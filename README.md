@@ -233,7 +233,7 @@ Desarrollado con ❤️ por el equipo de **LuminaKraft Studios**.
 ## 🔗 Enlaces
 
 - [Sitio Web Oficial](https://luminakraft.com)
-- [Discord](https://discord.gg/luminakraft)
+- [Discord](https://discord.gg/UJZRrcUFMj)
 - [Documentación de Tauri](https://tauri.app)
 - [React](https://reactjs.org)
 - [TypeScript](https://typescriptlang.org)
