@@ -1,6 +1,7 @@
-import React from 'react';
-import { ArrowLeft, Calendar, Package, Cpu, HardDrive } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowLeft, Calendar, Package, Cpu, HardDrive, Users, Globe, Star, Image } from 'lucide-react';
 import type { Modpack, ModpackState } from '../../types/launcher';
+import { useLauncher } from '../../contexts/LauncherContext';
 import ModpackCard from './ModpackCard';
 
 interface ModpackDetailsProps {
@@ -10,6 +11,9 @@ interface ModpackDetailsProps {
 }
 
 const ModpackDetails: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack }) => {
+  const { translations } = useLauncher();
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+
   const formatChangelog = (changelog: string) => {
     return changelog.split('\n').map((line, index) => {
       if (line.trim() === '') return <br key={index} />;
@@ -40,19 +44,45 @@ const ModpackDetails: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack 
   };
 
   const getModloaderDisplayName = (modloader: string) => {
-    switch (modloader.toLowerCase()) {
-      case 'forge':
-        return 'Minecraft Forge';
-      case 'fabric':
-        return 'Fabric';
-      case 'quilt':
-        return 'Quilt';
-      case 'neoforge':
-        return 'NeoForge';
-      default:
-        return modloader;
-    }
+    const displayNames = translations?.ui.modloader || {};
+    return displayNames[modloader.toLowerCase()] || (() => {
+      switch (modloader.toLowerCase()) {
+        case 'forge':
+          return 'Minecraft Forge';
+        case 'fabric':
+          return 'Fabric';
+        case 'neoforge':
+          return 'NeoForge';
+        case 'paper':
+          return 'Paper';
+        case 'vanilla':
+          return 'Vanilla';
+        default:
+          return modloader;
+      }
+    })();
   };
+
+  const getServerStatusInfo = () => {
+    if (modpack.isNew) {
+      return { text: translations?.ui.status.new || 'Nuevo', color: 'text-green-400', emoji: '✨' };
+    }
+    if (modpack.isActive) {
+      return { text: translations?.ui.status.active || 'Activo', color: 'text-green-400', emoji: '🟢' };
+    }
+    if (modpack.isComingSoon) {
+      return { text: translations?.ui.status.coming_soon || 'Próximamente', color: 'text-yellow-400', emoji: '🔜' };
+    }
+    return { text: translations?.ui.status.inactive || 'Inactivo', color: 'text-gray-400', emoji: '💤' };
+  };
+
+  // Obtener traducciones del modpack
+  const modpackTranslations = state.translations;
+  const displayName = modpackTranslations?.name || modpack.name;
+  const displayDescription = modpackTranslations?.description || 'Descripción no disponible';
+  const features = state.features || [];
+  const statusInfo = getServerStatusInfo();
+  const isVanillaServer = modpack.modloader === 'vanilla' || modpack.modloader === 'paper';
 
   return (
     <div className="h-full flex flex-col">
@@ -69,8 +99,8 @@ const ModpackDetails: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack 
         <div className="flex items-start space-x-6">
           <div className="w-24 h-24 rounded-lg overflow-hidden bg-dark-700 flex-shrink-0">
             <img
-              src={modpack.urlIcono}
-              alt={modpack.nombre}
+              src={modpack.logo || modpack.urlIcono}
+              alt={displayName}
               className="w-full h-full object-cover"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
@@ -80,8 +110,15 @@ const ModpackDetails: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack 
           </div>
           
           <div className="flex-1">
-            <h1 className="text-white text-3xl font-bold mb-2">{modpack.nombre}</h1>
-            <p className="text-dark-300 text-lg mb-4">{modpack.descripcion}</p>
+            <div className="flex items-start justify-between mb-2">
+              <h1 className="text-white text-3xl font-bold">{displayName}</h1>
+              <span className={`flex items-center space-x-1 ${statusInfo.color} font-medium`}>
+                <span>{statusInfo.emoji}</span>
+                <span>{statusInfo.text}</span>
+              </span>
+            </div>
+            
+            <p className="text-dark-300 text-lg mb-4">{displayDescription}</p>
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="flex items-center space-x-2 text-dark-400">
@@ -96,10 +133,24 @@ const ModpackDetails: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack 
                 <Cpu className="w-4 h-4" />
                 <span>{getModloaderDisplayName(modpack.modloader)}</span>
               </div>
-              <div className="text-dark-400">
-                <span>{modpack.modloader} {modpack.modloaderVersion}</span>
-              </div>
+              {modpack.gamemode && (
+                <div className="flex items-center space-x-2 text-dark-400">
+                  <Star className="w-4 h-4" />
+                  <span>{modpack.gamemode}</span>
+                </div>
+              )}
             </div>
+
+            {/* IP del servidor para vanilla/paper */}
+            {isVanillaServer && modpack.ip && (
+              <div className="mt-4 p-3 bg-dark-700 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <Globe className="w-4 h-4 text-lumina-400" />
+                  <span className="text-white font-medium">IP del Servidor:</span>
+                  <code className="text-lumina-400 bg-dark-800 px-2 py-1 rounded text-sm">{modpack.ip}</code>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -107,8 +158,9 @@ const ModpackDetails: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack 
       {/* Content */}
       <div className="flex-1 overflow-auto">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 p-6">
-          {/* Action Card */}
-          <div className="lg:col-span-1">
+          {/* Left Column */}
+          <div className="lg:col-span-1 space-y-6">
+            {/* Action Card */}
             <div className="card">
               <h3 className="text-white font-semibold text-lg mb-4">Acciones</h3>
               <ModpackCard
@@ -119,25 +171,161 @@ const ModpackDetails: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack 
             </div>
 
             {/* System Requirements */}
-            <div className="card mt-6">
+            <div className="card">
               <h3 className="text-white font-semibold text-lg mb-4">Requerimientos</h3>
               <div className="space-y-3">
                 <div>
                   <span className="text-dark-400 text-sm">RAM Recomendada:</span>
                   <p className="text-white">4 GB mínimo, 8 GB recomendado</p>
                 </div>
-                <div>
-                  <span className="text-dark-400 text-sm">JVM Args Recomendados:</span>
-                  <p className="text-white text-xs bg-dark-700 p-2 rounded mt-1 font-mono break-all">
-                    {modpack.jvmArgsRecomendados}
-                  </p>
-                </div>
+                {modpack.jvmArgsRecomendados && (
+                  <div>
+                    <span className="text-dark-400 text-sm">JVM Args Recomendados:</span>
+                    <p className="text-white text-xs bg-dark-700 p-2 rounded mt-1 font-mono break-all">
+                      {modpack.jvmArgsRecomendados}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
+
+            {/* Collaborators */}
+            {modpack.collaborators && modpack.collaborators.length > 0 && (
+              <div className="card">
+                <h3 className="text-white font-semibold text-lg mb-4 flex items-center space-x-2">
+                  <Users className="w-5 h-5" />
+                  <span>Colaboradores</span>
+                </h3>
+                <div className="space-y-3">
+                  {modpack.collaborators.map((collaborator, index) => (
+                    <div key={index} className="flex items-center space-x-3">
+                      <div className="w-8 h-8 rounded-full overflow-hidden bg-dark-700 flex-shrink-0">
+                        <img
+                          src={collaborator.logo}
+                          alt={collaborator.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiBmaWxsPSIjMzc0MTUxIi8+CjxjaXJjbGUgY3g9IjE2IiBjeT0iMTYiIHI9IjgiIGZpbGw9IiM2Mzc1ODMiLz4KPC9zdmc+';
+                          }}
+                        />
+                      </div>
+                      <span className="text-white text-sm">{collaborator.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Changelog */}
-          <div className="lg:col-span-2">
+          {/* Right Column */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Image Gallery */}
+            {modpack.images && modpack.images.length > 0 && (
+              <div className="card">
+                <h3 className="text-white font-semibold text-lg mb-4 flex items-center space-x-2">
+                  <Image className="w-5 h-5" />
+                  <span>Galería</span>
+                </h3>
+                
+                <div className="space-y-4">
+                  {/* Main Image */}
+                  <div className="aspect-video rounded-lg overflow-hidden bg-dark-700">
+                    <img
+                      src={modpack.images[selectedImageIndex]}
+                      alt={`${displayName} - Imagen ${selectedImageIndex + 1}`}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                  
+                  {/* Thumbnail Navigation */}
+                  {modpack.images.length > 1 && (
+                    <div className="flex space-x-2 overflow-x-auto">
+                      {modpack.images.map((image, index) => (
+                        <button
+                          key={index}
+                          onClick={() => setSelectedImageIndex(index)}
+                          className={`w-20 h-12 rounded overflow-hidden flex-shrink-0 ${
+                            selectedImageIndex === index 
+                              ? 'ring-2 ring-lumina-500' 
+                              : 'opacity-60 hover:opacity-100'
+                          } transition-all`}
+                        >
+                          <img
+                            src={image}
+                            alt={`Thumbnail ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Features */}
+            {features.length > 0 && (
+              <div className="card">
+                <h3 className="text-white font-semibold text-lg mb-4 flex items-center space-x-2">
+                  <Star className="w-5 h-5" />
+                  <span>Características</span>
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {features.map((feature, index) => (
+                    <div key={index} className="p-4 bg-dark-700 rounded-lg">
+                      <h4 className="text-lumina-400 font-medium mb-2">{feature.title}</h4>
+                      <p className="text-dark-300 text-sm">{feature.description}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Multimedia Content */}
+            {(modpack.youtubeEmbed || modpack.tiktokEmbed) && (
+              <div className="card">
+                <h3 className="text-white font-semibold text-lg mb-4">Contenido Multimedia</h3>
+                <div className="space-y-4">
+                  {modpack.youtubeEmbed && (
+                    <div className="aspect-video rounded-lg overflow-hidden">
+                      <iframe
+                        src={modpack.youtubeEmbed}
+                        title="YouTube video"
+                        className="w-full h-full"
+                        allowFullScreen
+                      />
+                    </div>
+                  )}
+                  {modpack.tiktokEmbed && (
+                    <div className="flex justify-center">
+                      <blockquote
+                        className="tiktok-embed"
+                        cite={`https://www.tiktok.com/@user/video/${modpack.tiktokEmbed}`}
+                        data-video-id={modpack.tiktokEmbed}
+                      >
+                        <section>
+                          <a
+                            target="_blank"
+                            rel="noopener"
+                            title={displayName}
+                            href={`https://www.tiktok.com/@user/video/${modpack.tiktokEmbed}`}
+                          >
+                            Ver en TikTok
+                          </a>
+                        </section>
+                      </blockquote>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Changelog */}
             <div className="card">
               <h3 className="text-white font-semibold text-lg mb-4 flex items-center space-x-2">
                 <Calendar className="w-5 h-5" />

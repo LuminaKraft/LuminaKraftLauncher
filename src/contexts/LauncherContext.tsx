@@ -1,72 +1,98 @@
 import { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
-import type { LauncherData, ModpackState, UserSettings } from '../types/launcher';
+import type { LauncherData, ModpackState, UserSettings, Translations, ModpackFeatures } from '../types/launcher';
 import LauncherService from '../services/launcherService';
 
-interface LauncherContextState {
+interface LauncherContextType {
   launcherData: LauncherData | null;
-  modpackStates: Record<string, ModpackState>;
+  modpackStates: { [id: string]: ModpackState };
   userSettings: UserSettings;
+  translations: Translations | null;
+  currentLanguage: string;
   isLoading: boolean;
   error: string | null;
-  hasUpdate: boolean;
-  updateUrl: string | null;
+  updateUserSettings: (settings: Partial<UserSettings>) => void;
+  refreshData: () => Promise<void>;
+  installModpack: (id: string) => Promise<void>;
+  updateModpack: (id: string) => Promise<void>;
+  launchModpack: (id: string) => Promise<void>;
+  repairModpack: (id: string) => Promise<void>;
+  getModpackTranslations: (id: string) => any;
+  getModpackFeatures: (id: string) => Promise<ModpackFeatures | null>;
+  changeLanguage: (language: string) => Promise<void>;
 }
 
 type LauncherAction =
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'SET_LAUNCHER_DATA'; payload: LauncherData }
-  | { type: 'SET_MODPACK_STATE'; payload: { modpackId: string; state: ModpackState } }
+  | { type: 'SET_TRANSLATIONS'; payload: Translations | null }
+  | { type: 'SET_LANGUAGE'; payload: string }
   | { type: 'SET_USER_SETTINGS'; payload: UserSettings }
-  | { type: 'SET_UPDATE_AVAILABLE'; payload: { hasUpdate: boolean; url?: string } };
+  | { type: 'SET_MODPACK_STATE'; payload: { id: string; state: ModpackState } }
+  | { type: 'UPDATE_MODPACK_PROGRESS'; payload: { id: string; progress: number } };
 
-interface LauncherContextType extends LauncherContextState {
-  refreshLauncherData: () => Promise<void>;
-  updateUserSettings: (settings: Partial<UserSettings>) => void;
-  installModpack: (modpackId: string) => Promise<void>;
-  updateModpack: (modpackId: string) => Promise<void>;
-  launchModpack: (modpackId: string) => Promise<void>;
-  repairModpack: (modpackId: string) => Promise<void>;
-  checkForUpdates: () => Promise<void>;
+interface LauncherState {
+  launcherData: LauncherData | null;
+  modpackStates: { [id: string]: ModpackState };
+  userSettings: UserSettings;
+  translations: Translations | null;
+  currentLanguage: string;
+  isLoading: boolean;
+  error: string | null;
 }
 
-const initialState: LauncherContextState = {
+const initialState: LauncherState = {
   launcherData: null,
   modpackStates: {},
   userSettings: {
     username: 'Player',
     allocatedRam: 4,
-    launcherDataUrl: 'https://api.luminakraft.com/v1/launcher_data.json'
+    launcherDataUrl: 'https://api.luminakraft.com/v1/launcher_data.json',
+    language: 'es'
   },
+  translations: null,
+  currentLanguage: 'es',
   isLoading: false,
   error: null,
-  hasUpdate: false,
-  updateUrl: null
 };
 
-function launcherReducer(state: LauncherContextState, action: LauncherAction): LauncherContextState {
+function launcherReducer(state: LauncherState, action: LauncherAction): LauncherState {
   switch (action.type) {
     case 'SET_LOADING':
       return { ...state, isLoading: action.payload };
     case 'SET_ERROR':
       return { ...state, error: action.payload, isLoading: false };
     case 'SET_LAUNCHER_DATA':
-      return { ...state, launcherData: action.payload, isLoading: false, error: null };
+      return { ...state, launcherData: action.payload, isLoading: false };
+    case 'SET_TRANSLATIONS':
+      return { ...state, translations: action.payload };
+    case 'SET_LANGUAGE':
+      return { ...state, currentLanguage: action.payload };
+    case 'SET_USER_SETTINGS':
+      return { ...state, userSettings: action.payload };
     case 'SET_MODPACK_STATE':
       return {
         ...state,
         modpackStates: {
           ...state.modpackStates,
-          [action.payload.modpackId]: action.payload.state
-        }
+          [action.payload.id]: action.payload.state,
+        },
       };
-    case 'SET_USER_SETTINGS':
-      return { ...state, userSettings: action.payload };
-    case 'SET_UPDATE_AVAILABLE':
+    case 'UPDATE_MODPACK_PROGRESS':
       return {
         ...state,
-        hasUpdate: action.payload.hasUpdate,
-        updateUrl: action.payload.url || null
+        modpackStates: {
+          ...state.modpackStates,
+          [action.payload.id]: {
+            ...state.modpackStates[action.payload.id],
+            progress: {
+              downloaded: 0,
+              total: 100,
+              percentage: action.payload.progress,
+              speed: 0,
+            },
+          },
+        },
       };
     default:
       return state;
@@ -79,49 +105,90 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(launcherReducer, initialState);
   const launcherService = LauncherService.getInstance();
 
+  // Cargar configuración del usuario al inicializar
   useEffect(() => {
-    const settings = launcherService.getUserSettings();
-    dispatch({ type: 'SET_USER_SETTINGS', payload: settings });
-    refreshLauncherData();
+    const initializeApp = async () => {
+      try {
+        const settings = launcherService.getUserSettings();
+        dispatch({ type: 'SET_USER_SETTINGS', payload: settings });
+        dispatch({ type: 'SET_LANGUAGE', payload: settings.language });
+        
+        // Cargar datos iniciales
+        await refreshData();
+      } catch (error) {
+        console.error('Error initializing app:', error);
+        dispatch({ type: 'SET_ERROR', payload: 'Error al inicializar la aplicación' });
+      }
+    };
+
+    initializeApp();
   }, []);
 
+  // Cargar estados de modpacks cuando se cargan los datos
   useEffect(() => {
     if (state.launcherData) {
-      updateModpackStates();
-      checkForUpdates();
+      loadModpackStates().catch(error => {
+        console.error('Error loading modpack states:', error);
+      });
     }
   }, [state.launcherData]);
 
-  const refreshLauncherData = async () => {
+  const refreshData = async () => {
     dispatch({ type: 'SET_LOADING', payload: true });
+    dispatch({ type: 'SET_ERROR', payload: null });
+
     try {
-      const data = await launcherService.fetchLauncherData();
-      dispatch({ type: 'SET_LAUNCHER_DATA', payload: data });
+      // Cargar datos del launcher y traducciones en paralelo
+      const currentLang = launcherService.getUserSettings().language;
+      const [launcherData, translations] = await Promise.all([
+        launcherService.fetchLauncherData(),
+        launcherService.getTranslations(currentLang)
+      ]);
+
+      dispatch({ type: 'SET_LAUNCHER_DATA', payload: launcherData });
+      dispatch({ type: 'SET_TRANSLATIONS', payload: translations });
     } catch (error) {
-      dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Error desconocido' });
+      console.error('Error loading launcher data:', error);
+      dispatch({ type: 'SET_ERROR', payload: 'Error al cargar los datos del launcher' });
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
     }
   };
 
-  const updateModpackStates = async () => {
+  const loadModpackStates = async () => {
     if (!state.launcherData) return;
 
+    const currentLang = launcherService.getUserSettings().language;
+    
     for (const modpack of state.launcherData.modpacks) {
       try {
         const status = await launcherService.getModpackStatus(modpack.id);
+        
+        // Cargar traducciones y características del modpack
+        const [translations, features] = await Promise.all([
+          getModpackTranslations(modpack.id),
+          launcherService.getModpackFeatures(modpack.id, currentLang)
+        ]);
+
         dispatch({
           type: 'SET_MODPACK_STATE',
           payload: {
-            modpackId: modpack.id,
-            state: { status }
-          }
+            id: modpack.id,
+            state: {
+              status,
+              translations: translations || undefined,
+              features: features?.features || []
+            },
+          },
         });
       } catch (error) {
+        console.error(`Error loading state for modpack ${modpack.id}:`, error);
         dispatch({
           type: 'SET_MODPACK_STATE',
           payload: {
-            modpackId: modpack.id,
-            state: { status: 'error', error: 'Error al verificar estado' }
-          }
+            id: modpack.id,
+            state: { status: 'error', error: 'Error al cargar el estado' },
+          },
         });
       }
     }
@@ -133,179 +200,155 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'SET_USER_SETTINGS', payload: newSettings });
   };
 
-  const installModpack = async (modpackId: string) => {
+  const changeLanguage = async (language: string) => {
+    try {
+      await launcherService.changeLanguage(language);
+      dispatch({ type: 'SET_LANGUAGE', payload: language });
+      updateUserSettings({ language });
+      
+      // Recargar traducciones
+      const translations = await launcherService.getTranslations(language);
+      dispatch({ type: 'SET_TRANSLATIONS', payload: translations });
+      
+      // Recargar características de modpacks en el nuevo idioma
+      if (state.launcherData) {
+        for (const modpack of state.launcherData.modpacks) {
+          const features = await launcherService.getModpackFeatures(modpack.id, language);
+          const currentState = state.modpackStates[modpack.id];
+          
+          if (currentState) {
+            dispatch({
+              type: 'SET_MODPACK_STATE',
+              payload: {
+                id: modpack.id,
+                state: {
+                  ...currentState,
+                  features: features?.features || []
+                },
+              },
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error changing language:', error);
+    }
+  };
+
+  const getModpackTranslations = (modpackId: string) => {
+    return state.translations?.modpacks[modpackId] || null;
+  };
+
+  const getModpackFeatures = async (modpackId: string) => {
+    return launcherService.getModpackFeatures(modpackId, state.currentLanguage);
+  };
+
+  const performModpackAction = async (
+    action: 'install' | 'update' | 'launch' | 'repair',
+    modpackId: string
+  ) => {
+    const modpack = state.launcherData?.modpacks.find(m => m.id === modpackId);
+    if (!modpack) {
+      throw new Error('Modpack no encontrado');
+    }
+
+    // Verificar si el modpack requiere ZIP (no es vanilla/paper)
+    if (!modpack.urlModpackZip && (action === 'install' || action === 'update' || action === 'repair')) {
+      if (modpack.ip) {
+        // Es un servidor vanilla/paper, solo se puede "conectar"
+        throw new Error(`Este es un servidor ${modpack.modloader}. IP: ${modpack.ip}`);
+      } else {
+        throw new Error('Este servidor no tiene modpack disponible para descarga');
+      }
+    }
+
+    const actionStatus = action === 'launch' ? 'launching' : `${action}ing` as any;
+
     dispatch({
       type: 'SET_MODPACK_STATE',
       payload: {
-        modpackId,
-        state: { status: 'installing', progress: { downloaded: 0, total: 100, percentage: 0, speed: 0 } }
+        id: modpackId,
+        state: { 
+          ...state.modpackStates[modpackId],
+          status: actionStatus
+        },
+      },
+    });
+
+    try {
+      const onProgress = (progress: number) => {
+        dispatch({
+          type: 'UPDATE_MODPACK_PROGRESS',
+          payload: { id: modpackId, progress },
+        });
+      };
+
+      switch (action) {
+        case 'install':
+          await launcherService.installModpack(modpackId, onProgress);
+          break;
+        case 'update':
+          await launcherService.updateModpack(modpackId, onProgress);
+          break;
+        case 'launch':
+          await launcherService.launchModpack(modpackId);
+          break;
+        case 'repair':
+          await launcherService.repairModpack(modpackId, onProgress);
+          break;
       }
-    });
 
-    try {
-      await launcherService.installModpack(modpackId, (progress) => {
-        dispatch({
-          type: 'SET_MODPACK_STATE',
-          payload: {
-            modpackId,
-            state: { 
-              status: 'installing',
-              progress: { downloaded: progress, total: 100, percentage: progress, speed: 0 }
-            }
-          }
-        });
-      });
-
-      dispatch({
-        type: 'SET_MODPACK_STATE',
-        payload: { modpackId, state: { status: 'installed' } }
-      });
-    } catch (error) {
+      // Actualizar estado después de la acción exitosa
+      const newStatus = await launcherService.getModpackStatus(modpackId);
       dispatch({
         type: 'SET_MODPACK_STATE',
         payload: {
-          modpackId,
+          id: modpackId,
           state: { 
-            status: 'error',
-            error: error instanceof Error ? error.message : 'Error de instalación'
-          }
-        }
-      });
-    }
-  };
-
-  const updateModpack = async (modpackId: string) => {
-    dispatch({
-      type: 'SET_MODPACK_STATE',
-      payload: {
-        modpackId,
-        state: { status: 'updating', progress: { downloaded: 0, total: 100, percentage: 0, speed: 0 } }
-      }
-    });
-
-    try {
-      await launcherService.updateModpack(modpackId, (progress) => {
-        dispatch({
-          type: 'SET_MODPACK_STATE',
-          payload: {
-            modpackId,
-            state: { 
-              status: 'updating',
-              progress: { downloaded: progress, total: 100, percentage: progress, speed: 0 }
-            }
-          }
-        });
-      });
-
-      dispatch({
-        type: 'SET_MODPACK_STATE',
-        payload: { modpackId, state: { status: 'installed' } }
+            ...state.modpackStates[modpackId],
+            status: newStatus
+          },
+        },
       });
     } catch (error) {
+      console.error(`Error ${action}ing modpack:`, error);
       dispatch({
         type: 'SET_MODPACK_STATE',
         payload: {
-          modpackId,
+          id: modpackId,
           state: { 
-            status: 'error',
-            error: error instanceof Error ? error.message : 'Error de actualización'
-          }
-        }
+            ...state.modpackStates[modpackId],
+            status: 'error', 
+            error: error instanceof Error ? error.message : 'Error desconocido'
+          },
+        },
       });
+      throw error;
     }
   };
 
-  const launchModpack = async (modpackId: string) => {
-    dispatch({
-      type: 'SET_MODPACK_STATE',
-      payload: { modpackId, state: { status: 'launching' } }
-    });
-
-    try {
-      await launcherService.launchModpack(modpackId);
-      // Reset to installed status after launch
-      setTimeout(() => {
-        dispatch({
-          type: 'SET_MODPACK_STATE',
-          payload: { modpackId, state: { status: 'installed' } }
-        });
-      }, 2000);
-    } catch (error) {
-      dispatch({
-        type: 'SET_MODPACK_STATE',
-        payload: {
-          modpackId,
-          state: { 
-            status: 'error',
-            error: error instanceof Error ? error.message : 'Error al lanzar'
-          }
-        }
-      });
-    }
-  };
-
-  const repairModpack = async (modpackId: string) => {
-    dispatch({
-      type: 'SET_MODPACK_STATE',
-      payload: {
-        modpackId,
-        state: { status: 'installing', progress: { downloaded: 0, total: 100, percentage: 0, speed: 0 } }
-      }
-    });
-
-    try {
-      await launcherService.repairModpack(modpackId, (progress) => {
-        dispatch({
-          type: 'SET_MODPACK_STATE',
-          payload: {
-            modpackId,
-            state: { 
-              status: 'installing',
-              progress: { downloaded: progress, total: 100, percentage: progress, speed: 0 }
-            }
-          }
-        });
-      });
-
-      dispatch({
-        type: 'SET_MODPACK_STATE',
-        payload: { modpackId, state: { status: 'installed' } }
-      });
-    } catch (error) {
-      dispatch({
-        type: 'SET_MODPACK_STATE',
-        payload: {
-          modpackId,
-          state: { 
-            status: 'error',
-            error: error instanceof Error ? error.message : 'Error de reparación'
-          }
-        }
-      });
-    }
-  };
-
-  const checkForUpdates = async () => {
-    try {
-      const updateInfo = await launcherService.checkForLauncherUpdate();
-      dispatch({
-        type: 'SET_UPDATE_AVAILABLE',
-        payload: { hasUpdate: updateInfo.hasUpdate, url: updateInfo.downloadUrl }
-      });
-    } catch (error) {
-      console.error('Error checking for updates:', error);
-    }
-  };
+  const installModpack = (id: string) => performModpackAction('install', id);
+  const updateModpack = (id: string) => performModpackAction('update', id);
+  const launchModpack = (id: string) => performModpackAction('launch', id);
+  const repairModpack = (id: string) => performModpackAction('repair', id);
 
   const contextValue: LauncherContextType = {
-    ...state,
-    refreshLauncherData,
+    launcherData: state.launcherData,
+    modpackStates: state.modpackStates,
+    userSettings: state.userSettings,
+    translations: state.translations,
+    currentLanguage: state.currentLanguage,
+    isLoading: state.isLoading,
+    error: state.error,
     updateUserSettings,
+    refreshData,
     installModpack,
     updateModpack,
     launchModpack,
     repairModpack,
-    checkForUpdates
+    getModpackTranslations,
+    getModpackFeatures,
+    changeLanguage,
   };
 
   return (

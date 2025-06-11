@@ -3,7 +3,9 @@ import { Download, ExternalLink, Heart, Globe } from 'lucide-react';
 import { useLauncher } from '../../contexts/LauncherContext';
 
 const AboutPage: React.FC = () => {
-  const { hasUpdate, updateUrl } = useLauncher();
+  // Temporalmente removemos hasUpdate y updateUrl hasta implementar la funcionalidad
+  const hasUpdate = false;
+  const updateUrl = null;
 
   const handleDownloadUpdate = () => {
     if (updateUrl) {
@@ -174,7 +176,7 @@ const AboutPage: React.FC = () => {
               </a>
               
               <a
-                href="https://discord.gg/luminakraft"
+                href="https://discord.gg/UJZRrcUFMj"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center space-x-3 p-3 bg-dark-700 rounded-lg hover:bg-dark-600 transition-colors group"

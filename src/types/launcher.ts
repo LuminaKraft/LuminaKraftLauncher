@@ -10,16 +10,72 @@ export interface LauncherData {
 
 export interface Modpack {
   id: string;
-  nombre: string;
-  descripcion: string;
+  name: string;
   version: string;
   minecraftVersion: string;
-  modloader: 'forge' | 'fabric' | 'quilt' | 'neoforge';
+  modloader: 'forge' | 'fabric' | 'neoforge' | 'paper' | 'vanilla';
   modloaderVersion: string;
+  gamemode: string;
+  isNew: boolean;
+  isActive: boolean;
+  isComingSoon: boolean;
+  images: string[];
+  logo: string;
   urlIcono: string;
-  urlModpackZip: string;
+  featureIcons: string[];
+  collaborators: Collaborator[];
+  urlModpackZip: string | null;
   changelog: string;
   jvmArgsRecomendados: string;
+  youtubeEmbed?: string;
+  tiktokEmbed?: string;
+  ip?: string;
+  leaderboardPath?: string;
+}
+
+export interface Collaborator {
+  name: string;
+  logo: string;
+}
+
+export interface Translations {
+  modpacks: {
+    [modpackId: string]: {
+      name: string;
+      description: string;
+      shortDescription: string;
+    };
+  };
+  ui: {
+    status: {
+      new: string;
+      active: string;
+      coming_soon: string;
+      inactive: string;
+    };
+    modloader: {
+      [key: string]: string;
+    };
+    gamemode: {
+      [key: string]: string;
+    };
+  };
+}
+
+export interface ModpackFeatures {
+  modpackId: string;
+  language: string;
+  features: Feature[];
+}
+
+export interface Feature {
+  title: string;
+  description: string;
+}
+
+export interface AvailableLanguages {
+  availableLanguages: string[];
+  defaultLanguage: string;
 }
 
 export interface InstanceMetadata {
@@ -36,6 +92,7 @@ export interface UserSettings {
   allocatedRam: number; // in GB
   javaPath?: string;
   launcherDataUrl: string;
+  language: string; // 'es' | 'en'
 }
 
 export interface DownloadProgress {
@@ -51,4 +108,10 @@ export interface ModpackState {
   status: ModpackStatus;
   progress?: DownloadProgress;
   error?: string;
+  translations?: {
+    name: string;
+    description: string;
+    shortDescription: string;
+  };
+  features?: Feature[];
 } 

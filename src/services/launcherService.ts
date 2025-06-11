@@ -1,9 +1,18 @@
 import { invoke } from '@tauri-apps/api/core';
 import axios from 'axios';
-import type { LauncherData, InstanceMetadata, UserSettings, ModpackStatus } from '../types/launcher';
+import type { 
+  LauncherData, 
+  InstanceMetadata, 
+  UserSettings, 
+  ModpackStatus,
+  Translations,
+  ModpackFeatures,
+  AvailableLanguages,
+  Modpack 
+} from '../types/launcher';
 
-interface CacheEntry {
-  data: LauncherData;
+interface CacheEntry<T = any> {
+  data: T;
   timestamp: number;
 }
 
@@ -12,7 +21,8 @@ class LauncherService {
   private launcherData: LauncherData | null = null;
   private userSettings: UserSettings;
   private cache: Map<string, CacheEntry> = new Map();
-  private readonly cacheTTL = 5 * 60 * 1000; // 5 minutos
+  private readonly cacheTTL = 5 * 60 * 1000; // 5 minutos para datos principales
+  private readonly translationsTTL = 60 * 60 * 1000; // 1 hora para traducciones
   private readonly requestTimeout = 10000; // 10 segundos
 
   constructor() {
@@ -36,7 +46,8 @@ class LauncherService {
     const defaultSettings: UserSettings = {
       username: 'Player',
       allocatedRam: 4,
-      launcherDataUrl: 'https://api.luminakraft.com/v1/launcher_data.json'
+      launcherDataUrl: 'https://api.luminakraft.com/v1/launcher_data.json',
+      language: 'es'
     };
 
     try {
@@ -62,7 +73,7 @@ class LauncherService {
 
   async checkAPIHealth(): Promise<boolean> {
     try {
-      const baseUrl = this.userSettings.launcherDataUrl.replace('/v1/launcher_data.json', '');
+      const baseUrl = this.getBaseUrl();
       const response = await axios.get(`${baseUrl}/health`, {
         timeout: 5000
       });
@@ -73,13 +84,17 @@ class LauncherService {
     }
   }
 
+  private getBaseUrl(): string {
+    return this.userSettings.launcherDataUrl.replace('/v1/launcher_data.json', '');
+  }
+
   private getFallbackData(): LauncherData {
     return {
       launcherVersion: "1.0.0",
       launcherDownloadUrls: {
-        windows: "https://github.com/luminakraft/launcher/releases/latest/download/setup.exe",
-        macos: "https://github.com/luminakraft/launcher/releases/latest/download/app.dmg",
-        linux: "https://github.com/luminakraft/launcher/releases/latest/download/app.AppImage"
+        windows: "https://github.com/luminakraft/luminakraft-launcher/releases/latest/download/LuminaKraft-Launcher_x64_en-US.msi",
+        macos: "https://github.com/luminakraft/luminakraft-launcher/releases/latest/download/LuminaKraft-Launcher_x64.dmg",
+        linux: "https://github.com/luminakraft/luminakraft-launcher/releases/latest/download/LuminaKraft-Launcher_amd64.AppImage"
       },
       modpacks: []
     };
@@ -96,17 +111,7 @@ class LauncherService {
         return cached.data;
       }
 
-      // Verificar salud de la API primero
-      const isAPIHealthy = await this.checkAPIHealth();
-      if (!isAPIHealthy) {
-        console.warn('API health check failed, using cached data if available');
-        if (cached) {
-          this.launcherData = cached.data;
-          return cached.data;
-        }
-        throw new Error('API no disponible y no hay datos en caché');
-      }
-
+      console.log('Fetching launcher data from API...');
       const response = await axios.get<LauncherData>(this.userSettings.launcherDataUrl, {
         headers: {
           'Accept': 'application/json',
@@ -122,6 +127,7 @@ class LauncherService {
         timestamp: Date.now()
       });
 
+      console.log('Launcher data loaded successfully');
       return response.data;
     } catch (error) {
       console.error('Error fetching launcher data:', error);
@@ -139,6 +145,110 @@ class LauncherService {
       const fallback = this.getFallbackData();
       this.launcherData = fallback;
       return fallback;
+    }
+  }
+
+  async getAvailableLanguages(): Promise<AvailableLanguages> {
+    try {
+      const cacheKey = 'available_languages';
+      const cached = this.cache.get(cacheKey);
+      
+      if (cached && Date.now() - cached.timestamp < this.translationsTTL) {
+        return cached.data;
+      }
+
+      const baseUrl = this.getBaseUrl();
+      const response = await axios.get<AvailableLanguages>(`${baseUrl}/v1/translations`);
+      
+      this.cache.set(cacheKey, {
+        data: response.data,
+        timestamp: Date.now()
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching available languages:', error);
+      return {
+        availableLanguages: ['es', 'en'],
+        defaultLanguage: 'es'
+      };
+    }
+  }
+
+  async getTranslations(language?: string): Promise<Translations | null> {
+    try {
+      const lang = language || this.userSettings.language;
+      const cacheKey = `translations_${lang}`;
+      const cached = this.cache.get(cacheKey);
+      
+      if (cached && Date.now() - cached.timestamp < this.translationsTTL) {
+        return cached.data;
+      }
+
+      const baseUrl = this.getBaseUrl();
+      const response = await axios.get<Translations>(`${baseUrl}/v1/translations/${lang}`);
+      
+      this.cache.set(cacheKey, {
+        data: response.data,
+        timestamp: Date.now()
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching translations:', error);
+      return null;
+    }
+  }
+
+  async getModpackFeatures(modpackId: string, language?: string): Promise<ModpackFeatures | null> {
+    try {
+      const lang = language || this.userSettings.language;
+      const cacheKey = `features_${modpackId}_${lang}`;
+      const cached = this.cache.get(cacheKey);
+      
+      if (cached && Date.now() - cached.timestamp < this.translationsTTL) {
+        return cached.data;
+      }
+
+      const baseUrl = this.getBaseUrl();
+      const response = await axios.get<ModpackFeatures>(`${baseUrl}/v1/modpacks/${modpackId}/features/${lang}`);
+      
+      this.cache.set(cacheKey, {
+        data: response.data,
+        timestamp: Date.now()
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching modpack features:', error);
+      return null;
+    }
+  }
+
+  async getModpackWithTranslations(modpackId: string): Promise<{ modpack: Modpack; translations: any; features: any } | null> {
+    try {
+      if (!this.launcherData) {
+        await this.fetchLauncherData();
+      }
+
+      const modpack = this.launcherData?.modpacks.find(m => m.id === modpackId);
+      if (!modpack) {
+        return null;
+      }
+
+      const [translations, features] = await Promise.all([
+        this.getTranslations(),
+        this.getModpackFeatures(modpackId)
+      ]);
+
+      return {
+        modpack,
+        translations: translations?.modpacks[modpackId] || null,
+        features: features?.features || []
+      };
+    } catch (error) {
+      console.error('Error getting modpack with translations:', error);
+      return null;
     }
   }
 
@@ -183,6 +293,10 @@ class LauncherService {
     const modpack = this.launcherData?.modpacks.find(m => m.id === modpackId);
     if (!modpack) {
       throw new Error('Modpack no encontrado');
+    }
+
+    if (!modpack.urlModpackZip) {
+      throw new Error('Este servidor no requiere instalación de modpack');
     }
 
     try {
@@ -277,13 +391,25 @@ class LauncherService {
   // Método para obtener información de la API
   async getAPIInfo(): Promise<any> {
     try {
-      const baseUrl = this.userSettings.launcherDataUrl.replace('/v1/launcher_data.json', '');
+      const baseUrl = this.getBaseUrl();
       const response = await axios.get(`${baseUrl}/v1/info`);
       return response.data;
     } catch (error) {
       console.error('Error getting API info:', error);
       return null;
     }
+  }
+
+  // Método para cambiar idioma
+  async changeLanguage(language: string): Promise<void> {
+    this.userSettings.language = language;
+    this.saveUserSettings({ language });
+    
+    // Limpiar caché de traducciones para forzar recarga
+    const keysToDelete = Array.from(this.cache.keys()).filter(key => 
+      key.startsWith('translations_') || key.startsWith('features_')
+    );
+    keysToDelete.forEach(key => this.cache.delete(key));
   }
 }
 

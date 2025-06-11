@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { User, HardDrive, Coffee, Globe, Save, FolderOpen, CheckCircle, Wifi, WifiOff, RefreshCw, Trash2, Server } from 'lucide-react';
+import { User, HardDrive, Coffee, Globe, Save, FolderOpen, CheckCircle, Wifi, WifiOff, RefreshCw, Trash2, Server, Languages } from 'lucide-react';
 import { useLauncher } from '../../contexts/LauncherContext';
 import LauncherService from '../../services/launcherService';
 
 const SettingsPage: React.FC = () => {
-  const { userSettings, updateUserSettings } = useLauncher();
+  const { userSettings, updateUserSettings, translations, currentLanguage, changeLanguage } = useLauncher();
   
   const [formData, setFormData] = useState(userSettings);
   const [hasChanges, setHasChanges] = useState(false);
@@ -12,6 +12,7 @@ const SettingsPage: React.FC = () => {
   const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const [apiInfo, setApiInfo] = useState<any>(null);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [availableLanguages, setAvailableLanguages] = useState<string[]>(['es', 'en']);
 
   useEffect(() => {
     setFormData(userSettings);
@@ -25,6 +26,7 @@ const SettingsPage: React.FC = () => {
   useEffect(() => {
     checkAPIStatus();
     fetchAPIInfo();
+    fetchAvailableLanguages();
   }, []);
 
   const checkAPIStatus = async () => {
@@ -46,11 +48,30 @@ const SettingsPage: React.FC = () => {
     }
   };
 
+  const fetchAvailableLanguages = async () => {
+    try {
+      const languageData = await LauncherService.getInstance().getAvailableLanguages();
+      setAvailableLanguages(languageData.availableLanguages);
+    } catch (error) {
+      console.error('Error fetching available languages:', error);
+    }
+  };
+
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
+  };
+
+  const handleLanguageChange = async (language: string) => {
+    try {
+      await changeLanguage(language);
+      setSavedNotification(true);
+      setTimeout(() => setSavedNotification(false), 3000);
+    } catch (error) {
+      console.error('Error changing language:', error);
+    }
   };
 
   const handleSave = () => {
@@ -91,6 +112,11 @@ const SettingsPage: React.FC = () => {
     { value: 12, label: '12 GB' },
     { value: 16, label: '16 GB' },
     { value: 32, label: '32 GB' }
+  ];
+
+  const languageOptions = [
+    { value: 'es', label: '🇪🇸 Español', name: 'Español' },
+    { value: 'en', label: '🇺🇸 English', name: 'English' }
   ];
 
   const getStatusIcon = () => {
@@ -150,6 +176,41 @@ const SettingsPage: React.FC = () => {
         )}
 
         <div className="max-w-4xl space-y-8">
+          {/* Language Settings */}
+          <div className="card">
+            <div className="flex items-center space-x-3 mb-6">
+              <Languages className="w-6 h-6 text-lumina-500" />
+              <h2 className="text-white text-xl font-semibold">Idioma</h2>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-dark-300 text-sm font-medium mb-2">
+                  Idioma del launcher
+                </label>
+                <div className="flex items-center space-x-4">
+                  <select
+                    value={currentLanguage}
+                    onChange={(e) => handleLanguageChange(e.target.value)}
+                    className="input-field"
+                  >
+                    {languageOptions.map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="text-dark-400 text-sm">
+                    <p>Idioma actual: {languageOptions.find(l => l.value === currentLanguage)?.name}</p>
+                  </div>
+                </div>
+                <p className="text-dark-400 text-xs mt-1">
+                  Los cambios de idioma se aplicarán inmediatamente en toda la aplicación
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* API Status */}
           <div className="card">
             <div className="flex items-center space-x-3 mb-6">
@@ -189,6 +250,19 @@ const SettingsPage: React.FC = () => {
                   <div className="p-4 bg-dark-700 rounded-lg">
                     <p className="text-dark-300 text-sm font-medium mb-1">Descripción</p>
                     <p className="text-white text-sm">{apiInfo.description}</p>
+                  </div>
+                </div>
+              )}
+
+              {apiInfo && apiInfo.endpoints && (
+                <div className="p-4 bg-dark-700 rounded-lg">
+                  <p className="text-dark-300 text-sm font-medium mb-3">Endpoints Disponibles</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                    {apiInfo.endpoints.map((endpoint: string, index: number) => (
+                      <div key={index} className="text-lumina-400 font-mono">
+                        {endpoint}
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}

@@ -8,7 +8,8 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => {
-  const { hasUpdate } = useLauncher();
+  // Temporalmente removemos hasUpdate hasta implementar la funcionalidad
+  const hasUpdate = false;
 
   const menuItems = [
     {

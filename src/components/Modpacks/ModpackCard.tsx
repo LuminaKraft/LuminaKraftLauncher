@@ -1,5 +1,5 @@
 import React from 'react';
-import { Download, Play, RefreshCw, Wrench, AlertTriangle, Loader2 } from 'lucide-react';
+import { Download, Play, RefreshCw, Wrench, AlertTriangle, Loader2, Globe, Copy } from 'lucide-react';
 import type { Modpack, ModpackState } from '../../types/launcher';
 import { useLauncher } from '../../contexts/LauncherContext';
 
@@ -10,9 +10,72 @@ interface ModpackCardProps {
 }
 
 const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) => {
-  const { installModpack, updateModpack, launchModpack, repairModpack } = useLauncher();
+  const { installModpack, updateModpack, launchModpack, repairModpack, translations } = useLauncher();
+
+  const getServerStatusBadge = () => {
+    if (modpack.isNew) {
+      return (
+        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-600/20 text-green-400 border border-green-600/30">
+          ✨ {translations?.ui.status.new || 'Nuevo'}
+        </span>
+      );
+    }
+    if (modpack.isActive) {
+      return (
+        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-600/20 text-green-400 border border-green-600/30">
+          🟢 {translations?.ui.status.active || 'Activo'}
+        </span>
+      );
+    }
+    if (modpack.isComingSoon) {
+      return (
+        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-600/20 text-yellow-400 border border-yellow-600/30">
+          🔜 {translations?.ui.status.coming_soon || 'Próximamente'}
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-600/20 text-gray-400 border border-gray-600/30">
+        💤 {translations?.ui.status.inactive || 'Inactivo'}
+      </span>
+    );
+  };
+
+  const isVanillaServer = modpack.modloader === 'vanilla' || modpack.modloader === 'paper';
+  const requiresModpack = !!modpack.urlModpackZip;
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (error) {
+      console.error('Error copying to clipboard:', error);
+    }
+  };
 
   const getButtonConfig = () => {
+    // Si es un servidor vanilla/paper con IP, mostrar botón de conectar
+    if (isVanillaServer && modpack.ip) {
+      return {
+        text: `Conectar (${modpack.ip})`,
+        icon: Globe,
+        onClick: () => copyToClipboard(modpack.ip!),
+        className: 'btn-secondary',
+        disabled: false
+      };
+    }
+
+    // Si no tiene modpack para descargar y no es servidor vanilla, deshabilitar
+    if (!requiresModpack && !modpack.ip) {
+      return {
+        text: 'No disponible',
+        icon: AlertTriangle,
+        onClick: () => {},
+        className: 'btn-secondary',
+        disabled: true
+      };
+    }
+
+    // Lógica normal para modpacks que requieren instalación
     switch (state.status) {
       case 'not_installed':
         return {
@@ -78,6 +141,11 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
   const ButtonIcon = buttonConfig.icon;
   const isLoading = ['installing', 'updating', 'launching'].includes(state.status);
 
+  // Obtener traducciones del modpack
+  const modpackTranslations = state.translations;
+  const displayName = modpackTranslations?.name || modpack.name;
+  const displayDescription = modpackTranslations?.shortDescription || modpackTranslations?.description || 'Descripción no disponible';
+
   return (
     <div className="card hover:bg-dark-700 transition-colors duration-200 cursor-pointer group">
       <div onClick={onSelect} className="flex-1">
@@ -85,8 +153,8 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
           {/* Modpack Icon */}
           <div className="w-16 h-16 rounded-lg overflow-hidden bg-dark-700 flex-shrink-0">
             <img
-              src={modpack.urlIcono}
-              alt={modpack.nombre}
+              src={modpack.logo || modpack.urlIcono}
+              alt={displayName}
               className="w-full h-full object-cover"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
@@ -97,17 +165,43 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
 
           {/* Modpack Info */}
           <div className="flex-1 min-w-0">
-            <h3 className="text-white font-semibold text-lg truncate group-hover:text-lumina-400 transition-colors">
-              {modpack.nombre}
-            </h3>
+            <div className="flex items-start justify-between">
+              <h3 className="text-white font-semibold text-lg truncate group-hover:text-lumina-400 transition-colors pr-2">
+                {displayName}
+              </h3>
+              {getServerStatusBadge()}
+            </div>
+            
             <p className="text-dark-300 text-sm mt-1 line-clamp-2">
-              {modpack.descripcion}
+              {displayDescription}
             </p>
+            
             <div className="flex items-center space-x-4 mt-3 text-xs text-dark-400">
               <span>v{modpack.version}</span>
               <span>Minecraft {modpack.minecraftVersion}</span>
               <span className="capitalize">{modpack.modloader}</span>
+              {modpack.gamemode && (
+                <span className="text-lumina-400">{modpack.gamemode}</span>
+              )}
             </div>
+
+            {/* IP del servidor para vanilla/paper */}
+            {isVanillaServer && modpack.ip && (
+              <div className="mt-2 flex items-center space-x-2">
+                <span className="text-xs text-dark-400">IP:</span>
+                <code className="text-xs bg-dark-700 px-2 py-1 rounded text-lumina-400">{modpack.ip}</code>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    copyToClipboard(modpack.ip!);
+                  }}
+                  className="text-dark-400 hover:text-lumina-400 transition-colors"
+                  title="Copiar IP"
+                >
+                  <Copy className="w-3 h-3" />
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

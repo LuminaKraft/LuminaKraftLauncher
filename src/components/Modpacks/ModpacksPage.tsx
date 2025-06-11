@@ -11,15 +11,14 @@ const ModpacksPage: React.FC = () => {
     modpackStates, 
     isLoading, 
     error, 
-    refreshLauncherData 
+    refreshData 
   } = useLauncher();
   
   const [selectedModpack, setSelectedModpack] = useState<Modpack | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredModpacks = launcherData?.modpacks.filter(modpack =>
-    modpack.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    modpack.descripcion.toLowerCase().includes(searchTerm.toLowerCase())
+    modpack.name.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
 
   if (isLoading && !launcherData) {
@@ -42,7 +41,7 @@ const ModpacksPage: React.FC = () => {
           <h2 className="text-white text-xl font-semibold mb-2">Error al cargar</h2>
           <p className="text-dark-300 mb-4">{error}</p>
           <button
-            onClick={refreshLauncherData}
+            onClick={refreshData}
             className="btn-primary"
           >
             <RefreshCw className="w-4 h-4 mr-2" />
@@ -89,7 +88,7 @@ const ModpacksPage: React.FC = () => {
             </div>
             
             <button
-              onClick={refreshLauncherData}
+              onClick={refreshData}
               disabled={isLoading}
               className="btn-secondary"
               title="Actualizar lista de modpacks"
