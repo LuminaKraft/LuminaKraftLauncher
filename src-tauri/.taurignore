@@ -1,0 +1,28 @@
+# Exclude files that shouldn't trigger rebuilds
+target/
+.git/
+node_modules/
+dist/
+*.log
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# Exclude development files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Exclude build artifacts
+*.pdb
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Exclude temporary directories
+temp/
+tmp/ 

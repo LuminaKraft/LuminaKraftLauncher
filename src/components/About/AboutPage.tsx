@@ -1,5 +1,5 @@
 import React from 'react';
-import { Download, ExternalLink, Heart, Github, Globe } from 'lucide-react';
+import { Download, ExternalLink, Heart, Globe } from 'lucide-react';
 import { useLauncher } from '../../contexts/LauncherContext';
 
 const AboutPage: React.FC = () => {

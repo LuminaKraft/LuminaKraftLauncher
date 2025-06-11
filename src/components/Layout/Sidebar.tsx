@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Settings, Download, Info, AlertCircle } from 'lucide-react';
+import { Home, Settings, Info, AlertCircle } from 'lucide-react';
 import { useLauncher } from '../../contexts/LauncherContext';
 
 interface SidebarProps {

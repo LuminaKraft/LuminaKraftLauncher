@@ -61,10 +61,24 @@ Un lanzador de modpacks personalizado para Minecraft, desarrollado específicame
 ## 🚀 Comandos de Desarrollo
 
 ### Modo Desarrollo
+
+#### Método Recomendado (Estable)
+```bash
+# Windows (PowerShell)
+.\dev-stable.ps1
+
+# O usando npm
+npm run tauri:dev-stable
+```
+Inicia el launcher en modo desarrollo estable sin rebuilds constantes.
+
+#### Método Estándar
 ```bash
 npm run tauri dev
 ```
-Inicia el servidor de desarrollo con hot reload.
+Inicia el servidor de desarrollo con hot reload (puede ser inestable en algunos sistemas).
+
+> **⚠️ Problema Conocido**: En algunos sistemas, `npm run tauri dev` puede causar que la ventana se cierre y abra repetidamente debido a rebuilds automáticos. Si experimentas este problema, usa el método estable.
 
 ### Build de Producción
 ```bash
@@ -195,6 +209,36 @@ El launcher crea la siguiente estructura en el directorio de datos del usuario:
 ```
 
 ## 🐛 Resolución de Problemas
+
+### Ventana que se cierra y abre repetidamente (Desarrollo)
+Si durante el desarrollo la ventana del launcher se cierra y abre constantemente:
+
+**Causa**: Tauri está detectando cambios en archivos y reconstruyendo automáticamente.
+
+**Soluciones**:
+1. **Método Recomendado**: Usa el script estable
+   ```bash
+   # Windows
+   .\dev-stable.ps1
+   
+   # O con npm
+   npm run tauri:dev-stable
+   ```
+
+2. **Limpiar archivos temporales**:
+   ```bash
+   # Limpiar cache de Node.js
+   npm run clean
+   rm -rf node_modules package-lock.json
+   npm install
+   
+   # Limpiar cache de Rust
+   cd src-tauri
+   cargo clean
+   cd ..
+   ```
+
+3. **Verificar que no hay editores/IDEs modificando archivos automáticamente**
 
 ### Java no encontrado
 Si el launcher no puede encontrar Java:

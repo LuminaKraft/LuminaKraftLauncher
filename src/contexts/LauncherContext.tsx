@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
-import type { LauncherData, Modpack, ModpackState, UserSettings } from '../types/launcher';
+import { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
+import type { LauncherData, ModpackState, UserSettings } from '../types/launcher';
 import LauncherService from '../services/launcherService';
 
 interface LauncherContextState {

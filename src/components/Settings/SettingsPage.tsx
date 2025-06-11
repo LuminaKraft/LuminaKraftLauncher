@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { User, HardDrive, Coffee, Globe, Save, FolderOpen, CheckCircle } from 'lucide-react';
+import { User, HardDrive, Coffee, Globe, Save, FolderOpen, CheckCircle, Wifi, WifiOff, RefreshCw, Trash2, Server } from 'lucide-react';
 import { useLauncher } from '../../contexts/LauncherContext';
+import LauncherService from '../../services/launcherService';
 
 const SettingsPage: React.FC = () => {
   const { userSettings, updateUserSettings } = useLauncher();
@@ -8,6 +9,9 @@ const SettingsPage: React.FC = () => {
   const [formData, setFormData] = useState(userSettings);
   const [hasChanges, setHasChanges] = useState(false);
   const [savedNotification, setSavedNotification] = useState(false);
+  const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+  const [apiInfo, setApiInfo] = useState<any>(null);
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
 
   useEffect(() => {
     setFormData(userSettings);
@@ -17,6 +21,30 @@ const SettingsPage: React.FC = () => {
     const isDifferent = JSON.stringify(formData) !== JSON.stringify(userSettings);
     setHasChanges(isDifferent);
   }, [formData, userSettings]);
+
+  useEffect(() => {
+    checkAPIStatus();
+    fetchAPIInfo();
+  }, []);
+
+  const checkAPIStatus = async () => {
+    setApiStatus('checking');
+    try {
+      const isHealthy = await LauncherService.getInstance().checkAPIHealth();
+      setApiStatus(isHealthy ? 'online' : 'offline');
+    } catch (error) {
+      setApiStatus('offline');
+    }
+  };
+
+  const fetchAPIInfo = async () => {
+    try {
+      const info = await LauncherService.getInstance().getAPIInfo();
+      setApiInfo(info);
+    } catch (error) {
+      console.error('Error fetching API info:', error);
+    }
+  };
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({
@@ -42,6 +70,19 @@ const SettingsPage: React.FC = () => {
     }
   };
 
+  const handleTestConnection = async () => {
+    setIsTestingConnection(true);
+    await checkAPIStatus();
+    await fetchAPIInfo();
+    setIsTestingConnection(false);
+  };
+
+  const handleClearCache = () => {
+    LauncherService.getInstance().clearCache();
+    setSavedNotification(true);
+    setTimeout(() => setSavedNotification(false), 3000);
+  };
+
   const ramOptions = [
     { value: 2, label: '2 GB' },
     { value: 4, label: '4 GB' },
@@ -51,6 +92,39 @@ const SettingsPage: React.FC = () => {
     { value: 16, label: '16 GB' },
     { value: 32, label: '32 GB' }
   ];
+
+  const getStatusIcon = () => {
+    switch (apiStatus) {
+      case 'checking':
+        return <RefreshCw className="w-5 h-5 text-yellow-500 animate-spin" />;
+      case 'online':
+        return <Wifi className="w-5 h-5 text-green-500" />;
+      case 'offline':
+        return <WifiOff className="w-5 h-5 text-red-500" />;
+    }
+  };
+
+  const getStatusText = () => {
+    switch (apiStatus) {
+      case 'checking':
+        return 'Verificando...';
+      case 'online':
+        return 'Conectado';
+      case 'offline':
+        return 'Sin conexión';
+    }
+  };
+
+  const getStatusColor = () => {
+    switch (apiStatus) {
+      case 'checking':
+        return 'text-yellow-400';
+      case 'online':
+        return 'text-green-400';
+      case 'offline':
+        return 'text-red-400';
+    }
+  };
 
   return (
     <div className="h-full overflow-auto">
@@ -69,13 +143,71 @@ const SettingsPage: React.FC = () => {
             <div className="flex items-center space-x-2">
               <CheckCircle className="w-5 h-5 text-green-500" />
               <span className="text-green-400 font-medium">
-                Configuración guardada exitosamente
+                Operación completada exitosamente
               </span>
             </div>
           </div>
         )}
 
         <div className="max-w-4xl space-y-8">
+          {/* API Status */}
+          <div className="card">
+            <div className="flex items-center space-x-3 mb-6">
+              <Server className="w-6 h-6 text-lumina-500" />
+              <h2 className="text-white text-xl font-semibold">Estado de la API</h2>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-dark-700 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  {getStatusIcon()}
+                  <div>
+                    <p className={`font-medium ${getStatusColor()}`}>
+                      {getStatusText()}
+                    </p>
+                    <p className="text-dark-400 text-sm">
+                      {apiInfo?.name || 'LuminaKraft Launcher API'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleTestConnection}
+                  disabled={isTestingConnection}
+                  className="btn-secondary"
+                >
+                  <RefreshCw className={`w-4 h-4 mr-2 ${isTestingConnection ? 'animate-spin' : ''}`} />
+                  Probar conexión
+                </button>
+              </div>
+
+              {apiInfo && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 bg-dark-700 rounded-lg">
+                    <p className="text-dark-300 text-sm font-medium mb-1">Versión de la API</p>
+                    <p className="text-white">{apiInfo.version}</p>
+                  </div>
+                  <div className="p-4 bg-dark-700 rounded-lg">
+                    <p className="text-dark-300 text-sm font-medium mb-1">Descripción</p>
+                    <p className="text-white text-sm">{apiInfo.description}</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={handleClearCache}
+                  className="btn-secondary"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Limpiar caché
+                </button>
+                <p className="text-dark-400 text-sm">
+                  Limpia los datos almacenados localmente para forzar una actualización
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* User Settings */}
           <div className="card">
             <div className="flex items-center space-x-3 mb-6">

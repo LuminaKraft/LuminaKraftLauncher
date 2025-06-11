@@ -1,14 +1,23 @@
 import { invoke } from '@tauri-apps/api/core';
 import axios from 'axios';
-import type { LauncherData, Modpack, InstanceMetadata, UserSettings, ModpackStatus } from '../types/launcher';
+import type { LauncherData, InstanceMetadata, UserSettings, ModpackStatus } from '../types/launcher';
+
+interface CacheEntry {
+  data: LauncherData;
+  timestamp: number;
+}
 
 class LauncherService {
   private static instance: LauncherService;
   private launcherData: LauncherData | null = null;
   private userSettings: UserSettings;
+  private cache: Map<string, CacheEntry> = new Map();
+  private readonly cacheTTL = 5 * 60 * 1000; // 5 minutos
+  private readonly requestTimeout = 10000; // 10 segundos
 
   constructor() {
     this.userSettings = this.loadUserSettings();
+    this.setupAxiosDefaults();
   }
 
   static getInstance(): LauncherService {
@@ -16,6 +25,11 @@ class LauncherService {
       LauncherService.instance = new LauncherService();
     }
     return LauncherService.instance;
+  }
+
+  private setupAxiosDefaults(): void {
+    axios.defaults.timeout = this.requestTimeout;
+    axios.defaults.headers.common['User-Agent'] = 'LuminaKraft-Launcher/1.0.0';
   }
 
   private loadUserSettings(): UserSettings {
@@ -46,14 +60,85 @@ class LauncherService {
     return { ...this.userSettings };
   }
 
+  async checkAPIHealth(): Promise<boolean> {
+    try {
+      const baseUrl = this.userSettings.launcherDataUrl.replace('/v1/launcher_data.json', '');
+      const response = await axios.get(`${baseUrl}/health`, {
+        timeout: 5000
+      });
+      return response.data.status === 'ok';
+    } catch (error) {
+      console.error('API health check failed:', error);
+      return false;
+    }
+  }
+
+  private getFallbackData(): LauncherData {
+    return {
+      launcherVersion: "1.0.0",
+      launcherDownloadUrls: {
+        windows: "https://github.com/luminakraft/launcher/releases/latest/download/setup.exe",
+        macos: "https://github.com/luminakraft/launcher/releases/latest/download/app.dmg",
+        linux: "https://github.com/luminakraft/launcher/releases/latest/download/app.AppImage"
+      },
+      modpacks: []
+    };
+  }
+
   async fetchLauncherData(): Promise<LauncherData> {
     try {
-      const response = await axios.get<LauncherData>(this.userSettings.launcherDataUrl);
+      const cacheKey = 'launcher_data';
+      const cached = this.cache.get(cacheKey);
+      
+      // Verificar caché
+      if (cached && Date.now() - cached.timestamp < this.cacheTTL) {
+        this.launcherData = cached.data;
+        return cached.data;
+      }
+
+      // Verificar salud de la API primero
+      const isAPIHealthy = await this.checkAPIHealth();
+      if (!isAPIHealthy) {
+        console.warn('API health check failed, using cached data if available');
+        if (cached) {
+          this.launcherData = cached.data;
+          return cached.data;
+        }
+        throw new Error('API no disponible y no hay datos en caché');
+      }
+
+      const response = await axios.get<LauncherData>(this.userSettings.launcherDataUrl, {
+        headers: {
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache'
+        }
+      });
+
       this.launcherData = response.data;
+      
+      // Guardar en caché
+      this.cache.set(cacheKey, {
+        data: response.data,
+        timestamp: Date.now()
+      });
+
       return response.data;
     } catch (error) {
       console.error('Error fetching launcher data:', error);
-      throw new Error('No se pudo obtener los datos del launcher. Verifica tu conexión a internet.');
+      
+      // Intentar usar datos en caché como fallback
+      const cached = this.cache.get('launcher_data');
+      if (cached) {
+        console.warn('Using cached data as fallback');
+        this.launcherData = cached.data;
+        return cached.data;
+      }
+
+      // Último recurso: datos de fallback
+      console.warn('Using fallback data');
+      const fallback = this.getFallbackData();
+      this.launcherData = fallback;
+      return fallback;
     }
   }
 
@@ -182,6 +267,23 @@ class LauncherService {
     }
 
     return false;
+  }
+
+  // Método para limpiar caché manualmente
+  clearCache(): void {
+    this.cache.clear();
+  }
+
+  // Método para obtener información de la API
+  async getAPIInfo(): Promise<any> {
+    try {
+      const baseUrl = this.userSettings.launcherDataUrl.replace('/v1/launcher_data.json', '');
+      const response = await axios.get(`${baseUrl}/v1/info`);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting API info:', error);
+      return null;
+    }
   }
 }
 

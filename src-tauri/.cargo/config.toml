@@ -1,0 +1,18 @@
+[build]
+# Optimize development builds
+rustflags = ["-C", "opt-level=1"]
+
+[profile.dev]
+# Faster builds in development
+opt-level = 1
+debug = true
+split-debuginfo = "unpacked"
+incremental = true
+
+[profile.dev.package."*"]
+# Don't optimize dependencies in dev builds
+opt-level = 0
+
+[target.x86_64-pc-windows-msvc]
+# Windows-specific optimizations
+rustflags = ["-C", "target-cpu=native"] 

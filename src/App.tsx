@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { LauncherProvider } from './contexts/LauncherContext';
 import Sidebar from './components/Layout/Sidebar';
 import ModpacksPage from './components/Modpacks/ModpacksPage';

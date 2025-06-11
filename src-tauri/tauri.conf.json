@@ -23,7 +23,8 @@
     ],
     "security": {
       "csp": null
-    }
+    },
+    "trayIcon": null
   },
   "bundle": {
     "active": true,
