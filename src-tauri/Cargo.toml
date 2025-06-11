@@ -1,0 +1,29 @@
+[package]
+name = "luminakraft-launcher"
+version = "1.0.0"
+description = "LuminaKraft Studios Official Modpack Launcher"
+authors = ["LuminaKraft Studios"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-http = "2"
+tauri-plugin-shell = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.11", features = ["json", "stream"] }
+zip = "0.6"
+anyhow = "1.0"
+dirs = "5.0"
+uuid = { version = "1.0", features = ["v4"] }
+futures-util = "0.3"
+chrono = { version = "0.4", features = ["serde"] }
+
