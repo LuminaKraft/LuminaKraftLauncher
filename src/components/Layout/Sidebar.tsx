@@ -1,6 +1,5 @@
 import React from 'react';
 import { Home, Settings, Info, AlertCircle } from 'lucide-react';
-import { useLauncher } from '../../contexts/LauncherContext';
 
 interface SidebarProps {
   activeSection: string;
@@ -88,7 +87,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
       <div className="p-4 border-t border-dark-700">
         <div className="text-center">
           <p className="text-dark-400 text-xs">
-            © 2024 LuminaKraft Studios
+            © 2025 LuminaKraft Studios
           </p>
           <p className="text-dark-500 text-xs mt-1">
             Versión 1.0.0

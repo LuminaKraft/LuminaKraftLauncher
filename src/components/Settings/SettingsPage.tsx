@@ -4,7 +4,7 @@ import { useLauncher } from '../../contexts/LauncherContext';
 import LauncherService from '../../services/launcherService';
 
 const SettingsPage: React.FC = () => {
-  const { userSettings, updateUserSettings, translations, currentLanguage, changeLanguage } = useLauncher();
+  const { userSettings, updateUserSettings, currentLanguage, changeLanguage } = useLauncher();
   
   const [formData, setFormData] = useState(userSettings);
   const [hasChanges, setHasChanges] = useState(false);
@@ -12,7 +12,7 @@ const SettingsPage: React.FC = () => {
   const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const [apiInfo, setApiInfo] = useState<any>(null);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
-  const [availableLanguages, setAvailableLanguages] = useState<string[]>(['es', 'en']);
+
 
   useEffect(() => {
     setFormData(userSettings);
@@ -51,7 +51,8 @@ const SettingsPage: React.FC = () => {
   const fetchAvailableLanguages = async () => {
     try {
       const languageData = await LauncherService.getInstance().getAvailableLanguages();
-      setAvailableLanguages(languageData.availableLanguages);
+      // TODO: Implement dynamic language loading
+      console.log('Available languages:', languageData.availableLanguages);
     } catch (error) {
       console.error('Error fetching available languages:', error);
     }

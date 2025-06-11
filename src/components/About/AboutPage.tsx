@@ -1,6 +1,5 @@
 import React from 'react';
 import { Download, ExternalLink, Heart, Globe } from 'lucide-react';
-import { useLauncher } from '../../contexts/LauncherContext';
 
 const AboutPage: React.FC = () => {
   // Temporalmente removemos hasUpdate y updateUrl hasta implementar la funcionalidad
