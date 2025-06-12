@@ -162,16 +162,33 @@ jobs:
       # Nota: Construyendo sin firma de Apple para compatibilidad simplificada
 
       - name: Build Tauri app (Apple Silicon - ARM64)
-        run: npx tauri build --target aarch64-apple-darwin
+        run: |
+          # Configurar para evitar problemas de validación/codesign
+          mkdir -p ~/.tauri
+          cat > ~/.tauri/settings.json << EOL
+          {
+            "macOSCodeSign": {
+              "identity": null,
+              "hardened": false
+            }
+          }
+          EOL
+          
+          # Realizar la compilación con flags adicionales
+          npx tauri build --target aarch64-apple-darwin -- --features=macos-no-sign
         env:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+          MACOSX_DEPLOYMENT_TARGET: "10.13"
 
       - name: Build Tauri app (Intel - x86_64)
-        run: npx tauri build --target x86_64-apple-darwin
+        run: |
+          # Usar la misma configuración que para ARM
+          npx tauri build --target x86_64-apple-darwin -- --features=macos-no-sign
         env:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+          MACOSX_DEPLOYMENT_TARGET: "10.13"
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4

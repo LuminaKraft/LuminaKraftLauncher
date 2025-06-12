@@ -16,6 +16,10 @@ tauri-plugin-opener = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-http = "2"
 tauri-plugin-shell = "2"
+
+[features]
+default = []
+macos-no-sign = []
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["full"] }
