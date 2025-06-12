@@ -1,4 +1,5 @@
 import { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { LauncherData, ModpackState, UserSettings, Translations, ModpackFeatures } from '../types/launcher';
 import LauncherService from '../services/launcherService';
 
@@ -104,6 +105,7 @@ const LauncherContext = createContext<LauncherContextType | undefined>(undefined
 export function LauncherProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(launcherReducer, initialState);
   const launcherService = LauncherService.getInstance();
+  const { i18n } = useTranslation();
 
   // Cargar configuración del usuario al inicializar
   useEffect(() => {
@@ -112,6 +114,9 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
         const settings = launcherService.getUserSettings();
         dispatch({ type: 'SET_USER_SETTINGS', payload: settings });
         dispatch({ type: 'SET_LANGUAGE', payload: settings.language });
+        
+        // Sincronizar el idioma con react-i18next
+        await i18n.changeLanguage(settings.language);
         
         // Cargar datos iniciales
         await refreshData();
@@ -202,36 +207,74 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
 
   const changeLanguage = async (language: string) => {
     try {
-      await launcherService.changeLanguage(language);
+      // Cambiar el idioma en react-i18next
+      await i18n.changeLanguage(language);
+      
+      // Actualizar el estado local
       dispatch({ type: 'SET_LANGUAGE', payload: language });
       updateUserSettings({ language });
       
-      // Recargar traducciones
-      const translations = await launcherService.getTranslations(language);
-      dispatch({ type: 'SET_TRANSLATIONS', payload: translations });
+      // Limpiar caché completamente para forzar recarga de todos los datos
+      launcherService.clearCache();
       
-      // Recargar características de modpacks en el nuevo idioma
-      if (state.launcherData) {
-        for (const modpack of state.launcherData.modpacks) {
-          const features = await launcherService.getModpackFeatures(modpack.id, language);
-          const currentState = state.modpackStates[modpack.id];
-          
-          if (currentState) {
-            dispatch({
-              type: 'SET_MODPACK_STATE',
-              payload: {
-                id: modpack.id,
-                state: {
-                  ...currentState,
-                  features: features?.features || []
+      // Activar estado de carga mientras se recargan los datos
+      dispatch({ type: 'SET_LOADING', payload: true });
+      dispatch({ type: 'SET_ERROR', payload: null });
+      
+      try {
+        // Recargar datos del launcher y traducciones del servidor
+        const [launcherData, translations] = await Promise.all([
+          launcherService.fetchLauncherData(),
+          launcherService.getTranslations(language)
+        ]);
+
+        dispatch({ type: 'SET_LAUNCHER_DATA', payload: launcherData });
+        dispatch({ type: 'SET_TRANSLATIONS', payload: translations });
+        
+        // Recargar estados y características de todos los modpacks en el nuevo idioma
+        if (launcherData) {
+          for (const modpack of launcherData.modpacks) {
+            try {
+              const [status, modpackTranslations, features] = await Promise.all([
+                launcherService.getModpackStatus(modpack.id),
+                getModpackTranslations(modpack.id),
+                launcherService.getModpackFeatures(modpack.id, language)
+              ]);
+
+              dispatch({
+                type: 'SET_MODPACK_STATE',
+                payload: {
+                  id: modpack.id,
+                  state: {
+                    status,
+                    translations: modpackTranslations || undefined,
+                    features: features?.features || []
+                  },
                 },
-              },
-            });
+              });
+            } catch (modpackError) {
+              console.warn(`Error loading data for modpack ${modpack.id}:`, modpackError);
+              // En caso de error, mantener un estado básico
+              dispatch({
+                type: 'SET_MODPACK_STATE',
+                payload: {
+                  id: modpack.id,
+                  state: { status: 'error', error: 'Error al cargar datos del modpack' },
+                },
+              });
+            }
           }
         }
+      } catch (dataError) {
+        console.error('Error reloading data after language change:', dataError);
+        dispatch({ type: 'SET_ERROR', payload: 'Error al cargar datos en el nuevo idioma' });
+      } finally {
+        dispatch({ type: 'SET_LOADING', payload: false });
       }
     } catch (error) {
       console.error('Error changing language:', error);
+      dispatch({ type: 'SET_LOADING', payload: false });
+      throw error;
     }
   };
 

@@ -42,12 +42,32 @@ class LauncherService {
     axios.defaults.headers.common['User-Agent'] = 'LuminaKraft-Launcher/1.0.0';
   }
 
+  private detectDefaultLanguage(): string {
+    // Check if user has manually set a language preference
+    const storedLanguage = localStorage.getItem('luminakraft-language');
+    if (storedLanguage && ['es', 'en'].includes(storedLanguage)) {
+      return storedLanguage;
+    }
+
+    // Detect browser language - same logic as i18n
+    const browserLanguage = navigator.language || (navigator as any).languages?.[0];
+    if (browserLanguage) {
+      // If any Spanish variant (es, es-ES, es-MX, es-AR, etc.), use Spanish
+      if (browserLanguage.toLowerCase().startsWith('es')) {
+        return 'es';
+      }
+    }
+
+    // Default to English for all other languages
+    return 'en';
+  }
+
   private loadUserSettings(): UserSettings {
     const defaultSettings: UserSettings = {
       username: 'Player',
       allocatedRam: 4,
       launcherDataUrl: 'https://api.luminakraft.com/v1/launcher_data.json',
-      language: 'es'
+      language: this.detectDefaultLanguage()
     };
 
     try {
@@ -405,7 +425,10 @@ class LauncherService {
     this.userSettings.language = language;
     this.saveUserSettings({ language });
     
-    // Limpiar caché de traducciones para forzar recarga
+    // Actualizar localStorage para i18n
+    localStorage.setItem('luminakraft-language', language);
+    
+    // Limpiar caché de traducciones y características para forzar recarga completa
     const keysToDelete = Array.from(this.cache.keys()).filter(key => 
       key.startsWith('translations_') || key.startsWith('features_')
     );

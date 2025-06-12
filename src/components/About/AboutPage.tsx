@@ -1,7 +1,9 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Download, ExternalLink, Heart, Globe } from 'lucide-react';
 
 const AboutPage: React.FC = () => {
+  const { t } = useTranslation();
   // Temporalmente removemos hasUpdate y updateUrl hasta implementar la funcionalidad
   const hasUpdate = false;
   const updateUrl = null;
@@ -17,9 +19,9 @@ const AboutPage: React.FC = () => {
       <div className="p-6">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-white text-2xl font-bold mb-2">Acerca de</h1>
+          <h1 className="text-white text-2xl font-bold mb-2">{t('about.title')}</h1>
           <p className="text-dark-400">
-            Información sobre el LuminaKraft Launcher
+            {t('about.description')}
           </p>
         </div>
 
@@ -34,18 +36,17 @@ const AboutPage: React.FC = () => {
               <div className="flex-1">
                 <h2 className="text-white text-2xl font-bold mb-2">LuminaKraft Launcher</h2>
                 <p className="text-dark-300 mb-4">
-                  Un lanzador de modpacks personalizado para la comunidad de LuminaKraft Studios. 
-                  Diseñado para hacer que la instalación y gestión de modpacks sea simple y eficiente.
+                  {t('about.descriptionLong')}
                 </p>
                 
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <span className="text-dark-400">Versión:</span>
-                    <p className="text-white font-mono">1.0.0</p>
+                    <span className="text-dark-400">{t('about.versionLabel')}</span>
+                    <p className="text-white font-mono">{t('about.version', { version: '0.0.2' })}</p>
                   </div>
                   <div>
-                    <span className="text-dark-400">Tecnologías:</span>
-                    <p className="text-white">Tauri + React + TypeScript</p>
+                    <span className="text-dark-400">{t('about.technologies')}</span>
+                    <p className="text-white">{t('about.technologiesValue')}</p>
                   </div>
                 </div>
               </div>
@@ -58,10 +59,10 @@ const AboutPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-yellow-400 font-semibold text-lg mb-2">
-                    Nueva actualización disponible
+                    {t('about.newUpdate')}
                   </h3>
                   <p className="text-yellow-300">
-                    Hay una nueva versión del launcher disponible para descargar.
+                    {t('about.newUpdateDesc')}
                   </p>
                 </div>
                 <button
@@ -69,7 +70,7 @@ const AboutPage: React.FC = () => {
                   className="btn-warning"
                 >
                   <Download className="w-4 h-4 mr-2" />
-                  Descargar
+                  {t('about.download')}
                 </button>
               </div>
             </div>
@@ -77,28 +78,28 @@ const AboutPage: React.FC = () => {
 
           {/* Features */}
           <div className="card">
-            <h3 className="text-white font-semibold text-xl mb-4">Características</h3>
+            <h3 className="text-white font-semibold text-xl mb-4">{t('about.features')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-3">
                 <div className="flex items-start space-x-3">
                   <div className="w-2 h-2 bg-lumina-500 rounded-full mt-2 flex-shrink-0" />
                   <div>
-                    <p className="text-white font-medium">Instalación automática</p>
-                    <p className="text-dark-400 text-sm">Descarga e instala modpacks automáticamente</p>
+                    <p className="text-white font-medium">{t('about.feature1')}</p>
+                    <p className="text-dark-400 text-sm">{t('about.feature1Desc')}</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
                   <div className="w-2 h-2 bg-lumina-500 rounded-full mt-2 flex-shrink-0" />
                   <div>
-                    <p className="text-white font-medium">Actualizaciones automáticas</p>
-                    <p className="text-dark-400 text-sm">Mantén tus modpacks siempre actualizados</p>
+                    <p className="text-white font-medium">{t('about.feature2')}</p>
+                    <p className="text-dark-400 text-sm">{t('about.feature2Desc')}</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
                   <div className="w-2 h-2 bg-lumina-500 rounded-full mt-2 flex-shrink-0" />
                   <div>
-                    <p className="text-white font-medium">Gestión de instancias</p>
-                    <p className="text-dark-400 text-sm">Cada modpack en su propia carpeta</p>
+                    <p className="text-white font-medium">{t('about.feature3')}</p>
+                    <p className="text-dark-400 text-sm">{t('about.feature3Desc')}</p>
                   </div>
                 </div>
               </div>
@@ -106,22 +107,22 @@ const AboutPage: React.FC = () => {
                 <div className="flex items-start space-x-3">
                   <div className="w-2 h-2 bg-lumina-500 rounded-full mt-2 flex-shrink-0" />
                   <div>
-                    <p className="text-white font-medium">Compatible offline</p>
-                    <p className="text-dark-400 text-sm">Funciona con cuentas premium y no premium</p>
+                    <p className="text-white font-medium">{t('about.feature4')}</p>
+                    <p className="text-dark-400 text-sm">{t('about.feature4Desc')}</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
                   <div className="w-2 h-2 bg-lumina-500 rounded-full mt-2 flex-shrink-0" />
                   <div>
-                    <p className="text-white font-medium">Multiplataforma</p>
-                    <p className="text-dark-400 text-sm">Windows, macOS y Linux</p>
+                    <p className="text-white font-medium">{t('about.feature7')}</p>
+                    <p className="text-dark-400 text-sm">{t('about.feature7Desc')}</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
                   <div className="w-2 h-2 bg-lumina-500 rounded-full mt-2 flex-shrink-0" />
                   <div>
-                    <p className="text-white font-medium">Interfaz moderna</p>
-                    <p className="text-dark-400 text-sm">Diseño intuitivo y fácil de usar</p>
+                    <p className="text-white font-medium">{t('about.feature9')}</p>
+                    <p className="text-dark-400 text-sm">{t('about.feature9Desc')}</p>
                   </div>
                 </div>
               </div>
@@ -130,18 +131,18 @@ const AboutPage: React.FC = () => {
 
           {/* Credits */}
           <div className="card">
-            <h3 className="text-white font-semibold text-xl mb-4">Créditos</h3>
+            <h3 className="text-white font-semibold text-xl mb-4">{t('about.credits')}</h3>
             <div className="space-y-4">
               <div>
-                <h4 className="text-lumina-400 font-medium mb-2">Desarrollado con</h4>
+                <h4 className="text-lumina-400 font-medium mb-2">{t('about.developedWith')}</h4>
                 <div className="flex items-center space-x-2 text-dark-300">
                   <Heart className="w-4 h-4 text-red-500" />
-                  <span>por el equipo de LuminaKraft Studios</span>
+                  <span>{t('about.byTeam')}</span>
                 </div>
               </div>
               
               <div>
-                <h4 className="text-lumina-400 font-medium mb-2">Tecnologías utilizadas</h4>
+                <h4 className="text-lumina-400 font-medium mb-2">{t('about.technologiesUsed')}</h4>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm text-dark-300">
                   <span>• Tauri (Framework)</span>
                   <span>• React (UI)</span>
@@ -156,7 +157,7 @@ const AboutPage: React.FC = () => {
 
           {/* Links */}
           <div className="card">
-            <h3 className="text-white font-semibold text-xl mb-4">Enlaces</h3>
+            <h3 className="text-white font-semibold text-xl mb-4">{t('about.links')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <a
                 href="https://luminakraft.com"
@@ -167,7 +168,7 @@ const AboutPage: React.FC = () => {
                 <Globe className="w-5 h-5 text-lumina-500" />
                 <div className="flex-1">
                   <p className="text-white font-medium group-hover:text-lumina-400 transition-colors">
-                    Sitio Web Oficial
+                    {t('about.officialWebsite')}
                   </p>
                   <p className="text-dark-400 text-sm">luminakraft.com</p>
                 </div>
@@ -185,9 +186,9 @@ const AboutPage: React.FC = () => {
                 </div>
                 <div className="flex-1">
                   <p className="text-white font-medium group-hover:text-lumina-400 transition-colors">
-                    Discord
+                    {t('about.discord')}
                   </p>
-                  <p className="text-dark-400 text-sm">Únete a nuestra comunidad</p>
+                  <p className="text-dark-400 text-sm">{t('about.joinCommunity')}</p>
                 </div>
                 <ExternalLink className="w-4 h-4 text-dark-400" />
               </a>
@@ -197,10 +198,10 @@ const AboutPage: React.FC = () => {
           {/* Footer */}
           <div className="text-center py-8">
             <p className="text-dark-400 text-sm">
-              © 2024 LuminaKraft Studios. Todos los derechos reservados.
+              {t('about.copyright')}
             </p>
             <p className="text-dark-500 text-xs mt-1">
-              Minecraft es una marca registrada de Mojang Studios
+              {t('about.minecraftTrademark')}
             </p>
           </div>
         </div>

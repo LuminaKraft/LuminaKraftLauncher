@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Calendar, Package, Cpu, HardDrive, Users, Globe, Star, Image } from 'lucide-react';
 import type { Modpack, ModpackState } from '../../types/launcher';
 import { useLauncher } from '../../contexts/LauncherContext';
@@ -11,6 +12,7 @@ interface ModpackDetailsProps {
 }
 
 const ModpackDetails: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack }) => {
+  const { t } = useTranslation();
   const { translations } = useLauncher();
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
@@ -79,7 +81,7 @@ const ModpackDetails: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack 
   // Obtener traducciones del modpack
   const modpackTranslations = state.translations;
   const displayName = modpackTranslations?.name || modpack.name;
-  const displayDescription = modpackTranslations?.description || 'Descripción no disponible';
+  const displayDescription = modpackTranslations?.description || t('modpacks.descriptionNotAvailable');
   const features = state.features || [];
   const statusInfo = getServerStatusInfo();
   const isVanillaServer = modpack.modloader === 'vanilla' || modpack.modloader === 'paper';
@@ -93,7 +95,7 @@ const ModpackDetails: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack 
           className="flex items-center space-x-2 text-dark-400 hover:text-white transition-colors mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Volver a la lista</span>
+          <span>{t('navigation.backToList')}</span>
         </button>
         
         <div className="flex items-start space-x-6">
@@ -146,7 +148,7 @@ const ModpackDetails: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack 
               <div className="mt-4 p-3 bg-dark-700 rounded-lg">
                 <div className="flex items-center space-x-2">
                   <Globe className="w-4 h-4 text-lumina-400" />
-                  <span className="text-white font-medium">IP del Servidor:</span>
+                  <span className="text-white font-medium">{t('modpacks.serverIPLabel')}</span>
                   <code className="text-lumina-400 bg-dark-800 px-2 py-1 rounded text-sm">{modpack.ip}</code>
                 </div>
               </div>
@@ -162,7 +164,7 @@ const ModpackDetails: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack 
           <div className="lg:col-span-1 space-y-6">
             {/* Action Card */}
             <div className="card">
-              <h3 className="text-white font-semibold text-lg mb-4">Acciones</h3>
+              <h3 className="text-white font-semibold text-lg mb-4">{t('modpacks.actions')}</h3>
               <ModpackCard
                 modpack={modpack}
                 state={state}
@@ -172,15 +174,15 @@ const ModpackDetails: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack 
 
             {/* System Requirements */}
             <div className="card">
-              <h3 className="text-white font-semibold text-lg mb-4">Requerimientos</h3>
+              <h3 className="text-white font-semibold text-lg mb-4">{t('modpacks.requirements')}</h3>
               <div className="space-y-3">
                 <div>
-                  <span className="text-dark-400 text-sm">RAM Recomendada:</span>
-                  <p className="text-white">4 GB mínimo, 8 GB recomendado</p>
+                  <span className="text-dark-400 text-sm">{t('modpacks.recommendedRAM')}</span>
+                  <p className="text-white">{t('modpacks.ramMinRecommended', { min: 4, recommended: 8 })}</p>
                 </div>
                 {modpack.jvmArgsRecomendados && (
                   <div>
-                    <span className="text-dark-400 text-sm">JVM Args Recomendados:</span>
+                    <span className="text-dark-400 text-sm">{t('modpacks.recommendedJVMArgs')}</span>
                     <p className="text-white text-xs bg-dark-700 p-2 rounded mt-1 font-mono break-all">
                       {modpack.jvmArgsRecomendados}
                     </p>
@@ -194,7 +196,7 @@ const ModpackDetails: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack 
               <div className="card">
                 <h3 className="text-white font-semibold text-lg mb-4 flex items-center space-x-2">
                   <Users className="w-5 h-5" />
-                  <span>Colaboradores</span>
+                  <span>{t('modpacks.contributors')}</span>
                 </h3>
                 <div className="space-y-3">
                   {modpack.collaborators.map((collaborator, index) => (
@@ -225,7 +227,7 @@ const ModpackDetails: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack 
               <div className="card">
                 <h3 className="text-white font-semibold text-lg mb-4 flex items-center space-x-2">
                   <Image className="w-5 h-5" />
-                  <span>Galería</span>
+                  <span>{t('modpacks.gallery')}</span>
                 </h3>
                 
                 <div className="space-y-4">
@@ -233,7 +235,7 @@ const ModpackDetails: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack 
                   <div className="aspect-video rounded-lg overflow-hidden bg-dark-700">
                     <img
                       src={modpack.images[selectedImageIndex]}
-                      alt={`${displayName} - Imagen ${selectedImageIndex + 1}`}
+                      alt={t('modpacks.imageGallery', { index: selectedImageIndex + 1, total: modpack.images.length })}
                       className="w-full h-full object-cover"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
@@ -273,7 +275,7 @@ const ModpackDetails: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack 
               <div className="card">
                 <h3 className="text-white font-semibold text-lg mb-4 flex items-center space-x-2">
                   <Star className="w-5 h-5" />
-                  <span>Características</span>
+                  <span>{t('modpacks.features')}</span>
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {features.map((feature, index) => (
@@ -289,7 +291,7 @@ const ModpackDetails: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack 
             {/* Multimedia Content */}
             {(modpack.youtubeEmbed || modpack.tiktokEmbed) && (
               <div className="card">
-                <h3 className="text-white font-semibold text-lg mb-4">Contenido Multimedia</h3>
+                <h3 className="text-white font-semibold text-lg mb-4">{t('modpacks.multimedia')}</h3>
                 <div className="space-y-4">
                   {modpack.youtubeEmbed && (
                     <div className="aspect-video rounded-lg overflow-hidden">
@@ -315,7 +317,7 @@ const ModpackDetails: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack 
                             title={displayName}
                             href={`https://www.tiktok.com/@user/video/${modpack.tiktokEmbed}`}
                           >
-                            Ver en TikTok
+                            {t('modpacks.viewOnTikTok')}
                           </a>
                         </section>
                       </blockquote>
@@ -329,7 +331,7 @@ const ModpackDetails: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack 
             <div className="card">
               <h3 className="text-white font-semibold text-lg mb-4 flex items-center space-x-2">
                 <Calendar className="w-5 h-5" />
-                <span>Historial de Cambios</span>
+                <span>{t('modpacks.changelog')}</span>
               </h3>
               <div className="max-h-96 overflow-y-auto">
                 {modpack.changelog ? (
@@ -338,7 +340,7 @@ const ModpackDetails: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack 
                   </div>
                 ) : (
                   <p className="text-dark-400 italic">
-                    No hay información de cambios disponible.
+                    {t('modpacks.noChangelogAvailable')}
                   </p>
                 )}
               </div>

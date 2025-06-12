@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { User, HardDrive, Coffee, Globe, Save, FolderOpen, CheckCircle, Wifi, WifiOff, RefreshCw, Trash2, Server, Languages } from 'lucide-react';
 import { useLauncher } from '../../contexts/LauncherContext';
 import LauncherService from '../../services/launcherService';
 
 const SettingsPage: React.FC = () => {
+  const { t } = useTranslation();
   const { userSettings, updateUserSettings, currentLanguage, changeLanguage } = useLauncher();
   
   const [formData, setFormData] = useState(userSettings);
@@ -134,11 +136,11 @@ const SettingsPage: React.FC = () => {
   const getStatusText = () => {
     switch (apiStatus) {
       case 'checking':
-        return 'Verificando...';
+        return t('settings.checking');
       case 'online':
-        return 'Conectado';
+        return t('settings.connected');
       case 'offline':
-        return 'Sin conexión';
+        return t('settings.disconnected');
     }
   };
 
@@ -158,9 +160,9 @@ const SettingsPage: React.FC = () => {
       <div className="p-6">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-white text-2xl font-bold mb-2">Configuración</h1>
+          <h1 className="text-white text-2xl font-bold mb-2">{t('settings.title')}</h1>
           <p className="text-dark-400">
-            Personaliza tu experiencia con el LuminaKraft Launcher
+            {t('settings.settingsDescription')}
           </p>
         </div>
 
@@ -170,7 +172,7 @@ const SettingsPage: React.FC = () => {
             <div className="flex items-center space-x-2">
               <CheckCircle className="w-5 h-5 text-green-500" />
               <span className="text-green-400 font-medium">
-                Operación completada exitosamente
+                {t('settings.saved')}
               </span>
             </div>
           </div>
@@ -181,13 +183,13 @@ const SettingsPage: React.FC = () => {
           <div className="card">
             <div className="flex items-center space-x-3 mb-6">
               <Languages className="w-6 h-6 text-lumina-500" />
-              <h2 className="text-white text-xl font-semibold">Idioma</h2>
+              <h2 className="text-white text-xl font-semibold">{t('settings.language')}</h2>
             </div>
             
             <div className="space-y-4">
               <div>
                 <label className="block text-dark-300 text-sm font-medium mb-2">
-                  Idioma del launcher
+                  {t('settings.selectLanguage')}
                 </label>
                 <div className="flex items-center space-x-4">
                   <select
@@ -202,11 +204,11 @@ const SettingsPage: React.FC = () => {
                     ))}
                   </select>
                   <div className="text-dark-400 text-sm">
-                    <p>Idioma actual: {languageOptions.find(l => l.value === currentLanguage)?.name}</p>
+                    <p>{t('settings.currentLanguage', { language: languageOptions.find(l => l.value === currentLanguage)?.name })}</p>
                   </div>
                 </div>
                 <p className="text-dark-400 text-xs mt-1">
-                  Los cambios de idioma se aplicarán inmediatamente en toda la aplicación
+                  {t('settings.languageDescription')}
                 </p>
               </div>
             </div>
@@ -216,7 +218,7 @@ const SettingsPage: React.FC = () => {
           <div className="card">
             <div className="flex items-center space-x-3 mb-6">
               <Server className="w-6 h-6 text-lumina-500" />
-              <h2 className="text-white text-xl font-semibold">Estado de la API</h2>
+              <h2 className="text-white text-xl font-semibold">{t('settings.api')}</h2>
             </div>
             
             <div className="space-y-4">
@@ -238,18 +240,18 @@ const SettingsPage: React.FC = () => {
                   className="btn-secondary"
                 >
                   <RefreshCw className={`w-4 h-4 mr-2 ${isTestingConnection ? 'animate-spin' : ''}`} />
-                  Probar conexión
+                  {t('settings.testConnection')}
                 </button>
               </div>
 
               {apiInfo && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="p-4 bg-dark-700 rounded-lg">
-                    <p className="text-dark-300 text-sm font-medium mb-1">Versión de la API</p>
+                    <p className="text-dark-300 text-sm font-medium mb-1">{t('settings.apiVersion')}</p>
                     <p className="text-white">{apiInfo.version}</p>
                   </div>
                   <div className="p-4 bg-dark-700 rounded-lg">
-                    <p className="text-dark-300 text-sm font-medium mb-1">Descripción</p>
+                    <p className="text-dark-300 text-sm font-medium mb-1">{t('settings.description')}</p>
                     <p className="text-white text-sm">{apiInfo.description}</p>
                   </div>
                 </div>
@@ -257,7 +259,7 @@ const SettingsPage: React.FC = () => {
 
               {apiInfo && apiInfo.endpoints && (
                 <div className="p-4 bg-dark-700 rounded-lg">
-                  <p className="text-dark-300 text-sm font-medium mb-3">Endpoints Disponibles</p>
+                  <p className="text-dark-300 text-sm font-medium mb-3">{t('settings.availableEndpoints')}</p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
                     {apiInfo.endpoints.map((endpoint: string, index: number) => (
                       <div key={index} className="text-lumina-400 font-mono">
@@ -274,10 +276,10 @@ const SettingsPage: React.FC = () => {
                   className="btn-secondary"
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
-                  Limpiar caché
+                  {t('settings.clearCache')}
                 </button>
                 <p className="text-dark-400 text-sm">
-                  Limpia los datos almacenados localmente para forzar una actualización
+                  {t('settings.clearCacheDesc')}
                 </p>
               </div>
             </div>
@@ -287,23 +289,23 @@ const SettingsPage: React.FC = () => {
           <div className="card">
             <div className="flex items-center space-x-3 mb-6">
               <User className="w-6 h-6 text-lumina-500" />
-              <h2 className="text-white text-xl font-semibold">Usuario</h2>
+              <h2 className="text-white text-xl font-semibold">{t('settings.general')}</h2>
             </div>
             
             <div className="space-y-4">
               <div>
                 <label className="block text-dark-300 text-sm font-medium mb-2">
-                  Nombre de usuario
+                  {t('settings.username')}
                 </label>
                 <input
                   type="text"
                   value={formData.username}
                   onChange={(e) => handleInputChange('username', e.target.value)}
-                  placeholder="Introduce tu nombre de usuario"
+                  placeholder={t('settings.usernamePlaceholder')}
                   className="input-field w-full max-w-md"
                 />
                 <p className="text-dark-400 text-xs mt-1">
-                  Este nombre se usará para el modo offline de Minecraft
+                  {t('settings.usernameDescription')}
                 </p>
               </div>
             </div>
@@ -313,13 +315,13 @@ const SettingsPage: React.FC = () => {
           <div className="card">
             <div className="flex items-center space-x-3 mb-6">
               <HardDrive className="w-6 h-6 text-lumina-500" />
-              <h2 className="text-white text-xl font-semibold">Rendimiento</h2>
+              <h2 className="text-white text-xl font-semibold">{t('settings.performance')}</h2>
             </div>
             
             <div className="space-y-6">
               <div>
                 <label className="block text-dark-300 text-sm font-medium mb-2">
-                  Memoria RAM asignada
+                  {t('settings.ramAllocationLabel')}
                 </label>
                 <div className="flex items-center space-x-4">
                   <select
@@ -334,13 +336,12 @@ const SettingsPage: React.FC = () => {
                     ))}
                   </select>
                   <div className="text-dark-400 text-sm">
-                    <p>Recomendado: 4-8 GB para la mayoría de modpacks</p>
+                    <p>{t('settings.ramRecommended')}</p>
                   </div>
                 </div>
                 <div className="mt-3 p-3 bg-dark-700 rounded-lg">
                   <p className="text-dark-300 text-sm">
-                    <strong>Nota:</strong> Asignar demasiada RAM puede ser contraproducente. 
-                    La mayoría de modpacks funcionan bien con 4-8 GB.
+                    <strong>{t('app.note')}:</strong> {t('settings.ramNote')}
                   </p>
                 </div>
               </div>
@@ -351,32 +352,32 @@ const SettingsPage: React.FC = () => {
           <div className="card">
             <div className="flex items-center space-x-3 mb-6">
               <Coffee className="w-6 h-6 text-lumina-500" />
-              <h2 className="text-white text-xl font-semibold">Java</h2>
+              <h2 className="text-white text-xl font-semibold">{t('settings.java')}</h2>
             </div>
             
             <div className="space-y-4">
               <div>
                 <label className="block text-dark-300 text-sm font-medium mb-2">
-                  Ruta de Java (Opcional)
+                  {t('settings.javaPathOptional')}
                 </label>
                 <div className="flex items-center space-x-2">
                   <input
                     type="text"
                     value={formData.javaPath || ''}
                     onChange={(e) => handleInputChange('javaPath', e.target.value)}
-                    placeholder="Automático (se detectará Java del sistema)"
+                    placeholder={t('settings.javaPathAuto')}
                     className="input-field flex-1"
                   />
                   <button
                     onClick={handleSelectJavaPath}
                     className="btn-secondary"
-                    title="Seleccionar archivo"
+                    title={t('settings.selectFolder')}
                   >
                     <FolderOpen className="w-4 h-4" />
                   </button>
                 </div>
                 <p className="text-dark-400 text-xs mt-1">
-                  Deja vacío para usar la detección automática de Java
+                  {t('settings.javaPathDescription')}
                 </p>
               </div>
             </div>
@@ -386,13 +387,13 @@ const SettingsPage: React.FC = () => {
           <div className="card">
             <div className="flex items-center space-x-3 mb-6">
               <Globe className="w-6 h-6 text-lumina-500" />
-              <h2 className="text-white text-xl font-semibold">Avanzado</h2>
+              <h2 className="text-white text-xl font-semibold">{t('settings.advanced')}</h2>
             </div>
             
             <div className="space-y-4">
               <div>
                 <label className="block text-dark-300 text-sm font-medium mb-2">
-                  URL de datos del launcher
+                  {t('settings.dataUrl')}
                 </label>
                 <input
                   type="url"
@@ -402,7 +403,7 @@ const SettingsPage: React.FC = () => {
                   className="input-field w-full"
                 />
                 <p className="text-dark-400 text-xs mt-1">
-                  URL donde se obtienen los datos de modpacks disponibles
+                  {t('settings.dataUrlDescription')}
                 </p>
               </div>
             </div>
@@ -413,14 +414,14 @@ const SettingsPage: React.FC = () => {
             <div className="sticky bottom-0 bg-dark-900 border-t border-dark-700 p-4 -mx-6">
               <div className="flex justify-between items-center">
                 <p className="text-dark-400 text-sm">
-                  Tienes cambios sin guardar
+                  {t('settings.unsavedChanges')}
                 </p>
                 <button
                   onClick={handleSave}
                   className="btn-primary"
                 >
                   <Save className="w-4 h-4 mr-2" />
-                  Guardar cambios
+                  {t('settings.saveChanges')}
                 </button>
               </div>
             </div>

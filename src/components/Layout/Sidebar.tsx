@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Home, Settings, Info, AlertCircle } from 'lucide-react';
 
 interface SidebarProps {
@@ -7,25 +8,26 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => {
+  const { t } = useTranslation();
   // Temporalmente removemos hasUpdate hasta implementar la funcionalidad
   const hasUpdate = false;
 
   const menuItems = [
     {
       id: 'home',
-      label: 'Modpacks',
+      label: t('navigation.modpacks'),
       icon: Home,
       description: 'Explora y gestiona tus modpacks'
     },
     {
       id: 'settings',
-      label: 'Configuración',
+      label: t('navigation.settings'),
       icon: Settings,
       description: 'Ajustes del launcher'
     },
     {
       id: 'about',
-      label: 'Acerca de',
+      label: t('navigation.about'),
       icon: Info,
       description: 'Información del launcher'
     }
@@ -52,11 +54,11 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
           <div className="flex items-center space-x-2">
             <AlertCircle className="w-4 h-4 text-yellow-500" />
             <span className="text-yellow-400 text-sm font-medium">
-              Actualización disponible
+              {t('notifications.updateAvailable')}
             </span>
           </div>
           <p className="text-yellow-300 text-xs mt-1">
-            Hay una nueva versión del launcher disponible
+            {t('about.updateAvailable', { version: '0.0.3' })}
           </p>
         </div>
       )}
@@ -90,7 +92,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
             © 2025 LuminaKraft Studios
           </p>
           <p className="text-dark-500 text-xs mt-1">
-            Versión 1.0.0
+            {t('app.version', { version: '0.0.2' })}
           </p>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Download, Play, RefreshCw, Wrench, AlertTriangle, Loader2, Globe, Copy } from 'lucide-react';
 import type { Modpack, ModpackState } from '../../types/launcher';
 import { useLauncher } from '../../contexts/LauncherContext';
@@ -10,6 +11,7 @@ interface ModpackCardProps {
 }
 
 const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) => {
+  const { t } = useTranslation();
   const { installModpack, updateModpack, launchModpack, repairModpack, translations } = useLauncher();
 
   const getServerStatusBadge = () => {
@@ -56,7 +58,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
     // Si es un servidor vanilla/paper con IP, mostrar botón de conectar
     if (isVanillaServer && modpack.ip) {
       return {
-        text: `Conectar (${modpack.ip})`,
+        text: `${t('modpacks.connect')} (${modpack.ip})`,
         icon: Globe,
         onClick: () => copyToClipboard(modpack.ip!),
         className: 'btn-secondary',
@@ -67,7 +69,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
     // Si no tiene modpack para descargar y no es servidor vanilla, deshabilitar
     if (!requiresModpack && !modpack.ip) {
       return {
-        text: 'No disponible',
+        text: t('modpacks.notAvailable'),
         icon: AlertTriangle,
         onClick: () => {},
         className: 'btn-secondary',
@@ -79,7 +81,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
     switch (state.status) {
       case 'not_installed':
         return {
-          text: 'Instalar',
+          text: t('modpacks.install'),
           icon: Download,
           onClick: () => installModpack(modpack.id),
           className: 'btn-primary',
@@ -87,7 +89,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
         };
       case 'installed':
         return {
-          text: 'Jugar',
+          text: t('modpacks.play'),
           icon: Play,
           onClick: () => launchModpack(modpack.id),
           className: 'btn-success',
@@ -95,7 +97,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
         };
       case 'outdated':
         return {
-          text: 'Actualizar',
+          text: t('modpacks.update'),
           icon: RefreshCw,
           onClick: () => updateModpack(modpack.id),
           className: 'btn-warning',
@@ -104,7 +106,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
       case 'installing':
       case 'updating':
         return {
-          text: state.status === 'installing' ? 'Instalando...' : 'Actualizando...',
+          text: state.status === 'installing' ? t('modpacks.installing') : t('modpacks.updating'),
           icon: Loader2,
           onClick: () => {},
           className: 'btn-secondary',
@@ -112,7 +114,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
         };
       case 'launching':
         return {
-          text: 'Lanzando...',
+          text: t('modpacks.launching'),
           icon: Loader2,
           onClick: () => {},
           className: 'btn-success',
@@ -120,7 +122,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
         };
       case 'error':
         return {
-          text: 'Reparar',
+          text: t('modpacks.repair'),
           icon: Wrench,
           onClick: () => repairModpack(modpack.id),
           className: 'btn-warning',
@@ -128,7 +130,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
         };
       default:
         return {
-          text: 'Instalar',
+          text: t('modpacks.install'),
           icon: Download,
           onClick: () => installModpack(modpack.id),
           className: 'btn-primary',
@@ -144,7 +146,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
   // Obtener traducciones del modpack
   const modpackTranslations = state.translations;
   const displayName = modpackTranslations?.name || modpack.name;
-  const displayDescription = modpackTranslations?.shortDescription || modpackTranslations?.description || 'Descripción no disponible';
+  const displayDescription = modpackTranslations?.shortDescription || modpackTranslations?.description || t('modpacks.description');
 
   return (
     <div className="card hover:bg-dark-700 transition-colors duration-200 cursor-pointer group">
@@ -188,7 +190,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
             {/* IP del servidor para vanilla/paper */}
             {isVanillaServer && modpack.ip && (
               <div className="mt-2 flex items-center space-x-2">
-                <span className="text-xs text-dark-400">IP:</span>
+                <span className="text-xs text-dark-400">{t('modpacks.serverIP')}</span>
                 <code className="text-xs bg-dark-700 px-2 py-1 rounded text-lumina-400">{modpack.ip}</code>
                 <button
                   onClick={(e) => {
@@ -196,7 +198,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
                     copyToClipboard(modpack.ip!);
                   }}
                   className="text-dark-400 hover:text-lumina-400 transition-colors"
-                  title="Copiar IP"
+                  title={t('modpacks.copyIP')}
                 >
                   <Copy className="w-3 h-3" />
                 </button>
