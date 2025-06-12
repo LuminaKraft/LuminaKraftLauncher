@@ -248,7 +248,33 @@ Si el launcher no puede encontrar Java:
 ### Errores de descarga
 - Verifica tu conexión a internet
 - Comprueba que la URL del archivo JSON sea correcta
-- Asegúrate de que los archivos ZIP de modpacks sean accesibles
+
+### macOS: "La aplicación está dañada y no se puede abrir"
+Si al intentar abrir la aplicación en macOS ves el mensaje "La aplicación está dañada y no se puede abrir":
+
+**Causa**: macOS marca las aplicaciones descargadas de Internet con un atributo de cuarentena (`com.apple.Quarantine`).
+
+**Solución**:
+1. Abre la Terminal
+2. Ejecuta el siguiente comando (reemplaza la ruta con la ubicación de tu aplicación):
+   ```bash
+   xattr -c /Applications/LuminaKraftLauncher.app
+   ```
+3. Intenta abrir la aplicación nuevamente
+
+Este es un comportamiento normal de seguridad de macOS y no indica que la aplicación esté realmente dañada.
+
+### macOS: "Apple no pudo verificar que 'LuminaKraft Launcher' está libre de malware"
+Si ves el mensaje "Apple no pudo verificar que 'LuminaKraft Launcher' está libre de malware que podría dañar tu Mac o comprometer tu privacidad":
+
+**Solución**:
+1. Abre Configuración del Sistema
+2. Ve a Privacidad y Seguridad
+3. Desplázate hasta la parte inferior
+4. Verás el mensaje "LuminaKraft Launcher" fue bloqueado para proteger tu Mac
+5. Haz clic en "Abrir de todos modos"
+
+Este es otro mecanismo de seguridad de macOS que requiere una confirmación manual del usuario para aplicaciones no firmadas con un certificado de desarrollador de Apple.
 
 ### Problemas de permisos
 En Linux/macOS, es posible que necesites dar permisos de ejecución:
