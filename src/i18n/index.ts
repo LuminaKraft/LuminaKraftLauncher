@@ -1,6 +1,5 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import LanguageDetector from 'i18next-browser-languagedetector';
 
 // Import language files
 import en from '../../public/locales/en/common.json';
@@ -18,7 +17,7 @@ const resources = {
 // Custom language detector for Spanish variants
 const customLanguageDetector = {
   name: 'customDetector',
-  lookup(options: any) {
+  lookup() {
     // Check if user has manually set a language preference
     const storedLanguage = localStorage.getItem('luminakraft-language');
     if (storedLanguage && ['es', 'en'].includes(storedLanguage)) {
