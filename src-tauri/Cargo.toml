@@ -16,10 +16,6 @@ tauri-plugin-opener = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-http = "2"
 tauri-plugin-shell = "2"
-
-[features]
-default = []
-macos-no-sign = []
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["full"] }
@@ -30,4 +26,8 @@ dirs = "5.0"
 uuid = { version = "1.0", features = ["v4"] }
 futures-util = "0.3"
 chrono = { version = "0.4", features = ["serde"] }
+
+[features]
+default = []
+macos-no-sign = []
 
