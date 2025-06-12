@@ -201,7 +201,7 @@ jobs:
       - name: Create release
         uses: ncipollo/release-action@v1
         with:
-          artifacts: "artifacts/**/*"
+          artifacts: "artifacts/**/*.msi,artifacts/**/*.exe,artifacts/**/*.AppImage,artifacts/**/*.deb,artifacts/**/*.rpm,artifacts/**/*.dmg"
           token: ${{ secrets.GITHUB_TOKEN }}
           name: "LuminaKraft Launcher ${{ github.ref_name }}"
           body: |
