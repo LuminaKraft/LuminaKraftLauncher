@@ -73,6 +73,11 @@ async fn get_instance_metadata(modpack_id: String) -> Result<Option<String>, Str
 
 #[tauri::command]
 async fn install_modpack(modpack: Modpack) -> Result<(), String> {
+    // Validate modpack before installation
+    if let Err(e) = launcher::validate_modpack(&modpack) {
+        return Err(format!("Invalid modpack configuration: {}", e));
+    }
+    
     match launcher::install_modpack(modpack).await {
         Ok(_) => Ok(()),
         Err(e) => Err(format!("Failed to install modpack: {}", e)),
@@ -80,7 +85,25 @@ async fn install_modpack(modpack: Modpack) -> Result<(), String> {
 }
 
 #[tauri::command]
+async fn install_modpack_with_minecraft(modpack: Modpack, settings: UserSettings) -> Result<(), String> {
+    // Validate modpack before installation
+    if let Err(e) = launcher::validate_modpack(&modpack) {
+        return Err(format!("Invalid modpack configuration: {}", e));
+    }
+    
+    match launcher::install_modpack_with_minecraft(modpack, settings).await {
+        Ok(_) => Ok(()),
+        Err(e) => Err(format!("Failed to install modpack with Minecraft: {}", e)),
+    }
+}
+
+#[tauri::command]
 async fn launch_modpack(modpack: Modpack, settings: UserSettings) -> Result<(), String> {
+    // Validate modpack before launching
+    if let Err(e) = launcher::validate_modpack(&modpack) {
+        return Err(format!("Invalid modpack configuration: {}", e));
+    }
+    
     match minecraft::launch_minecraft(modpack, settings).await {
         Ok(_) => Ok(()),
         Err(e) => Err(format!("Failed to launch modpack: {}", e)),
@@ -120,6 +143,30 @@ async fn check_java() -> Result<bool, String> {
     }
 }
 
+#[tauri::command]
+async fn get_supported_loaders() -> Result<Vec<String>, String> {
+    Ok(minecraft::get_supported_loaders().iter().map(|s| s.to_string()).collect())
+}
+
+#[tauri::command]
+async fn validate_modpack_config(modpack: Modpack) -> Result<bool, String> {
+    match launcher::validate_modpack(&modpack) {
+        Ok(_) => Ok(true),
+        Err(_) => Ok(false), // Return false instead of error for validation check
+    }
+}
+
+#[tauri::command]
+async fn check_instance_needs_update(modpack: Modpack) -> Result<bool, String> {
+    match filesystem::get_instance_metadata(&modpack.id).await {
+        Ok(Some(metadata)) => {
+            Ok(minecraft::check_instance_needs_update(&modpack, &metadata).await)
+        }
+        Ok(None) => Ok(true), // No instance exists, needs "update" (install)
+        Err(e) => Err(format!("Failed to check instance metadata: {}", e)),
+    }
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
@@ -129,11 +176,15 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             get_instance_metadata,
             install_modpack,
+            install_modpack_with_minecraft,
             launch_modpack,
             delete_instance,
             get_launcher_version,
             get_platform,
-            check_java
+            check_java,
+            get_supported_loaders,
+            validate_modpack_config,
+            check_instance_needs_update
         ])
         .setup(|app| {
             // Initialize app data directory

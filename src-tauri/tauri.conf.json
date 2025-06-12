@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "LuminaKraft Launcher",
-  "version": "0.2.1",
-  "identifier": "com.luminakraft.launcher",
+  "version": "0.3.0",
+  "identifier": "LuminaKraftLauncher",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",

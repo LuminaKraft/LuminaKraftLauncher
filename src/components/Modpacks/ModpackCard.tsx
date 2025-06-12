@@ -211,14 +211,32 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
         {isLoading && state.progress && (
           <div className="mt-4">
             <div className="flex justify-between text-sm text-dark-300 mb-1">
-              <span>{buttonConfig.text}</span>
-              <span>{Math.round(state.progress.percentage)}%</span>
+              <span className="truncate">{buttonConfig.text}</span>
+              <span className="font-mono">{Math.round(state.progress.percentage)}%</span>
             </div>
-            <div className="w-full bg-dark-700 rounded-full h-2">
+            <div className="w-full bg-dark-700 rounded-full h-2 overflow-hidden">
               <div
-                className="bg-lumina-600 h-2 rounded-full transition-all duration-300"
+                className="bg-gradient-to-r from-lumina-600 to-lumina-500 h-2 rounded-full transition-all duration-500 ease-out"
                 style={{ width: `${state.progress.percentage}%` }}
               />
+            </div>
+            {/* Progress details */}
+            {state.progress.currentFile && (
+              <div className="mt-2 text-xs text-dark-400">
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-lumina-600 rounded-full animate-pulse"></div>
+                  <span className="truncate">{state.progress.currentFile}</span>
+                </div>
+              </div>
+            )}
+            {/* Speed and ETA */}
+            <div className="mt-1 flex justify-between text-xs text-dark-500">
+              {state.progress.downloadSpeed && (
+                <span>⚡ {state.progress.downloadSpeed}</span>
+              )}
+              {state.progress.eta && (
+                <span>⏱️ {state.progress.eta}</span>
+              )}
             </div>
           </div>
         )}

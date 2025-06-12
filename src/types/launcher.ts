@@ -100,6 +100,9 @@ export interface DownloadProgress {
   total: number;
   percentage: number;
   speed: number; // bytes per second
+  currentFile?: string; // nombre del archivo que se está descargando
+  downloadSpeed?: string; // velocidad formateada (ej: "2.5 MB/s")
+  eta?: string; // tiempo estimado restante (ej: "2m 30s")
 }
 
 export type ModpackStatus = 'not_installed' | 'installed' | 'outdated' | 'installing' | 'updating' | 'launching' | 'error';

@@ -4,12 +4,15 @@ import Sidebar from './components/Layout/Sidebar';
 import ModpacksPage from './components/Modpacks/ModpacksPage';
 import SettingsPage from './components/Settings/SettingsPage';
 import AboutPage from './components/About/AboutPage';
+import TauriWarning from './components/TauriWarning';
 import { Loader2, AlertTriangle } from 'lucide-react';
+import LauncherService from './services/launcherService';
 import './App.css';
 
 function AppContent() {
   const [activeSection, setActiveSection] = useState('home');
   const { isLoading, error, launcherData } = useLauncher();
+  const launcherService = LauncherService.getInstance();
 
   const renderContent = () => {
     switch (activeSection) {
@@ -62,11 +65,14 @@ function AppContent() {
 
   return (
     <div className="flex h-screen bg-dark-900 text-white">
+      {/* Show warning if not running in Tauri context */}
+      {!launcherService.isTauriAvailable() && <TauriWarning />}
+      
       <Sidebar 
         activeSection={activeSection} 
         onSectionChange={setActiveSection} 
       />
-      <main className="flex-1 overflow-hidden">
+      <main className={`flex-1 overflow-hidden ${!launcherService.isTauriAvailable() ? 'pt-16' : ''}`}>
         {renderContent()}
       </main>
     </div>

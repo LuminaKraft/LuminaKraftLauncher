@@ -1,288 +1,329 @@
-use std::process::Command;
-use std::path::Path;
-use serde_json::Value;
+use std::path::PathBuf;
 use anyhow::{Result, anyhow};
+use lyceris::minecraft::{
+    config::ConfigBuilder,
+    emitter::{Emitter, Event},
+    install::install,
+    launch::launch,
+    loader::{fabric::Fabric, forge::Forge, quilt::Quilt, neoforge::NeoForge, Loader},
+};
+use lyceris::auth::AuthMethod;
 use crate::{Modpack, UserSettings};
 
+/// Create a Lyceris emitter for progress tracking
+pub fn create_emitter() -> Emitter {
+    let emitter = Emitter::default();
+    
+    // Set up progress tracking (you can customize these handlers)
+    tokio::spawn({
+        let emitter = emitter.clone();
+        async move {
+            emitter
+                .on(
+                    Event::SingleDownloadProgress,
+                    |(path, current, total): (String, u64, u64)| {
+                        println!("Downloading {} - {}/{}", path, current, total);
+                    },
+                )
+                .await;
+        }
+    });
+    
+    tokio::spawn({
+        let emitter = emitter.clone();
+        async move {
+            emitter
+                .on(
+                    Event::MultipleDownloadProgress,
+                    |(_, current, total, _): (String, u64, u64, String)| {
+                        println!("Progress: {}/{}", current, total);
+                    },
+                )
+                .await;
+        }
+    });
+    
+    tokio::spawn({
+        let emitter = emitter.clone();
+        async move {
+            emitter
+                .on(Event::Console, |line: String| {
+                    println!("Minecraft: {}", line);
+                })
+                .await;
+        }
+    });
+    
+    emitter
+}
+
+/// Get the appropriate mod loader based on modpack configuration
+fn get_loader_by_name(name: &str, loader_version: &str) -> Result<Box<dyn Loader>> {
+    match name.to_lowercase().as_str() {
+        "fabric" => Ok(Fabric(loader_version.to_string()).into()),
+        "forge" => Ok(Forge(loader_version.to_string()).into()),
+        "quilt" => Ok(Quilt(loader_version.to_string()).into()),
+        "neoforge" => Ok(NeoForge(loader_version.to_string()).into()),
+        _ => Err(anyhow!("Unsupported mod loader: {}", name)),
+    }
+}
+
+/// Check if Java is available (Lyceris handles Java automatically)
 pub async fn check_java_availability() -> Result<bool> {
-    let output = Command::new("java")
-        .arg("-version")
-        .output();
-        
-    match output {
-        Ok(output) => Ok(output.status.success()),
-        Err(_) => Ok(false),
-    }
+    // Lyceris automatically downloads and manages Java versions
+    // So we can always return true as it handles Java internally
+    Ok(true)
 }
 
-pub async fn get_java_path() -> Result<Option<String>> {
-    // Try to find Java in common locations
-    let java_paths = if cfg!(target_os = "windows") {
-        vec![
-            "java",
-            "C:\\Program Files\\Java\\jdk-17\\bin\\java.exe",
-            "C:\\Program Files\\Java\\jdk-11\\bin\\java.exe",
-            "C:\\Program Files\\Java\\jdk-8\\bin\\java.exe",
-            "C:\\Program Files (x86)\\Java\\jdk-17\\bin\\java.exe",
-            "C:\\Program Files (x86)\\Java\\jdk-11\\bin\\java.exe",
-            "C:\\Program Files (x86)\\Java\\jdk-8\\bin\\java.exe",
-        ]
+/// Install Minecraft and mod loader using Lyceris
+pub async fn install_minecraft_with_lyceris(
+    modpack: &Modpack,
+    settings: &UserSettings,
+    instance_dir: PathBuf,
+) -> Result<()> {
+    let emitter = create_emitter();
+    
+    let config_builder = ConfigBuilder::new(
+        instance_dir,
+        modpack.minecraft_version.clone(),
+        AuthMethod::Offline {
+            username: settings.username.clone(),
+            uuid: None,
+        },
+    );
+    
+    // Build config with or without mod loader
+    if !modpack.modloader.is_empty() && !modpack.modloader_version.is_empty() {
+        let loader = get_loader_by_name(&modpack.modloader, &modpack.modloader_version)?;
+        let config = config_builder.loader(loader).build();
+        install(&config, Some(&emitter)).await?;
     } else {
-        vec![
-            "java",
-            "/usr/bin/java",
-            "/usr/lib/jvm/java-17-openjdk/bin/java",
-            "/usr/lib/jvm/java-11-openjdk/bin/java",
-            "/usr/lib/jvm/java-8-openjdk/bin/java",
-        ]
-    };
+        let config = config_builder.build();
+        install(&config, Some(&emitter)).await?;
+    }
+    
+    Ok(())
+}
 
-    for java_path in java_paths {
-        let output = Command::new(java_path)
-            .arg("-version")
-            .output();
-            
-        if let Ok(output) = output {
-            if output.status.success() {
-                return Ok(Some(java_path.to_string()));
+/// Generate custom JVM arguments (excluding memory - handled by Lyceris)
+fn generate_custom_jvm_args(_settings: &UserSettings, modpack: &Modpack) -> Vec<String> {
+    let mut jvm_args = Vec::new();
+    
+    // Note: Memory allocation is handled by Lyceris' built-in memory system
+    // Do not add -Xmx or -Xms here as it conflicts with Lyceris
+    
+    // Parse modpack recommended JVM args if available
+    if !modpack.jvm_args_recomendados.is_empty() {
+        for arg in modpack.jvm_args_recomendados.split_whitespace() {
+            let arg = arg.trim();
+            if !arg.is_empty() && !arg.starts_with("-Xmx") && !arg.starts_with("-Xms") {
+                jvm_args.push(arg.to_string());
             }
         }
     }
     
-    Ok(None)
-}
-
-fn get_java_version(java_path: &str) -> Result<String> {
-    let output = Command::new(java_path)
-        .arg("-version")
-        .output()?;
-        
-    if !output.status.success() {
-        return Err(anyhow!("Failed to get Java version"));
-    }
-    
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    
-    // Parse Java version from stderr output
-    for line in stderr.lines() {
-        if line.contains("version") {
-            if let Some(start) = line.find('"') {
-                if let Some(end) = line.rfind('"') {
-                    if start < end {
-                        return Ok(line[start+1..end].to_string());
-                    }
-                }
-            }
-        }
-    }
-    
-    Err(anyhow!("Could not parse Java version"))
-}
-
-fn get_optimized_jvm_args(allocated_ram: u32, java_version: &str) -> Vec<String> {
-    let mut args = vec![
-        format!("-Xmx{}M", allocated_ram),
-        format!("-Xms{}M", std::cmp::min(allocated_ram / 4, 1024)),
-        "-XX:+UnlockExperimentalVMOptions".to_string(),
-        "-XX:+UseG1GC".to_string(),
-        "-XX:G1NewSizePercent=20".to_string(),
-        "-XX:G1ReservePercent=20".to_string(),
-        "-XX:MaxGCPauseMillis=50".to_string(),
-        "-XX:G1HeapRegionSize=32M".to_string(),
-    ];
-
-    // Add Java 17+ specific optimizations
-    if java_version.starts_with("17") || java_version.starts_with("18") || java_version.starts_with("19") {
-        args.extend_from_slice(&[
-            "-XX:+UseStringDeduplication".to_string(),
-            "-XX:+UnlockDiagnosticVMOptions".to_string(),
+    // Default optimized JVM args for Minecraft
+    if jvm_args.len() <= 2 { // Only memory args added so far
+        jvm_args.extend([
+            "-XX:+UseG1GC".to_string(),
+            "-XX:+ParallelRefProcEnabled".to_string(),
+            "-XX:MaxGCPauseMillis=200".to_string(),
+            "-XX:+UnlockExperimentalVMOptions".to_string(),
             "-XX:+DisableExplicitGC".to_string(),
+            "-XX:+AlwaysPreTouch".to_string(),
+            "-XX:G1NewSizePercent=30".to_string(),
+            "-XX:G1MaxNewSizePercent=40".to_string(),
+            "-XX:G1HeapRegionSize=8M".to_string(),
+            "-XX:G1ReservePercent=20".to_string(),
+            "-XX:G1HeapWastePercent=5".to_string(),
+            "-XX:G1MixedGCCountTarget=4".to_string(),
+            "-XX:InitiatingHeapOccupancyPercent=15".to_string(),
+            "-XX:G1MixedGCLiveThresholdPercent=90".to_string(),
+            "-XX:G1RSetUpdatingPauseTimePercent=5".to_string(),
+            "-XX:SurvivorRatio=32".to_string(),
+            "-XX:+PerfDisableSharedMem".to_string(),
+            "-Dfml.ignoreInvalidMinecraftCertificates=true".to_string(),
+            "-Dfml.ignorePatchDiscrepancies=true".to_string(),
         ]);
     }
-
-    args
+    
+    jvm_args
 }
 
-async fn get_minecraft_manifest() -> Result<Value> {
-    let response = reqwest::get("https://launchermeta.mojang.com/mc/game/version_manifest.json")
-        .await?;
-    
-    let manifest: Value = response.json().await?;
-    Ok(manifest)
-}
-
-async fn get_version_info(version: &str) -> Result<Value> {
-    let manifest = get_minecraft_manifest().await?;
-    
-    if let Some(versions) = manifest["versions"].as_array() {
-        for version_info in versions {
-            if let Some(id) = version_info["id"].as_str() {
-                if id == version {
-                    if let Some(url) = version_info["url"].as_str() {
-                        let response = reqwest::get(url).await?;
-                        let version_data: Value = response.json().await?;
-                        return Ok(version_data);
-                    }
-                }
-            }
-        }
-    }
-    
-    Err(anyhow!("Version {} not found", version))
-}
-
-async fn build_classpath(version_info: &Value, minecraft_dir: &Path) -> Result<String> {
-    let mut classpath: Vec<String> = Vec::new();
-    
-    // Add libraries
-    if let Some(libraries) = version_info["libraries"].as_array() {
-        for library in libraries {
-            if let Some(downloads) = library["downloads"].as_object() {
-                if let Some(artifact) = downloads["artifact"].as_object() {
-                    if let Some(path) = artifact["path"].as_str() {
-                        let lib_path = minecraft_dir.join("libraries").join(path);
-                        if lib_path.exists() {
-                            classpath.push(lib_path.to_string_lossy().to_string());
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    // Add minecraft client jar
-    let client_jar = minecraft_dir
-        .join("versions")
-        .join(version_info["id"].as_str().unwrap_or("unknown"))
-        .join(format!("{}.jar", version_info["id"].as_str().unwrap_or("unknown")));
-    
-    if client_jar.exists() {
-        classpath.push(client_jar.to_string_lossy().to_string());
-    }
-    
-    Ok(classpath.join(if cfg!(target_os = "windows") { ";" } else { ":" }))
-}
-
-fn replace_minecraft_args(args: &str, replacements: &std::collections::HashMap<String, String>) -> String {
-    let mut result = args.to_string();
-    
-    for (key, value) in replacements {
-        result = result.replace(&format!("${{{}}}", key), value);
-    }
-    
-    result
-}
-
+/// Launch Minecraft using Lyceris
 pub async fn launch_minecraft(modpack: Modpack, settings: UserSettings) -> Result<()> {
-    let java_path = match &settings.java_path {
-        Some(path) => path.clone(),
-        None => {
-            match get_java_path().await? {
-                Some(path) => path,
-                None => return Err(anyhow!("Java not found")),
-            }
-        }
-    };
-    
-    let java_version = get_java_version(&java_path)?;
-    let minecraft_dir = dirs::data_dir()
+    let launcher_data_dir = dirs::data_dir()
         .ok_or_else(|| anyhow!("Could not determine data directory"))?
-        .join("luminakraft-launcher")
-        .join("minecraft");
+        .join("LuminaKraftLauncher");
     
-    let instance_dir = minecraft_dir
+    let instance_dir = launcher_data_dir
         .join("instances")
         .join(&modpack.id);
     
-    // Ensure directories exist
+    // Ensure instance directory exists
     std::fs::create_dir_all(&instance_dir)?;
-    std::fs::create_dir_all(minecraft_dir.join("assets"))?;
-    std::fs::create_dir_all(minecraft_dir.join("libraries"))?;
-    std::fs::create_dir_all(minecraft_dir.join("versions"))?;
     
-    // Download Minecraft assets and libraries (simplified)
-    ensure_minecraft_assets(&modpack.minecraft_version).await?;
+    let emitter = create_emitter();
     
-    // Get version info
-    let version_info = get_version_info(&modpack.minecraft_version).await?;
+    // Generate custom JVM arguments (excluding memory settings)
+    let custom_jvm_args = generate_custom_jvm_args(&settings, &modpack);
+    println!("Using custom JVM arguments: {:?}", custom_jvm_args);
     
-    // Build classpath
-    let classpath = build_classpath(&version_info, &minecraft_dir).await?;
+    // Configure memory using Lyceris' built-in system
+    let memory_gb = settings.allocated_ram.max(1);
+    println!("Configuring memory: {}GB", memory_gb);
     
-    // Prepare JVM arguments
-    let mut jvm_args = get_optimized_jvm_args(settings.allocated_ram, &java_version);
+    let mut config_builder = ConfigBuilder::new(
+        instance_dir,
+        modpack.minecraft_version.clone(),
+        AuthMethod::Offline {
+            username: settings.username.clone(),
+            uuid: None,
+        },
+    );
     
-    // Add custom JVM args from modpack
-    if !modpack.jvm_args_recomendados.is_empty() {
-        let custom_args: Vec<String> = modpack.jvm_args_recomendados
-            .split_whitespace()
-            .map(|s| s.to_string())
-            .collect();
-        jvm_args.extend(custom_args);
+    // Set memory using Lyceris' memory system
+    config_builder = config_builder.memory(lyceris::minecraft::config::Memory::Gigabyte(memory_gb as u16));
+    
+    // Add custom JVM arguments using Lyceris' system
+    config_builder = config_builder.custom_java_args(custom_jvm_args);
+    
+    // Build config with or without mod loader
+    if !modpack.modloader.is_empty() && !modpack.modloader_version.is_empty() {
+        let loader = get_loader_by_name(&modpack.modloader, &modpack.modloader_version)?;
+        let config = config_builder.loader(loader).build();
+        
+        // Install/verify Minecraft installation first
+        install(&config, Some(&emitter)).await?;
+        
+        // Launch Minecraft
+        let mut child = launch(&config, Some(&emitter)).await?;
+        
+        // Spawn a task to wait for the process to complete
+        tokio::spawn(async move {
+            match child.wait().await {
+                Ok(status) => {
+                    if status.success() {
+                        println!("Minecraft exited successfully");
+                    } else {
+                        println!("Minecraft exited with error: {:?}", status);
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Error waiting for Minecraft process: {}", e);
+                }
+            }
+        });
+    } else {
+        let config = config_builder.build();
+        
+        // Install/verify Minecraft installation first
+        install(&config, Some(&emitter)).await?;
+        
+        // Launch Minecraft
+        let mut child = launch(&config, Some(&emitter)).await?;
+        
+        // Spawn a task to wait for the process to complete
+        tokio::spawn(async move {
+            match child.wait().await {
+                Ok(status) => {
+                    if status.success() {
+                        println!("Minecraft exited successfully");
+                    } else {
+                        println!("Minecraft exited with error: {:?}", status);
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Error waiting for Minecraft process: {}", e);
+                }
+            }
+        });
     }
-    
-    // Add classpath
-    jvm_args.push("-cp".to_string());
-    jvm_args.push(classpath);
-    
-    // Main class
-    let main_class = version_info["mainClass"]
-        .as_str()
-        .unwrap_or("net.minecraft.client.main.Main");
-    jvm_args.push(main_class.to_string());
-    
-    // Minecraft arguments
-    let mut replacements = std::collections::HashMap::new();
-    replacements.insert("auth_player_name".to_string(), settings.username.clone());
-    replacements.insert("version_name".to_string(), modpack.minecraft_version.clone());
-    replacements.insert("game_directory".to_string(), instance_dir.to_string_lossy().to_string());
-    replacements.insert("assets_root".to_string(), minecraft_dir.join("assets").to_string_lossy().to_string());
-    replacements.insert("auth_uuid".to_string(), uuid::Uuid::new_v4().to_string());
-    replacements.insert("auth_access_token".to_string(), "offline".to_string());
-    replacements.insert("user_type".to_string(), "legacy".to_string());
-    replacements.insert("version_type".to_string(), "release".to_string());
-    
-    if let Some(game_args) = version_info["minecraftArguments"].as_str() {
-        let processed_args = replace_minecraft_args(game_args, &replacements);
-        let game_args_vec: Vec<String> = processed_args
-            .split_whitespace()
-            .map(|s| s.to_string())
-            .collect();
-        jvm_args.extend(game_args_vec);
-    }
-    
-    // Launch Minecraft
-    let mut command = Command::new(&java_path);
-    command.args(&jvm_args);
-    command.current_dir(&instance_dir);
-    
-    let mut child = command.spawn()?;
-    
-    // Wait for the process to finish or detach it
-    tokio::spawn(async move {
-        let _ = child.wait();
-    });
     
     Ok(())
 }
 
-pub async fn ensure_minecraft_assets(_version: &str) -> Result<()> {
-    // This is a simplified version
-    // In a complete implementation, you would:
-    // 1. Download the version manifest
-    // 2. Download all required libraries
-    // 3. Download the client jar
-    // 4. Download assets index and assets
+/// Check if a modpack instance needs updating
+pub async fn check_instance_needs_update(
+    modpack: &Modpack,
+    instance_metadata: &crate::InstanceMetadata,
+) -> bool {
+    // Check if modpack version has changed
+    if modpack.version != instance_metadata.version {
+        return true;
+    }
     
-    // For now, we'll just ensure the directories exist
-    let minecraft_dir = dirs::data_dir()
-        .ok_or_else(|| anyhow!("Could not determine data directory"))?
-        .join("luminakraft-launcher")
-        .join("minecraft");
+    // Check if Minecraft version has changed
+    if modpack.minecraft_version != instance_metadata.minecraft_version {
+        return true;
+    }
     
-    std::fs::create_dir_all(minecraft_dir.join("assets"))?;
-    std::fs::create_dir_all(minecraft_dir.join("libraries"))?;
-    std::fs::create_dir_all(minecraft_dir.join("versions"))?;
+    // Check if mod loader has changed
+    if modpack.modloader != instance_metadata.modloader {
+        return true;
+    }
     
-    Ok(())
+    // Check if mod loader version has changed
+    if modpack.modloader_version != instance_metadata.modloader_version {
+        return true;
+    }
+    
+    false
+}
+
+/// Get supported mod loaders
+pub fn get_supported_loaders() -> Vec<&'static str> {
+    vec!["forge", "fabric", "quilt", "neoforge"]
+}
+
+/// Validate if a mod loader is supported
+pub fn is_loader_supported(loader: &str) -> bool {
+    get_supported_loaders().contains(&loader.to_lowercase().as_str())
+}
+
+/// Get the minimum supported Minecraft version for Forge
+pub fn get_min_forge_version() -> &'static str {
+    "1.12.2"
+}
+
+/// Check if a Minecraft version is supported for the given mod loader
+pub fn is_version_supported(minecraft_version: &str, mod_loader: &str) -> bool {
+    match mod_loader.to_lowercase().as_str() {
+        "forge" => {
+            // Forge is supported from 1.12.2 onwards
+            version_compare(minecraft_version, get_min_forge_version()) >= 0
+        }
+        "fabric" | "quilt" | "neoforge" => {
+            // These loaders have broader version support
+            true
+        }
+        _ => false,
+    }
+}
+
+/// Simple version comparison (basic implementation)
+fn version_compare(version1: &str, version2: &str) -> i32 {
+    let v1_parts: Vec<u32> = version1
+        .split('.')
+        .filter_map(|s| s.parse().ok())
+        .collect();
+    let v2_parts: Vec<u32> = version2
+        .split('.')
+        .filter_map(|s| s.parse().ok())
+        .collect();
+    
+    let max_len = v1_parts.len().max(v2_parts.len());
+    
+    for i in 0..max_len {
+        let v1_part = v1_parts.get(i).unwrap_or(&0);
+        let v2_part = v2_parts.get(i).unwrap_or(&0);
+        
+        if v1_part > v2_part {
+            return 1;
+        } else if v1_part < v2_part {
+            return -1;
+        }
+    }
+    
+    0
 } 

@@ -19,7 +19,7 @@ const customLanguageDetector = {
   name: 'customDetector',
   lookup() {
     // Check if user has manually set a language preference
-    const storedLanguage = localStorage.getItem('luminakraft-language');
+    const storedLanguage = localStorage.getItem('LuminaKraftLauncher-language');
     if (storedLanguage && ['es', 'en'].includes(storedLanguage)) {
       return storedLanguage;
     }
@@ -37,7 +37,7 @@ const customLanguageDetector = {
     return 'en';
   },
   cacheUserLanguage(lng: string) {
-    localStorage.setItem('luminakraft-language', lng);
+    localStorage.setItem('LuminaKraftLauncher-language', lng);
   }
 };
 

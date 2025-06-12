@@ -1,0 +1,28 @@
+# Directorio de build de Rust
+target/
+# Directorio de dependencias de Node.js
+node_modules/
+# Archivos de dist
+dist/
+# Archivos temporales
+temp/
+# Logs
+*.log
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+# Directorio de git
+.git/
+# Directorio de instancias del launcher
+instances/
+# Archivos de configuración del IDE
+.vscode/
+.idea/
+# Archivos de cache
+.cache/
+# Archivos temporales de build
+*.tmp
+*.temp
+# Archivos de backup
+*.bak
+*.backup 

@@ -1,6 +1,6 @@
 # LuminaKraft Launcher
 
-Un lanzador de modpacks personalizado para Minecraft, desarrollado específicamente para la comunidad de LuminaKraft Studios. Construido con Tauri, React, TypeScript y Rust para ofrecer una experiencia moderna, segura y eficiente.
+Un lanzador de modpacks personalizado para Minecraft, desarrollado específicamente para la comunidad de LuminaKraft Studios. Construido con Tauri, React, TypeScript y Rust usando la biblioteca **Lyceris** para ofrecer una experiencia moderna, segura y eficiente.
 
 ## 🚀 Características
 
@@ -12,11 +12,15 @@ Un lanzador de modpacks personalizado para Minecraft, desarrollado específicame
 - **Interfaz moderna**: Diseño intuitivo con tema oscuro
 - **Configuración flexible**: Personaliza RAM, rutas de Java y más
 - **Múltiples modloaders**: Soporte para Forge, Fabric, Quilt y NeoForge
+- **⭐ Nuevo**: **Gestión automática de Java** - Lyceris descarga automáticamente la versión correcta de Java
+- **⭐ Nuevo**: **Instalación optimizada** - Descargas paralelas y verificación automática de archivos
+- **⭐ Nuevo**: **Validación de modpacks** - Verificación automática de compatibilidad
 
 ## 🛠️ Stack Tecnológico
 
 - **Frontend**: React + TypeScript + Tailwind CSS
 - **Framework**: Tauri (Rust + Web)
+- **Minecraft Launcher**: Lyceris v1.1.3 (Rust)
 - **Iconos**: Lucide React
 - **Herramientas de build**: Vite
 - **Gestión de estado**: Context API de React
@@ -31,8 +35,8 @@ Un lanzador de modpacks personalizado para Minecraft, desarrollado específicame
 
 ### Para el Usuario Final
 
-- **Java** 8 o superior (para ejecutar Minecraft)
-- **Conexión a internet** (para descargar modpacks)
+- **Conexión a internet** (para descargar modpacks y Minecraft)
+- **Java se instala automáticamente** - Lyceris maneja la instalación de Java automáticamente
 
 ## 🔧 Instalación para Desarrollo
 
@@ -117,9 +121,9 @@ luminakraft-launcher/
 │   │   ├── main.rs            # Punto de entrada principal
 │   │   ├── launcher.rs        # Lógica de instalación de modpacks
 │   │   ├── filesystem.rs      # Operaciones de sistema de archivos
-│   │   ├── minecraft.rs       # Lanzamiento de Minecraft
+│   │   ├── minecraft.rs       # Integración con Lyceris
 │   │   └── downloader.rs      # Descarga de archivos
-│   ├── Cargo.toml             # Dependencias de Rust
+│   ├── Cargo.toml             # Dependencias de Rust (incluye Lyceris)
 │   └── tauri.conf.json        # Configuración de Tauri
 ├── public/                      # Archivos estáticos
 ├── package.json                # Dependencias de Node.js
@@ -152,7 +156,7 @@ El launcher obtiene la información de modpacks desde un archivo JSON remoto. El
       "urlIcono": "https://ejemplo.com/icono.png",
       "urlModpackZip": "https://ejemplo.com/modpack.zip",
       "changelog": "v1.2.3: Cambios...",
-      "jvmArgsRecomendados": "-Xmx4G -Xms2G"
+      "jvmArgsRecomendados": "-XX:+UseG1GC -XX:+ParallelRefProcEnabled"
     }
   ]
 }
@@ -164,8 +168,39 @@ Las configuraciones se guardan localmente y incluyen:
 
 - **Nombre de usuario**: Para el modo offline
 - **RAM asignada**: Memoria para Minecraft
-- **Ruta de Java**: Opcional, usa detección automática por defecto
+- **Ruta de Java**: Opcional, Lyceris maneja Java automáticamente
 - **URL de datos**: Donde obtener la información de modpacks
+
+## 🎮 Integración con Lyceris
+
+### Características de Lyceris Integradas
+
+- **Gestión automática de Java**: Descarga e instala automáticamente la versión correcta de Java
+- **Soporte para múltiples mod loaders**: Forge (1.12.2+), Fabric, Quilt, NeoForge
+- **Descargas paralelas**: Múltiples archivos se descargan simultáneamente
+- **Verificación de integridad**: Archivos corruptos se redescargan automáticamente
+- **Reportes de progreso**: Seguimiento en tiempo real de descargas e instalación
+
+### Mod Loaders Soportados
+
+- **Forge**: Versiones 1.12.2 y superiores
+- **Fabric**: Todas las versiones compatibles
+- **Quilt**: Todas las versiones compatibles  
+- **NeoForge**: Todas las versiones compatibles
+
+### Comandos Tauri Disponibles
+
+#### Comandos Principales
+- `install_modpack(modpack)` - Instala solo el modpack (sin Minecraft)
+- `install_modpack_with_minecraft(modpack, settings)` - Instalación completa con Minecraft
+- `launch_modpack(modpack, settings)` - Lanza el modpack
+- `delete_instance(modpack_id)` - Elimina una instancia
+
+#### Comandos de Utilidad
+- `get_supported_loaders()` - Lista de mod loaders soportados
+- `validate_modpack_config(modpack)` - Valida configuración del modpack
+- `check_instance_needs_update(modpack)` - Verifica si necesita actualización
+- `check_java()` - Verifica disponibilidad de Java (siempre true con Lyceris)
 
 ## 🏗️ Build para Distribución
 
@@ -200,12 +235,13 @@ El launcher crea la siguiente estructura en el directorio de datos del usuario:
 │   │   ├── mods/
 │   │   ├── config/
 │   │   ├── saves/
+│   │   ├── libraries/          # Gestionado por Lyceris
+│   │   ├── assets/             # Gestionado por Lyceris
+│   │   ├── versions/           # Gestionado por Lyceris
 │   │   └── instance.json
 │   └── technika_s3/
 │       └── ...
-├── assets/
-├── temp/
-└── logs/
+└── temp/
 ```
 
 ## 🐛 Resolución de Problemas
@@ -240,14 +276,21 @@ Si durante el desarrollo la ventana del launcher se cierra y abre constantemente
 
 3. **Verificar que no hay editores/IDEs modificando archivos automáticamente**
 
-### Java no encontrado
-Si el launcher no puede encontrar Java:
-1. Instala Java 8 o superior
-2. O configura la ruta manualmente en Configuración > Java
+### Problemas con Java
+✅ **Solucionado con Lyceris**: Lyceris maneja automáticamente:
+- Detección de Java instalado
+- Descarga automática de la versión correcta
+- Configuración automática de rutas
 
 ### Errores de descarga
 - Verifica tu conexión a internet
 - Comprueba que la URL del archivo JSON sea correcta
+- Lyceris reintentará automáticamente las descargas fallidas
+
+### Problemas de compatibilidad de mod loaders
+- El launcher valida automáticamente la compatibilidad
+- Forge requiere Minecraft 1.12.2 o superior
+- Otros loaders tienen soporte más amplio
 
 ### macOS: "La aplicación está dañada y no se puede abrir"
 Si al intentar abrir la aplicación en macOS ves el mensaje "La aplicación está dañada y no se puede abrir":
@@ -282,6 +325,22 @@ En Linux/macOS, es posible que necesites dar permisos de ejecución:
 chmod +x LuminaKraft-Launcher
 ```
 
+## 🆕 Migración desde la Versión Anterior
+
+### Cambios Principales
+
+1. **Java automático**: Ya no necesitas instalar Java manualmente
+2. **Validación automática**: Los modpacks se validan antes de la instalación
+3. **Nuevos comandos**: Comandos adicionales para mejor gestión
+4. **Mejor rendimiento**: Descargas paralelas y verificación de archivos
+
+### Compatibilidad
+
+- ✅ Los modpacks existentes siguen siendo compatibles
+- ✅ Las configuraciones de usuario se mantienen
+- ✅ Las instancias existentes funcionan sin cambios
+- ✅ El formato JSON del servidor no cambia
+
 ## 🤝 Contribuir
 
 1. Fork el repositorio
@@ -304,6 +363,7 @@ Desarrollado con ❤️ por el equipo de **LuminaKraft Studios**.
 
 - [Sitio Web Oficial](https://luminakraft.com)
 - [Discord](https://discord.gg/UJZRrcUFMj)
+- [Lyceris Library](https://crates.io/crates/lyceris)
 - [Documentación de Tauri](https://tauri.app)
 - [React](https://reactjs.org)
 - [TypeScript](https://typescriptlang.org)

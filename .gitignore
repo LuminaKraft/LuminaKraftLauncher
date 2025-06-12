@@ -89,6 +89,10 @@ dist
 tmp/
 temp/
 
+# Directorios problemáticos del launcher
+com.luminakraft.launcher/
+instances/
+
 # Runtime data
 pids
 *.pid

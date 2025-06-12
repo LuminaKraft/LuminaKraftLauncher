@@ -16,6 +16,20 @@ interface CacheEntry<T = any> {
   timestamp: number;
 }
 
+// Helper function to check if we're running in Tauri context
+function isTauriContext(): boolean {
+  return typeof window !== 'undefined' && 
+         (window as any).__TAURI_INTERNALS__ !== undefined;
+}
+
+// Helper function to safely invoke Tauri commands
+async function safeInvoke<T>(command: string, payload?: any): Promise<T> {
+  if (!isTauriContext()) {
+    throw new Error('Tauri context not available. Please run the application with Tauri.');
+  }
+  return invoke<T>(command, payload);
+}
+
 class LauncherService {
   private static instance: LauncherService;
   private launcherData: LauncherData | null = null;
@@ -39,12 +53,13 @@ class LauncherService {
 
   private setupAxiosDefaults(): void {
     axios.defaults.timeout = this.requestTimeout;
-    axios.defaults.headers.common['User-Agent'] = 'LuminaKraft-Launcher/1.0.0';
+    // Note: User-Agent header cannot be set in browsers for security reasons
+    // Only set other headers that are allowed
   }
 
   private detectDefaultLanguage(): string {
     // Check if user has manually set a language preference
-    const storedLanguage = localStorage.getItem('luminakraft-language');
+    const storedLanguage = localStorage.getItem('LuminaKraftLauncher-language');
     if (storedLanguage && ['es', 'en'].includes(storedLanguage)) {
       return storedLanguage;
     }
@@ -71,7 +86,7 @@ class LauncherService {
     };
 
     try {
-      const saved = localStorage.getItem('luminakraft_settings');
+      const saved = localStorage.getItem('LuminaKraftLauncher_settings');
       if (saved) {
         return { ...defaultSettings, ...JSON.parse(saved) };
       }
@@ -84,7 +99,7 @@ class LauncherService {
 
   saveUserSettings(settings: Partial<UserSettings>): void {
     this.userSettings = { ...this.userSettings, ...settings };
-    localStorage.setItem('luminakraft_settings', JSON.stringify(this.userSettings));
+    localStorage.setItem('LuminaKraftLauncher_settings', JSON.stringify(this.userSettings));
   }
 
   getUserSettings(): UserSettings {
@@ -277,6 +292,11 @@ class LauncherService {
   }
 
   async getModpackStatus(modpackId: string): Promise<ModpackStatus> {
+    if (!isTauriContext()) {
+      // When not in Tauri context, return default status
+      return 'not_installed';
+    }
+
     try {
       const metadata = await this.getInstanceMetadata(modpackId);
       if (!metadata) {
@@ -294,22 +314,54 @@ class LauncherService {
 
       return 'installed';
     } catch (error) {
-      console.error('Error getting modpack status:', error);
+      console.error(`Error getting status for modpack ${modpackId}:`, error);
       return 'error';
     }
   }
 
   async getInstanceMetadata(modpackId: string): Promise<InstanceMetadata | null> {
     try {
-      const metadata = await invoke<string>('get_instance_metadata', { modpackId });
+      const metadata = await safeInvoke<string>('get_instance_metadata', { modpackId });
       return metadata ? JSON.parse(metadata) : null;
     } catch (error) {
+      if (!isTauriContext()) {
+        console.warn('Tauri context not available for getting instance metadata');
+        return null;
+      }
       console.error('Error getting instance metadata:', error);
       return null;
     }
   }
 
-  async installModpack(modpackId: string, onProgress?: (progress: number) => void): Promise<void> {
+  // Transform frontend modpack structure to backend-expected structure
+  private transformModpackForBackend(modpack: any) {
+    return {
+      id: modpack.id,
+      nombre: modpack.name, // Transform 'name' to 'nombre'
+      descripcion: modpack.description || '', // Add missing field
+      version: modpack.version,
+      minecraftVersion: modpack.minecraftVersion,
+      modloader: modpack.modloader,
+      modloaderVersion: modpack.modloaderVersion,
+      urlIcono: modpack.urlIcono || modpack.logo || '',
+      urlModpackZip: modpack.urlModpackZip || '',
+      changelog: modpack.changelog || '',
+      jvmArgsRecomendados: modpack.jvmArgsRecomendados || ''
+    };
+  }
+
+  // Transform frontend UserSettings structure to backend-expected structure
+  private transformUserSettingsForBackend(settings: UserSettings) {
+    return {
+      username: settings.username,
+      allocatedRam: settings.allocatedRam, // Keep camelCase, backend should handle it
+      javaPath: settings.javaPath || null,
+      launcherDataUrl: settings.launcherDataUrl
+      // Note: Don't send language to backend as it's frontend-only
+    };
+  }
+
+  async installModpack(modpackId: string, _onProgress?: (progress: number) => void): Promise<void> {
     const modpack = this.launcherData?.modpacks.find(m => m.id === modpackId);
     if (!modpack) {
       throw new Error('Modpack no encontrado');
@@ -320,11 +372,18 @@ class LauncherService {
     }
 
     try {
-      await invoke('install_modpack', {
-        modpack,
-        onProgress: onProgress || (() => {})
+      // Transform the modpack structure to match backend expectations
+      const transformedModpack = this.transformModpackForBackend(modpack);
+      const transformedSettings = this.transformUserSettingsForBackend(this.userSettings);
+      
+      await safeInvoke('install_modpack_with_minecraft', {
+        modpack: transformedModpack,
+        settings: transformedSettings
       });
     } catch (error) {
+      if (!isTauriContext()) {
+        throw new Error('Esta función requiere ejecutar la aplicación con Tauri. Por favor, usa "npm run tauri:dev" en lugar de "npm run dev".');
+      }
       console.error('Error installing modpack:', error);
       throw new Error('Error al instalar el modpack');
     }
@@ -341,11 +400,18 @@ class LauncherService {
     }
 
     try {
-      await invoke('launch_modpack', {
-        modpack,
-        settings: this.userSettings
+      // Transform the modpack structure to match backend expectations
+      const transformedModpack = this.transformModpackForBackend(modpack);
+      const transformedSettings = this.transformUserSettingsForBackend(this.userSettings);
+      
+      await safeInvoke('launch_modpack', {
+        modpack: transformedModpack,
+        settings: transformedSettings
       });
     } catch (error) {
+      if (!isTauriContext()) {
+        throw new Error('Esta función requiere ejecutar la aplicación con Tauri. Por favor, usa "npm run tauri:dev" en lugar de "npm run dev".');
+      }
       console.error('Error launching modpack:', error);
       throw new Error('Error al lanzar el modpack');
     }
@@ -353,9 +419,13 @@ class LauncherService {
 
   async repairModpack(modpackId: string, onProgress?: (progress: number) => void): Promise<void> {
     try {
-      await invoke('delete_instance', { modpackId });
+      await safeInvoke('delete_instance', { modpackId });
+      // The installModpack method already handles the transformation
       await this.installModpack(modpackId, onProgress);
     } catch (error) {
+      if (!isTauriContext()) {
+        throw new Error('Esta función requiere ejecutar la aplicación con Tauri. Por favor, usa "npm run tauri:dev" en lugar de "npm run dev".');
+      }
       console.error('Error repairing modpack:', error);
       throw new Error('Error al reparar el modpack');
     }
@@ -366,12 +436,17 @@ class LauncherService {
       return { hasUpdate: false };
     }
 
+    if (!isTauriContext()) {
+      // When not in Tauri context, can't check for updates
+      return { hasUpdate: false };
+    }
+
     try {
-      const currentVersion = await invoke<string>('get_launcher_version');
+      const currentVersion = await safeInvoke<string>('get_launcher_version');
       const remoteVersion = this.launcherData.launcherVersion;
 
       if (this.isVersionNewer(remoteVersion, currentVersion)) {
-        const platform = await invoke<string>('get_platform');
+        const platform = await safeInvoke<string>('get_platform');
         const downloadUrl = this.launcherData.launcherDownloadUrls[platform as keyof typeof this.launcherData.launcherDownloadUrls];
         
         return {
@@ -426,13 +501,18 @@ class LauncherService {
     this.saveUserSettings({ language });
     
     // Actualizar localStorage para i18n
-    localStorage.setItem('luminakraft-language', language);
+    localStorage.setItem('LuminaKraftLauncher-language', language);
     
     // Limpiar caché de traducciones y características para forzar recarga completa
     const keysToDelete = Array.from(this.cache.keys()).filter(key => 
       key.startsWith('translations_') || key.startsWith('features_')
     );
     keysToDelete.forEach(key => this.cache.delete(key));
+  }
+
+  // Check if we're running in Tauri context
+  isTauriAvailable(): boolean {
+    return isTauriContext();
   }
 }
 
