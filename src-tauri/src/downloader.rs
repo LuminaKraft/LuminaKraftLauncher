@@ -39,6 +39,7 @@ pub async fn download_file(url: &str, output_path: &PathBuf) -> Result<()> {
 }
 
 /// Download a file with progress callback
+#[allow(dead_code)]
 pub async fn download_file_with_progress<F>(
     url: &str,
     output_path: &PathBuf,

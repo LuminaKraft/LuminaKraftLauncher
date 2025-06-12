@@ -80,6 +80,7 @@ pub async fn delete_instance(modpack_id: &str) -> Result<()> {
 }
 
 /// Calculate the total size of an instance
+#[allow(dead_code)]
 pub async fn get_instance_size(modpack_id: &str) -> Result<u64> {
     let instance_dir = get_instance_dir(modpack_id)?;
     
@@ -91,6 +92,7 @@ pub async fn get_instance_size(modpack_id: &str) -> Result<u64> {
 }
 
 /// Calculate directory size recursively using synchronous operations
+#[allow(dead_code)]
 fn calculate_dir_size_sync(dir: &PathBuf) -> Result<u64> {
     let mut total_size = 0u64;
     
@@ -115,6 +117,7 @@ fn calculate_dir_size_sync(dir: &PathBuf) -> Result<u64> {
 }
 
 /// List all installed instances
+#[allow(dead_code)]
 pub async fn list_instances() -> Result<Vec<InstanceMetadata>> {
     let instances_dir = get_instances_dir()?;
     let mut instances = Vec::new();
@@ -144,6 +147,7 @@ pub async fn list_instances() -> Result<Vec<InstanceMetadata>> {
 }
 
 /// Create the instance metadata object
+#[allow(dead_code)]
 pub fn create_instance_metadata(
     id: String,
     version: String,
@@ -162,6 +166,7 @@ pub fn create_instance_metadata(
 }
 
 /// Check if an instance exists
+#[allow(dead_code)]
 pub async fn instance_exists(modpack_id: &str) -> bool {
     let instance_dir = get_instance_dir(modpack_id);
     
@@ -172,6 +177,7 @@ pub async fn instance_exists(modpack_id: &str) -> bool {
 }
 
 /// Get the last modified time of an instance
+#[allow(dead_code)]
 pub async fn get_instance_last_modified(modpack_id: &str) -> Result<Option<DateTime<Utc>>> {
     let instance_dir = get_instance_dir(modpack_id)?;
     let metadata_path = instance_dir.join("instance.json");

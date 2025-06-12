@@ -41,8 +41,22 @@ const AboutPage: React.FC = () => {
           {/* Launcher Info */}
           <div className="card">
             <div className="flex items-start space-x-6">
-              <div className="w-20 h-20 bg-gradient-to-br from-lumina-500 to-lumina-700 rounded-xl flex items-center justify-center flex-shrink-0">
-                <span className="text-white font-bold text-2xl">L</span>
+              <div className="w-20 h-20 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
+                <img 
+                  src="/luminakraft-logo.svg" 
+                  alt="LuminaKraft Logo" 
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    // Fallback to the original "L" if SVG fails to load
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    const fallback = target.nextElementSibling as HTMLElement;
+                    if (fallback) fallback.style.display = 'flex';
+                  }}
+                />
+                <div className="w-full h-full bg-gradient-to-br from-lumina-500 to-lumina-700 rounded-xl flex items-center justify-center" style={{ display: 'none' }}>
+                  <span className="text-white font-bold text-2xl">L</span>
+                </div>
               </div>
               
               <div className="flex-1">
@@ -158,8 +172,8 @@ const AboutPage: React.FC = () => {
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm text-dark-300">
                   <span>• Tauri (Framework)</span>
                   <span>• React (UI)</span>
-                  <span>• TypeScript (Lenguaje)</span>
-                  <span>• Tailwind CSS (Estilos)</span>
+                  <span>• TypeScript (Language)</span>
+                  <span>• Tailwind CSS (Styles)</span>
                   <span>• Rust (Backend)</span>
                   <span>• Vite (Build Tool)</span>
                 </div>

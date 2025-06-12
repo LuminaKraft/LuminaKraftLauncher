@@ -38,8 +38,22 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
       {/* Header */}
       <div className="p-6 border-b border-dark-700">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-lumina-500 to-lumina-700 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-lg">L</span>
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden">
+            <img 
+              src="/luminakraft-logo.svg" 
+              alt="LuminaKraft Logo" 
+              className="w-full h-full object-contain"
+              onError={(e) => {
+                // Fallback to the original "L" if SVG fails to load
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+                const fallback = target.nextElementSibling as HTMLElement;
+                if (fallback) fallback.style.display = 'flex';
+              }}
+            />
+            <div className="w-full h-full bg-gradient-to-br from-lumina-500 to-lumina-700 rounded-lg flex items-center justify-center" style={{ display: 'none' }}>
+              <span className="text-white font-bold text-lg">L</span>
+            </div>
           </div>
           <div>
             <h1 className="text-white font-bold text-lg">LuminaKraft</h1>
