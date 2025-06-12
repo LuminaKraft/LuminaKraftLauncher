@@ -186,6 +186,8 @@ jobs:
     needs: [build-windows, build-linux, build-macos]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
     
     steps:
       - name: Checkout repository
@@ -218,7 +220,7 @@ jobs:
             
             #### macOS
             - **DMG Image**: `*.dmg` - Drag and drop installation
-            - **🍎 Apple Silicon (M1/M2/M3)**: `aarch64-apple-darwin` - **Recommended**
+            - **🍎 Apple Silicon (M1/M2/M3/M4)**: `aarch64-apple-darwin` - **Recommended**
             - **💻 Intel Macs**: `x86_64-apple-darwin` - Legacy support
             
             ### ✨ What's New
