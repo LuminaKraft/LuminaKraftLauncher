@@ -83,7 +83,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             libwebkit2gtk-4.1-dev \
-            libappindicator3-dev \
             librsvg2-dev \
             patchelf \
             libssl-dev \
@@ -228,4 +227,4 @@ jobs:
             ### 🐛 Bug Reports
             If you encounter any issues, please report them on our [Discord](https://discord.gg/UJZRrcUFMj) or create an issue on GitHub.
           draft: false
-          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }} 
+          prerelease: true 
