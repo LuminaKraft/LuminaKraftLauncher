@@ -122,7 +122,6 @@
     "checking": "Verificando...",
     "apiVersion": "Versión de la API",
     "description": "Descripción",
-    "availableEndpoints": "Endpoints Disponibles",
     "resetSettings": "Restablecer configuración",
     "resetConfirm": "¿Estás seguro de que quieres restablecer toda la configuración?",
     "saved": "Configuración guardada",

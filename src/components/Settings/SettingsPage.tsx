@@ -257,18 +257,7 @@ const SettingsPage: React.FC = () => {
                 </div>
               )}
 
-              {apiInfo && apiInfo.endpoints && (
-                <div className="p-4 bg-dark-700 rounded-lg">
-                  <p className="text-dark-300 text-sm font-medium mb-3">{t('settings.availableEndpoints')}</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
-                    {apiInfo.endpoints.map((endpoint: string, index: number) => (
-                      <div key={index} className="text-lumina-400 font-mono">
-                        {endpoint}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+
 
               <div className="flex items-center space-x-4">
                 <button

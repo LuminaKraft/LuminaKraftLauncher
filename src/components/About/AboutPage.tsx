@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Download, ExternalLink, Heart, Globe } from 'lucide-react';
+import { invoke } from '@tauri-apps/api/core';
 
 const AboutPage: React.FC = () => {
   const { t } = useTranslation();
@@ -11,6 +12,17 @@ const AboutPage: React.FC = () => {
   const handleDownloadUpdate = () => {
     if (updateUrl) {
       window.open(updateUrl, '_blank');
+    }
+  };
+
+  const handleOpenUrl = async (url: string) => {
+    try {
+      // Try using Tauri API to open external URLs
+      await invoke('open_url', { url });
+    } catch (error) {
+      // Fallback to regular window.open for web environment
+      console.warn('Tauri command not available, using fallback:', error);
+      window.open(url, '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -159,11 +171,9 @@ const AboutPage: React.FC = () => {
           <div className="card">
             <h3 className="text-white font-semibold text-xl mb-4">{t('about.links')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <a
-                href="https://luminakraft.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center space-x-3 p-3 bg-dark-700 rounded-lg hover:bg-dark-600 transition-colors group"
+              <button
+                onClick={() => handleOpenUrl('https://luminakraft.com')}
+                className="flex items-center space-x-3 p-3 bg-dark-700 rounded-lg hover:bg-dark-600 transition-colors group w-full text-left"
               >
                 <Globe className="w-5 h-5 text-lumina-500" />
                 <div className="flex-1">
@@ -173,13 +183,11 @@ const AboutPage: React.FC = () => {
                   <p className="text-dark-400 text-sm">luminakraft.com</p>
                 </div>
                 <ExternalLink className="w-4 h-4 text-dark-400" />
-              </a>
+              </button>
               
-              <a
-                href="https://discord.gg/UJZRrcUFMj"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center space-x-3 p-3 bg-dark-700 rounded-lg hover:bg-dark-600 transition-colors group"
+              <button
+                onClick={() => handleOpenUrl('https://discord.gg/UJZRrcUFMj')}
+                className="flex items-center space-x-3 p-3 bg-dark-700 rounded-lg hover:bg-dark-600 transition-colors group w-full text-left"
               >
                 <div className="w-5 h-5 bg-indigo-500 rounded flex items-center justify-center">
                   <span className="text-white text-xs font-bold">D</span>
@@ -191,7 +199,7 @@ const AboutPage: React.FC = () => {
                   <p className="text-dark-400 text-sm">{t('about.joinCommunity')}</p>
                 </div>
                 <ExternalLink className="w-4 h-4 text-dark-400" />
-              </a>
+              </button>
             </div>
           </div>
 

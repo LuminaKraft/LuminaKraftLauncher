@@ -122,7 +122,6 @@
     "checking": "Checking...",
     "apiVersion": "API Version",
     "description": "Description",
-    "availableEndpoints": "Available Endpoints",
     "resetSettings": "Reset settings",
     "resetConfirm": "Are you sure you want to reset all settings?",
     "saved": "Settings saved",
