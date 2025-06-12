@@ -68,7 +68,7 @@ const AboutPage: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-dark-400">{t('about.versionLabel')}</span>
-                    <p className="text-white font-mono">{t('about.version', { version: '0.0.2' })}</p>
+                    <p className="text-white font-mono">{t('about.version', { version: '0.2.1' })}</p>
                   </div>
                   <div>
                     <span className="text-dark-400">{t('about.technologies')}</span>

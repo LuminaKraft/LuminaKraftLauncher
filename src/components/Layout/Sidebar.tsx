@@ -106,7 +106,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
             © 2025 LuminaKraft Studios
           </p>
           <p className="text-dark-500 text-xs mt-1">
-            {t('app.version', { version: '0.0.2' })}
+            {t('app.version', { version: '0.2.1' })}
           </p>
         </div>
       </div>
