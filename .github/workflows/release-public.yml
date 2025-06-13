@@ -1,16 +1,23 @@
-name: Build and Publish Public Release
+name: Build and Release (Unified)
 
 on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-and-release:
     runs-on: windows-latest
+    permissions:
+      contents: write
     
     steps:
-    - name: Checkout private repository
+    - name: Checkout repository
       uses: actions/checkout@v4
 
     - name: Setup Node.js
@@ -21,6 +28,20 @@ jobs:
 
     - name: Setup Rust
       uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: stable
+        targets: x86_64-pc-windows-msvc
+
+    - name: Cache Rust dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          src-tauri/target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
     - name: Install dependencies
       run: npm ci
@@ -28,8 +49,11 @@ jobs:
     - name: Build application
       run: npm run build
 
-    - name: Build Tauri app (Windows only for faster testing)
+    - name: Build Tauri app (Windows only for testing)
       run: npm run tauri build
+      env:
+        TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+        TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
 
     - name: Get version from tag
       id: get_version
@@ -49,7 +73,7 @@ jobs:
       shell: powershell
 
     - name: Create Release in Public Repository
-      id: create_release
+      id: create_public_release
       uses: softprops/action-gh-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
@@ -100,7 +124,7 @@ jobs:
           **Public release**: https://github.com/kristiangarcia/luminakraft-launcher-releases/releases/tag/${{ github.ref_name }}
           
           ### 🔧 Build Info
-          - **Platform**: Windows
+          - **Platform**: Windows (Linux/macOS commented for testing)
           - **Version**: ${{ steps.get_version.outputs.VERSION }}
           - **Commit**: ${{ github.sha }}
           
@@ -118,4 +142,19 @@ jobs:
         echo "✅ Public release: https://github.com/kristiangarcia/luminakraft-launcher-releases/releases/tag/${{ github.ref_name }}"
         echo "✅ Private tracking: https://github.com/kristiangarcia/luminakraft-launcher/releases/tag/${{ github.ref_name }}"
         echo "🎉 Release completed successfully!"
-      shell: powershell 
+      shell: powershell
+
+  # TODO: Uncomment when ready for multi-platform builds
+  # build-linux:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
+  #     # ... Linux build steps
+  
+  # build-macos:
+  #   runs-on: macos-latest
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
+  #     # ... macOS build steps 
