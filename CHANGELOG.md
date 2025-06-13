@@ -13,6 +13,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.1] - 2025-06-13
 
+### 🚀 New Release
+- Version 0.0.1 released with latest improvements
+- See previous versions below for detailed changes
+
+## [0.0.1] - 2025-06-13
+
+### 🚀 New Release
+- Version 0.0.1 released with latest improvements
+- See previous versions below for detailed changes
+
+## [0.0.1] - 2025-06-13
+
+### 🚀 New Release
+- Version 0.0.1 released with latest improvements
+- See previous versions below for detailed changes
+
+## [0.0.1] - 2025-06-13
+
+### 🚀 New Release
+- Version 0.0.1 released with latest improvements
+- See previous versions below for detailed changes
+
+## [0.0.1] - 2025-06-13
+
 ### 🚀 Major Features Added
 
 #### **Fully Automatic Updates**

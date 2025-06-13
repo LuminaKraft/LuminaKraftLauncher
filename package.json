@@ -17,7 +17,8 @@
     "release": "node release.js",
     "release:patch": "node release.js patch --push",
     "release:minor": "node release.js minor --push",
-    "release:major": "node release.js major --push"
+    "release:major": "node release.js major --push",
+    "test:release": "node test-release.js"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
@@ -46,5 +47,5 @@
     "vite": "^6.0.3",
     "wait-on": "^8.0.3"
   },
-  "isPrerelease": false
+  "isPrerelease": true
 }

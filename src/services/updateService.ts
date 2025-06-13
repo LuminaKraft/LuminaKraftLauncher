@@ -24,8 +24,10 @@ class UpdateService {
   private updateCheckInterval: number | null = null;
   private lastCheckTime: number = 0;
   private readonly CHECK_INTERVAL = 60 * 60 * 1000; // 1 hour
-  // Using public releases repository - no token needed!
+  // Primary: Public releases repository - no token needed!
   private readonly GITHUB_API_URL = 'https://api.github.com/repos/kristiangarcia/luminakraft-launcher-releases/releases/latest';
+  // Fallback: Private repository (will need token, but try anyway)
+  private readonly FALLBACK_GITHUB_API_URL = 'https://api.github.com/repos/kristiangarcia/luminakraft-launcher/releases/latest';
 
   private constructor() {}
 
@@ -81,11 +83,38 @@ class UpdateService {
   }
 
   /**
-   * Check for updates using GitHub releases from public repository
+   * Try to fetch from a specific GitHub releases URL
+   */
+  private async fetchGitHubRelease(url: string, repoName: string): Promise<GitHubRelease> {
+    console.log(`Attempting to fetch from ${repoName}: ${url}`);
+    
+    const headers: Record<string, string> = {
+      'Accept': 'application/vnd.github.v3+json',
+      'User-Agent': 'LuminaKraft-Launcher'
+    };
+
+    const response = await fetch(url, { headers });
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error(`No releases found in ${repoName}. Repository may not exist or have no releases.`);
+      } else if (response.status === 403) {
+        throw new Error(`Access denied to ${repoName}. Repository may be private or rate-limited.`);
+      }
+      throw new Error(`GitHub API request failed for ${repoName}: ${response.status} ${response.statusText}`);
+    }
+
+    const release: GitHubRelease = await response.json();
+    console.log(`✅ Successfully fetched release from ${repoName}:`, release.tag_name);
+    return release;
+  }
+
+  /**
+   * Check for updates using GitHub releases with fallback strategy
    */
   async checkForUpdates(): Promise<UpdateInfo> {
     try {
-      console.log('Checking for updates from public releases repository...');
+      console.log('🔍 Checking for updates...');
       
       // Get current version and platform from Tauri
       const [currentVersion, platform] = await Promise.all([
@@ -93,28 +122,45 @@ class UpdateService {
         invoke<string>('get_platform')
       ]);
 
-      // Prepare headers for GitHub API (no token needed for public repo)
-      const headers: Record<string, string> = {
-        'Accept': 'application/vnd.github.v3+json',
-        'User-Agent': 'LuminaKraft-Launcher'
-      };
+      console.log(`Current version: ${currentVersion}, Platform: ${platform}`);
 
-      // Fetch latest release from public GitHub repository
-      const response = await fetch(this.GITHUB_API_URL, { headers });
+      let release: GitHubRelease;
       
-      if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error('No releases found in public repository. Please check if releases have been published.');
+      // Try public repository first
+      try {
+        release = await this.fetchGitHubRelease(this.GITHUB_API_URL, 'public releases repository');
+      } catch (publicError) {
+        console.warn('Failed to fetch from public repository:', publicError);
+        
+        // Try fallback to private repository
+        try {
+          console.log('🔄 Trying fallback to private repository...');
+          release = await this.fetchGitHubRelease(this.FALLBACK_GITHUB_API_URL, 'private repository');
+        } catch (fallbackError) {
+          console.error('Both repositories failed:', fallbackError);
+          
+          // If both fail, return no update available
+          const updateInfo: UpdateInfo = {
+            hasUpdate: false,
+            currentVersion,
+            latestVersion: currentVersion,
+            platform,
+            releaseNotes: 'Unable to check for updates: No releases found. This is normal for new installations.'
+          };
+          
+          console.log('❌ No releases found in any repository, returning no update');
+          return updateInfo;
         }
-        throw new Error(`GitHub API request failed: ${response.status} ${response.statusText}`);
       }
 
-      const release: GitHubRelease = await response.json();
       const latestVersion = release.tag_name.replace('v', '');
+      console.log(`Latest version found: ${latestVersion}`);
 
       // Compare versions
       const comparison = this.compareVersions(currentVersion, latestVersion);
       const hasUpdate = comparison < 0;
+
+      console.log(`Version comparison: current(${currentVersion}) vs latest(${latestVersion}) = ${comparison} (hasUpdate: ${hasUpdate})`);
 
       const updateInfo: UpdateInfo = {
         hasUpdate,
@@ -133,11 +179,11 @@ class UpdateService {
         updateInfo
       }));
 
-      console.log('Update check result:', updateInfo);
+      console.log('✅ Update check completed:', updateInfo);
       return updateInfo;
     } catch (error) {
-      console.error('Failed to check for updates:', error);
-      throw error;
+      console.error('❌ Failed to check for updates:', error);
+      throw new Error(`Update check failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 

@@ -36,7 +36,7 @@ function updateVersion(newVersion, isPrerelease = false) {
       update: (content) => {
         const pkg = JSON.parse(content);
         pkg.version = newVersion;
-        pkg.isPrerelease = isPrerelease;
+        pkg.isPrerelease = Boolean(isPrerelease);
         return JSON.stringify(pkg, null, 2);
       }
     },
@@ -87,6 +87,14 @@ function updateVersion(newVersion, isPrerelease = false) {
       process.exit(1);
     }
   });
+  
+  // Debug: verify package.json was updated correctly
+  try {
+    const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+    log(`🔍 Verification: package.json isPrerelease = ${packageJson.isPrerelease} (type: ${typeof packageJson.isPrerelease})`, 'cyan');
+  } catch (error) {
+    log(`⚠️  Could not verify package.json: ${error.message}`, 'yellow');
+  }
 }
 
 function updateChangelog(version) {
@@ -184,6 +192,7 @@ function main() {
 
   const versionArg = args[0];
   const isPrerelease = args.includes('--prerelease');
+  const isPushAuto = args.includes('--push');
   let newVersion;
 
   // Handle semantic version increments
@@ -215,10 +224,11 @@ function main() {
   log(`📊 Current version: ${currentVersion}`, 'magenta');
   log(`🎯 New version:     ${newVersion}`, 'green');
   log(`📋 Release type:    ${isPrerelease ? '🧪 Pre-release' : '🎉 Stable'}`, isPrerelease ? 'yellow' : 'green');
+  log(`🔧 Auto-push:      ${isPushAuto ? '✅ Enabled' : '❌ Disabled'}`, isPushAuto ? 'green' : 'yellow');
   log('');
 
   // Confirm the release
-  if (process.env.CI !== 'true' && !args.includes('--push')) {
+  if (process.env.CI !== 'true' && !isPushAuto) {
     log('⚠️  This will:', 'yellow');
     log('   1. Update version in all files', 'yellow');
     log('   2. Update CHANGELOG.md', 'yellow');
@@ -268,7 +278,7 @@ function main() {
 
   // Step 4: Git operations
   runCommand('git add .', 'Staging changes');
-  runCommand(`git commit -m "🚀 Release v${newVersion}"`, 'Creating commit');
+  runCommand(`git commit -m "🚀 Release v${newVersion}${isPrerelease ? ' (pre-release)' : ''}"`, 'Creating commit');
   runCommand(`git tag v${newVersion}`, 'Creating tag');
 
   log('');
@@ -280,17 +290,18 @@ function main() {
   log('This will trigger:', 'cyan');
   log('  ✅ GitHub Actions build', 'green');
   log('  ✅ Automatic GitHub release creation', 'green');
-  log('  ✅ API repository update', 'green');
+  log(`  ✅ ${isPrerelease ? 'Pre-release' : 'Stable release'} in public repository`, isPrerelease ? 'yellow' : 'green');
+  log('  ✅ Internal tracking in private repository', 'green');
   log('  ✅ User notifications for updates', 'green');
   log('');
 
   // Auto-push if in CI or if --push flag is provided
-  if (process.env.CI === 'true' || args.includes('--push')) {
+  if (process.env.CI === 'true' || isPushAuto) {
     runCommand('git push origin main --tags', 'Pushing to GitHub');
     log('');
     log('🚀 Release pushed to GitHub!', 'bright');
     log('🔗 Check GitHub Actions for build progress:', 'cyan');
-    log('   https://github.com/luminakraft/luminakraft-launcher/actions', 'blue');
+    log('   https://github.com/kristiangarcia/luminakraft-launcher/actions', 'blue');
   } else {
     log('💡 To complete the release, run:', 'cyan');
     log('   git push origin main --tags', 'yellow');
