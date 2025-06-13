@@ -6,7 +6,9 @@ import { updateService, UpdateInfo } from '../../services/updateService';
 
 const AboutPage: React.FC = () => {
   const { t } = useTranslation();
-  const [currentVersion, setCurrentVersion] = useState<string>('0.3.1');
+  // Version is automatically updated by release.js
+  const currentVersion = "0.0.1";
+  const [loadedVersion, setLoadedVersion] = useState<string>(currentVersion);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState<boolean>(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
@@ -18,7 +20,7 @@ const AboutPage: React.FC = () => {
     const loadInitialData = async () => {
       try {
         const version = await invoke<string>('get_launcher_version');
-        setCurrentVersion(version);
+        setLoadedVersion(version);
         
         // Check for cached update info
         const cached = updateService.getCachedUpdateInfo();
@@ -111,7 +113,7 @@ const AboutPage: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-dark-400">{t('about.versionLabel')}</span>
-                    <p className="text-white font-mono">{t('about.version', { version: currentVersion })}</p>
+                    <p className="text-white font-mono">{t('about.version', { version: loadedVersion })}</p>
                   </div>
                   <div>
                     <span className="text-dark-400">{t('about.technologies')}</span>
