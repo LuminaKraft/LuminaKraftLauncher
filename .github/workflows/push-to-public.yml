@@ -1,62 +1,32 @@
-name: 🔄 Sync to Public Repository
+# ⚠️ DEPRECATED - Este workflow ya no se usa
+# Los releases ahora se manejan directamente en el repositorio público:
+# https://github.com/kristiangarcia/luminakraft-launcher-releases
+
+name: "⚠️ [DEPRECATED] Sync to Public Repository"
 
 on:
-  push:
-    tags:
-      - 'v*'
+  # Workflow deshabilitado - usar git push directamente
   workflow_dispatch:
     inputs:
       force_push:
-        description: 'Forzar push (sobrescribir historial)'
+        description: 'Este workflow está deprecado'
         required: false
         type: boolean
         default: false
 
 jobs:
-  sync-to-public:
+  notify:
     runs-on: ubuntu-latest
-    # Usar el plan gratuito de GitHub Actions
-    permissions:
-      contents: write
     steps:
-      - name: 📥 Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          
-      - name: 🔧 Setup Git
+      - name: ⚠️ Workflow Deprecado
         run: |
-          git config --global user.name "LuminaKraft Bot"
-          git config --global user.email "bot@luminakraft.com"
-          
-      - name: 🌐 Push to public repository
-        env:
-          PUBLIC_REPO_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
-        run: |
-          echo "🔄 Sincronizando con repositorio público..."
-          
-          # Add public remote using token
-          echo "🔗 Configurando remote público..."
-          git remote add public https://x-access-token:${PUBLIC_REPO_TOKEN}@github.com/kristiangarcia/luminakraft-launcher-releases.git
-          
-          # Push changes
-          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
-            # Si es un tag, solo enviar ese tag específico
-            TAG_NAME=${GITHUB_REF#refs/tags/}
-            echo "📦 Sincronizando tag: $TAG_NAME"
-            git push public $TAG_NAME
-            echo "✅ Tag sincronizado! El build comenzará automáticamente en el repositorio público"
-          else
-            # Si no es un tag, sincronizar la rama actual
-            BRANCH=${GITHUB_REF#refs/heads/}
-            echo "📦 Sincronizando rama: $BRANCH"
-            FORCE_FLAG=""
-            if [ "${{ github.event.inputs.force_push }}" = "true" ]; then
-              FORCE_FLAG="--force"
-              echo "⚠️ Usando force push"
-            fi
-            git push public ${BRANCH}:main ${FORCE_FLAG}
-            echo "✅ Rama sincronizada!"
-          fi
-          
-          echo "🔗 Ver progreso en: https://github.com/kristiangarcia/luminakraft-launcher-releases/actions" 
+          echo "❌ Este workflow ya no se usa"
+          echo ""
+          echo "✨ Nuevo proceso de release:"
+          echo "1. Hacer cambios en el repositorio privado"
+          echo "2. git push origin main"
+          echo "3. git push public main"
+          echo ""
+          echo "🔗 Los builds se ejecutan automáticamente en:"
+          echo "https://github.com/kristiangarcia/luminakraft-launcher-releases"
+          exit 1 
