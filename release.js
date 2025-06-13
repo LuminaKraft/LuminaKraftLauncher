@@ -66,6 +66,12 @@ function updateVersion(newVersion, isPrerelease = false) {
         config.version = newVersion;
         return JSON.stringify(config, null, 2);
       }
+    },
+    {
+      path: 'src-tauri/Cargo.toml',
+      update: (content) => {
+        return content.replace(/version\s*=\s*".*?"/, `version = "${newVersion}"`);
+      }
     }
   ];
 
