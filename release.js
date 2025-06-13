@@ -187,8 +187,14 @@ function main() {
     log('  node release.js patch          Release next patch version', 'green');
     log('  node release.js 1.0.0-beta.1  Release beta version', 'green');
     log('  node release.js 0.5.0 --prerelease  Release 0.5.0 as pre-release', 'green');
-    log('  npm run release:patch-pre      Release next patch as pre-release', 'green');
-    log('  npm run release -- 0.5.0 --prerelease   Pass flags via npm', 'green');
+    log('');
+    log('NPM Shortcuts:', 'cyan');
+    log('  npm run release:patch          Auto-push patch release', 'green');
+    log('  npm run release:patch-pre      Auto-push patch prerelease', 'green');
+    log('  npm run release:pre 0.5.0      Prerelease specific version', 'green');
+    log('  npm run release:version 0.5.0  Release specific version', 'green');
+    log('  npm run release:version 0.5.0 --pre  Release specific as prerelease', 'green');
+    log('  npm run release -- 0.5.0 --prerelease   Direct flags via npm', 'green');
     log('');
     log(`Current version: ${getCurrentVersion()}`, 'magenta');
     process.exit(0);
