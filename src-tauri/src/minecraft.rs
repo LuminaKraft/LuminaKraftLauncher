@@ -75,6 +75,33 @@ pub async fn check_java_availability() -> Result<bool> {
     Ok(true)
 }
 
+/// Get the appropriate auth method based on user settings
+fn get_auth_method(settings: &UserSettings) -> AuthMethod {
+    match settings.auth_method.as_str() {
+        "microsoft" => {
+            if let Some(ref account) = settings.microsoft_account {
+                AuthMethod::Microsoft {
+                    username: account.username.clone(),
+                    xuid: account.xuid.clone(),
+                    uuid: account.uuid.clone(),
+                    access_token: account.access_token.clone(),
+                    refresh_token: account.refresh_token.clone(),
+                }
+            } else {
+                // Fallback to offline if Microsoft account is not available
+                AuthMethod::Offline {
+                    username: settings.username.clone(),
+                    uuid: None,
+                }
+            }
+        }
+        _ => AuthMethod::Offline {
+            username: settings.username.clone(),
+            uuid: None,
+        }
+    }
+}
+
 /// Install Minecraft and mod loader using Lyceris
 pub async fn install_minecraft_with_lyceris(
     modpack: &Modpack,
@@ -83,13 +110,12 @@ pub async fn install_minecraft_with_lyceris(
 ) -> Result<()> {
     let emitter = create_emitter();
     
+    let auth_method = get_auth_method(settings);
+    
     let config_builder = ConfigBuilder::new(
         instance_dir,
         modpack.minecraft_version.clone(),
-        AuthMethod::Offline {
-            username: settings.username.clone(),
-            uuid: None,
-        },
+        auth_method,
     );
     
     // Build config with or without mod loader
@@ -173,13 +199,12 @@ pub async fn launch_minecraft(modpack: Modpack, settings: UserSettings) -> Resul
     let memory_gb = settings.allocated_ram.max(1);
     println!("Configuring memory: {}GB", memory_gb);
     
+    let auth_method = get_auth_method(&settings);
+    
     let mut config_builder = ConfigBuilder::new(
         instance_dir,
         modpack.minecraft_version.clone(),
-        AuthMethod::Offline {
-            username: settings.username.clone(),
-            uuid: None,
-        },
+        auth_method,
     );
     
     // Set memory using Lyceris' memory system

@@ -82,7 +82,8 @@ class LauncherService {
       username: 'Player',
       allocatedRam: 4,
       launcherDataUrl: 'https://api.luminakraft.com/v1/launcher_data.json',
-      language: this.detectDefaultLanguage()
+      language: this.detectDefaultLanguage(),
+      authMethod: 'offline'
     };
 
     try {
@@ -356,7 +357,9 @@ class LauncherService {
       username: settings.username,
       allocatedRam: settings.allocatedRam, // Keep camelCase, backend should handle it
       javaPath: settings.javaPath || null,
-      launcherDataUrl: settings.launcherDataUrl
+      launcherDataUrl: settings.launcherDataUrl,
+      authMethod: settings.authMethod,
+      microsoftAccount: settings.microsoftAccount || null
       // Note: Don't send language to backend as it's frontend-only
     };
   }

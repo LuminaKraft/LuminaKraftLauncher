@@ -49,7 +49,8 @@ const initialState: LauncherState = {
     username: 'Player',
     allocatedRam: 4,
     launcherDataUrl: 'https://api.luminakraft.com/v1/launcher_data.json',
-    language: 'es'
+    language: 'es',
+    authMethod: 'offline'
   },
   translations: null,
   currentLanguage: 'es',

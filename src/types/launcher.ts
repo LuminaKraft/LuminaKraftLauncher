@@ -87,12 +87,24 @@ export interface InstanceMetadata {
   minecraftVersion: string;
 }
 
+export interface MicrosoftAccount {
+  xuid: string;
+  exp: number;
+  uuid: string;
+  username: string;
+  accessToken: string;
+  refreshToken: string;
+  clientId: string;
+}
+
 export interface UserSettings {
   username: string;
   allocatedRam: number; // in GB
   javaPath?: string;
   launcherDataUrl: string;
   language: string; // 'es' | 'en'
+  authMethod: 'offline' | 'microsoft';
+  microsoftAccount?: MicrosoftAccount;
 }
 
 export interface DownloadProgress {

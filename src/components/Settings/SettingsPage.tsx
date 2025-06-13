@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, HardDrive, Coffee, Globe, Save, FolderOpen, CheckCircle, Wifi, WifiOff, RefreshCw, Trash2, Server, Languages } from 'lucide-react';
+import { User, HardDrive, Coffee, Globe, Save, FolderOpen, CheckCircle, Wifi, WifiOff, RefreshCw, Trash2, Server, Languages, Shield, XCircle } from 'lucide-react';
 import { useLauncher } from '../../contexts/LauncherContext';
 import LauncherService from '../../services/launcherService';
+import MicrosoftAuth from './MicrosoftAuth';
+import type { MicrosoftAccount } from '../../types/launcher';
 
 const SettingsPage: React.FC = () => {
   const { t } = useTranslation();
@@ -14,6 +16,7 @@ const SettingsPage: React.FC = () => {
   const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const [apiInfo, setApiInfo] = useState<any>(null);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
 
   useEffect(() => {
@@ -107,6 +110,39 @@ const SettingsPage: React.FC = () => {
     setTimeout(() => setSavedNotification(false), 3000);
   };
 
+  const handleMicrosoftAuthSuccess = (account: MicrosoftAccount) => {
+    setAuthError(null);
+    const newSettings = {
+      ...formData,
+      authMethod: 'microsoft' as const,
+      microsoftAccount: account,
+      username: account.username
+    };
+    setFormData(newSettings);
+    updateUserSettings(newSettings);
+    setSavedNotification(true);
+    setTimeout(() => setSavedNotification(false), 3000);
+  };
+
+  const handleMicrosoftAuthClear = () => {
+    setAuthError(null);
+    const newSettings = {
+      ...formData,
+      authMethod: 'offline' as const,
+      microsoftAccount: undefined,
+      username: 'Player'
+    };
+    setFormData(newSettings);
+    updateUserSettings(newSettings);
+    setSavedNotification(true);
+    setTimeout(() => setSavedNotification(false), 3000);
+  };
+
+  const handleAuthError = (error: string) => {
+    setAuthError(error);
+    setTimeout(() => setAuthError(null), 5000);
+  };
+
   const ramOptions = [
     { value: 2, label: '2 GB' },
     { value: 4, label: '4 GB' },
@@ -178,6 +214,18 @@ const SettingsPage: React.FC = () => {
           </div>
         )}
 
+        {/* Error notification */}
+        {authError && (
+          <div className="mb-6 p-4 bg-red-600/20 border border-red-600/30 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <XCircle className="w-5 h-5 text-red-500" />
+              <span className="text-red-400 font-medium">
+                {authError}
+              </span>
+            </div>
+          </div>
+        )}
+
         <div className="max-w-4xl space-y-8">
           {/* Language Settings */}
           <div className="card">
@@ -211,6 +259,43 @@ const SettingsPage: React.FC = () => {
                   {t('settings.languageDescription')}
                 </p>
               </div>
+            </div>
+          </div>
+
+          {/* Authentication Settings */}
+          <div className="card">
+            <div className="flex items-center space-x-3 mb-6">
+              <Shield className="w-6 h-6 text-lumina-500" />
+              <h2 className="text-white text-xl font-semibold">{t('auth.title')}</h2>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <p className="text-dark-300 text-sm mb-4">
+                  {t('auth.description')}
+                </p>
+                
+                <MicrosoftAuth
+                  userSettings={formData}
+                  onAuthSuccess={handleMicrosoftAuthSuccess}
+                  onAuthClear={handleMicrosoftAuthClear}
+                  onError={handleAuthError}
+                />
+              </div>
+              
+              {formData.authMethod === 'offline' && (
+                <div className="p-4 bg-yellow-600/20 border border-yellow-600/30 rounded-lg">
+                                     <div className="flex items-center space-x-2">
+                     <CheckCircle className="w-5 h-5 text-yellow-500" />
+                     <span className="text-yellow-400 font-medium">
+                       {t('auth.offlineMode')}
+                     </span>
+                   </div>
+                   <p className="text-yellow-300 text-sm mt-2">
+                     {t('auth.offlineModeDescription')}
+                   </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -292,9 +377,13 @@ const SettingsPage: React.FC = () => {
                   onChange={(e) => handleInputChange('username', e.target.value)}
                   placeholder={t('settings.usernamePlaceholder')}
                   className="input-field w-full max-w-md"
+                  disabled={formData.authMethod === 'microsoft'}
                 />
                 <p className="text-dark-400 text-xs mt-1">
-                  {t('settings.usernameDescription')}
+                  {formData.authMethod === 'microsoft' 
+                    ? t('auth.usernameFromMicrosoft')
+                    : t('settings.usernameDescription')
+                  }
                 </p>
               </div>
             </div>

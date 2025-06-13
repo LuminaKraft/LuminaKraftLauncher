@@ -16,10 +16,17 @@ Un lanzador de modpacks personalizado para Minecraft, desarrollado específicame
 - **Instalación sin intervención**: No requiere pasos manuales del usuario
 - **Respaldo inteligente**: Sistema de fallback con múltiples métodos de actualización
 
+### 🔐 Autenticación de Microsoft
+- **⭐ Autenticación modal**: Ventana emergente estilo Modrinth para Microsoft
+- **🔄 Método alternativo**: Sistema de respaldo con pegado de URL
+- **🔑 Gestión automática de tokens**: Renovación y validación automática de sesiones
+- **🌐 Soporte multilingüe**: Interfaz completa en español e inglés
+- **💾 Sesiones persistentes**: Mantiene la autenticación entre sesiones
+
 ### 🎯 Experiencia de Usuario
-- **Compatible con usuarios premium y no premium**: Soporte completo para el modo offline
+- **Compatible con usuarios premium y no premium**: Soporte completo para Microsoft y modo offline
 - **Interfaz moderna**: Diseño intuitivo con tema oscuro y componentes responsivos
-- **Configuración flexible**: Personaliza RAM, rutas de Java y más
+- **Configuración flexible**: Personaliza RAM, rutas de Java y autenticación
 - **Multiplataforma**: Windows, macOS y Linux con soporte nativo
 
 ### ⚡ Rendimiento y Tecnología
@@ -153,6 +160,39 @@ luminakraft-launcher/
 ├── LAUNCHER_API_UPDATER_REQUIREMENTS.md  # ⭐ Especificaciones de API
 └── README.md                   # Este archivo
 ```
+
+## 🔐 Sistema de Autenticación Microsoft
+
+### Características de Autenticación
+
+- **🪟 Modal de Autenticación**: Ventana emergente que se abre automáticamente para autenticarse con Microsoft
+- **🔄 Método Alternativo**: Si el modal falla, cambia automáticamente al método de pegar URL
+- **🔑 Gestión de Tokens**: Renovación automática de tokens expirados sin intervención del usuario
+- **💾 Persistencia**: La autenticación se mantiene entre sesiones del launcher
+- **🌐 Multilingüe**: Interfaz completamente traducida en español e inglés
+
+### Como Funciona
+
+1. **Modo Modal (Recomendado)**:
+   - Hacer clic en "Iniciar sesión con Microsoft"
+   - Se abre una ventana emergente con el login de Microsoft
+   - Completar la autenticación en la ventana
+   - La ventana se cierra automáticamente al completar el login
+   - ¡Listo! Ya puedes acceder a servidores premium
+
+2. **Método Alternativo**:
+   - Si el modal no funciona, se activa automáticamente el método alternativo
+   - Se abre el navegador con la página de Microsoft
+   - Copiar la URL completa de la página en blanco que aparece después del login
+   - Pegar la URL en el campo del launcher
+   - Hacer clic en "Verificar URL"
+
+### Gestión de Sesiones
+
+- **Renovación Automática**: Los tokens se renuevan automáticamente antes de expirar
+- **Indicadores Visuales**: El launcher muestra claramente si estás autenticado o no
+- **Cerrar Sesión**: Opción para cerrar sesión y volver al modo offline
+- **Compatibilidad**: Funciona junto con el modo offline sin conflictos
 
 ## 🔄 Sistema de Actualizaciones
 
