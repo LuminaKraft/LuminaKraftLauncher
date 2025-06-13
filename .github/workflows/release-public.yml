@@ -28,7 +28,7 @@ jobs:
     - name: Build application
       run: npm run build
 
-    - name: Build Tauri app
+    - name: Build Tauri app (Windows only for faster testing)
       run: npm run tauri build
 
     - name: Get version from tag
@@ -36,6 +36,16 @@ jobs:
       run: |
         $version = $env:GITHUB_REF -replace 'refs/tags/v', ''
         echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+      shell: powershell
+
+    - name: List built files (for debugging)
+      run: |
+        echo "=== Checking build output ==="
+        if (Test-Path "src-tauri/target/release/bundle") {
+          Get-ChildItem -Recurse "src-tauri/target/release/bundle" | Select-Object FullName
+        } else {
+          echo "Bundle directory not found"
+        }
       shell: powershell
 
     - name: Create Release in Public Repository
@@ -74,11 +84,10 @@ jobs:
         draft: false
         prerelease: false
         files: |
-          src-tauri/target/release/bundle/msi/LuminaKraft Launcher_${{ steps.get_version.outputs.VERSION }}_x64_en-US.msi
-          src-tauri/target/release/bundle/nsis/LuminaKraft Launcher_${{ steps.get_version.outputs.VERSION }}_x64-setup.exe
+          src-tauri/target/release/bundle/msi/*.msi
+          src-tauri/target/release/bundle/nsis/*.exe
 
-    # Optional: Also create a release in the private repo for internal tracking
-    - name: Create Release in Private Repository (Internal)
+    - name: Create Release in Private Repository (Internal tracking)
       uses: softprops/action-gh-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -86,8 +95,27 @@ jobs:
         tag_name: ${{ github.ref_name }}
         name: Internal Release v${{ steps.get_version.outputs.VERSION }}
         body: |
-          Internal release tracking for development team.
-          Public release available at: https://github.com/kristiangarcia/luminakraft-launcher-releases/releases/tag/${{ github.ref_name }}
+          ## 📋 Internal Release Tracking
+          
+          **Public release**: https://github.com/kristiangarcia/luminakraft-launcher-releases/releases/tag/${{ github.ref_name }}
+          
+          ### 🔧 Build Info
+          - **Platform**: Windows
+          - **Version**: ${{ steps.get_version.outputs.VERSION }}
+          - **Commit**: ${{ github.sha }}
+          
+          ### 📦 Assets
+          - MSI installer: ✅
+          - NSIS installer: ✅
         draft: false
         prerelease: false
-      continue-on-error: true 
+      continue-on-error: true
+
+    - name: Summary
+      run: |
+        echo "=== Release Summary ==="
+        echo "✅ Version: ${{ steps.get_version.outputs.VERSION }}"
+        echo "✅ Public release: https://github.com/kristiangarcia/luminakraft-launcher-releases/releases/tag/${{ github.ref_name }}"
+        echo "✅ Private tracking: https://github.com/kristiangarcia/luminakraft-launcher/releases/tag/${{ github.ref_name }}"
+        echo "🎉 Release completed successfully!"
+      shell: powershell 
