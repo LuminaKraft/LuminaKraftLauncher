@@ -1,7 +1,7 @@
 {
   "name": "luminakraft-launcher",
   "private": true,
-  "version": "0.3.1",
+  "version": "0.4.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -13,7 +13,11 @@
     "tauri:dev-stable": "node kill-port.js && tauri dev --no-watch",
     "tauri:dev-watch": "tauri dev",
     "tauri:build": "tauri build",
-    "kill-port": "node kill-port.js"
+    "kill-port": "node kill-port.js",
+    "release": "node release.js",
+    "release:patch": "node release.js patch --push",
+    "release:minor": "node release.js minor --push",
+    "release:major": "node release.js major --push"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
