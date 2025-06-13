@@ -207,7 +207,13 @@ async function publishToPublic(version, isPrerelease, forceFlag, octokit) {
     const releaseExists = Boolean(existingRelease);
     const existingReleaseId = existingRelease?.id;
 
-    if (releaseExists) {
+    let tagExists = false;
+    try {
+      await octokit.git.getRef({ owner: PUBLIC_REPO_OWNER, repo: PUBLIC_REPO_NAME, ref: `tags/v${version}` });
+      tagExists = true;
+    } catch {}
+
+    if (releaseExists || tagExists) {
       if (!forceFlag) {
         const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
         const answer = await new Promise(res => rl.question(`⚠️ Ya existe un release/tag v${version} en el repo público. ¿Reemplazarlo? (y/N): `, res));
@@ -217,8 +223,12 @@ async function publishToPublic(version, isPrerelease, forceFlag, octokit) {
         }
       }
       log('🔄 Eliminando release y tag previos en repo público...', 'yellow');
-      await octokit.repos.deleteRelease({ owner: PUBLIC_REPO_OWNER, repo: PUBLIC_REPO_NAME, release_id: existingReleaseId });
-      try { await octokit.git.deleteRef({ owner: PUBLIC_REPO_OWNER, repo: PUBLIC_REPO_NAME, ref: `tags/v${version}` }); } catch {}
+      if (releaseExists) {
+        await octokit.repos.deleteRelease({ owner: PUBLIC_REPO_OWNER, repo: PUBLIC_REPO_NAME, release_id: existingReleaseId });
+      }
+      if (tagExists) {
+        try { await octokit.git.deleteRef({ owner: PUBLIC_REPO_OWNER, repo: PUBLIC_REPO_NAME, ref: `tags/v${version}` }); } catch {}
+      }
     }
 
     // Obtener lista de instaladores
@@ -350,7 +360,10 @@ ${isPrerelease ? '🧪 **PRE-RELEASE** - Versión de prueba' : '✅ **RELEASE ES
         const releaseExists = Boolean(existingRelease);
         const existingReleaseId = existingRelease?.id;
 
-        if (releaseExists) {
+        let tagExistsPrivate = false;
+        try { await octokit.git.getRef({ owner: PRIVATE_REPO_OWNER, repo: PRIVATE_REPO_NAME, ref: `tags/v${version}` }); tagExistsPrivate = true;} catch {}
+
+        if (releaseExists || tagExistsPrivate) {
             if (!forceFlag) {
               const rl2 = readline.createInterface({ input: process.stdin, output: process.stdout });
               const ans2 = await new Promise(res => rl2.question(`⚠️ Ya existe un release/tag v${version} en repo privado. ¿Reemplazarlo? (y/N): `, res));
@@ -360,8 +373,12 @@ ${isPrerelease ? '🧪 **PRE-RELEASE** - Versión de prueba' : '✅ **RELEASE ES
               }
             }
             log('🔄 Eliminando release y tag previos en repo privado...', 'yellow');
-            await octokit.repos.deleteRelease({ owner: PRIVATE_REPO_OWNER, repo: PRIVATE_REPO_NAME, release_id: existingReleaseId });
-            try { await octokit.git.deleteRef({ owner: PRIVATE_REPO_OWNER, repo: PRIVATE_REPO_NAME, ref: `tags/v${version}` }); } catch {}
+            if (releaseExists) {
+              await octokit.repos.deleteRelease({ owner: PRIVATE_REPO_OWNER, repo: PRIVATE_REPO_NAME, release_id: existingReleaseId });
+            }
+            if (tagExistsPrivate) {
+              try { await octokit.git.deleteRef({ owner: PRIVATE_REPO_OWNER, repo: PRIVATE_REPO_NAME, ref: `tags/v${version}` }); } catch {}
+            }
         }
 
         const { data: privateRelease } = await octokit.repos.createRelease({
