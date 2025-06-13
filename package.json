@@ -45,5 +45,6 @@
     "typescript": "~5.6.2",
     "vite": "^6.0.3",
     "wait-on": "^8.0.3"
-  }
+  },
+  "isPrerelease": false
 }
