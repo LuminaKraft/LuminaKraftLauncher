@@ -1,89 +1,158 @@
-# 🚀 Configuración de Releases Públicos
+# 🚀 Sistema de Releases LuminaKraft Launcher
 
-## Arquitectura de Repositorios
+## 📋 Arquitectura de Repositorios
 
 ### 📁 Repositorio Privado (Código Fuente)
 - **Repositorio**: `kristiangarcia/luminakraft-launcher`
-- **Contenido**: Código fuente completo, desarrollo
+- **Contenido**: Código fuente completo, desarrollo, workflow de build
 - **Acceso**: Privado (solo desarrolladores)
-- **Propósito**: Proteger el código fuente
+- **Propósito**: Proteger el código fuente y ejecutar builds
 
 ### 📦 Repositorio Público (Solo Releases)
 - **Repositorio**: `kristiangarcia/luminakraft-launcher-releases`
-- **Contenido**: Solo releases y archivos de descarga
+- **Contenido**: Solo releases, binarios y documentación para usuarios
 - **Acceso**: Público (todos los usuarios)
 - **Propósito**: Distribución pública del launcher
 
-## 🔄 Flujo de Release
+## 🎮 Comandos de Release
 
-### 1. Desarrollo (Repositorio Privado)
+### 📋 Releases Estables
 ```bash
-# Desarrollar en repositorio privado
-git commit -m "Nueva funcionalidad"
-git push origin main
+# Incrementos automáticos
+npm run release patch     # 0.3.1 -> 0.3.2
+npm run release minor     # 0.3.1 -> 0.4.0  
+npm run release major     # 0.3.1 -> 1.0.0
 
-# Crear release
-npm run release:patch # 0.3.1 -> 0.3.2
-npm run release:minor # 0.3.1 -> 0.4.0
-npm run release:major # 0.3.1 -> 1.0.0
-
-# Crear release con version especifica
-npm run release 0.3.2
+# Versión específica
+npm run release 1.2.3     # Release estable v1.2.3
 ```
 
-### 2. Build y Publicación Automática
-- GitHub Actions detecta el tag `v*`
-- Compila la aplicación desde el código privado
-- Publica el release en el repositorio público
-- Los usuarios pueden descargar sin acceso al código
-
-### 3. Actualización de Usuarios
-- La aplicación verifica: `luminakraft-launcher-releases`
-- Encuentra nuevas versiones públicamente
-- Descarga desde el repositorio público
-- **Sin necesidad de tokens o acceso privado**
-
-## 🔧 Configuración Requerida
-
-### 1. Crear Repositorio Público
+### 🧪 Pre-Releases (Nuevas!)
 ```bash
-# En GitHub, crear nuevo repositorio:
-# Nombre: luminakraft-launcher-releases
-# Visibilidad: Público
-# Descripción: "Public releases for LuminaKraft Launcher"
+# Pre-releases con incrementos
+npm run release patch --prerelease     # Pre-release patch
+npm run release minor --prerelease     # Pre-release minor
+
+# Pre-release con versión específica
+npm run release 0.5.0 --prerelease     # Pre-release v0.5.0
+npm run release 1.0.0-alpha.1 --prerelease  # Pre-release v1.0.0-alpha.1
 ```
 
-### 2. Configurar GitHub Secrets
-En el repositorio **privado**, agregar secret:
-- `PUBLIC_REPO_TOKEN`: Token con permisos para escribir en el repo público
+### ⚡ Flags Disponibles
+- `--prerelease`: Marca el release como pre-release
+- `--push`: Auto-push sin confirmación (para CI)
 
-### 3. Crear Personal Access Token
-1. GitHub → Settings → Developer settings → Personal access tokens
-2. Generate new token (classic)
-3. Seleccionar scopes:
-   - `public_repo` (para escribir en repositorios públicos)
-4. Copiar token y agregarlo como `PUBLIC_REPO_TOKEN` en secrets
+## 🏗️ Workflow Multi-Plataforma
 
-## ✅ Ventajas de esta Arquitectura
+### 📦 Builds Automáticos
+- **🪟 Windows**: MSI + NSIS installers
+- **🐧 Linux**: AppImage + DEB + RPM packages
+- **🍎 macOS**: DMG para ARM64 (Apple Silicon) + x86_64 (Intel)
 
-- **🔒 Código Protegido**: El código fuente permanece privado
-- **📦 Releases Públicos**: Cualquiera puede descargar
-- **🚀 Sin Tokens**: Los usuarios no necesitan configuración
-- **🔄 Automático**: Todo el proceso es automático
-- **📊 Tracking**: Releases internos y públicos separados
+### 🔄 Proceso Automático
+1. **Tag Detection**: Workflow se activa con tags `v*`
+2. **Multi-Platform Build**: Builds paralelos en 3 runners
+3. **Dual Release**: Publica en repositorio público y privado
+4. **Spanish Content**: Releases en español, formato corto
 
-## 🎯 Estado Actual
+## 📝 Contenido de Releases
 
-- ✅ Sistema de actualizaciones implementado
-- ✅ GitHub Actions configurado para dual-repo
-- ✅ Servicio actualizado para usar repo público
-- 🔄 **Pendiente**: Crear repositorio público
-- 🔄 **Pendiente**: Configurar PUBLIC_REPO_TOKEN
+### 🌐 Release Público (Español)
+- Instrucciones de descarga por plataforma
+- Características principales del launcher
+- Enlaces de soporte (Discord, Issues)
+- Advertencias para pre-releases
 
-## 📋 Próximos Pasos
+### 🔒 Release Privado (Tracking)
+- Información técnica de build
+- Enlaces al release público
+- Datos para desarrollo interno
 
-1. **Crear** `kristiangarcia/luminakraft-launcher-releases` (público)
-2. **Generar** Personal Access Token con scope `public_repo`
-3. **Agregar** token como `PUBLIC_REPO_TOKEN` en secrets del repo privado
-4. **Probar** con un nuevo release: `npm run release:patch`
-5. **Verificar** que el release aparece en el repo público 
+## ✅ Estado Actual del Sistema
+
+- ✅ **Workflow Configurado**: Multi-plataforma completo
+- ✅ **Dual Repository**: Público + privado funcionando
+- ✅ **Pre-release Manual**: Control con flag `--prerelease`
+- ✅ **Versiones Dinámicas**: Sidebar se actualiza automáticamente
+- ✅ **Contenido en Español**: Releases cortos y claros
+- ✅ **TOKEN Configurado**: `PUBLIC_REPO_TOKEN` funcionando
+
+## 🔧 Configuración Técnica
+
+### 🔑 GitHub Secrets (Ya configurados)
+- `PUBLIC_REPO_TOKEN`: Token para escribir en repo público
+- `TAURI_PRIVATE_KEY`: Firma de aplicaciones (opcional)
+- `TAURI_KEY_PASSWORD`: Password para firma (opcional)
+
+### 📋 Package.json Extensions
+- `version`: Versión actual (auto-actualizada)
+- `isPrerelease`: Flag para pre-releases (nuevo)
+
+### 🔄 Auto-Update de Versiones
+- `package.json`: Versión principal
+- `src-tauri/Cargo.toml`: Versión de Rust
+- `src-tauri/tauri.conf.json`: Configuración Tauri
+- `src/components/About/AboutPage.tsx`: Versión en About
+- `src/components/Layout/Sidebar.tsx`: Versión en Sidebar (nuevo)
+
+## 🎯 Ejemplos Prácticos
+
+### 🚀 Release Estable
+```bash
+npm run release 1.0.0
+# Resultado:
+# - ✅ Release estable v1.0.0
+# - 📦 Todos los binarios generados
+# - 🌐 Release público en español
+# - 🔒 Tracking interno
+```
+
+### 🧪 Pre-Release
+```bash
+npm run release 1.1.0-beta.1 --prerelease
+# Resultado:
+# - 🧪 Pre-release v1.1.0-beta.1
+# - ⚠️ Marcado como pre-release en GitHub
+# - 📝 Advertencias en descripción
+# - 🔍 Visible en releases pero marcado como experimental
+```
+
+### 📈 Incremento Automático
+```bash
+# Si la versión actual es 0.5.2
+npm run release minor --prerelease
+# Resultado: Pre-release v0.6.0
+```
+
+## 🔗 Enlaces Importantes
+
+- **🔨 GitHub Actions**: https://github.com/kristiangarcia/luminakraft-launcher/actions
+- **📦 Releases Públicos**: https://github.com/kristiangarcia/luminakraft-launcher-releases/releases
+- **🔒 Releases Privados**: https://github.com/kristiangarcia/luminakraft-launcher/releases
+
+## 📋 Comandos de Mantenimiento
+
+### 🗑️ Limpiar Tags
+```bash
+# Borrar todos los tags locales
+git tag | xargs git tag -d
+
+# Borrar tags remotos (cuidado!)
+git push origin --delete $(git tag -l)
+```
+
+### 🔍 Verificar Estado
+```bash
+# Ver tags actuales
+git tag -l
+
+# Ver último commit
+git log --oneline -1
+
+# Ver configuración de remotes
+git remote -v
+```
+
+---
+
+**🎉 Sistema completamente operativo y listo para uso en producción!** 
