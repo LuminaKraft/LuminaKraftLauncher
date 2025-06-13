@@ -167,6 +167,8 @@ function runCommand(command, description) {
 function main() {
   const args = process.argv.slice(2);
   
+
+  
   if (args.length === 0) {
     log('🚀 LuminaKraft Launcher Release Tool', 'bright');
     log('');
@@ -185,14 +187,26 @@ function main() {
     log('  node release.js patch          Release next patch version', 'green');
     log('  node release.js 1.0.0-beta.1  Release beta version', 'green');
     log('  node release.js 0.5.0 --prerelease  Release 0.5.0 as pre-release', 'green');
+    log('  npm run release:patch-pre      Release next patch as pre-release', 'green');
+    log('  npm run release -- 0.5.0 --prerelease   Pass flags via npm', 'green');
     log('');
     log(`Current version: ${getCurrentVersion()}`, 'magenta');
     process.exit(0);
   }
 
-  const versionArg = args[0];
+  // Parse flags from anywhere in arguments
   const isPrerelease = args.includes('--prerelease');
   const isPushAuto = args.includes('--push');
+  
+  // Get version argument (first non-flag argument)
+  const versionArg = args.find(arg => !arg.startsWith('--'));
+  
+  if (!versionArg) {
+    log('❌ No version specified!', 'red');
+    log('💡 Usage: node release.js <version> [--prerelease] [--push]', 'cyan');
+    process.exit(1);
+  }
+  
   let newVersion;
 
   // Handle semantic version increments

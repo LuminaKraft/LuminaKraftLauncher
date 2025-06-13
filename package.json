@@ -1,7 +1,7 @@
 {
   "name": "luminakraft-launcher",
   "private": true,
-  "version": "0.0.2",
+  "version": "0.0.3",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -18,6 +18,9 @@
     "release:patch": "node release.js patch --push",
     "release:minor": "node release.js minor --push",
     "release:major": "node release.js major --push",
+    "release:patch-pre": "node release.js patch --prerelease --push",
+    "release:minor-pre": "node release.js minor --prerelease --push",
+    "release:major-pre": "node release.js major --prerelease --push",
     "test:release": "node test-release.js"
   },
   "dependencies": {
@@ -47,5 +50,5 @@
     "vite": "^6.0.3",
     "wait-on": "^8.0.3"
   },
-  "isPrerelease": false
+  "isPrerelease": true
 }
