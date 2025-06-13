@@ -1,14 +1,19 @@
 #!/usr/bin/env node
 
+import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
-import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
+import os from 'os';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ANSI color codes for pretty output
+// Configuración
+const PUBLIC_REPO_PATH = path.join(__dirname, '../luminakraft-launcher-releases');
+const ARTIFACTS_PATH = path.join(__dirname, 'src-tauri/target/release');
+
+// ANSI color codes
 const colors = {
   reset: '\x1b[0m',
   bright: '\x1b[1m',
@@ -29,21 +34,14 @@ function getCurrentVersion() {
   return packageJson.version;
 }
 
-function updateVersion(newVersion, isPrerelease = false) {
+function updateVersion(newVersion) {
   const files = [
     {
       path: 'package.json',
       update: (content) => {
         const pkg = JSON.parse(content);
         pkg.version = newVersion;
-        pkg.isPrerelease = Boolean(isPrerelease);
         return JSON.stringify(pkg, null, 2);
-      }
-    },
-    {
-      path: 'src-tauri/Cargo.toml',
-      update: (content) => {
-        return content.replace(/^version = ".*"$/m, `version = "${newVersion}"`);
       }
     },
     {
@@ -53,166 +51,197 @@ function updateVersion(newVersion, isPrerelease = false) {
         config.version = newVersion;
         return JSON.stringify(config, null, 2);
       }
-    },
-    {
-      path: 'src/components/About/AboutPage.tsx',
-      update: (content) => {
-        return content.replace(
-          /const currentVersion = ['"].*['"];/,
-          `const currentVersion = "${newVersion}";`
-        );
-      }
-    },
-    {
-      path: 'src/components/Layout/Sidebar.tsx',
-      update: (content) => {
-        return content.replace(
-          /const currentVersion = ['"].*['"];/,
-          `const currentVersion = "${newVersion}";`
-        );
-      }
     }
   ];
 
-  log(`📝 Updating version to ${newVersion} in all files...`, 'cyan');
+  log(`📝 Actualizando versión a ${newVersion} en todos los archivos...`, 'cyan');
   
   files.forEach(file => {
     try {
       const content = fs.readFileSync(file.path, 'utf8');
       const updatedContent = file.update(content);
       fs.writeFileSync(file.path, updatedContent);
-      log(`  ✅ Updated ${file.path}`, 'green');
+      log(`  ✅ Actualizado ${file.path}`, 'green');
     } catch (error) {
-      log(`  ❌ Failed to update ${file.path}: ${error.message}`, 'red');
+      log(`  ❌ Error al actualizar ${file.path}: ${error.message}`, 'red');
       process.exit(1);
     }
   });
-  
-  // Debug: verify package.json was updated correctly
-  try {
-    const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-    log(`🔍 Verification: package.json isPrerelease = ${packageJson.isPrerelease} (type: ${typeof packageJson.isPrerelease})`, 'cyan');
-  } catch (error) {
-    log(`⚠️  Could not verify package.json: ${error.message}`, 'yellow');
-  }
-}
-
-function updateChangelog(version) {
-  const changelogPath = 'CHANGELOG.md';
-  const today = new Date().toISOString().split('T')[0];
-  
-  try {
-    let content = fs.readFileSync(changelogPath, 'utf8');
-    
-    // Find the "Unreleased" section and replace it with the new version
-    const unreleasedRegex = /## \[Unreleased\]/;
-    if (unreleasedRegex.test(content)) {
-      content = content.replace(
-        unreleasedRegex,
-        `## [${version}] - ${today}`
-      );
-      
-      // Add a new Unreleased section at the top
-      const firstVersionRegex = /## \[\d+\.\d+\.\d+\]/;
-      content = content.replace(
-        firstVersionRegex,
-        `## [Unreleased]\n\n### 🚀 Features\n- \n\n### 🐛 Bug Fixes\n- \n\n### 🔧 Technical\n- \n\n$&`
-      );
-    } else {
-      // If no Unreleased section, add the version after the existing first version
-      const firstVersionRegex = /(## \[\d+\.\d+\.\d+\] - \d{4}-\d{2}-\d{2})/;
-      if (firstVersionRegex.test(content)) {
-        content = content.replace(
-          firstVersionRegex,
-          `## [${version}] - ${today}\n\n### 🚀 New Release\n- Version ${version} released with latest improvements\n- See previous versions below for detailed changes\n\n$&`
-        );
-      } else {
-        // Fallback: add after the header
-        const headerRegex = /(# Changelog\n\n.*?\n\n)/s;
-        content = content.replace(
-          headerRegex,
-          `$1## [${version}] - ${today}\n\n### 🚀 New Release\n- Version ${version} released\n\n`
-        );
-      }
-    }
-    
-    fs.writeFileSync(changelogPath, content);
-    log(`  ✅ Updated CHANGELOG.md with version ${version}`, 'green');
-    log(`  📝 You can edit the changelog later to add specific changes`, 'cyan');
-  } catch (error) {
-    log(`  ⚠️  Could not update CHANGELOG.md: ${error.message}`, 'yellow');
-  }
 }
 
 function validateVersion(version) {
   const semverRegex = /^\d+\.\d+\.\d+(-[a-zA-Z0-9.-]+)?$/;
   if (!semverRegex.test(version)) {
-    log(`❌ Invalid version format: ${version}`, 'red');
-    log(`   Expected format: X.Y.Z or X.Y.Z-suffix (e.g., 1.0.0-beta.1)`, 'yellow');
+    log(`❌ Formato de versión inválido: ${version}`, 'red');
+    log(`   Formato esperado: X.Y.Z o X.Y.Z-suffix (ej: 1.0.0-beta.1)`, 'yellow');
     process.exit(1);
   }
 }
 
-function runCommand(command, description) {
+function buildApp() {
+  log('🔨 Construyendo la aplicación...', 'cyan');
   try {
-    log(`🔄 ${description}...`, 'cyan');
-    execSync(command, { stdio: 'inherit' });
-    log(`✅ ${description} completed`, 'green');
+    // Instalar dependencias si es necesario
+    if (!fs.existsSync('node_modules')) {
+      log('📦 Instalando dependencias...', 'cyan');
+      execSync('npm install', { stdio: 'inherit' });
+    }
+    
+    // En Windows, construir para Windows y Linux
+    if (os.platform() === 'win32') {
+      // Instalar target de Linux si no está instalado
+      log('🔧 Verificando target de Linux...', 'cyan');
+      try {
+        execSync('rustup target add x86_64-unknown-linux-gnu', { stdio: 'inherit' });
+      } catch (error) {
+        log('⚠️ No se pudo instalar el target de Linux. Solo se construirá para Windows.', 'yellow');
+        log(`   Error: ${error.message}`, 'yellow');
+      }
+
+      log('🎯 Construyendo para Windows...', 'cyan');
+      execSync('npm run tauri build', { stdio: 'inherit' });
+      
+      try {
+        log('🐧 Construyendo para Linux...', 'cyan');
+        execSync('npm run tauri build -- --target x86_64-unknown-linux-gnu', { stdio: 'inherit' });
+      } catch (error) {
+        log('⚠️ No se pudo construir para Linux. Continuando solo con Windows.', 'yellow');
+        log(`   Error: ${error.message}`, 'yellow');
+      }
+    } else {
+      // En otros sistemas, solo construir para el sistema actual
+      execSync('npm run tauri build', { stdio: 'inherit' });
+    }
+    
+    log('✅ Build completado', 'green');
   } catch (error) {
-    log(`❌ Failed to ${description.toLowerCase()}: ${error.message}`, 'red');
-    process.exit(1);
+    log(`❌ Error al construir: ${error.message}`, 'red');
+    throw error;
+  }
+}
+
+function getInstallerFiles() {
+  const bundleDir = path.join(ARTIFACTS_PATH, 'bundle');
+  const installers = [];
+  
+  // Buscar en las carpetas msi y nsis para Windows
+  const msiDir = path.join(bundleDir, 'msi');
+  const nsisDir = path.join(bundleDir, 'nsis');
+  const debianDir = path.join(bundleDir, 'deb');
+  const appimageDir = path.join(bundleDir, 'appimage');
+  
+  if (fs.existsSync(msiDir)) {
+    const msiFiles = fs.readdirSync(msiDir).filter(f => f.endsWith('.msi'));
+    installers.push(...msiFiles.map(f => path.join('bundle', 'msi', f)));
+  }
+  
+  if (fs.existsSync(nsisDir)) {
+    const nsisFiles = fs.readdirSync(nsisDir).filter(f => f.endsWith('.exe'));
+    installers.push(...nsisFiles.map(f => path.join('bundle', 'nsis', f)));
+  }
+  
+  if (fs.existsSync(debianDir)) {
+    const debFiles = fs.readdirSync(debianDir).filter(f => f.endsWith('.deb'));
+    installers.push(...debFiles.map(f => path.join('bundle', 'deb', f)));
+  }
+  
+  if (fs.existsSync(appimageDir)) {
+    const appimageFiles = fs.readdirSync(appimageDir).filter(f => f.endsWith('.AppImage'));
+    installers.push(...appimageFiles.map(f => path.join('bundle', 'appimage', f)));
+  }
+  
+  return installers;
+}
+
+function publishToPublic(version) {
+  log(`📦 Publicando v${version}...`, 'cyan');
+  
+  try {
+    // Cambiar al directorio del repositorio público
+    process.chdir(PUBLIC_REPO_PATH);
+    
+    // Crear directorio releases si no existe
+    const releasesDir = path.join(PUBLIC_REPO_PATH, 'releases');
+    if (!fs.existsSync(releasesDir)) {
+      fs.mkdirSync(releasesDir, { recursive: true });
+    }
+    
+    // Obtener lista de instaladores
+    log('📄 Copiando instaladores...', 'cyan');
+    const installers = getInstallerFiles();
+      
+    if (installers.length === 0) {
+      throw new Error('No se encontraron instaladores para copiar');
+    }
+    
+    installers.forEach(installer => {
+      const source = path.join(ARTIFACTS_PATH, installer);
+      const filename = path.basename(installer);
+      const dest = path.join(releasesDir, filename);
+      fs.copyFileSync(source, dest);
+      log(`  ✅ Copiado: ${filename}`, 'green');
+    });
+    
+    // Crear archivo de release info
+    const releaseInfo = {
+      version,
+      platform: os.platform(),
+      date: new Date().toISOString(),
+      artifacts: installers.map(installer => ({
+        name: path.basename(installer),
+        path: `releases/${path.basename(installer)}`
+      }))
+    };
+    
+    fs.writeFileSync(
+      path.join(releasesDir, `release-${version}.json`),
+      JSON.stringify(releaseInfo, null, 2)
+    );
+    
+    // Git operations
+    log('🔄 Actualizando repositorio público...', 'cyan');
+    execSync('git add releases/*', { stdio: 'inherit' });
+    execSync(`git commit -m "release: v${version}"`, { stdio: 'inherit' });
+    execSync(`git tag -a v${version} -m "Release v${version}"`, { stdio: 'inherit' });
+    execSync('git push origin main --tags', { stdio: 'inherit' });
+    
+    log(`\n✨ Release v${version} publicada!`, 'green');
+    log('📝 Resumen:', 'cyan');
+    log(`  • ${installers.length} instaladores subidos`, 'green');
+    log(`  • Tag v${version} creado`, 'green');
+    log(`  • Release info guardada en releases/release-${version}.json`, 'green');
+    
+  } catch (error) {
+    log(`❌ Error al publicar: ${error.message}`, 'red');
+    throw error;
   }
 }
 
 function main() {
   const args = process.argv.slice(2);
-  
-
+  const originalDir = process.cwd();
   
   if (args.length === 0) {
-    log('🚀 LuminaKraft Launcher Release Tool', 'bright');
+    log('🚀 LuminaKraft Launcher - Release Local', 'bright');
     log('');
-    log('Usage:', 'cyan');
-    log('  node release.js <version>     Create a new release', 'yellow');
-    log('  node release.js patch         Increment patch version (0.3.1 → 0.3.2)', 'yellow');
-    log('  node release.js minor         Increment minor version (0.3.1 → 0.4.0)', 'yellow');
-    log('  node release.js major         Increment major version (0.3.1 → 1.0.0)', 'yellow');
+    log('Uso:', 'cyan');
+    log('  node release.js <version>     Crear nueva release', 'yellow');
+    log('  node release.js patch         Incrementar versión patch (0.3.1 → 0.3.2)', 'yellow');
+    log('  node release.js minor         Incrementar versión minor (0.3.1 → 0.4.0)', 'yellow');
+    log('  node release.js major         Incrementar versión major (0.3.1 → 1.0.0)', 'yellow');
     log('');
-    log('Flags:', 'cyan');
-    log('  --prerelease                  Mark as pre-release', 'yellow');
-    log('  --push                        Auto-push without confirmation', 'yellow');
+    log('Ejemplos:', 'cyan');
+    log('  node release.js 0.4.0         Release versión 0.4.0', 'green');
+    log('  node release.js patch         Release siguiente versión patch', 'green');
+    log('  node release.js 1.0.0-beta.1  Release versión beta', 'green');
     log('');
-    log('Examples:', 'cyan');
-    log('  node release.js 0.4.0         Release version 0.4.0', 'green');
-    log('  node release.js patch          Release next patch version', 'green');
-    log('  node release.js 1.0.0-beta.1  Release beta version', 'green');
-    log('  node release.js 0.5.0 --prerelease  Release 0.5.0 as pre-release', 'green');
-    log('');
-    log('NPM Shortcuts:', 'cyan');
-    log('  npm run release:patch          Auto-push patch release', 'green');
-    log('  npm run release:patch-pre      Auto-push patch prerelease', 'green');
-    log('  npm run release:pre 0.5.0      Prerelease specific version', 'green');
-    log('  npm run release:version 0.5.0  Release specific version', 'green');
-    log('  npm run release:version 0.5.0 --pre  Release specific as prerelease', 'green');
-    log('  npm run release -- 0.5.0 --prerelease   Direct flags via npm', 'green');
-    log('');
-    log(`Current version: ${getCurrentVersion()}`, 'magenta');
+    log(`Versión actual: ${getCurrentVersion()}`, 'magenta');
+    log(`Plataforma: ${os.platform()}`, 'magenta');
     process.exit(0);
   }
 
-  // Parse flags from anywhere in arguments
-  const isPrerelease = args.includes('--prerelease');
-  const isPushAuto = args.includes('--push');
-  
-  // Get version argument (first non-flag argument)
-  const versionArg = args.find(arg => !arg.startsWith('--'));
-  
-  if (!versionArg) {
-    log('❌ No version specified!', 'red');
-    log('💡 Usage: node release.js <version> [--prerelease] [--push]', 'cyan');
-    process.exit(1);
-  }
-  
+  // Get version argument
+  const versionArg = args[0];
   let newVersion;
 
   // Handle semantic version increments
@@ -236,95 +265,38 @@ function main() {
   }
 
   validateVersion(newVersion);
-
-  const currentVersion = getCurrentVersion();
   
-  log('🚀 LuminaKraft Launcher Release Process', 'bright');
-  log('');
-  log(`📊 Current version: ${currentVersion}`, 'magenta');
-  log(`🎯 New version:     ${newVersion}`, 'green');
-  log(`📋 Release type:    ${isPrerelease ? '🧪 Pre-release' : '🎉 Stable'}`, isPrerelease ? 'yellow' : 'green');
-  log(`🔧 Auto-push:      ${isPushAuto ? '✅ Enabled' : '❌ Disabled'}`, isPushAuto ? 'green' : 'yellow');
-  log('');
-
-  // Confirm the release
-  if (process.env.CI !== 'true' && !isPushAuto) {
-    log('⚠️  This will:', 'yellow');
-    log('   1. Update version in all files', 'yellow');
-    log('   2. Update CHANGELOG.md', 'yellow');
-    log('   3. Create git commit', 'yellow');
-    log('   4. Create git tag', 'yellow');
-    log('   5. Push to GitHub (triggers automatic build & release)', 'yellow');
-    log('');
-    log('💡 To skip confirmation, use --push flag or run:', 'cyan');
-    log(`   npm run release:minor`, 'yellow');
-    log('');
-    
-    // Cross-platform confirmation
-    try {
-      if (process.platform === 'win32') {
-        // Windows PowerShell confirmation
-        execSync('powershell -Command "& {$response = Read-Host \'Continue? (y/N)\'; if ($response -ne \'y\' -and $response -ne \'Y\') { exit 1 }}"', { stdio: 'inherit' });
-      } else {
-        // Unix/Linux/macOS confirmation
-        execSync('read -p "Continue? (y/N): " -n 1 -r && echo && [[ $REPLY =~ ^[Yy]$ ]]', { stdio: 'inherit', shell: '/bin/bash' });
-      }
-    } catch {
-      log('❌ Release cancelled', 'red');
-      process.exit(0);
-    }
-  }
-
-  log('');
-  log('🔧 Starting release process...', 'bright');
-  log('');
-
-  // Step 1: Update version in all files
-  updateVersion(newVersion, isPrerelease);
-
-  // Step 2: Update changelog
-  log(`📝 Updating CHANGELOG.md...`, 'cyan');
-  updateChangelog(newVersion);
-
-  // Step 3: Build and test
-  log(`🔨 Running build test...`, 'cyan');
   try {
-    execSync('npm run build', { stdio: 'inherit' });
-    log(`✅ Build test passed`, 'green');
-  } catch (error) {
-    log(`❌ Build failed! Please fix errors before releasing.`, 'red');
-    process.exit(1);
-  }
+    // Verificar que el repositorio público existe
+    if (!fs.existsSync(PUBLIC_REPO_PATH)) {
+      throw new Error('No se encontró el repositorio público. Asegúrate de que esté clonado en el directorio correcto.');
+    }
 
-  // Step 4: Git operations
-  runCommand('git add .', 'Staging changes');
-  runCommand(`git commit -m "🚀 Release v${newVersion}${isPrerelease ? ' (pre-release)' : ''}"`, 'Creating commit');
-  runCommand(`git tag v${newVersion}`, 'Creating tag');
-
-  log('');
-  log('🎉 Release prepared successfully!', 'green');
-  log('');
-  log('Next steps:', 'cyan');
-  log(`  git push origin main --tags`, 'yellow');
-  log('');
-  log('This will trigger:', 'cyan');
-  log('  ✅ GitHub Actions build', 'green');
-  log('  ✅ Automatic GitHub release creation', 'green');
-  log(`  ✅ ${isPrerelease ? 'Pre-release' : 'Stable release'} in public repository`, isPrerelease ? 'yellow' : 'green');
-  log('  ✅ Internal tracking in private repository', 'green');
-  log('  ✅ User notifications for updates', 'green');
-  log('');
-
-  // Auto-push if in CI or if --push flag is provided
-  if (process.env.CI === 'true' || isPushAuto) {
-    runCommand('git push origin main --tags', 'Pushing to GitHub');
+    log('\n🚀 Iniciando proceso de release', 'bright');
+    log(`📊 Versión actual: ${getCurrentVersion()}`, 'magenta');
+    log(`🎯 Nueva versión: ${newVersion}`, 'green');
+    log(`💻 Plataforma: ${os.platform()}`, 'cyan');
     log('');
-    log('🚀 Release pushed to GitHub!', 'bright');
-    log('🔗 Check GitHub Actions for build progress:', 'cyan');
-    log('   https://github.com/kristiangarcia/luminakraft-launcher/actions', 'blue');
-  } else {
-    log('💡 To complete the release, run:', 'cyan');
-    log('   git push origin main --tags', 'yellow');
+
+    // Actualizar versión
+    updateVersion(newVersion);
+
+    // Construir
+    buildApp();
+
+    // Publicar
+    publishToPublic(newVersion);
+
+    log('\n✅ ¡Proceso completado con éxito!', 'green');
+    log('🌐 Visita el repositorio público para ver los archivos:', 'cyan');
+    log('   https://github.com/kristiangarcia/luminakraft-launcher-releases/releases\n');
+
+  } catch (error) {
+    log('\n❌ Error en el proceso de release:', 'red');
+    log(error.message, 'red');
+    process.exit(1);
+  } finally {
+    process.chdir(originalDir);
   }
 }
 

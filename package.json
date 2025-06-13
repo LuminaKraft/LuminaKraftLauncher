@@ -1,7 +1,7 @@
 {
   "name": "luminakraft-launcher",
   "private": true,
-  "version": "1.0.1",
+  "version": "0.0.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -15,9 +15,9 @@
     "tauri:build": "tauri build",
     "kill-port": "node kill-port.js",
     "release": "node release.js",
-    "release:patch": "node release.js patch --push",
-    "release:minor": "node release.js minor --push",
-    "release:major": "node release.js major --push",
+    "release:patch": "node release.js patch",
+    "release:minor": "node release.js minor",
+    "release:major": "node release.js major",
     "release:patch-pre": "node release.js patch --prerelease --push",
     "release:minor-pre": "node release.js minor --prerelease --push",
     "release:major-pre": "node release.js major --prerelease --push",
