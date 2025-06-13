@@ -1,4 +1,4 @@
-name: Publish Public Release
+name: Build and Publish Public Release
 
 on:
   push:
@@ -10,7 +10,7 @@ jobs:
     runs-on: windows-latest
     
     steps:
-    - name: Checkout repository
+    - name: Checkout private repository
       uses: actions/checkout@v4
 
     - name: Setup Node.js
@@ -38,12 +38,14 @@ jobs:
         echo "VERSION=$version" >> $env:GITHUB_OUTPUT
       shell: powershell
 
-    - name: Create Release
+    - name: Create Release in Public Repository
       id: create_release
       uses: actions/create-release@v1
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
       with:
+        owner: kristiangarcia
+        repo: luminakraft-launcher-releases
         tag_name: ${{ github.ref }}
         release_name: LuminaKraft Launcher v${{ steps.get_version.outputs.VERSION }}
         body: |
@@ -59,18 +61,24 @@ jobs:
           3. Launch LuminaKraft Launcher
           
           ### 📋 Changes
-          See CHANGELOG.md for detailed changes in this version.
+          - Bug fixes and improvements
+          - Enhanced performance
+          - Updated dependencies
+          
+          ### 🔗 Links
+          - [Official Website](https://luminakraft.com)
+          - [Support](https://discord.gg/luminakraft)
           
           ---
           
-          **Note**: This is an automated release. The source code remains private.
+          **Note**: This launcher is developed privately. Only releases are public for download.
         draft: false
         prerelease: false
 
     - name: Upload Windows MSI
       uses: actions/upload-release-asset@v1
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: src-tauri/target/release/bundle/msi/LuminaKraft Launcher_${{ steps.get_version.outputs.VERSION }}_x64_en-US.msi
@@ -80,10 +88,25 @@ jobs:
     - name: Upload Windows EXE (if exists)
       uses: actions/upload-release-asset@v1
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: src-tauri/target/release/bundle/nsis/LuminaKraft Launcher_${{ steps.get_version.outputs.VERSION }}_x64-setup.exe
         asset_name: LuminaKraft-Launcher-${{ steps.get_version.outputs.VERSION }}-windows-x64-setup.exe
         asset_content_type: application/octet-stream
+      continue-on-error: true
+
+    # Optional: Also create a release in the private repo for internal tracking
+    - name: Create Release in Private Repository (Internal)
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Internal Release v${{ steps.get_version.outputs.VERSION }}
+        body: |
+          Internal release tracking for development team.
+          Public release available at: https://github.com/kristiangarcia/luminakraft-launcher-releases/releases/tag/${{ github.ref }}
+        draft: false
+        prerelease: false
       continue-on-error: true 

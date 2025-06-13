@@ -24,9 +24,8 @@ class UpdateService {
   private updateCheckInterval: number | null = null;
   private lastCheckTime: number = 0;
   private readonly CHECK_INTERVAL = 60 * 60 * 1000; // 1 hour
-  private readonly GITHUB_API_URL = 'https://api.github.com/repos/kristiangarcia/luminakraft-launcher/releases/latest';
-  // GitHub token for private repository access (optional)
-  private readonly GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN || '';
+  // Using public releases repository - no token needed!
+  private readonly GITHUB_API_URL = 'https://api.github.com/repos/kristiangarcia/luminakraft-launcher-releases/releases/latest';
 
   private constructor() {}
 
@@ -82,11 +81,11 @@ class UpdateService {
   }
 
   /**
-   * Check for updates using GitHub releases
+   * Check for updates using GitHub releases from public repository
    */
   async checkForUpdates(): Promise<UpdateInfo> {
     try {
-      console.log('Checking for updates from GitHub releases...');
+      console.log('Checking for updates from public releases repository...');
       
       // Get current version and platform from Tauri
       const [currentVersion, platform] = await Promise.all([
@@ -94,23 +93,18 @@ class UpdateService {
         invoke<string>('get_platform')
       ]);
 
-      // Prepare headers for GitHub API
+      // Prepare headers for GitHub API (no token needed for public repo)
       const headers: Record<string, string> = {
         'Accept': 'application/vnd.github.v3+json',
         'User-Agent': 'LuminaKraft-Launcher'
       };
 
-      // Add authorization header if token is available
-      if (this.GITHUB_TOKEN) {
-        headers['Authorization'] = `token ${this.GITHUB_TOKEN}`;
-      }
-
-      // Fetch latest release from GitHub
+      // Fetch latest release from public GitHub repository
       const response = await fetch(this.GITHUB_API_URL, { headers });
       
       if (!response.ok) {
         if (response.status === 404) {
-          throw new Error('No releases found. Repository may be private or have no releases.');
+          throw new Error('No releases found in public repository. Please check if releases have been published.');
         }
         throw new Error(`GitHub API request failed: ${response.status} ${response.statusText}`);
       }
