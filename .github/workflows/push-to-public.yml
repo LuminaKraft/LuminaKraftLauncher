@@ -1,0 +1,152 @@
+name: 🚀 Push to Public Repository
+
+on:
+  push:
+    tags:
+      - 'v*'
+    branches:
+      - 'main'  # También sincronizar cambios en main
+  workflow_dispatch:
+    inputs:
+      sync_type:
+        description: 'Tipo de sincronización'
+        required: true
+        default: 'code-only'
+        type: choice
+        options:
+        - code-only
+        - full-release
+      force_push:
+        description: 'Forzar push (sobrescribir historial)'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  sync-to-public:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout private repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Obtener historial completo
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🔧 Setup Git
+        run: |
+          git config --global user.name "LuminaKraft Bot"
+          git config --global user.email "bot@luminakraft.com"
+          git config --global init.defaultBranch main
+
+      - name: 🌐 Add public repository as remote
+        run: |
+          # Verificar si el remote ya existe y removelo si es así
+          if git remote get-url public >/dev/null 2>&1; then
+            git remote remove public
+          fi
+          git remote add public https://x-access-token:${{ secrets.PUBLIC_REPO_TOKEN }}@github.com/kristiangarcia/luminakraft-launcher-releases.git
+          git remote -v
+
+      - name: 🧹 Prepare clean branch
+        run: |
+          # Crear una rama limpia para sincronizar
+          git checkout -b sync-branch
+          echo "📦 Branch prepared for sync"
+
+      - name: 🚫 Remove sensitive files
+        run: |
+          # Crear lista de archivos a excluir del repositorio público
+          cat > .gitignore-public << 'EOF'
+          # Archivos sensibles para repositorio público
+          .env*
+          *.key
+          *.pem
+          secrets/
+          private/
+          .private/
+          
+          # Archivos de desarrollo que no son necesarios en el repo público
+          .vscode/settings.json
+          *.local
+          debug.log
+          
+          # Archivos específicos del proyecto privado
+          PRIVATE_*
+          INTERNAL_*
+          EOF
+
+          # Remover archivos sensibles si existen
+          if [ -f ".env" ]; then rm .env; fi
+          if [ -f ".env.local" ]; then rm .env.local; fi
+          if [ -d "private" ]; then rm -rf private; fi
+          if [ -d "secrets" ]; then rm -rf secrets; fi
+          
+          echo "🔒 Sensitive files removed"
+
+      - name: 📤 Push code to public repository
+        run: |
+          echo "🚀 Pushing code to public repository..."
+          
+          # Determinar si usar force push
+          FORCE_FLAG=""
+          if [ "${{ github.event.inputs.force_push }}" = "true" ] || [ -n "${{ github.ref_type }}" ]; then
+            FORCE_FLAG="--force"
+            echo "⚠️  Using force push"
+          fi
+          
+          # Push del código
+          git push public sync-branch:main $FORCE_FLAG
+          echo "✅ Code pushed successfully!"
+
+      - name: 🏷️  Push tags to public repository
+        if: github.ref_type == 'tag' || github.event.inputs.sync_type == 'full-release'
+        run: |
+          echo "🏷️  Pushing tags to public repository..."
+          git push public --tags --force
+          echo "✅ Tags pushed successfully!"
+
+      - name: 🔨 Trigger build in public repository
+        if: github.ref_type == 'tag' || github.event.inputs.sync_type == 'full-release'
+        run: |
+          echo "🔧 Triggering build workflow in public repository..."
+          
+          # Determinar el tag a usar
+          TAG_NAME="${{ github.ref_name }}"
+          if [ -z "$TAG_NAME" ] || [ "$TAG_NAME" = "main" ]; then
+            TAG_NAME="v$(date +%Y.%m.%d)-dev"
+          fi
+          
+          # Trigger del workflow de build
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.PUBLIC_REPO_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/kristiangarcia/luminakraft-launcher-releases/actions/workflows/build-release.yml/dispatches \
+            -d "{\"ref\":\"main\",\"inputs\":{\"tag_name\":\"$TAG_NAME\"}}" \
+            --fail --silent --show-error || {
+              echo "❌ Failed to trigger build workflow"
+              echo "🔍 Trying to list available workflows..."
+              curl -H "Authorization: token ${{ secrets.PUBLIC_REPO_TOKEN }}" \
+                   -H "Accept: application/vnd.github.v3+json" \
+                   https://api.github.com/repos/kristiangarcia/luminakraft-launcher-releases/actions/workflows
+              exit 1
+            }
+          
+          echo "✅ Build triggered in public repository with tag: $TAG_NAME"
+
+      - name: 📋 Summary
+        if: always()
+        run: |
+          echo "📊 Sync Summary:"
+          echo "=================="
+          echo "🔗 Source: Private Repository"
+          echo "🎯 Target: Public Repository (kristiangarcia/luminakraft-launcher-releases)"
+          echo "📦 Sync Type: ${{ github.event.inputs.sync_type || 'auto' }}"
+          echo "🏷️  Reference: ${{ github.ref_name }}"
+          echo "🚀 Trigger: ${{ github.event_name }}"
+          
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Status: SUCCESS"
+          else
+            echo "❌ Status: FAILED"
+          fi 
