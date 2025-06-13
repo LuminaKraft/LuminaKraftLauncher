@@ -63,7 +63,7 @@ jobs:
         EOL
         
         # Build for Apple Silicon (ARM64)
-        npm run tauri build --target aarch64-apple-darwin
+        npx tauri build --target aarch64-apple-darwin
       env:
         TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
         TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
