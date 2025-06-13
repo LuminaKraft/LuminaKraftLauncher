@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   build-and-release:
-    runs-on: windows-latest
+    runs-on: macos-latest
     permissions:
       contents: write
     
@@ -30,7 +30,7 @@ jobs:
       uses: dtolnay/rust-toolchain@stable
       with:
         toolchain: stable
-        targets: x86_64-pc-windows-msvc
+        targets: aarch64-apple-darwin
 
     - name: Cache Rust dependencies
       uses: actions/cache@v4
@@ -49,28 +49,42 @@ jobs:
     - name: Build application
       run: npm run build
 
-    - name: Build Tauri app (Windows only for testing)
-      run: npm run tauri build
+    - name: Build Tauri app (macOS ARM only for testing)
+      run: |
+        # Configure for macOS without code signing for testing
+        mkdir -p ~/.tauri
+        cat > ~/.tauri/settings.json << EOL
+        {
+          "macOSCodeSign": {
+            "identity": null,
+            "hardened": false
+          }
+        }
+        EOL
+        
+        # Build for Apple Silicon (ARM64)
+        npm run tauri build --target aarch64-apple-darwin
       env:
-        TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
-        TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+        TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+        TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+        MACOSX_DEPLOYMENT_TARGET: "10.13"
 
     - name: Get version from tag
       id: get_version
       run: |
-        $version = $env:GITHUB_REF -replace 'refs/tags/v', ''
-        echo "VERSION=$version" >> $env:GITHUB_OUTPUT
-      shell: powershell
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        echo "Version: $VERSION"
 
     - name: List built files (for debugging)
       run: |
         echo "=== Checking build output ==="
-        if (Test-Path "src-tauri/target/release/bundle") {
-          Get-ChildItem -Recurse "src-tauri/target/release/bundle" | Select-Object FullName
-        } else {
+        if [ -d "src-tauri/target/aarch64-apple-darwin/release/bundle" ]; then
+          find src-tauri/target/aarch64-apple-darwin/release/bundle -type f -name "*.dmg" -o -name "*.app"
+        else
           echo "Bundle directory not found"
-        }
-      shell: powershell
+          ls -la src-tauri/target/ || echo "Target directory not found"
+        fi
 
     - name: Create Release in Public Repository
       id: create_public_release
@@ -85,12 +99,12 @@ jobs:
           ## 🚀 LuminaKraft Launcher v${{ steps.get_version.outputs.VERSION }}
           
           ### 📥 Downloads
-          - **Windows**: Download the `.msi` installer below
+          - **macOS (Apple Silicon)**: Download the `.dmg` installer below
           - **Auto-updates**: The launcher will notify you of future updates
           
           ### 🔧 Installation
-          1. Download the installer for your platform
-          2. Run the installer
+          1. Download the DMG file for your platform
+          2. Open the DMG and drag the app to Applications
           3. Launch LuminaKraft Launcher
           
           ### 📋 Changes
@@ -108,8 +122,7 @@ jobs:
         draft: false
         prerelease: false
         files: |
-          src-tauri/target/release/bundle/msi/*.msi
-          src-tauri/target/release/bundle/nsis/*.exe
+          src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
 
     - name: Create Release in Private Repository (Internal tracking)
       uses: softprops/action-gh-release@v1
@@ -124,13 +137,12 @@ jobs:
           **Public release**: https://github.com/kristiangarcia/luminakraft-launcher-releases/releases/tag/${{ github.ref_name }}
           
           ### 🔧 Build Info
-          - **Platform**: Windows (Linux/macOS commented for testing)
+          - **Platform**: macOS ARM (Apple Silicon) - Windows commented for testing
           - **Version**: ${{ steps.get_version.outputs.VERSION }}
           - **Commit**: ${{ github.sha }}
           
           ### 📦 Assets
-          - MSI installer: ✅
-          - NSIS installer: ✅
+          - DMG installer (Apple Silicon): ✅
         draft: false
         prerelease: false
       continue-on-error: true
@@ -142,19 +154,38 @@ jobs:
         echo "✅ Public release: https://github.com/kristiangarcia/luminakraft-launcher-releases/releases/tag/${{ github.ref_name }}"
         echo "✅ Private tracking: https://github.com/kristiangarcia/luminakraft-launcher/releases/tag/${{ github.ref_name }}"
         echo "🎉 Release completed successfully!"
-      shell: powershell
 
-  # TODO: Uncomment when ready for multi-platform builds
+  # TODO: Uncomment when ready for Windows builds
+  # build-windows:
+  #   runs-on: windows-latest
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
+  #     - name: Setup Node.js
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '20'
+  #         cache: 'npm'
+  #     - name: Setup Rust
+  #       uses: dtolnay/rust-toolchain@stable
+  #       with:
+  #         toolchain: stable
+  #         targets: x86_64-pc-windows-msvc
+  #     - name: Install dependencies
+  #       run: npm ci
+  #     - name: Build application
+  #       run: npm run build
+  #     - name: Build Tauri app (Windows)
+  #       run: npm run tauri build
+  #       env:
+  #         TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+  #         TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+  #     # ... Windows release steps
+
+  # TODO: Uncomment when ready for Linux builds
   # build-linux:
   #   runs-on: ubuntu-latest
   #   steps:
   #     - name: Checkout repository
   #       uses: actions/checkout@v4
-  #     # ... Linux build steps
-  
-  # build-macos:
-  #   runs-on: macos-latest
-  #   steps:
-  #     - name: Checkout repository
-  #       uses: actions/checkout@v4
-  #     # ... macOS build steps 
+  #     # ... Linux build steps 
