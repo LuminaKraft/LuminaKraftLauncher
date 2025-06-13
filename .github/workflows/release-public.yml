@@ -252,80 +252,34 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: "🚀 LuminaKraft Launcher ${{ github.ref_name }}"
           body: |
-            # 🚀 LuminaKraft Launcher ${{ github.ref_name }}
+            ## 📥 Instrucciones de Descarga
             
-            > **Advanced Minecraft Launcher** - Streamlined modpack management and enhanced gaming experience
+            ${{ steps.get_version.outputs.IS_PRERELEASE == 'true' && '🧪 **Versión Pre-Release** - Esta es una versión de prueba con características experimentales' || '🎉 **Versión Estable** - Versión lista para producción' }}
             
-            ## 📥 Download Instructions
-            
-            ### 🪟 **Windows** (Recommended: MSI Installer)
-            - **🔧 MSI Installer** (`*.msi`) - **Recommended** - Full installation with shortcuts and uninstaller
-            - **📦 NSIS Installer** (`*.exe`) - Alternative portable installer
+            ### 🪟 **Windows**
+            - **MSI Installer** (`*.msi`) - Recomendado
+            - **NSIS Installer** (`*.exe`) - Alternativo
             
             ### 🐧 **Linux**
-            - **🚀 AppImage** (`*.AppImage`) - **Recommended** - Portable, no installation required
-              ```bash
-              chmod +x *.AppImage && ./LuminaKraft-Launcher-*.AppImage
-              ```
-            - **📦 DEB Package** (`*.deb`) - For Debian/Ubuntu systems
-              ```bash
-              sudo dpkg -i *.deb
-              ```
-            - **📦 RPM Package** (`*.rpm`) - For Red Hat/Fedora/SUSE systems
-              ```bash
-              sudo rpm -i *.rpm
-              ```
+            - **AppImage** (`*.AppImage`) - Recomendado (portable)
+            - **DEB Package** (`*.deb`) - Debian/Ubuntu
+            - **RPM Package** (`*.rpm`) - Red Hat/Fedora
             
             ### 🍎 **macOS**
-            - **🍎 Apple Silicon** (`aarch64-apple-darwin.dmg`) - **Recommended** for M1/M2/M3/M4 Macs
-            - **💻 Intel Macs** (`x86_64-apple-darwin.dmg`) - For older Intel-based Macs
+            - **Apple Silicon** (`aarch64-apple-darwin.dmg`) - M1/M2/M3/M4
+            - **Intel Macs** (`x86_64-apple-darwin.dmg`) - Macs Intel
             
-            **Installation**: Download DMG → Open → Drag to Applications folder
+            ## 🎮 Características Principales
+            - Gestión de modpacks de Minecraft
+            - Actualizaciones automáticas
+            - Interfaz moderna y optimizada
+            - Soporte multi-plataforma
             
-            ## ✨ What's New in ${{ github.ref_name }}
+            ## 🔗 Enlaces
+            - 💬 **Discord**: [Únete a nuestra comunidad](https://discord.gg/luminakraft)
+            - 🐛 **Reportar bugs**: [GitHub Issues](https://github.com/kristiangarcia/luminakraft-launcher-releases/issues)
             
-            ${{ steps.get_version.outputs.IS_PRERELEASE == 'true' && '🧪 **Pre-Release Version** - This is a testing version with experimental features' || '🎉 **Stable Release** - Production-ready version' }}
-            
-            ### 🔧 **Core Features**
-            - **🎮 Modpack Management** - Easy installation and switching between modpacks
-            - **⚡ Performance Optimized** - Fast startup and efficient resource usage  
-            - **🔄 Auto-Updates** - Automatic detection and notification of new versions
-            - **🎨 Modern UI** - Clean, intuitive interface built with modern web technologies
-            - **🔒 Secure** - Safe modpack downloads with integrity verification
-            
-            ### 🛠️ **Technical Improvements**
-            - Enhanced GitHub-based update system
-            - Improved error handling and user feedback
-            - Optimized build process for all platforms
-            - Better cross-platform compatibility
-            
-            ## 🚀 **Getting Started**
-            
-            1. **Download** the appropriate installer for your platform above
-            2. **Install** following your platform's standard procedure
-            3. **Launch** LuminaKraft Launcher
-            4. **Enjoy** seamless Minecraft modpack management!
-            
-            ## 🔗 **Links & Support**
-            
-            - 🌐 **Official Website**: [luminakraft.com](https://luminakraft.com)
-            - 💬 **Discord Community**: [Join our Discord](https://discord.gg/luminakraft)
-            - 🐛 **Bug Reports**: [GitHub Issues](https://github.com/kristiangarcia/luminakraft-launcher-releases/issues)
-            - 📖 **Documentation**: [User Guide](https://docs.luminakraft.com)
-            
-            ## ⚠️ **System Requirements**
-            
-            - **Windows**: Windows 10/11 (64-bit)
-            - **macOS**: macOS 10.13+ (High Sierra or later)
-            - **Linux**: Modern distribution with GTK 3.0+
-            - **RAM**: 4GB minimum, 8GB recommended
-            - **Storage**: 500MB for launcher + space for modpacks
-            
-            ---
-            
-            **🔒 Privacy Note**: This launcher is developed in a private repository. Only releases are made public for download and community access.
-            
-            ${{ steps.get_version.outputs.IS_PRERELEASE == 'true' && '⚠️ **Pre-Release Warning**: This version may contain bugs or incomplete features. Use at your own discretion and report any issues you encounter.' || '✅ **Stable Release**: This version has been thoroughly tested and is recommended for all users.' }}
+            ${{ steps.get_version.outputs.IS_PRERELEASE == 'true' && '⚠️ **Advertencia**: Esta versión puede contener errores. Úsala bajo tu propio riesgo.' || '✅ **Versión estable y recomendada para todos los usuarios.**' }}
           draft: false
           prerelease: ${{ steps.get_version.outputs.IS_PRERELEASE }}
           files: |
@@ -344,62 +298,25 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: "📋 Internal Release Tracking ${{ github.ref_name }}"
           body: |
-            # 📋 Internal Development Release ${{ github.ref_name }}
+            # 📋 Release Interno ${{ github.ref_name }}
             
-            ## 🔗 **Public Release**
-            **🌐 Public Download**: https://github.com/kristiangarcia/luminakraft-launcher-releases/releases/tag/${{ github.ref_name }}
+            ## 🔗 **Release Público**
+            **🌐 Descarga**: https://github.com/kristiangarcia/luminakraft-launcher-releases/releases/tag/${{ github.ref_name }}
             
-            ## 🏗️ **Build Information**
-            
-            ### 📊 **Build Status**
-            - **✅ Windows Build**: MSI + NSIS installers
-            - **✅ Linux Build**: AppImage + DEB + RPM packages  
-            - **✅ macOS Build**: DMG for both ARM64 (Apple Silicon) and x86_64 (Intel)
-            - **📦 Total Artifacts**: Multi-platform distribution ready
-            
-            ### 🔧 **Technical Details**
-            - **Version**: `${{ steps.get_version.outputs.VERSION }}`
-            - **Commit SHA**: `${{ github.sha }}`
-            - **Build Date**: `${{ github.run_id }}`
+            ## 🏗️ **Info de Build**
+            - **Versión**: `${{ steps.get_version.outputs.VERSION }}`
+            - **Commit**: `${{ github.sha }}`
             - **Pre-release**: `${{ steps.get_version.outputs.IS_PRERELEASE }}`
-            - **Workflow**: Multi-platform unified build
             
-            ### 🎯 **Release Type**
-            ${{ steps.get_version.outputs.IS_PRERELEASE == 'true' && '🧪 **PRE-RELEASE** - Alpha/Beta/RC version for testing' || '🎉 **STABLE RELEASE** - Production-ready version' }}
+            ### 📦 **Builds Completados**
+            - ✅ **Windows**: MSI + NSIS
+            - ✅ **Linux**: AppImage + DEB + RPM  
+            - ✅ **macOS**: DMG (ARM64 + x86_64)
             
-            ## 📈 **Deployment Pipeline**
-            
-            1. **🔨 Build Phase**: 
-               - Windows (windows-latest runner)
-               - Linux (ubuntu-latest runner) 
-               - macOS (macos-latest runner)
-            
-            2. **📦 Artifact Collection**:
-               - All platform binaries collected
-               - Integrity verification completed
-            
-            3. **🚀 Release Creation**:
-               - Public repository release created
-               - Private repository tracking created
-               - Download links activated
-            
-            ## 🔍 **Quality Assurance**
-            
-            - **✅ Build Verification**: All platforms compiled successfully
-            - **✅ Artifact Validation**: All expected files generated
-            - **✅ Release Automation**: Dual-repository deployment completed
-            - **✅ Update System**: GitHub-based update detection ready
-            
-            ## 📝 **Development Notes**
-            
-            - **Architecture**: Private source → Public releases model
-            - **Update Mechanism**: Direct GitHub releases API integration
-            - **Security**: No API backend required, simplified architecture
-            - **Distribution**: Multi-platform native installers
+            ${{ steps.get_version.outputs.IS_PRERELEASE == 'true' && '🧪 **PRE-RELEASE** - Versión de prueba' || '🎉 **RELEASE ESTABLE** - Versión de producción' }}
             
             ---
-            
-            **🔒 Internal Use Only** - This release tracking is for development team reference.
+            **🔒 Solo uso interno** - Tracking para el equipo de desarrollo.
           draft: false
           prerelease: ${{ steps.get_version.outputs.IS_PRERELEASE }}
         continue-on-error: true
