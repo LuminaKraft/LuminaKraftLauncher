@@ -46,8 +46,9 @@ function main() {
     process.exit(0);
   }
 
-  const version = args[0];
-  const isPrerelease = args.includes('--pre') || args.includes('--prerelease');
+  // Get version argument (first non-flag argument)
+  const version = args.find(arg => !arg.startsWith('--'));
+  const isPrerelease = args.includes('--pre') || args.includes('--prerelease') || (version && version.includes('-'));
   
   if (!version) {
     log('❌ No version specified!', 'red');

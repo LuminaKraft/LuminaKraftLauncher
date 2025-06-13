@@ -145,10 +145,10 @@ function updateChangelog(version) {
 }
 
 function validateVersion(version) {
-  const semverRegex = /^\d+\.\d+\.\d+(-[a-zA-Z0-9-]+)?$/;
+  const semverRegex = /^\d+\.\d+\.\d+(-[a-zA-Z0-9.-]+)?$/;
   if (!semverRegex.test(version)) {
     log(`❌ Invalid version format: ${version}`, 'red');
-    log(`   Expected format: X.Y.Z or X.Y.Z-suffix`, 'yellow');
+    log(`   Expected format: X.Y.Z or X.Y.Z-suffix (e.g., 1.0.0-beta.1)`, 'yellow');
     process.exit(1);
   }
 }
