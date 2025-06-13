@@ -26,10 +26,12 @@
     "test:release": "node test-release.js"
   },
   "dependencies": {
+    "@octokit/rest": "^22.0.0",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-opener": "^2",
     "@tauri-apps/plugin-process": "^2.2.1",
     "axios": "^1.6.2",
+    "dotenv": "^16.5.0",
     "i18next": "^25.2.1",
     "i18next-browser-languagedetector": "^8.2.0",
     "i18next-http-backend": "^3.0.2",
@@ -52,5 +54,5 @@
     "vite": "^6.0.3",
     "wait-on": "^8.0.3"
   },
-  "isPrerelease": true
+  "isPrerelease": false
 }
