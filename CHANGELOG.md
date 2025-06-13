@@ -5,6 +5,105 @@ All notable changes to the LuminaKraft Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2025-01-13
+
+### 🚀 Major Features Added
+
+#### **Fully Automatic Updates**
+- **Zero Manual Installation** - Users can now update with one click, no manual downloads required
+- **Tauri Built-in Updater** - Integrated `@tauri-apps/plugin-updater` for seamless updates
+- **Automatic App Restart** - App restarts automatically after successful update installation
+- **Intelligent Fallback** - Falls back to manual download if automatic installation fails
+- **Enhanced Update Dialog** - Updated UI to reflect automatic installation capabilities
+
+#### **Development Experience Improvements**
+- **Port Conflict Resolution** - Fixed development port conflicts with improved cleanup script
+- **ES Module Compatibility** - Updated port cleanup script for modern JavaScript standards
+- **Cross-platform Port Cleanup** - Works on Windows, macOS, and Linux
+- **Graceful Process Termination** - Tries gentle termination before force killing
+
+### 🔧 Technical Improvements
+
+#### **Update System Architecture**
+- **Backend Integration**:
+  - Added `tauri-plugin-updater = "2"` dependency
+  - Added `tauri-plugin-process = "2"` for app restart functionality
+  - Configured updater endpoints in `tauri.conf.json`
+  - Integrated updater plugin in `main.rs`
+
+- **Frontend Enhancements**:
+  - Rewritten `UpdateService` to use Tauri's built-in updater
+  - Added `downloadAndInstallUpdate()` method for automatic installation
+  - Enhanced error handling with fallback to manual download
+  - Updated `UpdateDialog` component for automatic installation UI
+
+#### **Development Tools**
+- **Enhanced Port Cleanup**:
+  - `kill-port.js` script with ES module syntax
+  - Cross-platform process detection and termination
+  - Improved logging and error handling
+  - 2-second wait time for proper port release
+
+### 🎨 User Experience
+
+#### **Update Process Transformation**
+- **Before**: "The update will be downloaded and you'll need to install it manually."
+- **After**: "The update will be downloaded and installed automatically. The app will restart when complete."
+
+#### **UI/UX Improvements**
+- **Button Text**: Changed from "Download" to "Install Update"
+- **Progress Indicators**: Shows "Installing..." instead of "Opening..."
+- **Success Messages**: "Update installed successfully! App will restart..."
+- **Error Handling**: Clear error messages with fallback options
+
+### 🔒 Security & Reliability
+
+#### **Security Features**
+- **Tauri Security**: Uses Tauri's built-in updater with signature verification support
+- **User Consent**: Requires user approval before installation
+- **HTTPS Only**: All communications are encrypted
+- **Signed Updates**: Support for cryptographically signed updates
+
+#### **Reliability Features**
+- **Automatic Fallback**: If Tauri updater fails, falls back to manual download
+- **Error Recovery**: Clear error messages and recovery options
+- **Non-Blocking**: Update failures don't crash the app
+- **Smart Caching**: Avoids excessive update checks
+
+### 🐛 Bug Fixes
+
+#### **Development Issues Fixed**
+- **Port Conflict**: Fixed "Port 1420 is already in use" error in development
+- **ES Module Compatibility**: Updated scripts to work with modern JavaScript modules
+- **Process Cleanup**: Improved process termination for cleaner development experience
+
+### 📦 Dependencies Added
+
+#### **Frontend**
+- `@tauri-apps/plugin-updater` - Automatic update checking and installation
+- `@tauri-apps/plugin-process` - App restart functionality
+
+#### **Backend**
+- `tauri-plugin-updater = "2"` - Tauri updater plugin
+
+### 🔄 Breaking Changes
+- **None** - Full backward compatibility maintained
+- **API Enhancement**: Added new automatic update methods while preserving existing functionality
+
+### 📚 Documentation
+
+#### **New Documentation**
+- **LAUNCHER_API_UPDATER_REQUIREMENTS.md**: Comprehensive backend API requirements
+- **AUTOMATIC_UPDATES_SUMMARY.md**: Complete implementation summary
+- **UPDATE_FEATURE_SUMMARY.md**: Enhanced with automatic installation details
+
+### 🎯 Future Enhancements
+- ✅ **Auto-Install**: ~~Implement automatic update installation~~ **COMPLETED**
+- **Update Notifications**: System tray notifications
+- **Rollback Support**: Ability to revert updates
+- **Beta Channel**: Support for pre-release versions
+- **Update History**: Show changelog and update history
+
 ## [0.3.0] - 2025-01-13
 
 ### 🚀 Major Features Added

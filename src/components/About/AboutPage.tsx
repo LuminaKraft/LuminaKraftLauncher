@@ -1,17 +1,60 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Download, ExternalLink, Heart, Globe } from 'lucide-react';
+import { Download, ExternalLink, Heart, Globe, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
+import UpdateService, { UpdateInfo } from '../../services/updateService';
 
 const AboutPage: React.FC = () => {
   const { t } = useTranslation();
-  // Temporalmente removemos hasUpdate y updateUrl hasta implementar la funcionalidad
-  const hasUpdate = false;
-  const updateUrl = null;
+  const [currentVersion, setCurrentVersion] = useState<string>('0.3.1');
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState<boolean>(false);
+  const [updateError, setUpdateError] = useState<string | null>(null);
 
-  const handleDownloadUpdate = () => {
-    if (updateUrl) {
-      window.open(updateUrl, '_blank');
+  const updateService = UpdateService.getInstance();
+
+  useEffect(() => {
+    // Load current version and cached update info on component mount
+    const loadInitialData = async () => {
+      try {
+        const version = await invoke<string>('get_launcher_version');
+        setCurrentVersion(version);
+        
+        // Check for cached update info
+        const cached = updateService.getCachedUpdateInfo();
+        if (cached) {
+          setUpdateInfo(cached);
+        }
+      } catch (error) {
+        console.error('Failed to load initial data:', error);
+      }
+    };
+
+    loadInitialData();
+  }, []);
+
+  const handleCheckForUpdates = async () => {
+    setIsCheckingUpdate(true);
+    setUpdateError(null);
+    
+    try {
+      const info = await updateService.checkForUpdates();
+      setUpdateInfo(info);
+    } catch (error) {
+      console.error('Failed to check for updates:', error);
+      setUpdateError('Failed to check for updates');
+    } finally {
+      setIsCheckingUpdate(false);
+    }
+  };
+
+  const handleInstallUpdate = async () => {
+    if (updateInfo) {
+      try {
+        await updateService.downloadAndInstallUpdate(updateInfo);
+      } catch (error) {
+        console.error('Failed to install update:', error);
+      }
     }
   };
 
@@ -68,7 +111,7 @@ const AboutPage: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-dark-400">{t('about.versionLabel')}</span>
-                    <p className="text-white font-mono">{t('about.version', { version: '0.2.1' })}</p>
+                    <p className="text-white font-mono">{t('about.version', { version: currentVersion })}</p>
                   </div>
                   <div>
                     <span className="text-dark-400">{t('about.technologies')}</span>
@@ -80,27 +123,60 @@ const AboutPage: React.FC = () => {
           </div>
 
           {/* Update Section */}
-          {hasUpdate && (
-            <div className="card border-yellow-600/30 bg-yellow-600/10">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-yellow-400 font-semibold text-lg mb-2">
-                    {t('about.newUpdate')}
-                  </h3>
-                  <p className="text-yellow-300">
-                    {t('about.newUpdateDesc')}
-                  </p>
-                </div>
+          <div className="card">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <h3 className="text-white font-semibold text-lg mb-2">{t('about.updates')}</h3>
+                {isCheckingUpdate ? (
+                  <div className="flex items-center space-x-2">
+                    <RefreshCw className="w-4 h-4 text-lumina-500 animate-spin" />
+                    <p className="text-dark-300">{t('about.checkingUpdates')}</p>
+                  </div>
+                ) : updateError ? (
+                  <div className="flex items-center space-x-2">
+                    <AlertCircle className="w-4 h-4 text-red-500" />
+                    <p className="text-red-400">{updateError}</p>
+                  </div>
+                ) : updateInfo ? (
+                  updateInfo.hasUpdate ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <Download className="w-4 h-4 text-yellow-500" />
+                        <p className="text-yellow-400">{t('about.updateAvailable', { version: updateInfo.latestVersion })}</p>
+                      </div>
+                      <p className="text-dark-300 text-sm">{t('about.newUpdateDesc')}</p>
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <p className="text-green-400">{t('about.upToDate')}</p>
+                    </div>
+                  )
+                ) : (
+                  <p className="text-dark-300">{t('about.checkingUpdates')}</p>
+                )}
+              </div>
+              <div className="flex space-x-2">
+                {updateInfo?.hasUpdate && (
+                  <button
+                    onClick={handleInstallUpdate}
+                    className="btn-warning"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    {t('about.installUpdate')}
+                  </button>
+                )}
                 <button
-                  onClick={handleDownloadUpdate}
-                  className="btn-warning"
+                  onClick={handleCheckForUpdates}
+                  disabled={isCheckingUpdate}
+                  className="btn-secondary"
                 >
-                  <Download className="w-4 h-4 mr-2" />
-                  {t('about.download')}
+                  <RefreshCw className={`w-4 h-4 mr-2 ${isCheckingUpdate ? 'animate-spin' : ''}`} />
+                  {t('about.checkingUpdates')}
                 </button>
               </div>
             </div>
-          )}
+          </div>
 
           {/* Features */}
           <div className="card">

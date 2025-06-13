@@ -1,18 +1,74 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { LauncherProvider, useLauncher } from './contexts/LauncherContext';
 import Sidebar from './components/Layout/Sidebar';
 import ModpacksPage from './components/Modpacks/ModpacksPage';
 import SettingsPage from './components/Settings/SettingsPage';
 import AboutPage from './components/About/AboutPage';
 import TauriWarning from './components/TauriWarning';
+import UpdateDialog from './components/UpdateDialog';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import LauncherService from './services/launcherService';
+import UpdateService, { UpdateInfo } from './services/updateService';
 import './App.css';
 
 function AppContent() {
   const [activeSection, setActiveSection] = useState('home');
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+  const [showUpdateDialog, setShowUpdateDialog] = useState(false);
+  const [isInstallingUpdate, setIsInstallingUpdate] = useState(false);
   const { isLoading, error, launcherData } = useLauncher();
   const launcherService = LauncherService.getInstance();
+  const updateService = UpdateService.getInstance();
+
+  useEffect(() => {
+    const checkForUpdatesOnStartup = async () => {
+      if (launcherService.isTauriAvailable()) {
+        try {
+          console.log('Checking for updates on startup...');
+          const update = await updateService.checkForUpdates();
+          
+          if (update.hasUpdate) {
+            console.log('Update available:', update);
+            setUpdateInfo(update);
+            setShowUpdateDialog(true);
+          } else {
+            console.log('No updates available');
+          }
+        } catch (error) {
+          console.error('Failed to check for updates on startup:', error);
+        }
+        
+        // Start automatic checking for future updates
+        updateService.startAutomaticChecking();
+      }
+    };
+
+    checkForUpdatesOnStartup();
+
+    // Cleanup on unmount
+    return () => {
+      updateService.stopAutomaticChecking();
+    };
+  }, [updateService, launcherService]);
+
+  const handleInstallUpdate = async () => {
+    if (!updateInfo) return;
+    
+    try {
+      setIsInstallingUpdate(true);
+      await updateService.downloadAndInstallUpdate(updateInfo);
+      // App will restart automatically, so we don't need to close the dialog
+    } catch (error) {
+      console.error('Failed to install update:', error);
+      // Show error message or keep dialog open
+    } finally {
+      setIsInstallingUpdate(false);
+    }
+  };
+
+  const handleCloseUpdateDialog = () => {
+    setShowUpdateDialog(false);
+  };
 
   const renderContent = () => {
     switch (activeSection) {
@@ -75,6 +131,16 @@ function AppContent() {
       <main className={`flex-1 overflow-hidden ${!launcherService.isTauriAvailable() ? 'pt-16' : ''}`}>
         {renderContent()}
       </main>
+
+      {/* Update Dialog */}
+      {showUpdateDialog && updateInfo && (
+        <UpdateDialog
+          updateInfo={updateInfo}
+          onClose={handleCloseUpdateDialog}
+          onInstall={handleInstallUpdate}
+          isInstalling={isInstallingUpdate}
+        />
+      )}
     </div>
   );
 }

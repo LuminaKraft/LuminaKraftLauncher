@@ -120,7 +120,7 @@ async fn delete_instance(modpack_id: String) -> Result<(), String> {
 
 #[tauri::command]
 async fn get_launcher_version() -> Result<String, String> {
-    Ok("1.0.0".to_string())
+    Ok(env!("CARGO_PKG_VERSION").to_string())
 }
 
 #[tauri::command]
@@ -167,12 +167,22 @@ async fn check_instance_needs_update(modpack: Modpack) -> Result<bool, String> {
     }
 }
 
+#[tauri::command]
+async fn open_url(app: tauri::AppHandle, url: String) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    match app.opener().open_url(url, None::<&str>) {
+        Ok(_) => Ok(()),
+        Err(e) => Err(format!("Failed to open URL: {}", e)),
+    }
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             get_instance_metadata,
             install_modpack,
@@ -184,7 +194,8 @@ fn main() {
             check_java,
             get_supported_loaders,
             validate_modpack_config,
-            check_instance_needs_update
+            check_instance_needs_update,
+            open_url
         ])
         .setup(|app| {
             // Initialize app data directory
