@@ -40,14 +40,13 @@ jobs:
 
     - name: Create Release in Public Repository
       id: create_release
-      uses: actions/create-release@v1
+      uses: softprops/action-gh-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
       with:
-        owner: kristiangarcia
-        repo: luminakraft-launcher-releases
-        tag_name: ${{ github.ref }}
-        release_name: LuminaKraft Launcher v${{ steps.get_version.outputs.VERSION }}
+        repository: kristiangarcia/luminakraft-launcher-releases
+        tag_name: ${{ github.ref_name }}
+        name: LuminaKraft Launcher v${{ steps.get_version.outputs.VERSION }}
         body: |
           ## 🚀 LuminaKraft Launcher v${{ steps.get_version.outputs.VERSION }}
           
@@ -74,39 +73,21 @@ jobs:
           **Note**: This launcher is developed privately. Only releases are public for download.
         draft: false
         prerelease: false
-
-    - name: Upload Windows MSI
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: src-tauri/target/release/bundle/msi/LuminaKraft Launcher_${{ steps.get_version.outputs.VERSION }}_x64_en-US.msi
-        asset_name: LuminaKraft-Launcher-${{ steps.get_version.outputs.VERSION }}-windows-x64.msi
-        asset_content_type: application/octet-stream
-
-    - name: Upload Windows EXE (if exists)
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: src-tauri/target/release/bundle/nsis/LuminaKraft Launcher_${{ steps.get_version.outputs.VERSION }}_x64-setup.exe
-        asset_name: LuminaKraft-Launcher-${{ steps.get_version.outputs.VERSION }}-windows-x64-setup.exe
-        asset_content_type: application/octet-stream
-      continue-on-error: true
+        files: |
+          src-tauri/target/release/bundle/msi/LuminaKraft Launcher_${{ steps.get_version.outputs.VERSION }}_x64_en-US.msi
+          src-tauri/target/release/bundle/nsis/LuminaKraft Launcher_${{ steps.get_version.outputs.VERSION }}_x64-setup.exe
 
     # Optional: Also create a release in the private repo for internal tracking
     - name: Create Release in Private Repository (Internal)
-      uses: actions/create-release@v1
+      uses: softprops/action-gh-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ github.ref }}
-        release_name: Internal Release v${{ steps.get_version.outputs.VERSION }}
+        tag_name: ${{ github.ref_name }}
+        name: Internal Release v${{ steps.get_version.outputs.VERSION }}
         body: |
           Internal release tracking for development team.
-          Public release available at: https://github.com/kristiangarcia/luminakraft-launcher-releases/releases/tag/${{ github.ref }}
+          Public release available at: https://github.com/kristiangarcia/luminakraft-launcher-releases/releases/tag/${{ github.ref_name }}
         draft: false
         prerelease: false
       continue-on-error: true 
