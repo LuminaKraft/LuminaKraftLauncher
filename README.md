@@ -154,33 +154,31 @@ luminakraft-launcher/
 └── README.md                   # Este archivo
 ```
 
-## 🔄 Sistema de Actualizaciones Automáticas
+## 🔄 Sistema de Actualizaciones
 
 ### Características del Sistema de Actualizaciones
 
-- **⭐ Completamente automático**: Un clic instala, descarga y reinicia
-- **Verificación al inicio**: Comprueba actualizaciones automáticamente al abrir
-- **Sin pasos manuales**: El usuario no necesita hacer nada manualmente
-- **Sistema de respaldo**: Múltiples métodos de actualización como fallback
-- **Seguridad integrada**: Verificación de firmas y descargas seguras
+- **🔍 Detección automática**: Verifica nuevas versiones al iniciar la aplicación
+- **📊 Comparación inteligente**: Compara versiones usando GitHub releases
+- **🌐 Descarga directa**: Abre el navegador para descargar desde GitHub
+- **📱 Notificaciones elegantes**: Interfaz moderna para gestionar actualizaciones
+- **🔒 Seguridad**: Descargas directas desde GitHub, sin intermediarios
+- **📝 Notas de versión**: Muestra qué hay de nuevo en cada actualización
 
 ### Flujo de Actualización
 
-1. **Detección automática**: Al iniciar, verifica nuevas versiones
-2. **Notificación al usuario**: Muestra diálogo con changelog
-3. **Un clic para actualizar**: Botón "Install Update"
-4. **Descarga automática**: Descarga en segundo plano
-5. **Instalación automática**: Instala y reinicia sin intervención
+1. **Verificación al inicio**: El launcher consulta GitHub releases al iniciar
+2. **Comparación de versiones**: Compara la versión actual con la última disponible
+3. **Notificación visual**: Muestra un diálogo cuando hay actualizaciones disponibles
+4. **Descarga directa**: Abre GitHub releases en el navegador para descarga manual
+5. **Instalación manual**: El usuario descarga e instala la nueva versión
 
-### Configuración del Backend
+### Tecnología
 
-El sistema requiere un endpoint de API que devuelva información de actualizaciones:
-
-```
-GET /v1/updater/{current_version}/{target}/{arch}
-```
-
-Ver `LAUNCHER_API_UPDATER_REQUIREMENTS.md` para especificaciones completas.
+- **GitHub API**: Consulta directa a la API pública de GitHub releases
+- **Versionado semántico**: Comparación inteligente de versiones (ej: 0.3.1 vs 0.4.0)
+- **Sin backend**: No requiere infraestructura adicional, usa GitHub directamente
+- **Multiplataforma**: Detecta automáticamente el archivo correcto para cada SO
 
 ## 🔧 Configuración
 
@@ -447,6 +445,4 @@ Desarrollado con ❤️ por el equipo de **LuminaKraft Studios**.
 
 - [`CHANGELOG.md`](CHANGELOG.md) - Registro detallado de todos los cambios
 - [`docs/`](docs/) - Documentación técnica detallada
-  - [Automatización de Releases](docs/AUTOMATED_RELEASE_SETUP.md)
   - [Integración con Lyceris](docs/LYCERIS_INTEGRATION_SUMMARY.md)
-  - [Especificaciones de API](docs/LAUNCHER_API_UPDATER_REQUIREMENTS.md)

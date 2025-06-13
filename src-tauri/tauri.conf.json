@@ -50,14 +50,7 @@
     },
     "shell": {
       "open": true
-    },
-    "updater": {
-      "active": true,
-      "endpoints": [
-        "https://api.luminakraft.com/v1/updater/{{current_version}}/{{target}}/{{arch}}"
-      ],
-      "dialog": false,
-      "pubkey": ""
     }
+
   }
 }

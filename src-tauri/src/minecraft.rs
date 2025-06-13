@@ -40,7 +40,7 @@ pub fn create_emitter() -> Emitter {
                     },
                 )
                 .await;
-        }
+    }
     });
     
     tokio::spawn({
@@ -51,7 +51,7 @@ pub fn create_emitter() -> Emitter {
                     println!("Minecraft: {}", line);
                 })
                 .await;
-        }
+            }
     });
     
     emitter
@@ -192,10 +192,10 @@ pub async fn launch_minecraft(modpack: Modpack, settings: UserSettings) -> Resul
     if !modpack.modloader.is_empty() && !modpack.modloader_version.is_empty() {
         let loader = get_loader_by_name(&modpack.modloader, &modpack.modloader_version)?;
         let config = config_builder.loader(loader).build();
-        
+    
         // Install/verify Minecraft installation first
         install(&config, Some(&emitter)).await?;
-        
+    
         // Launch Minecraft
         let mut child = launch(&config, Some(&emitter)).await?;
         
@@ -219,12 +219,12 @@ pub async fn launch_minecraft(modpack: Modpack, settings: UserSettings) -> Resul
         
         // Install/verify Minecraft installation first
         install(&config, Some(&emitter)).await?;
-        
-        // Launch Minecraft
+    
+    // Launch Minecraft
         let mut child = launch(&config, Some(&emitter)).await?;
-        
+    
         // Spawn a task to wait for the process to complete
-        tokio::spawn(async move {
+    tokio::spawn(async move {
             match child.wait().await {
                 Ok(status) => {
                     if status.success() {

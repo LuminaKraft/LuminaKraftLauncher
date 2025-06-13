@@ -1,6 +1,4 @@
 import { invoke } from '@tauri-apps/api/core';
-import { check, Update } from '@tauri-apps/plugin-updater';
-import { relaunch } from '@tauri-apps/plugin-process';
 
 export interface UpdateInfo {
   hasUpdate: boolean;
@@ -8,16 +6,17 @@ export interface UpdateInfo {
   latestVersion: string;
   downloadUrl?: string;
   platform: string;
-  update?: Update;
+  releaseNotes?: string;
 }
 
-export interface LauncherData {
-  launcherVersion: string;
-  launcherDownloadUrls: {
-    windows: string;
-    macos: string;
-    linux: string;
-  };
+interface GitHubRelease {
+  tag_name: string;
+  name: string;
+  body: string;
+  assets: Array<{
+    name: string;
+    browser_download_url: string;
+  }>;
 }
 
 class UpdateService {
@@ -25,7 +24,7 @@ class UpdateService {
   private updateCheckInterval: number | null = null;
   private lastCheckTime: number = 0;
   private readonly CHECK_INTERVAL = 60 * 60 * 1000; // 1 hour
-  private readonly API_URL = 'https://api.luminakraft.com/v1/launcher_data.json';
+  private readonly GITHUB_API_URL = 'https://api.github.com/repos/kristiangarcia/luminakraft-launcher/releases/latest';
 
   private constructor() {}
 
@@ -57,28 +56,35 @@ class UpdateService {
   }
 
   /**
-   * Get platform-specific download URL
+   * Get the appropriate download asset for the current platform
    */
-  private getDownloadUrl(urls: LauncherData['launcherDownloadUrls'], platform: string): string {
-    switch (platform.toLowerCase()) {
-      case 'windows':
-        return urls.windows;
-      case 'macos':
-      case 'darwin':
-        return urls.macos;
-      case 'linux':
-        return urls.linux;
-      default:
-        return urls.windows; // Default fallback
-    }
+  private getDownloadAsset(assets: GitHubRelease['assets'], platform: string): string | undefined {
+    const platformLower = platform.toLowerCase();
+    
+    // Find the appropriate asset based on platform
+    const asset = assets.find(asset => {
+      const name = asset.name.toLowerCase();
+      
+      if (platformLower === 'windows') {
+        return name.endsWith('.msi') || name.endsWith('.exe');
+      } else if (platformLower === 'linux') {
+        return name.endsWith('.appimage');
+      } else if (platformLower === 'macos' || platformLower === 'darwin') {
+        return name.endsWith('.dmg');
+      }
+      
+      return false;
+    });
+    
+    return asset?.browser_download_url;
   }
 
   /**
-   * Check for updates using Tauri's built-in updater
+   * Check for updates using GitHub releases
    */
   async checkForUpdates(): Promise<UpdateInfo> {
     try {
-      console.log('Checking for updates using Tauri updater...');
+      console.log('Checking for updates from GitHub releases...');
       
       // Get current version and platform from Tauri
       const [currentVersion, platform] = await Promise.all([
@@ -86,15 +92,26 @@ class UpdateService {
         invoke<string>('get_platform')
       ]);
 
-      // Use Tauri's built-in updater to check for updates
-      const update = await check();
-      
+      // Fetch latest release from GitHub
+      const response = await fetch(this.GITHUB_API_URL);
+      if (!response.ok) {
+        throw new Error(`GitHub API request failed: ${response.status}`);
+      }
+
+      const release: GitHubRelease = await response.json();
+      const latestVersion = release.tag_name.replace('v', '');
+
+      // Compare versions
+      const comparison = this.compareVersions(currentVersion, latestVersion);
+      const hasUpdate = comparison < 0;
+
       const updateInfo: UpdateInfo = {
-        hasUpdate: update !== null,
+        hasUpdate,
         currentVersion,
-        latestVersion: update?.version || currentVersion,
+        latestVersion,
         platform,
-        update: update || undefined
+        downloadUrl: hasUpdate ? this.getDownloadAsset(release.assets, platform) : undefined,
+        releaseNotes: hasUpdate ? release.body : undefined
       };
 
       this.lastCheckTime = Date.now();
@@ -102,59 +119,15 @@ class UpdateService {
       // Store update info in localStorage for persistence
       localStorage.setItem('lastUpdateCheck', JSON.stringify({
         timestamp: this.lastCheckTime,
-        updateInfo: {
-          ...updateInfo,
-          update: undefined // Don't serialize the Update object
-        }
+        updateInfo
       }));
 
       console.log('Update check result:', updateInfo);
       return updateInfo;
     } catch (error) {
       console.error('Failed to check for updates:', error);
-      
-      // Fallback to manual checking if Tauri updater fails
-      try {
-        return await this.checkForUpdatesManually();
-      } catch (fallbackError) {
-        console.error('Fallback update check also failed:', fallbackError);
-        throw error;
-      }
+      throw error;
     }
-  }
-
-  /**
-   * Fallback manual update checking (original method)
-   */
-  private async checkForUpdatesManually(): Promise<UpdateInfo> {
-    console.log('Using fallback manual update checking...');
-    
-    // Get current version and platform from Tauri
-    const [currentVersion, platform] = await Promise.all([
-      invoke<string>('get_launcher_version'),
-      invoke<string>('get_platform')
-    ]);
-
-    // Fetch latest version from API
-    const response = await fetch(this.API_URL);
-    if (!response.ok) {
-      throw new Error(`API request failed: ${response.status}`);
-    }
-
-    const data: LauncherData = await response.json();
-    const latestVersion = data.launcherVersion;
-
-    // Compare versions
-    const comparison = this.compareVersions(currentVersion, latestVersion);
-    const hasUpdate = comparison < 0;
-
-    return {
-      hasUpdate,
-      currentVersion,
-      latestVersion,
-      platform,
-      downloadUrl: hasUpdate ? this.getDownloadUrl(data.launcherDownloadUrls, platform) : undefined
-    };
   }
 
   /**
@@ -209,79 +182,50 @@ class UpdateService {
   }
 
   /**
-   * Download and install update automatically
+   * Download and open the update file
    */
-  async downloadAndInstallUpdate(updateInfo: UpdateInfo): Promise<void> {
-    if (!updateInfo.update) {
-      throw new Error('No update object available for automatic installation');
-    }
-
+  async downloadUpdate(downloadUrl: string): Promise<void> {
     try {
-      console.log('Starting automatic update download and installation...');
-      
-      // Download and install the update
-      await updateInfo.update.downloadAndInstall();
-      
-      console.log('Update downloaded and installed successfully');
-      
-      // Relaunch the application to apply the update
-      console.log('Relaunching application to apply update...');
-      await relaunch();
-      
+      console.log('Opening download URL:', downloadUrl);
+      await this.openDownloadUrl(downloadUrl);
     } catch (error) {
-      console.error('Failed to download and install update:', error);
-      
-      // Fallback to manual download if automatic installation fails
-      if (updateInfo.downloadUrl) {
-        console.log('Falling back to manual download...');
-        await this.openDownloadUrl(updateInfo.downloadUrl);
-      } else {
-        throw new Error('Automatic update failed and no manual download URL available');
-      }
+      console.error('Failed to download update:', error);
+      throw error;
     }
   }
 
   /**
-   * Open download URL in default browser (fallback method)
+   * Open download URL in browser
    */
   private async openDownloadUrl(url: string): Promise<void> {
     try {
       await invoke('open_url', { url });
-      console.log('Successfully opened download URL in browser');
     } catch (error) {
-      console.error('Failed to open download URL:', error);
-      
-      // Fallback: try to copy to clipboard
+      console.error('Failed to open URL:', error);
+      // Fallback: copy to clipboard
       try {
-        if (navigator.clipboard) {
-          await navigator.clipboard.writeText(url);
-          throw new Error(`Could not open browser. Download URL copied to clipboard: ${url}`);
-        } else {
-          throw new Error(`Could not open browser or copy to clipboard. Download URL: ${url}`);
-        }
+        await navigator.clipboard.writeText(url);
+        console.log('Download URL copied to clipboard');
       } catch (clipboardError) {
-        throw new Error(`Could not open browser. Please visit: ${url}`);
+        console.error('Failed to copy to clipboard:', clipboardError);
       }
+      throw error;
     }
   }
 
   /**
-   * Check if updates should be checked (not too frequent)
+   * Check if we should check for updates (not checked recently)
    */
   shouldCheckForUpdates(): boolean {
-    const now = Date.now();
-    const timeSinceLastCheck = now - this.lastCheckTime;
-    return timeSinceLastCheck >= this.CHECK_INTERVAL;
+    return Date.now() - this.lastCheckTime > this.CHECK_INTERVAL;
   }
 
   /**
-   * Get time until next automatic check
+   * Get time until next automatic check (in milliseconds)
    */
   getTimeUntilNextCheck(): number {
-    const now = Date.now();
-    const timeSinceLastCheck = now - this.lastCheckTime;
-    return Math.max(0, this.CHECK_INTERVAL - timeSinceLastCheck);
+    return Math.max(0, this.CHECK_INTERVAL - (Date.now() - this.lastCheckTime));
   }
 }
 
-export default UpdateService; 
+export const updateService = UpdateService.getInstance(); 

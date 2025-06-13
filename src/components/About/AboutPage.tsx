@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Download, ExternalLink, Heart, Globe, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
-import UpdateService, { UpdateInfo } from '../../services/updateService';
+import { updateService, UpdateInfo } from '../../services/updateService';
 
 const AboutPage: React.FC = () => {
   const { t } = useTranslation();
@@ -11,7 +11,7 @@ const AboutPage: React.FC = () => {
   const [isCheckingUpdate, setIsCheckingUpdate] = useState<boolean>(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
 
-  const updateService = UpdateService.getInstance();
+
 
   useEffect(() => {
     // Load current version and cached update info on component mount
@@ -48,12 +48,12 @@ const AboutPage: React.FC = () => {
     }
   };
 
-  const handleInstallUpdate = async () => {
-    if (updateInfo) {
+  const handleDownloadUpdate = async () => {
+    if (updateInfo && updateInfo.downloadUrl) {
       try {
-        await updateService.downloadAndInstallUpdate(updateInfo);
+        await updateService.downloadUpdate(updateInfo.downloadUrl);
       } catch (error) {
-        console.error('Failed to install update:', error);
+        console.error('Failed to download update:', error);
       }
     }
   };
@@ -159,7 +159,7 @@ const AboutPage: React.FC = () => {
               <div className="flex space-x-2">
                 {updateInfo?.hasUpdate && (
                   <button
-                    onClick={handleInstallUpdate}
+                    onClick={handleDownloadUpdate}
                     className="btn-warning"
                   >
                     <Download className="w-4 h-4 mr-2" />

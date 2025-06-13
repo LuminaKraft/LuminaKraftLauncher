@@ -8,7 +8,7 @@ import TauriWarning from './components/TauriWarning';
 import UpdateDialog from './components/UpdateDialog';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import LauncherService from './services/launcherService';
-import UpdateService, { UpdateInfo } from './services/updateService';
+import { updateService, UpdateInfo } from './services/updateService';
 import './App.css';
 
 function AppContent() {
@@ -18,7 +18,7 @@ function AppContent() {
   const [isInstallingUpdate, setIsInstallingUpdate] = useState(false);
   const { isLoading, error, launcherData } = useLauncher();
   const launcherService = LauncherService.getInstance();
-  const updateService = UpdateService.getInstance();
+
 
   useEffect(() => {
     const checkForUpdatesOnStartup = async () => {
@@ -51,16 +51,14 @@ function AppContent() {
     };
   }, [updateService, launcherService]);
 
-  const handleInstallUpdate = async () => {
-    if (!updateInfo) return;
+  const handleDownloadUpdate = async () => {
+    if (!updateInfo || !updateInfo.downloadUrl) return;
     
     try {
       setIsInstallingUpdate(true);
-      await updateService.downloadAndInstallUpdate(updateInfo);
-      // App will restart automatically, so we don't need to close the dialog
+      await updateService.downloadUpdate(updateInfo.downloadUrl);
     } catch (error) {
-      console.error('Failed to install update:', error);
-      // Show error message or keep dialog open
+      console.error('Failed to download update:', error);
     } finally {
       setIsInstallingUpdate(false);
     }
@@ -137,8 +135,8 @@ function AppContent() {
         <UpdateDialog
           updateInfo={updateInfo}
           onClose={handleCloseUpdateDialog}
-          onInstall={handleInstallUpdate}
-          isInstalling={isInstallingUpdate}
+          onDownload={handleDownloadUpdate}
+          isDownloading={isInstallingUpdate}
         />
       )}
     </div>
