@@ -17,6 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Version 1.0.0-rc.1 released with latest improvements
 - See previous versions below for detailed changes
 
+## [1.0.0-rc.2] - 2025-06-13
+
+### 🚀 New Release
+- Version 1.0.0-rc.2 released with latest improvements
+- See previous versions below for detailed changes
+
 ## [0.0.5] - 2025-06-13
 
 ### 🚀 New Release
