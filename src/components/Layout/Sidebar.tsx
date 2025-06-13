@@ -11,6 +11,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
   const { t } = useTranslation();
   // Temporalmente removemos hasUpdate hasta implementar la funcionalidad
   const hasUpdate = false;
+  
+  // Version is automatically updated by release.js
+  const currentVersion = "0.0.1";
 
   const menuItems = [
     {
@@ -106,7 +109,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
             © 2025 LuminaKraft Studios
           </p>
           <p className="text-dark-500 text-xs mt-1">
-            {t('app.version', { version: '0.2.1' })}
+            {t('app.version', { version: currentVersion })}
           </p>
         </div>
       </div>

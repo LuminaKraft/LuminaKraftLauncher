@@ -61,6 +61,15 @@ function updateVersion(newVersion) {
           `const currentVersion = "${newVersion}";`
         );
       }
+    },
+    {
+      path: 'src/components/Layout/Sidebar.tsx',
+      update: (content) => {
+        return content.replace(
+          /const currentVersion = ['"].*['"];/,
+          `const currentVersion = "${newVersion}";`
+        );
+      }
     }
   ];
 
