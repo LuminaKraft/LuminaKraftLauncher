@@ -446,5 +446,7 @@ Desarrollado con ❤️ por el equipo de **LuminaKraft Studios**.
 ## 📋 Documentación Adicional
 
 - [`CHANGELOG.md`](CHANGELOG.md) - Registro detallado de todos los cambios
-- [`LYCERIS_INTEGRATION_SUMMARY.md`](LYCERIS_INTEGRATION_SUMMARY.md) - Detalles de la integración con Lyceris
-- [`LAUNCHER_API_UPDATER_REQUIREMENTS.md`](LAUNCHER_API_UPDATER_REQUIREMENTS.md) - Especificaciones para el backend de actualizaciones
+- [`docs/`](docs/) - Documentación técnica detallada
+  - [Automatización de Releases](docs/AUTOMATED_RELEASE_SETUP.md)
+  - [Integración con Lyceris](docs/LYCERIS_INTEGRATION_SUMMARY.md)
+  - [Especificaciones de API](docs/LAUNCHER_API_UPDATER_REQUIREMENTS.md)
