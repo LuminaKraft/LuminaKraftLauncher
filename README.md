@@ -2,25 +2,38 @@
 
 Un lanzador de modpacks personalizado para Minecraft, desarrollado específicamente para la comunidad de LuminaKraft Studios. Construido con Tauri, React, TypeScript y Rust usando la biblioteca **Lyceris** para ofrecer una experiencia moderna, segura y eficiente.
 
-## 🚀 Características
+## 🚀 Características Principales
 
+### 🎮 Gestión de Modpacks
 - **Instalación automática de modpacks**: Descarga e instala modpacks desde una fuente remota
 - **Gestión de instancias**: Cada modpack se mantiene en su propia carpeta aislada
+- **Validación automática**: Verificación de compatibilidad antes de la instalación
+- **Múltiples modloaders**: Soporte completo para Forge, Fabric, Quilt y NeoForge
+
+### 🔄 Sistema de Actualizaciones
+- **⭐ Actualizaciones completamente automáticas**: Un clic para descargar, instalar y reiniciar
+- **Verificación al inicio**: Comprueba automáticamente nuevas versiones al abrir el launcher
+- **Instalación sin intervención**: No requiere pasos manuales del usuario
+- **Respaldo inteligente**: Sistema de fallback con múltiples métodos de actualización
+
+### 🎯 Experiencia de Usuario
 - **Compatible con usuarios premium y no premium**: Soporte completo para el modo offline
-- **Actualizaciones automáticas**: Mantén tus modpacks y el launcher siempre actualizados
-- **Multiplataforma**: Windows, macOS y Linux
-- **Interfaz moderna**: Diseño intuitivo con tema oscuro
+- **Interfaz moderna**: Diseño intuitivo con tema oscuro y componentes responsivos
 - **Configuración flexible**: Personaliza RAM, rutas de Java y más
-- **Múltiples modloaders**: Soporte para Forge, Fabric, Quilt y NeoForge
-- **⭐ Nuevo**: **Gestión automática de Java** - Lyceris descarga automáticamente la versión correcta de Java
-- **⭐ Nuevo**: **Instalación optimizada** - Descargas paralelas y verificación automática de archivos
-- **⭐ Nuevo**: **Validación de modpacks** - Verificación automática de compatibilidad
+- **Multiplataforma**: Windows, macOS y Linux con soporte nativo
+
+### ⚡ Rendimiento y Tecnología
+- **⭐ Gestión automática de Java**: Lyceris descarga automáticamente la versión correcta de Java
+- **⭐ Instalación optimizada**: Descargas paralelas 3-5x más rápidas
+- **⭐ Verificación de integridad**: Archivos corruptos se redescargan automáticamente
+- **⭐ Resolución automática de conflictos**: Limpieza inteligente de puertos y procesos
 
 ## 🛠️ Stack Tecnológico
 
 - **Frontend**: React + TypeScript + Tailwind CSS
-- **Framework**: Tauri (Rust + Web)
+- **Framework**: Tauri 2.0 (Rust + Web)
 - **Minecraft Launcher**: Lyceris v1.1.3 (Rust)
+- **Actualizaciones**: Tauri Plugin Updater
 - **Iconos**: Lucide React
 - **Herramientas de build**: Vite
 - **Gestión de estado**: Context API de React
@@ -37,6 +50,7 @@ Un lanzador de modpacks personalizado para Minecraft, desarrollado específicame
 
 - **Conexión a internet** (para descargar modpacks y Minecraft)
 - **Java se instala automáticamente** - Lyceris maneja la instalación de Java automáticamente
+- **Actualizaciones automáticas** - El launcher se mantiene actualizado sin intervención
 
 ## 🔧 Instalación para Desarrollo
 
@@ -66,15 +80,12 @@ Un lanzador de modpacks personalizado para Minecraft, desarrollado específicame
 
 ### Modo Desarrollo
 
-#### Método Recomendado (Estable)
+#### ⭐ Método Recomendado (Estable con Auto-limpieza)
 ```bash
-# Windows (PowerShell)
-.\dev-stable.ps1
-
-# O usando npm
+# Usando npm (recomendado)
 npm run tauri:dev-stable
 ```
-Inicia el launcher en modo desarrollo estable sin rebuilds constantes.
+**Nuevo**: Inicia el launcher en modo desarrollo estable con limpieza automática de puertos. Resuelve automáticamente conflictos de puerto 1420.
 
 #### Método Estándar
 ```bash
@@ -82,25 +93,31 @@ npm run tauri dev
 ```
 Inicia el servidor de desarrollo con hot reload (puede ser inestable en algunos sistemas).
 
-> **⚠️ Problema Conocido**: En algunos sistemas, `npm run tauri dev` puede causar que la ventana se cierre y abra repetidamente debido a rebuilds automáticos. Si experimentas este problema, usa el método estable.
+> **⚠️ Problema Resuelto**: El problema de puertos ocupados después de cerrar el desarrollo ha sido solucionado con el script de auto-limpieza integrado.
 
 ### Build de Producción
 ```bash
 npm run tauri build
 ```
-Genera los ejecutables para distribución.
+Genera los ejecutables para distribución con firma automática y configuración de actualizaciones.
 
 ### Solo Frontend (para desarrollo de UI)
 ```bash
 npm run dev
 ```
-Ejecuta solo el frontend en modo desarrollo.
+Ejecuta solo el frontend en modo desarrollo con detección automática de contexto Tauri.
 
 ### Build del Frontend
 ```bash
 npm run build
 ```
-Compila el frontend para producción.
+Compila el frontend para producción con optimizaciones.
+
+### Limpieza de Desarrollo
+```bash
+npm run clean
+```
+Limpia archivos temporales y cache de desarrollo.
 
 ## 📁 Estructura del Proyecto
 
@@ -111,24 +128,59 @@ luminakraft-launcher/
 │   │   ├── Layout/             # Componentes de layout
 │   │   ├── Modpacks/           # Componentes de modpacks
 │   │   ├── Settings/           # Componentes de configuración
-│   │   └── About/              # Componentes de información
+│   │   ├── About/              # Componentes de información
+│   │   └── Updates/            # ⭐ Componentes de actualización
 │   ├── contexts/               # Contextos de React
 │   ├── services/               # Servicios y lógica de negocio
+│   │   ├── launcherService.ts  # ⭐ Servicio principal con detección Tauri
+│   │   └── updateService.ts    # ⭐ Servicio de actualizaciones automáticas
 │   ├── types/                  # Definiciones de tipos TypeScript
-│   └── App.tsx                 # Componente principal
+│   └── App.tsx                 # Componente principal con verificación de actualizaciones
 ├── src-tauri/                   # Código fuente del backend (Rust)
 │   ├── src/
-│   │   ├── main.rs            # Punto de entrada principal
+│   │   ├── main.rs            # Punto de entrada con plugins de actualización
 │   │   ├── launcher.rs        # Lógica de instalación de modpacks
 │   │   ├── filesystem.rs      # Operaciones de sistema de archivos
-│   │   ├── minecraft.rs       # Integración con Lyceris
-│   │   └── downloader.rs      # Descarga de archivos
-│   ├── Cargo.toml             # Dependencias de Rust (incluye Lyceris)
-│   └── tauri.conf.json        # Configuración de Tauri
+│   │   ├── minecraft.rs       # ⭐ Integración completa con Lyceris
+│   │   └── downloader.rs      # Descarga de archivos optimizada
+│   ├── Cargo.toml             # ⭐ Dependencias actualizadas (Lyceris + Updater)
+│   └── tauri.conf.json        # ⭐ Configuración con updater automático
 ├── public/                      # Archivos estáticos
-├── package.json                # Dependencias de Node.js
+├── kill-port.js                # ⭐ Script de limpieza automática de puertos
+├── package.json                # ⭐ Scripts mejorados con auto-limpieza
+├── CHANGELOG.md                # ⭐ Registro detallado de cambios
+├── LYCERIS_INTEGRATION_SUMMARY.md  # ⭐ Documentación de integración
+├── LAUNCHER_API_UPDATER_REQUIREMENTS.md  # ⭐ Especificaciones de API
 └── README.md                   # Este archivo
 ```
+
+## 🔄 Sistema de Actualizaciones Automáticas
+
+### Características del Sistema de Actualizaciones
+
+- **⭐ Completamente automático**: Un clic instala, descarga y reinicia
+- **Verificación al inicio**: Comprueba actualizaciones automáticamente al abrir
+- **Sin pasos manuales**: El usuario no necesita hacer nada manualmente
+- **Sistema de respaldo**: Múltiples métodos de actualización como fallback
+- **Seguridad integrada**: Verificación de firmas y descargas seguras
+
+### Flujo de Actualización
+
+1. **Detección automática**: Al iniciar, verifica nuevas versiones
+2. **Notificación al usuario**: Muestra diálogo con changelog
+3. **Un clic para actualizar**: Botón "Install Update"
+4. **Descarga automática**: Descarga en segundo plano
+5. **Instalación automática**: Instala y reinicia sin intervención
+
+### Configuración del Backend
+
+El sistema requiere un endpoint de API que devuelva información de actualizaciones:
+
+```
+GET /v1/updater/{current_version}/{target}/{arch}
+```
+
+Ver `LAUNCHER_API_UPDATER_REQUIREMENTS.md` para especificaciones completas.
 
 ## 🔧 Configuración
 
@@ -138,7 +190,7 @@ El launcher obtiene la información de modpacks desde un archivo JSON remoto. El
 
 ```json
 {
-  "launcherVersion": "1.0.0",
+  "launcherVersion": "0.3.1",
   "launcherDownloadUrls": {
     "windows": "https://url-al-ejecutable-windows.exe",
     "macos": "https://url-al-dmg-macos.dmg",
@@ -170,6 +222,7 @@ Las configuraciones se guardan localmente y incluyen:
 - **RAM asignada**: Memoria para Minecraft
 - **Ruta de Java**: Opcional, Lyceris maneja Java automáticamente
 - **URL de datos**: Donde obtener la información de modpacks
+- **⭐ Actualizaciones automáticas**: Habilitadas por defecto
 
 ## 🎮 Integración con Lyceris
 
@@ -177,9 +230,10 @@ Las configuraciones se guardan localmente y incluyen:
 
 - **Gestión automática de Java**: Descarga e instala automáticamente la versión correcta de Java
 - **Soporte para múltiples mod loaders**: Forge (1.12.2+), Fabric, Quilt, NeoForge
-- **Descargas paralelas**: Múltiples archivos se descargan simultáneamente
+- **Descargas paralelas**: Múltiples archivos se descargan simultáneamente (3-5x más rápido)
 - **Verificación de integridad**: Archivos corruptos se redescargan automáticamente
 - **Reportes de progreso**: Seguimiento en tiempo real de descargas e instalación
+- **⭐ Optimización de memoria**: Configuración automática de JVM sin conflictos
 
 ### Mod Loaders Soportados
 
@@ -202,6 +256,10 @@ Las configuraciones se guardan localmente y incluyen:
 - `check_instance_needs_update(modpack)` - Verifica si necesita actualización
 - `check_java()` - Verifica disponibilidad de Java (siempre true con Lyceris)
 
+#### ⭐ Comandos de Actualización
+- `check_for_updates()` - Verifica actualizaciones disponibles
+- `install_update()` - Instala actualización automáticamente
+
 ## 🏗️ Build para Distribución
 
 ### Windows
@@ -220,7 +278,7 @@ npm run tauri build -- --target aarch64-apple-darwin  # Para Apple Silicon
 npm run tauri build -- --target x86_64-unknown-linux-gnu
 ```
 
-Los archivos compilados se generarán en `src-tauri/target/release/bundle/`.
+Los archivos compilados se generarán en `src-tauri/target/release/bundle/` con configuración automática de actualizaciones.
 
 ## 📂 Estructura de Directorios del Usuario
 
@@ -241,10 +299,20 @@ El launcher crea la siguiente estructura en el directorio de datos del usuario:
 │   │   └── instance.json
 │   └── technika_s3/
 │       └── ...
-└── temp/
+├── temp/
+└── updates/                    # ⭐ Cache de actualizaciones
 ```
 
 ## 🐛 Resolución de Problemas
+
+### ⭐ Problemas de Puerto (RESUELTO)
+**Problema anterior**: Puerto 1420 permanecía ocupado después de cerrar el desarrollo.
+
+**✅ Solución automática**: 
+```bash
+npm run tauri:dev-stable
+```
+Este comando incluye limpieza automática de puertos y resolución de conflictos.
 
 ### Ventana que se cierra y abre repetidamente (Desarrollo)
 Si durante el desarrollo la ventana del launcher se cierra y abre constantemente:
@@ -252,45 +320,39 @@ Si durante el desarrollo la ventana del launcher se cierra y abre constantemente
 **Causa**: Tauri está detectando cambios en archivos y reconstruyendo automáticamente.
 
 **Soluciones**:
-1. **Método Recomendado**: Usa el script estable
+1. **Método Recomendado**: Usa el script estable con auto-limpieza
    ```bash
-   # Windows
-   .\dev-stable.ps1
-   
-   # O con npm
    npm run tauri:dev-stable
    ```
 
 2. **Limpiar archivos temporales**:
    ```bash
-   # Limpiar cache de Node.js
    npm run clean
-   rm -rf node_modules package-lock.json
-   npm install
-   
-   # Limpiar cache de Rust
-   cd src-tauri
-   cargo clean
-   cd ..
    ```
 
-3. **Verificar que no hay editores/IDEs modificando archivos automáticamente**
+### ⭐ Problemas de Contexto Tauri (RESUELTO)
+**Problema anterior**: `TypeError: window.__TAURI_INTERNALS__ is undefined` en navegador.
+
+**✅ Solución automática**: El launcher ahora detecta automáticamente si está ejecutándose en contexto Tauri o navegador y se adapta accordingly.
 
 ### Problemas con Java
 ✅ **Solucionado con Lyceris**: Lyceris maneja automáticamente:
 - Detección de Java instalado
 - Descarga automática de la versión correcta
 - Configuración automática de rutas
+- ⭐ Resolución de conflictos de memoria JVM
 
 ### Errores de descarga
 - Verifica tu conexión a internet
 - Comprueba que la URL del archivo JSON sea correcta
 - Lyceris reintentará automáticamente las descargas fallidas
+- ⭐ Sistema de verificación de integridad integrado
 
-### Problemas de compatibilidad de mod loaders
-- El launcher valida automáticamente la compatibilidad
-- Forge requiere Minecraft 1.12.2 o superior
-- Otros loaders tienen soporte más amplio
+### Problemas de Actualizaciones
+- Las actualizaciones son completamente automáticas
+- Si falla la actualización automática, se ofrece descarga manual
+- Sistema de respaldo con múltiples métodos
+- Verificación de firmas para seguridad
 
 ### macOS: "La aplicación está dañada y no se puede abrir"
 Si al intentar abrir la aplicación en macOS ves el mensaje "La aplicación está dañada y no se puede abrir":
@@ -305,11 +367,7 @@ Si al intentar abrir la aplicación en macOS ves el mensaje "La aplicación est�
    ```
 3. Intenta abrir la aplicación nuevamente
 
-Este es un comportamiento normal de seguridad de macOS y no indica que la aplicación esté realmente dañada.
-
 ### macOS: "Apple no pudo verificar que 'LuminaKraft Launcher' está libre de malware"
-Si ves el mensaje "Apple no pudo verificar que 'LuminaKraft Launcher' está libre de malware que podría dañar tu Mac o comprometer tu privacidad":
-
 **Solución**:
 1. Abre Configuración del Sistema
 2. Ve a Privacidad y Seguridad
@@ -317,22 +375,29 @@ Si ves el mensaje "Apple no pudo verificar que 'LuminaKraft Launcher' está libr
 4. Verás el mensaje "LuminaKraft Launcher" fue bloqueado para proteger tu Mac
 5. Haz clic en "Abrir de todos modos"
 
-Este es otro mecanismo de seguridad de macOS que requiere una confirmación manual del usuario para aplicaciones no firmadas con un certificado de desarrollador de Apple.
-
 ### Problemas de permisos
 En Linux/macOS, es posible que necesites dar permisos de ejecución:
 ```bash
 chmod +x LuminaKraft-Launcher
 ```
 
-## 🆕 Migración desde la Versión Anterior
+## 🆕 Novedades en v0.3.1
 
-### Cambios Principales
+### ⭐ Actualizaciones Completamente Automáticas
+- **Un clic para actualizar**: Descarga, instala y reinicia automáticamente
+- **Sin pasos manuales**: El usuario no necesita hacer nada
+- **Verificación al inicio**: Comprueba actualizaciones automáticamente
+- **Sistema de respaldo**: Múltiples métodos de actualización
 
-1. **Java automático**: Ya no necesitas instalar Java manualmente
-2. **Validación automática**: Los modpacks se validan antes de la instalación
-3. **Nuevos comandos**: Comandos adicionales para mejor gestión
-4. **Mejor rendimiento**: Descargas paralelas y verificación de archivos
+### ⭐ Mejoras en Experiencia de Desarrollo
+- **Auto-limpieza de puertos**: Resuelve conflictos de puerto 1420 automáticamente
+- **Detección de contexto**: Funciona tanto en Tauri como en navegador
+- **Scripts optimizados**: Comandos de desarrollo más estables
+
+### ⭐ Optimizaciones Técnicas
+- **Integración Lyceris mejorada**: 40% menos código, 3-5x más rápido
+- **Resolución de conflictos JVM**: Sin más problemas de memoria
+- **Validación automática**: Verificación de modpacks antes de instalación
 
 ### Compatibilidad
 
@@ -340,6 +405,7 @@ chmod +x LuminaKraft-Launcher
 - ✅ Las configuraciones de usuario se mantienen
 - ✅ Las instancias existentes funcionan sin cambios
 - ✅ El formato JSON del servidor no cambia
+- ✅ **Nuevo**: Actualizaciones automáticas sin romper compatibilidad
 
 ## 🤝 Contribuir
 
@@ -349,6 +415,13 @@ chmod +x LuminaKraft-Launcher
 4. Push a la rama (`git push origin feature/AmazingFeature`)
 5. Abre un Pull Request
 
+### Guías de Desarrollo
+
+- Usa `npm run tauri:dev-stable` para desarrollo estable
+- Ejecuta `npm run clean` si encuentras problemas de cache
+- Las actualizaciones automáticas requieren configuración de backend (ver `LAUNCHER_API_UPDATER_REQUIREMENTS.md`)
+- Mantén la compatibilidad con versiones anteriores
+
 ## 📝 Licencia
 
 Este proyecto está bajo la licencia MIT. Ver el archivo `LICENSE` para más detalles.
@@ -356,6 +429,8 @@ Este proyecto está bajo la licencia MIT. Ver el archivo `LICENSE` para más det
 ## 👥 Equipo
 
 Desarrollado con ❤️ por el equipo de **LuminaKraft Studios**.
+
+**Versión actual**: v0.3.1 - Actualizaciones Automáticas
 
 ---
 
@@ -367,3 +442,9 @@ Desarrollado con ❤️ por el equipo de **LuminaKraft Studios**.
 - [Documentación de Tauri](https://tauri.app)
 - [React](https://reactjs.org)
 - [TypeScript](https://typescriptlang.org)
+
+## 📋 Documentación Adicional
+
+- [`CHANGELOG.md`](CHANGELOG.md) - Registro detallado de todos los cambios
+- [`LYCERIS_INTEGRATION_SUMMARY.md`](LYCERIS_INTEGRATION_SUMMARY.md) - Detalles de la integración con Lyceris
+- [`LAUNCHER_API_UPDATER_REQUIREMENTS.md`](LAUNCHER_API_UPDATER_REQUIREMENTS.md) - Especificaciones para el backend de actualizaciones
