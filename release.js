@@ -49,12 +49,13 @@ function getCurrentVersion() {
 }
 
 function updateVersion(newVersion, isPrerelease = false) {
+  const numericVersion = newVersion.match(/^\d+\.\d+\.\d+/)[0];
   const files = [
     {
       path: 'package.json',
       update: (content) => {
         const pkg = JSON.parse(content);
-        pkg.version = newVersion;
+        pkg.version = numericVersion;
         pkg.isPrerelease = isPrerelease;
         return JSON.stringify(pkg, null, 2);
       }
@@ -63,14 +64,14 @@ function updateVersion(newVersion, isPrerelease = false) {
       path: 'src-tauri/tauri.conf.json',
       update: (content) => {
         const config = JSON.parse(content);
-        config.version = newVersion;
+        config.version = numericVersion;
         return JSON.stringify(config, null, 2);
       }
     },
     {
       path: 'src-tauri/Cargo.toml',
       update: (content) => {
-        return content.replace(/version\s*=\s*".*?"/, `version = "${newVersion}"`);
+        return content.replace(/version\s*=\s*".*?"/, `version = "${numericVersion}"`);
       }
     }
   ];
