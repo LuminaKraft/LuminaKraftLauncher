@@ -5,12 +5,26 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import os from 'os';
+import { Octokit } from '@octokit/rest';
+import dotenv from 'dotenv';
+import readline from 'readline';
+
+// Cargar variables de entorno desde .env
+const dotenvResult = dotenv.config();
+if (dotenvResult.error) {
+  console.log(`\x1b[33m ⚠️  No se encontró el archivo .env, se usarán las variables de entorno del sistema si existen.\x1b[0m`);
+} else {
+  console.log(`\x1b[32m ✅  Archivo .env cargado correctamente.\x1b[0m`);
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Configuración
-const PUBLIC_REPO_PATH = path.join(__dirname, '../luminakraft-launcher-releases');
+const PUBLIC_REPO_OWNER = 'kristiangarcia';
+const PUBLIC_REPO_NAME = 'luminakraft-launcher-releases';
+const PRIVATE_REPO_OWNER = 'kristiangarcia';
+const PRIVATE_REPO_NAME = 'luminakraft-launcher';
 const ARTIFACTS_PATH = path.join(__dirname, 'src-tauri/target/release');
 
 // ANSI color codes
@@ -34,13 +48,14 @@ function getCurrentVersion() {
   return packageJson.version;
 }
 
-function updateVersion(newVersion) {
+function updateVersion(newVersion, isPrerelease = false) {
   const files = [
     {
       path: 'package.json',
       update: (content) => {
         const pkg = JSON.parse(content);
         pkg.version = newVersion;
+        pkg.isPrerelease = isPrerelease;
         return JSON.stringify(pkg, null, 2);
       }
     },
@@ -54,7 +69,7 @@ function updateVersion(newVersion) {
     }
   ];
 
-  log(`📝 Actualizando versión a ${newVersion} en todos los archivos...`, 'cyan');
+  log(`📝 Actualizando versión a ${newVersion}${isPrerelease ? ' (pre-release)' : ''} en todos los archivos...`, 'cyan');
   
   files.forEach(file => {
     try {
@@ -78,6 +93,25 @@ function validateVersion(version) {
   }
 }
 
+function cleanBuildCache() {
+  log('🧹 Limpiando caché de builds anteriores...', 'cyan');
+  try {
+    const bundlePaths = [
+      'src-tauri/target/release/bundle',
+      'src-tauri/target/debug/bundle'
+    ];
+
+    bundlePaths.forEach(bundlePath => {
+      if (fs.existsSync(bundlePath)) {
+        fs.rmSync(bundlePath, { recursive: true, force: true });
+        log(`  ✅ Eliminado: ${bundlePath}`, 'green');
+      }
+    });
+  } catch (error) {
+    log(`  ⚠️ Error al limpiar caché: ${error.message}`, 'yellow');
+  }
+}
+
 function buildApp() {
   log('🔨 Construyendo la aplicación...', 'cyan');
   try {
@@ -86,32 +120,13 @@ function buildApp() {
       log('📦 Instalando dependencias...', 'cyan');
       execSync('npm install', { stdio: 'inherit' });
     }
-    
-    // En Windows, construir para Windows y Linux
-    if (os.platform() === 'win32') {
-      // Instalar target de Linux si no está instalado
-      log('🔧 Verificando target de Linux...', 'cyan');
-      try {
-        execSync('rustup target add x86_64-unknown-linux-gnu', { stdio: 'inherit' });
-      } catch (error) {
-        log('⚠️ No se pudo instalar el target de Linux. Solo se construirá para Windows.', 'yellow');
-        log(`   Error: ${error.message}`, 'yellow');
-      }
 
-      log('🎯 Construyendo para Windows...', 'cyan');
-      execSync('npm run tauri build', { stdio: 'inherit' });
-      
-      try {
-        log('🐧 Construyendo para Linux...', 'cyan');
-        execSync('npm run tauri build -- --target x86_64-unknown-linux-gnu', { stdio: 'inherit' });
-      } catch (error) {
-        log('⚠️ No se pudo construir para Linux. Continuando solo con Windows.', 'yellow');
-        log(`   Error: ${error.message}`, 'yellow');
-      }
-    } else {
-      // En otros sistemas, solo construir para el sistema actual
-      execSync('npm run tauri build', { stdio: 'inherit' });
-    }
+    // Limpiar caché antes de construir
+    cleanBuildCache();
+    
+    // Construir para la plataforma actual
+    log(`🎯 Construyendo para ${os.platform()}...`, 'cyan');
+    execSync('npm run tauri build', { stdio: 'inherit' });
     
     log('✅ Build completado', 'green');
   } catch (error) {
@@ -124,116 +139,245 @@ function getInstallerFiles() {
   const bundleDir = path.join(ARTIFACTS_PATH, 'bundle');
   const installers = [];
   
-  // Buscar en las carpetas msi y nsis para Windows
-  const msiDir = path.join(bundleDir, 'msi');
-  const nsisDir = path.join(bundleDir, 'nsis');
-  const debianDir = path.join(bundleDir, 'deb');
-  const appimageDir = path.join(bundleDir, 'appimage');
+  // Buscar en las carpetas según la plataforma
+  const platform = os.platform();
   
-  if (fs.existsSync(msiDir)) {
-    const msiFiles = fs.readdirSync(msiDir).filter(f => f.endsWith('.msi'));
-    installers.push(...msiFiles.map(f => path.join('bundle', 'msi', f)));
-  }
-  
-  if (fs.existsSync(nsisDir)) {
-    const nsisFiles = fs.readdirSync(nsisDir).filter(f => f.endsWith('.exe'));
-    installers.push(...nsisFiles.map(f => path.join('bundle', 'nsis', f)));
-  }
-  
-  if (fs.existsSync(debianDir)) {
-    const debFiles = fs.readdirSync(debianDir).filter(f => f.endsWith('.deb'));
-    installers.push(...debFiles.map(f => path.join('bundle', 'deb', f)));
-  }
-  
-  if (fs.existsSync(appimageDir)) {
-    const appimageFiles = fs.readdirSync(appimageDir).filter(f => f.endsWith('.AppImage'));
-    installers.push(...appimageFiles.map(f => path.join('bundle', 'appimage', f)));
+  if (platform === 'win32') {
+    const msiDir = path.join(bundleDir, 'msi');
+    const nsisDir = path.join(bundleDir, 'nsis');
+    
+    if (fs.existsSync(msiDir)) {
+      const msiFiles = fs.readdirSync(msiDir).filter(f => f.endsWith('.msi'));
+      installers.push(...msiFiles.map(f => path.join('bundle', 'msi', f)));
+    }
+    
+    if (fs.existsSync(nsisDir)) {
+      const nsisFiles = fs.readdirSync(nsisDir).filter(f => f.endsWith('.exe'));
+      installers.push(...nsisFiles.map(f => path.join('bundle', 'nsis', f)));
+    }
+  } else if (platform === 'linux') {
+    const debianDir = path.join(bundleDir, 'deb');
+    const appimageDir = path.join(bundleDir, 'appimage');
+    
+    if (fs.existsSync(debianDir)) {
+      const debFiles = fs.readdirSync(debianDir).filter(f => f.endsWith('.deb'));
+      installers.push(...debFiles.map(f => path.join('bundle', 'deb', f)));
+    }
+    
+    if (fs.existsSync(appimageDir)) {
+      const appimageFiles = fs.readdirSync(appimageDir).filter(f => f.endsWith('.AppImage'));
+      installers.push(...appimageFiles.map(f => path.join('bundle', 'appimage', f)));
+    }
+  } else if (platform === 'darwin') {
+    const dmgDir = path.join(bundleDir, 'dmg');
+    const macosDir = path.join(bundleDir, 'macos');
+    
+    if (fs.existsSync(dmgDir)) {
+      const dmgFiles = fs.readdirSync(dmgDir).filter(f => f.endsWith('.dmg'));
+      installers.push(...dmgFiles.map(f => path.join('bundle', 'dmg', f)));
+    }
+    
+    if (fs.existsSync(macosDir)) {
+      const appFiles = fs.readdirSync(macosDir).filter(f => f.endsWith('.app'));
+      installers.push(...appFiles.map(f => path.join('bundle', 'macos', f)));
+    }
   }
   
   return installers;
 }
 
-function publishToPublic(version) {
-  log(`📦 Publicando v${version}...`, 'cyan');
+async function publishToPublic(version, isPrerelease, forceFlag, octokit) {
+  log(`📦 Publicando v${version}${isPrerelease ? ' (pre-release)' : ''} en el repo público...`, 'cyan');
   
   try {
-    // Cambiar al directorio del repositorio público
-    process.chdir(PUBLIC_REPO_PATH);
-    
-    // Crear directorio releases si no existe
-    const releasesDir = path.join(PUBLIC_REPO_PATH, 'releases');
-    if (!fs.existsSync(releasesDir)) {
-      fs.mkdirSync(releasesDir, { recursive: true });
+    // If release/tag exists, handle replacement
+    let releaseExists = false;
+    let existingReleaseId = null;
+    try {
+      const { data: existingRelease } = await octokit.repos.getReleaseByTag({ owner: PUBLIC_REPO_OWNER, repo: PUBLIC_REPO_NAME, tag: `v${version}` });
+      releaseExists = true;
+      existingReleaseId = existingRelease.id;
+    } catch {}
+
+    if (releaseExists) {
+      if (!forceFlag) {
+        const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+        const answer = await new Promise(res => rl.question(`⚠️ Ya existe un release/tag v${version} en el repo público. ¿Reemplazarlo? (y/N): `, res));
+        rl.close();
+        if (!['y', 'Y', 'yes', 'YES'].includes(answer.trim())) {
+          throw new Error('Operación cancelada por el usuario.');
+        }
+      }
+      log('🔄 Eliminando release y tag previos en repo público...', 'yellow');
+      await octokit.repos.deleteRelease({ owner: PUBLIC_REPO_OWNER, repo: PUBLIC_REPO_NAME, release_id: existingReleaseId });
+      try { await octokit.git.deleteRef({ owner: PUBLIC_REPO_OWNER, repo: PUBLIC_REPO_NAME, ref: `tags/v${version}` }); } catch {}
     }
-    
+
     // Obtener lista de instaladores
-    log('📄 Copiando instaladores...', 'cyan');
+    log('📄 Preparando instaladores...', 'cyan');
     const installers = getInstallerFiles();
       
     if (installers.length === 0) {
-      throw new Error('No se encontraron instaladores para copiar');
+      throw new Error('No se encontraron instaladores para publicar');
     }
-    
-    installers.forEach(installer => {
-      const source = path.join(ARTIFACTS_PATH, installer);
-      const filename = path.basename(installer);
-      const dest = path.join(releasesDir, filename);
-      fs.copyFileSync(source, dest);
-      log(`  ✅ Copiado: ${filename}`, 'green');
-    });
-    
-    // Crear archivo de release info
+
+    // Crear release info
     const releaseInfo = {
       version,
+      isPrerelease,
       platform: os.platform(),
       date: new Date().toISOString(),
       artifacts: installers.map(installer => ({
         name: path.basename(installer),
-        path: `releases/${path.basename(installer)}`
+        path: installer
       }))
     };
+
+    // Crear el release en GitHub
+    log('🔄 Creando release en GitHub...', 'cyan');
+    log(`  - Debug: Prerelease flag: ${isPrerelease} (Type: ${typeof isPrerelease})`, 'magenta');
+    const { data: release } = await octokit.repos.createRelease({
+      owner: PUBLIC_REPO_OWNER,
+      repo: PUBLIC_REPO_NAME,
+      tag_name: `v${version}`,
+      name: `🚀 LuminaKraft Launcher v${version}${isPrerelease ? ' (Pre-release)' : ''}`,
+      body: `## 📥 Instrucciones de Descarga
+
+${isPrerelease ? '🧪 **Versión Pre-Release** - Esta es una versión de prueba con características experimentales' : '🎉 **Versión Estable** - Versión lista para producción'}
+
+### 🪟 **Windows**
+- **MSI Installer** (\`*.msi\`) - Recomendado
+- **NSIS Installer** (\`*.exe\`) - Alternativo
+
+### 🐧 **Linux**
+- **AppImage** (\`*.AppImage\`) - Recomendado (portable)
+- **DEB Package** (\`*.deb\`) - Debian/Ubuntu
+- **RPM Package** (\`*.rpm\`) - Red Hat/Fedora
+
+### 🍎 **macOS**
+- **Apple Silicon** (\`aarch64-apple-darwin.dmg\`) - M1/M2/M3/M4
+- **Intel Macs** (\`x86_64-apple-darwin.dmg\`) - Macs Intel
+
+## 🔗 Enlaces
+- 💬 **Discord**: [Únete a nuestra comunidad](https://discord.gg/UJZRrcUFMj)
+- 🐛 **Reportar bugs**: [GitHub Issues](https://github.com/kristiangarcia/luminakraft-launcher-releases/issues)
+
+${isPrerelease ? '⚠️ **Advertencia**: Esta versión puede contener errores. Úsala bajo tu propio riesgo.' : '✅ **Versión estable y recomendada para todos los usuarios.**'}`,
+      draft: false,
+      prerelease: isPrerelease
+    });
+
+    // Subir los archivos al release
+    log('📤 Subiendo archivos al release...', 'cyan');
+    for (const installer of installers) {
+      const filePath = path.join(ARTIFACTS_PATH, installer);
+      const fileName = path.basename(installer);
+      
+      log(`  📦 Subiendo ${fileName}...`, 'cyan');
+      await octokit.repos.uploadReleaseAsset({
+        owner: PUBLIC_REPO_OWNER,
+        repo: PUBLIC_REPO_NAME,
+        release_id: release.id,
+        name: fileName,
+        data: fs.readFileSync(filePath)
+      });
+      log(`  ✅ Subido: ${fileName}`, 'green');
+    }
     
-    fs.writeFileSync(
-      path.join(releasesDir, `release-${version}.json`),
-      JSON.stringify(releaseInfo, null, 2)
-    );
-    
-    // Git operations
-    log('🔄 Actualizando repositorio público...', 'cyan');
-    execSync('git add releases/*', { stdio: 'inherit' });
-    execSync(`git commit -m "release: v${version}"`, { stdio: 'inherit' });
-    execSync(`git tag -a v${version} -m "Release v${version}"`, { stdio: 'inherit' });
-    execSync('git push origin main --tags', { stdio: 'inherit' });
-    
-    log(`\n✨ Release v${version} publicada!`, 'green');
+    log(`\n✨ Release v${version}${isPrerelease ? ' (pre-release)' : ''} publicada!`, 'green');
     log('📝 Resumen:', 'cyan');
     log(`  • ${installers.length} instaladores subidos`, 'green');
-    log(`  • Tag v${version} creado`, 'green');
-    log(`  • Release info guardada en releases/release-${version}.json`, 'green');
+    log(`  • Release creada en GitHub`, 'green');
+    log(`  • URL: ${release.html_url}`, 'green');
+
+    return release;
     
   } catch (error) {
-    log(`❌ Error al publicar: ${error.message}`, 'red');
+    log(`❌ Error al publicar en el repo público: ${error.message}`, 'red');
     throw error;
   }
 }
 
-function main() {
+async function publishToPrivate(version, isPrerelease, publicReleaseUrl, forceFlag, octokit) {
+    log(`📝 Creando release informativa en el repo privado...`, 'cyan');
+    try {
+        const commitHash = execSync('git rev-parse HEAD').toString().trim();
+        const platform = os.platform();
+
+        let buildsCompleted;
+        switch (platform) {
+            case 'win32':
+                buildsCompleted = `- ✅ **Windows**: MSI + NSIS\n- ❌ **Linux**: No compilado\n- ❌ **macOS**: No compilado`;
+                break;
+            case 'linux':
+                buildsCompleted = `- ❌ **Windows**: No compilado\n- ✅ **Linux**: AppImage + DEB\n- ❌ **macOS**: No compilado`;
+                break;
+            case 'darwin':
+                buildsCompleted = `- ❌ **Windows**: No compilado\n- ❌ **Linux**: No compilado\n- ✅ **macOS**: DMG`;
+                break;
+            default:
+                buildsCompleted = `- ❓ **Plataforma desconocida**`;
+        }
+
+        const body = `## 🔗 **Release Público**
+**🌐 Descarga**: ${publicReleaseUrl}
+
+## 🏗️ **Info de Build**
+- **Versión**: \`${version}\`
+- **Commit**: \`${commitHash}\`
+- **Pre-release**: \`${isPrerelease}\`
+
+### 📦 **Builds Completados**
+${buildsCompleted}
+
+${isPrerelease ? '🧪 **PRE-RELEASE** - Versión de prueba' : '✅ **RELEASE ESTABLE**'}
+
+---
+**🔒 Solo uso interno** - Tracking para el equipo de desarrollo.`;
+
+        log(`  - Debug: Prerelease flag: ${isPrerelease} (Type: ${typeof isPrerelease})`, 'magenta');
+        const { data: privateRelease } = await octokit.repos.createRelease({
+            owner: PRIVATE_REPO_OWNER,
+            repo: PRIVATE_REPO_NAME,
+            tag_name: `v${version}`,
+            name: `📝 Build v${version} Info`,
+            body,
+            prerelease: isPrerelease,
+            draft: false
+        });
+
+        log(`✨ Release informativa creada en ${PRIVATE_REPO_NAME}!`, 'green');
+        log(`  • URL: ${privateRelease.html_url}`, 'green');
+
+    } catch (error) {
+        log(`⚠️ Error al publicar en el repo privado: ${error.message}`, 'yellow');
+        log('   Esto no es un error crítico, el release público fue exitoso.', 'yellow');
+    }
+}
+
+async function main() {
   const args = process.argv.slice(2);
   const originalDir = process.cwd();
   
-  if (args.length === 0) {
+  // Parse arguments
+  const isPrerelease = args.includes('--prerelease') || process.env.npm_config_prerelease !== undefined;
+  const forceFlag = args.includes('--force') || args.includes('-f');
+  const versionArgs = args.filter(arg => arg !== '--prerelease' && arg !== '--force' && arg !== '-f');
+  
+  if (versionArgs.length === 0) {
     log('🚀 LuminaKraft Launcher - Release Local', 'bright');
     log('');
     log('Uso:', 'cyan');
-    log('  node release.js <version>     Crear nueva release', 'yellow');
-    log('  node release.js patch         Incrementar versión patch (0.3.1 → 0.3.2)', 'yellow');
-    log('  node release.js minor         Incrementar versión minor (0.3.1 → 0.4.0)', 'yellow');
-    log('  node release.js major         Incrementar versión major (0.3.1 → 1.0.0)', 'yellow');
+    log('  node release.js <version> [--prerelease]     Crear nueva release', 'yellow');
+    log('  node release.js patch [--prerelease]         Incrementar versión patch (0.3.1 → 0.3.2)', 'yellow');
+    log('  node release.js minor [--prerelease]         Incrementar versión minor (0.3.1 → 0.4.0)', 'yellow');
+    log('  node release.js major [--prerelease]         Incrementar versión major (0.3.1 → 1.0.0)', 'yellow');
     log('');
     log('Ejemplos:', 'cyan');
-    log('  node release.js 0.4.0         Release versión 0.4.0', 'green');
-    log('  node release.js patch         Release siguiente versión patch', 'green');
-    log('  node release.js 1.0.0-beta.1  Release versión beta', 'green');
+    log('  node release.js 0.4.0                        Release versión 0.4.0', 'green');
+    log('  node release.js 0.4.0 --prerelease           Release versión pre-release 0.4.0', 'green');
+    log('  node release.js patch                        Release siguiente versión patch', 'green');
+    log('  node release.js 1.0.0-beta.1 --prerelease    Release versión beta', 'green');
     log('');
     log(`Versión actual: ${getCurrentVersion()}`, 'magenta');
     log(`Plataforma: ${os.platform()}`, 'magenta');
@@ -241,7 +385,7 @@ function main() {
   }
 
   // Get version argument
-  const versionArg = args[0];
+  const versionArg = versionArgs[0];
   let newVersion;
 
   // Handle semantic version increments
@@ -267,25 +411,77 @@ function main() {
   validateVersion(newVersion);
   
   try {
-    // Verificar que el repositorio público existe
-    if (!fs.existsSync(PUBLIC_REPO_PATH)) {
-      throw new Error('No se encontró el repositorio público. Asegúrate de que esté clonado en el directorio correcto.');
-    }
-
     log('\n🚀 Iniciando proceso de release', 'bright');
     log(`📊 Versión actual: ${getCurrentVersion()}`, 'magenta');
-    log(`🎯 Nueva versión: ${newVersion}`, 'green');
+    log(`🎯 Nueva versión: ${newVersion}${isPrerelease ? ' (pre-release)' : ''}`, 'green');
     log(`💻 Plataforma: ${os.platform()}`, 'cyan');
     log('');
 
     // Actualizar versión
-    updateVersion(newVersion);
+    updateVersion(newVersion, isPrerelease);
+
+    // Commit, tag and push before building/publishing
+    try {
+      log('📚 Commit y tag en Git...', 'cyan');
+      execSync('git add -A', { stdio: 'inherit' });
+      // Realizar commit solo si hay cambios
+      try {
+        execSync(`git commit -m "chore(release): v${newVersion}${isPrerelease ? ' (pre-release)' : ''}"`, { stdio: 'inherit' });
+      } catch { /* Sin cambios que commitear */ }
+
+      // Reemplazar tag si ya existe
+      let tagExists = false;
+      try {
+        execSync(`git rev-parse --quiet --verify refs/tags/v${newVersion}`, { stdio: 'ignore' });
+        tagExists = true;
+      } catch {}
+
+      if (tagExists) {
+        if (!forceFlag) {
+          const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+          const answer = await new Promise(res => rl.question(`⚠️ El tag v${newVersion} ya existe. ¿Reemplazarlo? (y/N): `, res));
+          rl.close();
+          if (!['y', 'Y', 'yes', 'YES'].includes(answer.trim())) {
+            throw new Error('Operación cancelada por el usuario.');
+          }
+        }
+        execSync(`git tag -d v${newVersion}`, { stdio: 'inherit' });
+        execSync(`git push --delete origin v${newVersion}`, { stdio: 'inherit' });
+      }
+
+      // Crear/forzar tag
+      execSync(`git tag -a -f v${newVersion} -m "v${newVersion}"`, { stdio: 'inherit' });
+
+      // Push commit (si lo hubo) y tag forzado
+      execSync('git push', { stdio: 'inherit' });
+      execSync(`git push --force origin v${newVersion}`, { stdio: 'inherit' });
+
+      log('✅ Commit y tag enviados a remoto', 'green');
+    } catch (gitErr) {
+      log(`⚠️ No se pudo hacer commit/push: ${gitErr.message}`, 'yellow');
+    }
 
     // Construir
     buildApp();
 
-    // Publicar
-    publishToPublic(newVersion);
+    // Verificar token y crear cliente Octokit una vez
+    const token = process.env.GITHUB_TOKEN;
+    if (!token) {
+      throw new Error('GITHUB_TOKEN no encontrado. Revisa tu archivo .env o las variables de entorno del sistema.');
+    }
+    log(`🔑 Token encontrado: ${token.substring(0, 12)}...`, 'cyan');
+    const octokit = new Octokit({
+      auth: token,
+      userAgent: 'LuminaKraft-Launcher-Release-Script'
+    });
+
+    // Publicar en repo público
+    const publicRelease = await publishToPublic(newVersion, isPrerelease, forceFlag, octokit);
+
+    // Si es exitoso, publicar en repo privado
+    if (publicRelease) {
+      await publishToPrivate(newVersion, isPrerelease, publicRelease.html_url, forceFlag, octokit);
+    }
 
     log('\n✅ ¡Proceso completado con éxito!', 'green');
     log('🌐 Visita el repositorio público para ver los archivos:', 'cyan');
