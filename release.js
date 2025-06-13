@@ -491,7 +491,6 @@ async function main() {
           }
         }
         execSync(`git tag -d v${newVersion}`, { stdio: 'inherit' });
-        execSync(`git push --delete origin v${newVersion}`, { stdio: 'inherit' });
       }
 
       // Crear/forzar tag
