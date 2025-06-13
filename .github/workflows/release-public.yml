@@ -223,12 +223,13 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
           
-          # Check if this is a pre-release
-          if [[ "$VERSION" == *"alpha"* ]] || [[ "$VERSION" == *"beta"* ]] || [[ "$VERSION" == *"rc"* ]]; then
-            echo "IS_PRERELEASE=true" >> $GITHUB_OUTPUT
+          # Check if this is a pre-release from package.json
+          IS_PRERELEASE=$(node -p "JSON.parse(require('fs').readFileSync('package.json', 'utf8')).isPrerelease || false")
+          echo "IS_PRERELEASE=$IS_PRERELEASE" >> $GITHUB_OUTPUT
+          
+          if [[ "$IS_PRERELEASE" == "true" ]]; then
             echo "This is a pre-release: $VERSION"
           else
-            echo "IS_PRERELEASE=false" >> $GITHUB_OUTPUT
             echo "This is a stable release: $VERSION"
           fi
 
@@ -269,14 +270,8 @@ jobs:
             - **Apple Silicon** (`aarch64-apple-darwin.dmg`) - M1/M2/M3/M4
             - **Intel Macs** (`x86_64-apple-darwin.dmg`) - Macs Intel
             
-            ## 🎮 Características Principales
-            - Gestión de modpacks de Minecraft
-            - Actualizaciones automáticas
-            - Interfaz moderna y optimizada
-            - Soporte multi-plataforma
-            
             ## 🔗 Enlaces
-            - 💬 **Discord**: [Únete a nuestra comunidad](https://discord.gg/luminakraft)
+            - 💬 **Discord**: [Únete a nuestra comunidad](https://discord.gg/UJZRrcUFMj)
             - 🐛 **Reportar bugs**: [GitHub Issues](https://github.com/kristiangarcia/luminakraft-launcher-releases/issues)
             
             ${{ steps.get_version.outputs.IS_PRERELEASE == 'true' && '⚠️ **Advertencia**: Esta versión puede contener errores. Úsala bajo tu propio riesgo.' || '✅ **Versión estable y recomendada para todos los usuarios.**' }}

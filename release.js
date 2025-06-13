@@ -29,13 +29,14 @@ function getCurrentVersion() {
   return packageJson.version;
 }
 
-function updateVersion(newVersion) {
+function updateVersion(newVersion, isPrerelease = false) {
   const files = [
     {
       path: 'package.json',
       update: (content) => {
         const pkg = JSON.parse(content);
         pkg.version = newVersion;
+        pkg.isPrerelease = isPrerelease;
         return JSON.stringify(pkg, null, 2);
       }
     },
@@ -167,16 +168,22 @@ function main() {
     log('  node release.js minor         Increment minor version (0.3.1 → 0.4.0)', 'yellow');
     log('  node release.js major         Increment major version (0.3.1 → 1.0.0)', 'yellow');
     log('');
+    log('Flags:', 'cyan');
+    log('  --prerelease                  Mark as pre-release', 'yellow');
+    log('  --push                        Auto-push without confirmation', 'yellow');
+    log('');
     log('Examples:', 'cyan');
     log('  node release.js 0.4.0         Release version 0.4.0', 'green');
     log('  node release.js patch          Release next patch version', 'green');
     log('  node release.js 1.0.0-beta.1  Release beta version', 'green');
+    log('  node release.js 0.5.0 --prerelease  Release 0.5.0 as pre-release', 'green');
     log('');
     log(`Current version: ${getCurrentVersion()}`, 'magenta');
     process.exit(0);
   }
 
   const versionArg = args[0];
+  const isPrerelease = args.includes('--prerelease');
   let newVersion;
 
   // Handle semantic version increments
@@ -207,6 +214,7 @@ function main() {
   log('');
   log(`📊 Current version: ${currentVersion}`, 'magenta');
   log(`🎯 New version:     ${newVersion}`, 'green');
+  log(`📋 Release type:    ${isPrerelease ? '🧪 Pre-release' : '🎉 Stable'}`, isPrerelease ? 'yellow' : 'green');
   log('');
 
   // Confirm the release
@@ -242,7 +250,7 @@ function main() {
   log('');
 
   // Step 1: Update version in all files
-  updateVersion(newVersion);
+  updateVersion(newVersion, isPrerelease);
 
   // Step 2: Update changelog
   log(`📝 Updating CHANGELOG.md...`, 'cyan');
