@@ -7,12 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.2] - 2025-06-13
 
-### 🚀 New Release
-- Version 0.0.2 released with latest improvements
-- See previous versions below for detailed changes
-
-## [0.0.2] - 2025-06-13
-
 ### 🔐 Microsoft Authentication System
 
 #### **Complete Microsoft Authentication Integration**
