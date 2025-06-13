@@ -370,7 +370,7 @@ ${isPrerelease ? '🧪 **PRE-RELEASE** - Versión de prueba' : '✅ **RELEASE ES
         let tagExistsPrivate = false;
         try { await octokit.git.getRef({ owner: PRIVATE_REPO_OWNER, repo: PRIVATE_REPO_NAME, ref: `tags/v${version}` }); tagExistsPrivate = true;} catch {}
 
-        if (releaseExists || tagExistsPrivate) {
+        if (releaseExists) {
             if (!forceFlag) {
               const rl2 = readline.createInterface({ input: process.stdin, output: process.stdout });
               const ans2 = await new Promise(res => rl2.question(`⚠️ Ya existe un release/tag v${version} en repo privado. ¿Reemplazarlo? (y/N): `, res));
