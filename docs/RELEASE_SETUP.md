@@ -23,7 +23,12 @@ git commit -m "Nueva funcionalidad"
 git push origin main
 
 # Crear release
-npm run release:patch
+npm run release:patch # 0.3.1 -> 0.3.2
+npm run release:minor # 0.3.1 -> 0.4.0
+npm run release:major # 0.3.1 -> 1.0.0
+
+# Crear release con version especifica
+npm run release 0.3.2
 ```
 
 ### 2. Build y Publicación Automática

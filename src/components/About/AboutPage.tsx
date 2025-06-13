@@ -124,7 +124,7 @@ const AboutPage: React.FC = () => {
 
           {/* Update Section */}
           <div className="card">
-            <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between">
               <div className="flex-1">
                 <h3 className="text-white font-semibold text-lg mb-2">{t('about.updates')}</h3>
                 {isCheckingUpdate ? (
@@ -155,14 +155,14 @@ const AboutPage: React.FC = () => {
                 ) : (
                   <p className="text-dark-300">{t('about.checkingUpdates')}</p>
                 )}
-              </div>
+                </div>
               <div className="flex space-x-2">
                 {updateInfo?.hasUpdate && (
-                  <button
-                    onClick={handleDownloadUpdate}
-                    className="btn-warning"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
+                <button
+                  onClick={handleDownloadUpdate}
+                  className="btn-warning"
+                >
+                  <Download className="w-4 h-4 mr-2" />
                     {t('about.installUpdate')}
                   </button>
                 )}
