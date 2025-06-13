@@ -25,6 +25,8 @@ class UpdateService {
   private lastCheckTime: number = 0;
   private readonly CHECK_INTERVAL = 60 * 60 * 1000; // 1 hour
   private readonly GITHUB_API_URL = 'https://api.github.com/repos/kristiangarcia/luminakraft-launcher/releases/latest';
+  // GitHub token for private repository access (optional)
+  private readonly GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN || '';
 
   private constructor() {}
 
@@ -92,10 +94,25 @@ class UpdateService {
         invoke<string>('get_platform')
       ]);
 
+      // Prepare headers for GitHub API
+      const headers: Record<string, string> = {
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'LuminaKraft-Launcher'
+      };
+
+      // Add authorization header if token is available
+      if (this.GITHUB_TOKEN) {
+        headers['Authorization'] = `token ${this.GITHUB_TOKEN}`;
+      }
+
       // Fetch latest release from GitHub
-      const response = await fetch(this.GITHUB_API_URL);
+      const response = await fetch(this.GITHUB_API_URL, { headers });
+      
       if (!response.ok) {
-        throw new Error(`GitHub API request failed: ${response.status}`);
+        if (response.status === 404) {
+          throw new Error('No releases found. Repository may be private or have no releases.');
+        }
+        throw new Error(`GitHub API request failed: ${response.status} ${response.statusText}`);
       }
 
       const release: GitHubRelease = await response.json();
