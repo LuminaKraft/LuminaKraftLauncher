@@ -51,6 +51,13 @@ jobs:
             libayatana-appindicator3-dev \
             libxdo-dev
 
+      - name: Clean previous builds (prevents version conflicts)
+        run: |
+          echo "🧹 Cleaning previous builds to prevent version conflicts..."
+          rm -rf src-tauri/target/release/bundle/ || true
+          rm -rf src-tauri/target/debug/bundle/ || true
+          echo "✅ Build cache cleaned"
+
       - name: Install dependencies
         run: npm ci
 

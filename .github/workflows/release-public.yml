@@ -1,4 +1,4 @@
-name: Build and Release (Multi-Platform)
+name: Build and Release (Multi-Platform) - FIXED
 
 on:
   push:
@@ -30,7 +30,7 @@ jobs:
           toolchain: stable
           targets: x86_64-pc-windows-msvc
 
-      - name: Cache Rust dependencies
+      - name: Cache Rust dependencies (excluding build artifacts)
         uses: actions/cache@v4
         with:
           path: |
@@ -38,8 +38,22 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            src-tauri/target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-v2
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Clean previous builds (prevents version conflicts)
+        run: |
+          echo "🧹 Cleaning previous builds to prevent version conflicts..."
+          if (Test-Path "src-tauri/target/release/bundle/") { 
+            Write-Host "Removing release bundle..."
+            Remove-Item -Recurse -Force "src-tauri/target/release/bundle/" 
+          }
+          if (Test-Path "src-tauri/target/debug/bundle/") { 
+            Write-Host "Removing debug bundle..."
+            Remove-Item -Recurse -Force "src-tauri/target/debug/bundle/" 
+          }
+          echo "✅ Build cache cleaned"
 
       - name: Install dependencies
         run: npm ci
@@ -52,6 +66,16 @@ jobs:
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+
+      - name: List generated files (for debugging)
+        run: |
+          echo "=== Windows Build Artifacts ==="
+          if (Test-Path "src-tauri/target/release/bundle/msi/") {
+            Get-ChildItem "src-tauri/target/release/bundle/msi/" -Name
+          }
+          if (Test-Path "src-tauri/target/release/bundle/nsis/") {
+            Get-ChildItem "src-tauri/target/release/bundle/nsis/" -Name
+          }
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
@@ -97,7 +121,7 @@ jobs:
             libayatana-appindicator3-dev \
             libxdo-dev
 
-      - name: Cache Rust dependencies
+      - name: Cache Rust dependencies (excluding build artifacts)
         uses: actions/cache@v4
         with:
           path: |
@@ -105,8 +129,16 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            src-tauri/target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-v2
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Clean previous builds (prevents version conflicts)
+        run: |
+          echo "🧹 Cleaning previous builds to prevent version conflicts..."
+          rm -rf src-tauri/target/release/bundle/ || true
+          rm -rf src-tauri/target/debug/bundle/ || true
+          echo "✅ Build cache cleaned"
 
       - name: Install dependencies
         run: npm ci
@@ -119,6 +151,11 @@ jobs:
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+
+      - name: List generated files (for debugging)
+        run: |
+          echo "=== Linux Build Artifacts ==="
+          find src-tauri/target/release/bundle/ -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" 2>/dev/null | sort || true
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
@@ -151,7 +188,7 @@ jobs:
             x86_64-apple-darwin
             aarch64-apple-darwin
 
-      - name: Cache Rust dependencies
+      - name: Cache Rust dependencies (excluding build artifacts)
         uses: actions/cache@v4
         with:
           path: |
@@ -159,8 +196,16 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            src-tauri/target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-v2
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Clean previous builds (prevents version conflicts)
+        run: |
+          echo "🧹 Cleaning previous builds to prevent version conflicts..."
+          rm -rf src-tauri/target/*/release/bundle/ || true
+          rm -rf src-tauri/target/*/debug/bundle/ || true
+          echo "✅ Build cache cleaned"
 
       - name: Install dependencies
         run: npm ci
@@ -193,6 +238,11 @@ jobs:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
           MACOSX_DEPLOYMENT_TARGET: "10.13"
+
+      - name: List generated files (for debugging)
+        run: |
+          echo "=== macOS Build Artifacts ==="
+          find src-tauri/target/*/release/bundle/ -name "*.dmg" -o -name "*.app" 2>/dev/null | sort || true
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
@@ -227,10 +277,13 @@ jobs:
           IS_PRERELEASE=$(node -p "JSON.parse(require('fs').readFileSync('package.json', 'utf8')).isPrerelease || false")
           echo "IS_PRERELEASE=$IS_PRERELEASE" >> $GITHUB_OUTPUT
           
+          echo "🔍 Debug package.json isPrerelease field:"
+          node -p "const pkg = JSON.parse(require('fs').readFileSync('package.json', 'utf8')); console.log('isPrerelease:', pkg.isPrerelease, 'type:', typeof pkg.isPrerelease); pkg.isPrerelease"
+          
           if [[ "$IS_PRERELEASE" == "true" ]]; then
-            echo "This is a pre-release: $VERSION"
+            echo "✅ This is a PRE-RELEASE: $VERSION"
           else
-            echo "This is a stable release: $VERSION"
+            echo "✅ This is a STABLE release: $VERSION"
           fi
 
       - name: Download all artifacts
@@ -238,10 +291,17 @@ jobs:
         with:
           path: artifacts/
 
-      - name: List downloaded artifacts (for debugging)
+      - name: List downloaded artifacts (for debugging version conflicts)
         run: |
-          echo "=== Downloaded Artifacts ==="
+          echo "=== All Downloaded Artifacts ==="
           find artifacts/ -type f -name "*.msi" -o -name "*.exe" -o -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" -o -name "*.dmg" | sort
+          echo ""
+          echo "🔍 Checking for version conflicts:"
+          echo "Files with correct version (${{ steps.get_version.outputs.VERSION }}):"
+          find artifacts/ -name "*${{ steps.get_version.outputs.VERSION }}*" | sort
+          echo ""
+          echo "❌ Files with INCORRECT versions (should be investigated):"
+          find artifacts/ -type f \( -name "*.msi" -o -name "*.exe" -o -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" -o -name "*.dmg" \) ! -name "*${{ steps.get_version.outputs.VERSION }}*" | sort
 
       - name: Create Release in Public Repository
         id: create_public_release
@@ -276,7 +336,7 @@ jobs:
             
             ${{ steps.get_version.outputs.IS_PRERELEASE == 'true' && '⚠️ **Advertencia**: Esta versión puede contener errores. Úsala bajo tu propio riesgo.' || '✅ **Versión estable y recomendada para todos los usuarios.**' }}
           draft: false
-          prerelease: ${{ steps.get_version.outputs.IS_PRERELEASE }}
+          prerelease: ${{ steps.get_version.outputs.IS_PRERELEASE == 'true' }}
           files: |
             artifacts/**/*.msi
             artifacts/**/*.exe
@@ -293,8 +353,6 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: "📋 Internal Release Tracking ${{ github.ref_name }}"
           body: |
-            # 📋 Release Interno ${{ github.ref_name }}
-            
             ## 🔗 **Release Público**
             **🌐 Descarga**: https://github.com/kristiangarcia/luminakraft-launcher-releases/releases/tag/${{ github.ref_name }}
             
@@ -313,7 +371,7 @@ jobs:
             ---
             **🔒 Solo uso interno** - Tracking para el equipo de desarrollo.
           draft: false
-          prerelease: ${{ steps.get_version.outputs.IS_PRERELEASE }}
+          prerelease: ${{ steps.get_version.outputs.IS_PRERELEASE == 'true' }}
         continue-on-error: true
 
       - name: Build Summary
@@ -328,5 +386,10 @@ jobs:
           echo "  🪟 Windows: MSI + NSIS installers"
           echo "  🐧 Linux: AppImage + DEB + RPM packages"
           echo "  🍎 macOS: DMG for ARM64 + x86_64"
+          echo ""
+          echo "🔧 **Cache Fixes Applied:**"
+          echo "  ✅ Build artifacts cleaned before build"
+          echo "  ✅ Cache keys improved to prevent conflicts"
+          echo "  ✅ Debugging output added for artifact verification"
           echo ""
           echo "🎯 **Release completed successfully!**" 
