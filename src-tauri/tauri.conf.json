@@ -37,7 +37,7 @@
       "icons/icon.ico"
     ],
     "windows": {
-      "webviewInstallMode": "downloadBootstrapper"
+      "webviewInstallMode": "download-bootstrapper"
     },
     "macOS": {
       "frameworks": [],
