@@ -73,6 +73,12 @@ function updateVersion(newVersion, isPrerelease = false) {
       update: (content) => {
         return content.replace(/version\s*=\s*".*?"/, `version = "${numericVersion}"`);
       }
+    },
+    {
+      path: 'src/components/Layout/Sidebar.tsx',
+      update: (content) => {
+        return content.replace(/const\s+currentVersion\s*=\s*".*?"/, `const currentVersion = "${newVersion}"`);
+      }
     }
   ];
 

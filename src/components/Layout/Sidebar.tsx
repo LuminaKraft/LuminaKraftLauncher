@@ -13,7 +13,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
   const hasUpdate = false;
   
   // Version is automatically updated by release.js
-  const currentVersion = "1.0.0-rc.2";
+  const currentVersion = "0.0.2";
 
   const menuItems = [
     {
