@@ -12,7 +12,3 @@ incremental = true
 [profile.dev.package."*"]
 # Don't optimize dependencies in dev builds
 opt-level = 0
-
-[target.x86_64-pc-windows-msvc]
-# Windows-specific optimizations
-rustflags = ["-C", "target-cpu=native"] 
