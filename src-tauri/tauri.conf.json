@@ -36,15 +36,17 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "windows": {
-      "webviewInstallMode": "download-bootstrapper-inline"
-    },
     "macOS": {
       "frameworks": [],
       "minimumSystemVersion": "10.13",
       "exceptionDomain": "",
       "signingIdentity": null,
       "entitlements": null
+    },
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      }
     }
   },
   "plugins": {

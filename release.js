@@ -467,14 +467,14 @@ async function main() {
   }
 
   validateVersion(newVersion);
-  
+
   try {
     log('\n🚀 Iniciando proceso de release', 'bright');
     log(`📊 Versión actual: ${getCurrentVersion()}`, 'magenta');
     log(`🎯 Nueva versión: ${newVersion}${isPrerelease ? ' (pre-release)' : ''}`, 'green');
     log(`💻 Plataforma: ${os.platform()}`, 'cyan');
     log('');
-
+    
     // Actualizar versión
     updateVersion(newVersion, isPrerelease);
 
