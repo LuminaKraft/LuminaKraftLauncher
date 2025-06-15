@@ -219,47 +219,8 @@ async fn download_mods(manifest: &CurseForgeManifest, instance_dir: &PathBuf) ->
                     println!("✅ URL de descarga obtenida para mod {}", index + 1);
                     download_info.push((file_info.file_name.clone(), file_info.download_url.clone()));
                 } else {
-                    // Si no hay URL directa, intentamos usar la API directa como fallback
-                    println!("⚠️ URL de descarga no disponible en el proxy, intentando con API directa...");
-                    
-                    // URL para la API directa
-                    let direct_url = format!("https://api.curseforge.com/v1/mods/{}/files/{}/download-url", 
-                                           file.project_id, file.file_id);
-                    
-                                                        // Realizar la petición directa
-                                    match client.get(&direct_url)
-                                        .header("x-api-key", "$CURSEFORGE_API_KEY")
-                        .send()
-                        .await {
-                        Ok(direct_resp) => {
-                            if direct_resp.status().is_success() {
-                                match direct_resp.json::<ApiResponse<String>>().await {
-                                    Ok(direct_api_response) => {
-                                        let download_url = direct_api_response.data;
-                                        if !download_url.is_empty() {
-                                            // Obtener el nombre del archivo de la URL
-                                            let file_name = download_url.split('/').last()
-                                                .unwrap_or(&format!("mod_{}.jar", file.file_id))
-                                                .to_string();
-                                            
-                                            download_info.push((file_name, download_url));
-                                            println!("✅ URL de descarga obtenida desde API directa para mod {}", index + 1);
-                                        } else {
-                                            println!("⚠️ URL de descarga vacía para mod #{}", index + 1);
-                                        }
-                                    },
-                                    Err(e) => {
-                                        println!("❌ Error al parsear respuesta JSON de API directa: {}", e);
-                                    }
-                                }
-                            } else {
-                                println!("❌ Error de API directa HTTP {}", direct_resp.status());
-                            }
-                        },
-                        Err(e) => {
-                            println!("❌ Error al conectar con la API directa: {}", e);
-                        }
-                    }
+                    // No hay URL disponible para este mod
+                    println!("⚠️ No se pudo obtener URL de descarga para el mod #{}", index + 1);
                 }
             },
             Err(e) => {

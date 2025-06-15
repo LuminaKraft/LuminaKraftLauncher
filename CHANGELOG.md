@@ -5,6 +5,36 @@ All notable changes to the LuminaKraft Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.4] - 2025-06-15
+
+### 🌎 CurseForge API Integration
+
+#### **CurseForge API Backend Implementation**
+- **API Proxy Service**: Added proxy service to interact with CurseForge API securely
+- **Secure Key Handling**: Implemented secure API key handling with proper escaping
+- **Complete Endpoint Coverage**:
+  - Mod info retrieval
+  - File download URL access
+  - Mod search capability
+  - Category listings
+  - Batch mod/file operations
+
+#### **Technical Implementation**
+- **Environment Variable Security**: CURSEFORGE_API_KEY stored as environment variable
+- **Rate Limiting**: Basic rate limiting to prevent API abuse
+- **Error Handling**: Comprehensive error handling and logging
+- **Docker Integration**: Secure environment variable handling in Docker
+- **CI/CD Updates**: GitHub Actions updated for secure API key deployment
+
+### 🐛 Bug Fixes
+- **API Key Handling**: Fixed escaping of dollar signs in API key with proper normalization
+- **Debug Cleanup**: Removed debug logging for production environment
+- **Error Messages**: Standardized error message format across all endpoints
+
+### 🚀 Performance Improvements
+- **Reduced Log Volume**: Removed verbose debug logging for better performance
+- **Error Reporting**: Streamlined error reporting for faster response times
+
 ## [0.0.3] - 2025-06-14
 
 ### 🐛 Bug Fixes
