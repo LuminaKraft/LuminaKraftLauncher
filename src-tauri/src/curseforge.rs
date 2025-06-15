@@ -50,7 +50,7 @@ struct CurseForgeFile {
 struct ModFileInfo {
     #[allow(dead_code)]
     id: i64,
-    #[serde(rename = "downloadUrl")]
+    #[serde(rename = "downloadUrl", default)]
     download_url: String,
     #[allow(dead_code)]
     #[serde(rename = "fileDate")]
@@ -111,11 +111,18 @@ pub async fn process_curseforge_modpack(
 ) -> Result<(String, String)> {
     println!("Procesando modpack de CurseForge");
     
-    // Extraer el archivo ZIP
-    extract_zip(modpack_zip_path, instance_dir)?;
+    // Crear un directorio temporal para extraer el modpack
+    let temp_dir = instance_dir.join("temp_extract");
+    if temp_dir.exists() {
+        fs::remove_dir_all(&temp_dir)?;
+    }
+    fs::create_dir_all(&temp_dir)?;
     
-    // Leer el manifest
-    let manifest_path = instance_dir.join("manifest.json");
+    // Extraer el archivo ZIP al directorio temporal
+    extract_zip(modpack_zip_path, &temp_dir)?;
+    
+    // Leer el manifest desde el directorio temporal
+    let manifest_path = temp_dir.join("manifest.json");
     if !manifest_path.exists() {
         return Err(anyhow!("El archivo manifest.json no existe en el modpack"));
     }
@@ -140,8 +147,11 @@ pub async fn process_curseforge_modpack(
     println!("Descargando {} mods", manifest.files.len());
     download_mods(&manifest, instance_dir).await?;
     
-    // Procesar los overrides
-    process_overrides(&manifest, instance_dir)?;
+    // Procesar los overrides desde el directorio temporal
+    process_overrides(&manifest, &temp_dir, instance_dir)?;
+    
+    // Eliminar el directorio temporal
+    fs::remove_dir_all(&temp_dir)?;
     
     // Extraer la información del modloader
     let (modloader, modloader_version) = get_modloader_info(&manifest)?;
@@ -165,60 +175,133 @@ async fn download_mods(manifest: &CurseForgeManifest, instance_dir: &PathBuf) ->
         .timeout(std::time::Duration::from_secs(60))
         .build()?;
     
-    // Usar URL base configurada en las settings o el valor por defecto
+    // Usar el proxy API de LuminaKraft
     let proxy_base_url = "https://api.luminakraft.com/v1/curseforge";
-    println!("Conectando a la API de CurseForge mediante proxy: {}", proxy_base_url);
+    println!("Conectando al proxy API de CurseForge");
+    println!("Verificando conexión con la API...");
     
-    // Procesar cada mod individualmente para mayor robustez
-    println!("Descargando mods uno a uno para mayor fiabilidad...");
+    // Obtener información de los mods
+    println!("Obteniendo información de los mods...");
     
+    let mut download_info = Vec::new();
+    
+    // Procesar cada mod individualmente
     for (index, file) in manifest.files.iter().enumerate() {
-        // Debug info
-        println!("[{}/{}] Procesando mod (project: {}, file: {})", 
-                 index + 1, manifest.files.len(), file.project_id, file.file_id);
+        println!("Procesando mod {}/{} (project_id: {}, file_id: {})", 
+                index + 1, manifest.files.len(), file.project_id, file.file_id);
         
-        // Realizar petición para un solo archivo
-        let url = format!("{}/mods/{}/files/{}", proxy_base_url, file.project_id, file.file_id);
-        println!("Consultando información: {}", url);
+        // Primero obtenemos la información del archivo
+        let file_info_url = format!("{}/mods/{}/files/{}", proxy_base_url, file.project_id, file.file_id);
         
-        let response = match client.get(&url).send().await {
+        println!("Consultando información: {}", file_info_url);
+        
+        // Realizar la petición para obtener la información del archivo
+        let response = match client.get(&file_info_url)
+            .send()
+            .await {
             Ok(resp) => resp,
             Err(e) => {
-                println!("Error al conectar con la API: {}", e);
-                // Continuar con el siguiente archivo
+                println!("❌ Error al conectar con la API: {}", e);
                 continue;
             }
         };
         
         if !response.status().is_success() {
-            println!("Error de API HTTP {}: {}", response.status(), url);
-            // Continuar con el siguiente archivo
+            println!("❌ Error de API HTTP {}: {}", response.status(), file_info_url);
             continue;
         }
         
-        let api_response = match response.json::<ApiResponse<ModFileInfo>>().await {
-            Ok(resp) => resp,
+        // Parsear la respuesta para obtener la información del archivo
+        match response.json::<ApiResponse<ModFileInfo>>().await {
+            Ok(api_response) => {
+                let file_info = api_response.data;
+                if !file_info.download_url.is_empty() {
+                    println!("✅ URL de descarga obtenida para mod {}", index + 1);
+                    download_info.push((file_info.file_name.clone(), file_info.download_url.clone()));
+                } else {
+                    // Si no hay URL directa, intentamos usar la API directa como fallback
+                    println!("⚠️ URL de descarga no disponible en el proxy, intentando con API directa...");
+                    
+                    // URL para la API directa
+                    let direct_url = format!("https://api.curseforge.com/v1/mods/{}/files/{}/download-url", 
+                                           file.project_id, file.file_id);
+                    
+                                                        // Realizar la petición directa
+                                    match client.get(&direct_url)
+                                        .header("x-api-key", "$CURSEFORGE_API_KEY")
+                        .send()
+                        .await {
+                        Ok(direct_resp) => {
+                            if direct_resp.status().is_success() {
+                                match direct_resp.json::<ApiResponse<String>>().await {
+                                    Ok(direct_api_response) => {
+                                        let download_url = direct_api_response.data;
+                                        if !download_url.is_empty() {
+                                            // Obtener el nombre del archivo de la URL
+                                            let file_name = download_url.split('/').last()
+                                                .unwrap_or(&format!("mod_{}.jar", file.file_id))
+                                                .to_string();
+                                            
+                                            download_info.push((file_name, download_url));
+                                            println!("✅ URL de descarga obtenida desde API directa para mod {}", index + 1);
+                                        } else {
+                                            println!("⚠️ URL de descarga vacía para mod #{}", index + 1);
+                                        }
+                                    },
+                                    Err(e) => {
+                                        println!("❌ Error al parsear respuesta JSON de API directa: {}", e);
+                                    }
+                                }
+                            } else {
+                                println!("❌ Error de API directa HTTP {}", direct_resp.status());
+                            }
+                        },
+                        Err(e) => {
+                            println!("❌ Error al conectar con la API directa: {}", e);
+                        }
+                    }
+                }
+            },
             Err(e) => {
-                println!("Error al parsear respuesta JSON: {}", e);
-                continue;
+                println!("❌ Error al parsear respuesta JSON: {}", e);
             }
-        };
+        }
+    }
+    
+    let mut all_files_info = Vec::new();
+    
+    // Convertir la información de descarga al formato esperado
+    for (file_name, download_url) in download_info {
+        all_files_info.push(ModFileInfo {
+            id: 0,
+            download_url,
+            file_date: String::new(),
+            file_name,
+            file_length: 0,
+        });
+    }
+    
+    // Si no se pudo obtener información de ningún mod, retornar error
+    if all_files_info.is_empty() {
+        return Err(anyhow!("No se pudo obtener información de ningún mod"));
+    }
+    
+    println!("Se obtuvo información de {}/{} mods", all_files_info.len(), manifest.files.len());
+    
+    // Descargar cada mod
+    for (index, file_info) in all_files_info.iter().enumerate() {
+        let mod_path = mods_dir.join(&file_info.file_name);
         
-        let file_info = api_response.data;
+        println!("Descargando mod {}/{}: {}", index + 1, all_files_info.len(), file_info.file_name);
         
-        // Log de la información obtenida
-        println!("Información obtenida: {}", file_info.file_name);
-        
-        // Vector con un solo elemento para mantener compatibilidad con el resto del código
-        let files_info = vec![file_info];
-        
-        // Descargar cada mod
-        for file_info in files_info {
-            let mod_path = mods_dir.join(&file_info.file_name);
-            
-            // Descargar el archivo
-            download_file(&file_info.download_url, &mod_path).await?;
-            println!("Descargado: {}", file_info.file_name);
+        // Descargar el archivo
+        match download_file(&file_info.download_url, &mod_path).await {
+            Ok(_) => {
+                println!("✅ Descargado: {}", file_info.file_name);
+            },
+            Err(e) => {
+                println!("❌ Error al descargar {}: {}", file_info.file_name, e);
+            }
         }
     }
     
@@ -227,17 +310,14 @@ async fn download_mods(manifest: &CurseForgeManifest, instance_dir: &PathBuf) ->
 }
 
 /// Procesa la carpeta overrides del modpack
-fn process_overrides(manifest: &CurseForgeManifest, instance_dir: &PathBuf) -> Result<()> {
-    let overrides_dir = instance_dir.join(&manifest.overrides);
+fn process_overrides(manifest: &CurseForgeManifest, temp_dir: &PathBuf, instance_dir: &PathBuf) -> Result<()> {
+    let overrides_dir = temp_dir.join(&manifest.overrides);
     
     if overrides_dir.exists() && overrides_dir.is_dir() {
         println!("Procesando overrides...");
         
         // Recorrer la carpeta overrides y mover su contenido a la raíz
         copy_dir_recursively(&overrides_dir, instance_dir)?;
-        
-        // Eliminar la carpeta overrides
-        fs::remove_dir_all(&overrides_dir)?;
         
         println!("Overrides procesados correctamente");
     } else {
@@ -274,9 +354,14 @@ fn copy_dir_recursively(src: &Path, dst: &Path) -> Result<()> {
 
 /// Descarga un archivo desde una URL con reintento
 async fn download_file(url: &str, output_path: &PathBuf) -> Result<()> {
+    // Verificar que la URL no está vacía
+    if url.is_empty() {
+        return Err(anyhow!("URL de descarga vacía"));
+    }
+    
     let client = Client::builder()
-        .user_agent("LuminaKraft-Launcher")
-        .timeout(std::time::Duration::from_secs(120)) // Aumentar timeout a 2 minutos
+        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36")
+        .timeout(std::time::Duration::from_secs(180)) // Aumentar timeout a 3 minutos
         .build()?;
     
     // Número máximo de intentos
@@ -292,7 +377,9 @@ async fn download_file(url: &str, output_path: &PathBuf) -> Result<()> {
     
     // Intentar descarga con reintentos
     loop {
-        println!("Descargando {} (intento {}/{})", url, retry_count + 1, max_retries);
+        if retry_count > 0 {
+            println!("Reintentando descarga (intento {}/{})", retry_count + 1, max_retries);
+        }
         
         match client.get(url).send().await {
             Ok(response) => {
