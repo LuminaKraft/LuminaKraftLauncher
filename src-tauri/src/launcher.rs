@@ -83,7 +83,6 @@ pub async fn install_modpack_with_minecraft(modpack: Modpack, settings: UserSett
     // Verificar si es un modpack de CurseForge
     let mut modloader = modpack.modloader.clone();
     let mut modloader_version = modpack.modloader_version.clone();
-    let mut is_curseforge_modpack = false;
     
     // Extraer el ZIP en una carpeta temporal para verificar si tiene manifest.json (indicando que es un modpack de CurseForge)
     let temp_extract_dir = app_data_dir.join("temp").join(format!("check_{}", modpack.id));
@@ -93,7 +92,7 @@ pub async fn install_modpack_with_minecraft(modpack: Modpack, settings: UserSett
     fs::create_dir_all(&temp_extract_dir)?;
     
     // Extraer solo manifest.json para verificar
-    {
+    let is_curseforge_modpack = {
         let file = fs::File::open(&temp_zip_path)?;
         let mut archive = zip::ZipArchive::new(file)?;
         
@@ -107,8 +106,8 @@ pub async fn install_modpack_with_minecraft(modpack: Modpack, settings: UserSett
             }
         }
         
-        is_curseforge_modpack = found_manifest;
-    }
+        found_manifest
+    };
     
     println!("🔄 Procesando modpack para: {}", instance_dir.display());
     

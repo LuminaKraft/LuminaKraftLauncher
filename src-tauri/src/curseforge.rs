@@ -48,13 +48,16 @@ struct CurseForgeFile {
 
 #[derive(Debug, Deserialize)]
 struct ModFileInfo {
+    #[allow(dead_code)]
     id: i64,
     #[serde(rename = "downloadUrl")]
     download_url: String,
+    #[allow(dead_code)]
     #[serde(rename = "fileDate")]
     file_date: String,
     #[serde(rename = "fileName")]
     file_name: String,
+    #[allow(dead_code)]
     #[serde(rename = "fileLength")]
     file_length: i64,
 }

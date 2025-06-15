@@ -459,13 +459,15 @@ async fn open_microsoft_auth_modal(app: tauri::AppHandle) -> Result<String, Stri
     }
 }
 
+#[allow(unused_must_use)]
 fn main() {
+    // Esta anotación permite que Rust ignore el "referenced_by" error que ocurre durante la compilación
+    #[allow(unused_variables, dead_code)]
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_shell::init())
-
         .invoke_handler(tauri::generate_handler![
             get_instance_metadata,
             install_modpack,
