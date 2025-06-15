@@ -1,7 +1,8 @@
-use crate::{Modpack, InstanceMetadata, UserSettings, downloader, filesystem, minecraft};
+use crate::{Modpack, InstanceMetadata, UserSettings, downloader, filesystem, minecraft, curseforge};
 use anyhow::{Result, anyhow};
 use std::path::PathBuf;
 use dirs::data_dir;
+use std::fs;
 
 /// Install a modpack to the instances directory
 pub async fn install_modpack(modpack: Modpack) -> Result<()> {
@@ -79,12 +80,59 @@ pub async fn install_modpack_with_minecraft(modpack: Modpack, settings: UserSett
     println!("Downloading modpack from: {}", modpack.url_modpack_zip);
     downloader::download_file(&modpack.url_modpack_zip, &temp_zip_path).await?;
     
-    println!("🔄 Extracting modpack to: {}", instance_dir.display());
-    extract_zip(&temp_zip_path, &instance_dir)?;
+    // Verificar si es un modpack de CurseForge
+    let mut modloader = modpack.modloader.clone();
+    let mut modloader_version = modpack.modloader_version.clone();
+    let mut is_curseforge_modpack = false;
+    
+    // Extraer el ZIP en una carpeta temporal para verificar si tiene manifest.json (indicando que es un modpack de CurseForge)
+    let temp_extract_dir = app_data_dir.join("temp").join(format!("check_{}", modpack.id));
+    if temp_extract_dir.exists() {
+        fs::remove_dir_all(&temp_extract_dir)?;
+    }
+    fs::create_dir_all(&temp_extract_dir)?;
+    
+    // Extraer solo manifest.json para verificar
+    {
+        let file = fs::File::open(&temp_zip_path)?;
+        let mut archive = zip::ZipArchive::new(file)?;
+        
+        // Buscar manifest.json en la raíz
+        let mut found_manifest = false;
+        for i in 0..archive.len() {
+            let file = archive.by_index(i)?;
+            if file.name() == "manifest.json" {
+                found_manifest = true;
+                break;
+            }
+        }
+        
+        is_curseforge_modpack = found_manifest;
+    }
+    
+    println!("🔄 Procesando modpack para: {}", instance_dir.display());
+    
+    // Si es un modpack de CurseForge, usar el procesador de CurseForge
+    if is_curseforge_modpack {
+        println!("📦 Detectado formato de modpack CurseForge");
+        let (cf_modloader, cf_version) = curseforge::process_curseforge_modpack(&temp_zip_path, &instance_dir).await?;
+        
+        // Actualizar la información del modloader
+        modloader = cf_modloader;
+        modloader_version = cf_version;
+        println!("✅ Modpack CurseForge procesado: {} {}", modloader, modloader_version);
+    } else {
+        // Si no es CurseForge, extraer normalmente
+        println!("📦 Usando formato de modpack estándar");
+        extract_zip(&temp_zip_path, &instance_dir)?;
+    }
     
     // Clean up temporary file
     if temp_zip_path.exists() {
         std::fs::remove_file(&temp_zip_path)?;
+    }
+    if temp_extract_dir.exists() {
+        fs::remove_dir_all(&temp_extract_dir)?;
     }
     
     println!("✅ Phase 1/3: Modpack downloaded and extracted successfully!");
@@ -92,8 +140,16 @@ pub async fn install_modpack_with_minecraft(modpack: Modpack, settings: UserSett
     // Phase 2: Install Minecraft and mod loader using Lyceris (90% of total progress)
     println!("⚙️ Phase 2/3: Installing Minecraft and mod loader...");
     println!("Installing Minecraft {} with {} {}", 
-             modpack.minecraft_version, modpack.modloader, modpack.modloader_version);
-    minecraft::install_minecraft_with_lyceris(&modpack, &settings, instance_dir.clone()).await?;
+             modpack.minecraft_version, modloader, modloader_version);
+    
+    // Crear copia del modpack con información actualizada para la instalación
+    let updated_modpack = Modpack {
+        modloader: modloader,
+        modloader_version: modloader_version,
+        ..modpack.clone()
+    };
+    
+    minecraft::install_minecraft_with_lyceris(&updated_modpack, &settings, instance_dir.clone()).await?;
     
     println!("✅ Phase 2/3: Minecraft and mod loader installed successfully!");
     

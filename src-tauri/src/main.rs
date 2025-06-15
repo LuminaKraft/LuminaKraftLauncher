@@ -9,6 +9,7 @@ mod launcher;
 mod filesystem;
 mod minecraft;
 mod downloader;
+mod curseforge;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Modpack {
@@ -182,6 +183,61 @@ async fn check_instance_needs_update(modpack: Modpack) -> Result<bool, String> {
         }
         Ok(None) => Ok(true), // No instance exists, needs "update" (install)
         Err(e) => Err(format!("Failed to check instance metadata: {}", e)),
+    }
+}
+
+#[tauri::command]
+async fn check_curseforge_modpack(modpack_url: String) -> Result<bool, String> {
+    use std::path::PathBuf;
+    use dirs::data_dir;
+    use std::fs;
+    use zip::ZipArchive;
+    
+    let app_data_dir = data_dir()
+        .ok_or_else(|| "Failed to get app data directory".to_string())?;
+    
+    let temp_dir = app_data_dir
+        .join("LuminaKraftLauncher")
+        .join("temp");
+    
+    if !temp_dir.exists() {
+        fs::create_dir_all(&temp_dir)
+            .map_err(|e| format!("Failed to create temp directory: {}", e))?;
+    }
+    
+    let temp_file = temp_dir.join("temp_check_curseforge.zip");
+    
+    // Descargar el archivo
+    match downloader::download_file(&modpack_url, &temp_file).await {
+        Ok(_) => {
+            // Verificar si contiene manifest.json
+            let file = fs::File::open(&temp_file)
+                .map_err(|e| format!("Failed to open temp file: {}", e))?;
+            
+            let mut archive = ZipArchive::new(file)
+                .map_err(|e| format!("Failed to read zip file: {}", e))?;
+            
+            let mut is_curseforge = false;
+            
+            // Buscar manifest.json en la raíz
+            for i in 0..archive.len() {
+                let file = archive.by_index(i)
+                    .map_err(|e| format!("Failed to read zip entry: {}", e))?;
+                
+                if file.name() == "manifest.json" {
+                    is_curseforge = true;
+                    break;
+                }
+            }
+            
+            // Limpiar el archivo temporal
+            if temp_file.exists() {
+                let _ = fs::remove_file(&temp_file);
+            }
+            
+            Ok(is_curseforge)
+        },
+        Err(e) => Err(format!("Failed to download modpack: {}", e)),
     }
 }
 
@@ -388,6 +444,7 @@ fn main() {
             get_supported_loaders,
             validate_modpack_config,
             check_instance_needs_update,
+            check_curseforge_modpack,
             open_url,
             create_microsoft_auth_link,
             authenticate_microsoft,
