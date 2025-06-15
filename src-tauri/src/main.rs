@@ -11,7 +11,7 @@ mod minecraft;
 mod downloader;
 mod curseforge;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Modpack {
     pub id: String,
     pub nombre: String,
@@ -29,6 +29,40 @@ pub struct Modpack {
     pub changelog: String,
     #[serde(rename = "jvmArgsRecomendados")]
     pub jvm_args_recomendados: String,
+    
+    // Campos adicionales que aparecen en el TypeScript pero no estaban en Rust
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub gamemode: String,
+    #[serde(rename = "isNew", default)]
+    pub is_new: bool,
+    #[serde(rename = "isActive", default)]
+    pub is_active: bool,
+    #[serde(rename = "isComingSoon", default)]
+    pub is_coming_soon: bool,
+    #[serde(default)]
+    pub images: Vec<String>,
+    #[serde(default)]
+    pub logo: String,
+    #[serde(rename = "featureIcons", default)]
+    pub feature_icons: Vec<String>,
+    #[serde(default)]
+    pub collaborators: Vec<Collaborator>,
+    #[serde(rename = "youtubeEmbed", default)]
+    pub youtube_embed: Option<String>,
+    #[serde(rename = "tiktokEmbed", default)]
+    pub tiktok_embed: Option<String>,
+    #[serde(default)]
+    pub ip: Option<String>,
+    #[serde(rename = "leaderboardPath", default)]
+    pub leaderboard_path: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Collaborator {
+    pub name: String,
+    pub logo: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

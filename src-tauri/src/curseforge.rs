@@ -5,16 +5,18 @@ use serde::{Deserialize, Serialize};
 use reqwest::Client;
 use tokio::io::AsyncWriteExt;
 use tokio::fs::File;
-use crate::downloader;
-use crate::filesystem;
+// Eliminamos las importaciones no utilizadas
 
 #[derive(Debug, Deserialize, Serialize)]
 struct CurseForgeManifest {
     minecraft: MinecraftInfo,
+    #[serde(rename = "manifestType")]
     manifest_type: String,
+    #[serde(rename = "manifestVersion")]
     manifest_version: i32,
     name: String,
     version: String,
+    #[serde(default)]
     author: String,
     files: Vec<CurseForgeFile>,
     overrides: String,
@@ -25,6 +27,8 @@ struct MinecraftInfo {
     version: String,
     #[serde(rename = "modLoaders")]
     mod_loaders: Vec<ModLoader>,
+    #[serde(rename = "recommendedRam", default)]
+    recommended_ram: Option<u32>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -60,13 +64,52 @@ struct ApiResponse<T> {
     data: T,
 }
 
+/// Extrae un archivo zip
+fn extract_zip(zip_path: &PathBuf, extract_to: &PathBuf) -> Result<()> {
+    let file = std::fs::File::open(zip_path)?;
+    let mut archive = zip::ZipArchive::new(file)?;
+    
+    for i in 0..archive.len() {
+        let mut file = archive.by_index(i)?;
+        let outpath = match file.enclosed_name() {
+            Some(path) => extract_to.join(path),
+            None => continue,
+        };
+        
+        if (*file.name()).ends_with('/') {
+            std::fs::create_dir_all(&outpath)?;
+        } else {
+            if let Some(p) = outpath.parent() {
+                if !p.exists() {
+                    std::fs::create_dir_all(p)?;
+                }
+            }
+            let mut outfile = std::fs::File::create(&outpath)?;
+            std::io::copy(&mut file, &mut outfile)?;
+        }
+        
+        // Get and Set permissions
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            if let Some(mode) = file.unix_mode() {
+                std::fs::set_permissions(&outpath, std::fs::Permissions::from_mode(mode))?;
+            }
+        }
+    }
+    
+    Ok(())
+}
+
 /// Extrae un archivo modpack de CurseForge y procesa su contenido
 pub async fn process_curseforge_modpack(
     modpack_zip_path: &PathBuf,
     instance_dir: &PathBuf,
 ) -> Result<(String, String)> {
+    println!("Procesando modpack de CurseForge");
+    
     // Extraer el archivo ZIP
-    crate::launcher::extract_zip(modpack_zip_path, instance_dir)?;
+    extract_zip(modpack_zip_path, instance_dir)?;
     
     // Leer el manifest
     let manifest_path = instance_dir.join("manifest.json");
@@ -74,13 +117,24 @@ pub async fn process_curseforge_modpack(
         return Err(anyhow!("El archivo manifest.json no existe en el modpack"));
     }
     
+    println!("Leyendo manifest.json");
     let manifest_content = fs::read_to_string(&manifest_path)
         .context("No se pudo leer el archivo manifest.json")?;
     
     let manifest: CurseForgeManifest = serde_json::from_str(&manifest_content)
         .context("Error al parsear manifest.json")?;
     
+    println!("Nombre del modpack: {}", manifest.name);
+    println!("Versión del modpack: {}", manifest.version);
+    println!("Versión de Minecraft: {}", manifest.minecraft.version);
+    
+    // Si hay RAM recomendada, mostrarla
+    if let Some(ram) = manifest.minecraft.recommended_ram {
+        println!("RAM recomendada: {} MB", ram);
+    }
+    
     // Procesar los mods
+    println!("Descargando {} mods", manifest.files.len());
     download_mods(&manifest, instance_dir).await?;
     
     // Procesar los overrides
@@ -230,12 +284,13 @@ fn get_modloader_info(manifest: &CurseForgeManifest) -> Result<(String, String)>
     // Buscar el modloader primario
     for loader in &manifest.minecraft.mod_loaders {
         if loader.primary {
-            // El formato típico es "forge-40.2.0"
+            // El formato típico es "forge-40.2.0" o "forge-47.4.0" como en tu ejemplo
             let parts: Vec<&str> = loader.id.split('-').collect();
             if parts.len() >= 2 {
                 let modloader_name = parts[0].to_lowercase();
                 let modloader_version = parts[1].to_string();
                 
+                println!("Encontrado modloader primario: {} {}", modloader_name, modloader_version);
                 return Ok((modloader_name, modloader_version));
             }
         }
@@ -248,10 +303,12 @@ fn get_modloader_info(manifest: &CurseForgeManifest) -> Result<(String, String)>
             let modloader_name = parts[0].to_lowercase();
             let modloader_version = parts[1].to_string();
             
+            println!("Usando primer modloader disponible: {} {}", modloader_name, modloader_version);
             return Ok((modloader_name, modloader_version));
         }
     }
     
     // Si no hay modloaders, asumir vanilla
+    println!("No se encontró información de modloader, asumiendo vanilla.");
     Err(anyhow!("No se encontró información del modloader en el manifest"))
 } 
