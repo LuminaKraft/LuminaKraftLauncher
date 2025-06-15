@@ -222,7 +222,6 @@ async fn check_instance_needs_update(modpack: Modpack) -> Result<bool, String> {
 
 #[tauri::command]
 async fn check_curseforge_modpack(modpack_url: String) -> Result<bool, String> {
-    use std::path::PathBuf;
     use dirs::data_dir;
     use std::fs;
     use zip::ZipArchive;
