@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "LuminaKraft Launcher",
+  "productName": "LuminaKraft.Launcher",
   "version": "0.0.5",
   "identifier": "LKLauncher",
   "build": {

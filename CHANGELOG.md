@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Task names
   - File paths
   - API UserAgent
+- **Product Name Format**: Changed app file name from "LuminaKraft Launcher" to "LuminaKraft.Launcher" to fix DMG bundling issues on macOS
 
 #### **Data Directory Optimization**
 - **Optimized Data Folders**:

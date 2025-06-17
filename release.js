@@ -233,13 +233,19 @@ function getInstallerFiles() {
       log(`  📦 Encontrados ${appFiles.length} archivos APP para Intel x86_64`, 'cyan');
       
       for (const appFile of appFiles) {
-        const formattedName = `LuminaKraft.Launcher_${version}_x64.app.zip`;
-        
-        installers.push({
-          isApp: true,
-          originalPath: path.join(x86_64Path, 'bundle', 'macos', appFile),
-          formattedName
-        });
+        // Only process the app file that matches our product name pattern
+        if (appFile.startsWith("LuminaKraft")) {
+          const formattedName = `LuminaKraft.Launcher_${version}_x64.app.zip`;
+          
+          installers.push({
+            isApp: true,
+            originalPath: path.join(x86_64Path, 'bundle', 'macos', appFile),
+            formattedName
+          });
+          
+          // Only add one app file
+          break;
+        }
       }
     } else {
       log(`  ❌ No se encontraron archivos APP para Intel x86_64 en ${path.join(x86_64Path, 'bundle', 'macos')}`, 'yellow');
@@ -266,13 +272,19 @@ function getInstallerFiles() {
       log(`  📦 Encontrados ${appFiles.length} archivos APP para Apple Silicon`, 'cyan');
       
       for (const appFile of appFiles) {
-        const formattedName = `LuminaKraft.Launcher_${version}_aarch64.app.zip`;
-        
-        installers.push({
-          isApp: true,
-          originalPath: path.join(aarch64Path, 'bundle', 'macos', appFile),
-          formattedName
-        });
+        // Only process the app file that matches our product name pattern
+        if (appFile.startsWith("LuminaKraft")) {
+          const formattedName = `LuminaKraft.Launcher_${version}_aarch64.app.zip`;
+          
+          installers.push({
+            isApp: true,
+            originalPath: path.join(aarch64Path, 'bundle', 'macos', appFile),
+            formattedName
+          });
+          
+          // Only add one app file
+          break;
+        }
       }
     } else {
       log(`  ❌ No se encontraron archivos APP para Apple Silicon en ${path.join(aarch64Path, 'bundle', 'macos')}`, 'yellow');
