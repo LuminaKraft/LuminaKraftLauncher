@@ -230,7 +230,7 @@ async fn check_curseforge_modpack(modpack_url: String) -> Result<bool, String> {
         .ok_or_else(|| "Failed to get app data directory".to_string())?;
     
     let temp_dir = app_data_dir
-        .join("LuminaKraftLauncher")
+        .join("LKLauncher")
         .join("temp");
     
     if !temp_dir.exists() {

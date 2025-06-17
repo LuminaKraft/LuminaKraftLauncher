@@ -184,15 +184,36 @@ function getInstallerFiles() {
   } else if (platform === 'darwin') {
     const dmgDir = path.join(bundleDir, 'dmg');
     const macosDir = path.join(bundleDir, 'macos');
+    const version = getCurrentVersion();
     
+    // Procesar archivos DMG
     if (fs.existsSync(dmgDir)) {
       const dmgFiles = fs.readdirSync(dmgDir).filter(f => f.endsWith('.dmg'));
       installers.push(...dmgFiles.map(f => path.join('bundle', 'dmg', f)));
     }
     
+    // Procesar archivos APP (los incluimos siempre en macOS)
     if (fs.existsSync(macosDir)) {
       const appFiles = fs.readdirSync(macosDir).filter(f => f.endsWith('.app'));
-      installers.push(...appFiles.map(f => path.join('bundle', 'macos', f)));
+      
+      // Detectar arquitectura
+      const isArm64 = os.arch() === 'arm64';
+      const arch = isArm64 ? 'aarch64' : 'x64';
+      
+      // Para cada .app, crear una entrada con un nombre formateado
+      for (const appFile of appFiles) {
+        const formattedName = `LuminaKraft.Launcher_${version}_${arch}.app`;
+        const originalPath = path.join('bundle', 'macos', appFile);
+        
+        log(`  📦 Preparando ${appFile} como ${formattedName}...`, 'cyan');
+        
+        // Lo añadimos a la lista con el nombre original (ruta interna) pero después lo subiremos con el nombre formateado
+        installers.push({
+          originalPath,
+          formattedName,
+          isApp: true
+        });
+      }
     }
   }
   
@@ -215,64 +236,40 @@ async function publishToPublic(version, isPrerelease, forceFlag, octokit) {
   log(`📦 Publicando v${version}${isPrerelease ? ' (pre-release)' : ''} en el repo público...`, 'cyan');
   
   try {
-    // If release/tag exists, handle replacement
+    // If release/tag exists, check for existing assets
     const existingRelease = await findReleaseByTagSafe(octokit, PUBLIC_REPO_OWNER, PUBLIC_REPO_NAME, `v${version}`);
     const releaseExists = Boolean(existingRelease);
     const existingReleaseId = existingRelease?.id;
-
-    let tagExists = false;
-    try {
-      await octokit.git.getRef({ owner: PUBLIC_REPO_OWNER, repo: PUBLIC_REPO_NAME, ref: `tags/v${version}` });
-      tagExists = true;
-    } catch {}
-
-    if (releaseExists || tagExists) {
-      if (!forceFlag) {
-        const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-        const answer = await new Promise(res => rl.question(`⚠️ Ya existe un release/tag v${version} en el repo público. ¿Reemplazarlo? (y/N): `, res));
-        rl.close();
-        if (!['y', 'Y', 'yes', 'YES'].includes(answer.trim())) {
-          throw new Error('Operación cancelada por el usuario.');
-        }
-      }
-      log('🔄 Eliminando release y tag previos en repo público...', 'yellow');
-      if (releaseExists) {
-        await octokit.repos.deleteRelease({ owner: PUBLIC_REPO_OWNER, repo: PUBLIC_REPO_NAME, release_id: existingReleaseId });
-      }
-      if (tagExists) {
-        try { await octokit.git.deleteRef({ owner: PUBLIC_REPO_OWNER, repo: PUBLIC_REPO_NAME, ref: `tags/v${version}` }); } catch {}
-      }
-    }
-
-    // Obtener lista de instaladores
-    log('📄 Preparando instaladores...', 'cyan');
-    const installers = getInstallerFiles();
+    
+    // Nueva lógica: verificar si la release existe
+    let release;
+    let existingAssetNames = [];
+    
+    if (releaseExists) {
+      log('🔍 Se encontró una release existente con la misma versión', 'yellow');
       
-    if (installers.length === 0) {
-      throw new Error('No se encontraron instaladores para publicar');
-    }
-
-    // Crear release info
-    const releaseInfo = {
-      version,
-      isPrerelease,
-      platform: os.platform(),
-      date: new Date().toISOString(),
-      artifacts: installers.map(installer => ({
-        name: path.basename(installer),
-        path: installer
-      }))
-    };
-
-    // Crear el release en GitHub
-    log('🔄 Creando release en GitHub...', 'cyan');
-    log(`  - Debug: Prerelease flag: ${isPrerelease} (Type: ${typeof isPrerelease})`, 'magenta');
-    const { data: release } = await octokit.repos.createRelease({
-      owner: PUBLIC_REPO_OWNER,
-      repo: PUBLIC_REPO_NAME,
-      tag_name: `v${version}`,
-      name: `🚀 LuminaKraft Launcher v${version}${isPrerelease ? ' (Pre-release)' : ''}`,
-      body: `## 📥 Instrucciones de Descarga
+      // Obtener lista de archivos ya subidos
+      const { data: existingAssets } = await octokit.repos.listReleaseAssets({
+        owner: PUBLIC_REPO_OWNER,
+        repo: PUBLIC_REPO_NAME,
+        release_id: existingReleaseId
+      });
+      
+      existingAssetNames = existingAssets.map(asset => asset.name);
+      log(`📋 La release existente tiene ${existingAssets.length} archivos subidos`, 'yellow');
+      
+      // Usar la release existente
+      release = existingRelease;
+    } else {
+      // No existe la release, crear una nueva
+      log('🔄 Creando nueva release en GitHub...', 'cyan');
+      
+      const { data: newRelease } = await octokit.repos.createRelease({
+        owner: PUBLIC_REPO_OWNER,
+        repo: PUBLIC_REPO_NAME,
+        tag_name: `v${version}`,
+        name: `🚀 LuminaKraft Launcher v${version}${isPrerelease ? ' (Pre-release)' : ''}`,
+        body: `## 📥 Instrucciones de Descarga
 
 ${isPrerelease ? '🧪 **Versión Pre-Release** - Esta es una versión de prueba con características experimentales' : '🎉 **Versión Estable** - Versión lista para producción'}
 
@@ -294,31 +291,106 @@ ${isPrerelease ? '🧪 **Versión Pre-Release** - Esta es una versión de prueba
 - 🐛 **Reportar bugs**: [GitHub Issues](https://github.com/kristiangarcia/luminakraft-launcher-releases/issues)
 
 ${isPrerelease ? '⚠️ **Advertencia**: Esta versión puede contener errores. Úsala bajo tu propio riesgo.' : '✅ **Versión estable y recomendada para todos los usuarios.**'}`,
-      draft: false,
-      prerelease: isPrerelease
-    });
+        draft: false,
+        prerelease: isPrerelease
+      });
+      
+      release = newRelease;
+    }
+
+    // Obtener lista de instaladores
+    log('📄 Preparando instaladores...', 'cyan');
+    const installers = getInstallerFiles();
+      
+    if (installers.length === 0) {
+      throw new Error('No se encontraron instaladores para publicar');
+    }
 
     // Subir los archivos al release
     log('📤 Subiendo archivos al release...', 'cyan');
+    let uploadedCount = 0;
+    let skippedCount = 0;
+    
     for (const installer of installers) {
-      const filePath = path.join(ARTIFACTS_PATH, installer);
-      const fileName = path.basename(installer);
-      
-      log(`  📦 Subiendo ${fileName}...`, 'cyan');
-      await octokit.repos.uploadReleaseAsset({
-        owner: PUBLIC_REPO_OWNER,
-        repo: PUBLIC_REPO_NAME,
-        release_id: release.id,
-        name: fileName,
-        data: fs.readFileSync(filePath)
-      });
-      log(`  ✅ Subido: ${fileName}`, 'green');
+      // Manejar instaladores normales y especiales (los .app)
+      if (typeof installer === 'string') {
+        // Formato tradicional - ruta simple
+        const filePath = path.join(ARTIFACTS_PATH, installer);
+        const fileName = path.basename(installer);
+        
+        // Verificar si el archivo ya existe en la release
+        if (existingAssetNames.includes(fileName)) {
+          log(`  ⏩ Omitiendo ${fileName} (ya existe en la release)`, 'yellow');
+          skippedCount++;
+          continue;
+        }
+        
+        log(`  📦 Subiendo ${fileName}...`, 'cyan');
+        await octokit.repos.uploadReleaseAsset({
+          owner: PUBLIC_REPO_OWNER,
+          repo: PUBLIC_REPO_NAME,
+          release_id: release.id,
+          name: fileName,
+          data: fs.readFileSync(filePath)
+        });
+        log(`  ✅ Subido: ${fileName}`, 'green');
+        uploadedCount++;
+      } else if (installer.isApp) {
+        // Formato especial para .app - usar originalPath y formattedName
+        const filePath = path.join(ARTIFACTS_PATH, installer.originalPath);
+        
+        // Crear un archivo .zip del .app para poder subirlo
+        const zipFileName = installer.formattedName.replace('.app', '.zip');
+        
+        // Verificar si el archivo ya existe en la release
+        if (existingAssetNames.includes(zipFileName)) {
+          log(`  ⏩ Omitiendo ${zipFileName} (ya existe en la release)`, 'yellow');
+          skippedCount++;
+          continue;
+        }
+        
+        log(`  📦 Subiendo ${path.basename(installer.originalPath)} como ${installer.formattedName}...`, 'cyan');
+        
+        const zipFilePath = path.join(ARTIFACTS_PATH, 'temp_app_upload.zip');
+        
+        // Crear directorio temporal si no existe
+        const tempDir = path.join(ARTIFACTS_PATH, 'temp');
+        if (!fs.existsSync(tempDir)) {
+          fs.mkdirSync(tempDir, { recursive: true });
+        }
+        
+        try {
+          // Comprimir el .app en un .zip
+          log(`  📦 Comprimiendo ${installer.formattedName}...`, 'cyan');
+          execSync(`cd "${path.dirname(filePath)}" && zip -r "${zipFilePath}" "${path.basename(filePath)}"`, { stdio: 'inherit' });
+          
+          // Subir el .zip con el nombre formateado
+          await octokit.repos.uploadReleaseAsset({
+            owner: PUBLIC_REPO_OWNER,
+            repo: PUBLIC_REPO_NAME,
+            release_id: release.id,
+            name: zipFileName,
+            data: fs.readFileSync(zipFilePath)
+          });
+          
+          // Limpiar el archivo zip temporal
+          if (fs.existsSync(zipFilePath)) {
+            fs.unlinkSync(zipFilePath);
+          }
+          
+          log(`  ✅ Subido: ${zipFileName}`, 'green');
+          uploadedCount++;
+        } catch (error) {
+          log(`  ❌ Error al procesar .app: ${error.message}`, 'red');
+        }
+      }
     }
     
-    log(`\n✨ Release v${version}${isPrerelease ? ' (pre-release)' : ''} publicada!`, 'green');
+    log(`\n✨ Release v${version}${isPrerelease ? ' (pre-release)' : ''} actualizada!`, 'green');
     log('📝 Resumen:', 'cyan');
-    log(`  • ${installers.length} instaladores subidos`, 'green');
-    log(`  • Release creada en GitHub`, 'green');
+    log(`  • ${uploadedCount} archivos nuevos subidos`, 'green');
+    log(`  • ${skippedCount} archivos omitidos (ya existentes)`, 'yellow');
+    log(`  • Release ${releaseExists ? 'actualizada' : 'creada'} en GitHub`, 'green');
     log(`  • URL: ${release.html_url}`, 'green');
 
     return release;
@@ -330,24 +402,79 @@ ${isPrerelease ? '⚠️ **Advertencia**: Esta versión puede contener errores. 
 }
 
 async function publishToPrivate(version, isPrerelease, publicReleaseUrl, forceFlag, octokit) {
-    log(`📝 Creando release informativa en el repo privado...`, 'cyan');
+    log(`📝 Creando/actualizando release informativa en el repo privado...`, 'cyan');
     try {
         const commitHash = execSync('git rev-parse HEAD').toString().trim();
         const platform = os.platform();
 
-        let buildsCompleted;
-        switch (platform) {
-            case 'win32':
-                buildsCompleted = `- ✅ **Windows**: MSI + NSIS\n- ❌ **Linux**: No compilado\n- ❌ **macOS**: No compilado`;
-                break;
-            case 'linux':
-                buildsCompleted = `- ❌ **Windows**: No compilado\n- ✅ **Linux**: AppImage + DEB\n- ❌ **macOS**: No compilado`;
-                break;
-            case 'darwin':
-                buildsCompleted = `- ❌ **Windows**: No compilado\n- ❌ **Linux**: No compilado\n- ✅ **macOS**: DMG`;
-                break;
-            default:
-                buildsCompleted = `- ❓ **Plataforma desconocida**`;
+        // Construir el mensaje sobre los compilados
+        let buildsCompleted = '';
+        const platformInfo = {
+            win32: "Windows",
+            linux: "Linux",
+            darwin: "macOS"
+        };
+        
+        // Buscar si ya existe una release
+        const existingRelease = await findReleaseByTagSafe(octokit, PRIVATE_REPO_OWNER, PRIVATE_REPO_NAME, `v${version}`);
+        const releaseExists = Boolean(existingRelease);
+        
+        // Si existe, mantener la información de compilaciones previas
+        if (releaseExists) {
+            log(`🔍 Se encontró una release existente en el repo privado`, 'yellow');
+            
+            // Extraer información de compilaciones previas del body
+            const bodyText = existingRelease.body || '';
+            
+            // Buscar info de compilaciones en el texto
+            const compiledPattern = /### 📦 \*\*Builds Completados\*\*\n([\s\S]*?)(?:\n\n|$)/;
+            const compiledMatch = bodyText.match(compiledPattern);
+            
+            if (compiledMatch && compiledMatch[1]) {
+                // Extraer las plataformas ya compiladas
+                const existingPlatforms = compiledMatch[1].split('\n').filter(line => line.includes('✅'));
+                
+                // Agregar la plataforma actual
+                switch (platform) {
+                    case 'win32':
+                        buildsCompleted = `${compiledMatch[1].replace(/- ❌ \*\*Windows\*\*: No compilado/g, '- ✅ **Windows**: MSI + NSIS')}`;
+                        break;
+                    case 'linux':
+                        buildsCompleted = `${compiledMatch[1].replace(/- ❌ \*\*Linux\*\*: No compilado/g, '- ✅ **Linux**: AppImage + DEB')}`;
+                        break;
+                    case 'darwin':
+                        buildsCompleted = `${compiledMatch[1].replace(/- ❌ \*\*macOS\*\*: No compilado/g, '- ✅ **macOS**: DMG + APP (comprimidos)')}`;
+                        break;
+                }
+            } else {
+                // Si no encuentra el patrón, crear info desde cero
+                switch (platform) {
+                    case 'win32':
+                        buildsCompleted = `- ✅ **Windows**: MSI + NSIS\n- ❌ **Linux**: No compilado\n- ❌ **macOS**: No compilado`;
+                        break;
+                    case 'linux':
+                        buildsCompleted = `- ❌ **Windows**: No compilado\n- ✅ **Linux**: AppImage + DEB\n- ❌ **macOS**: No compilado`;
+                        break;
+                    case 'darwin':
+                        buildsCompleted = `- ❌ **Windows**: No compilado\n- ❌ **Linux**: No compilado\n- ✅ **macOS**: DMG + APP (comprimidos)`;
+                        break;
+                }
+            }
+        } else {
+            // Si no existe, crear info desde cero
+            switch (platform) {
+                case 'win32':
+                    buildsCompleted = `- ✅ **Windows**: MSI + NSIS\n- ❌ **Linux**: No compilado\n- ❌ **macOS**: No compilado`;
+                    break;
+                case 'linux':
+                    buildsCompleted = `- ❌ **Windows**: No compilado\n- ✅ **Linux**: AppImage + DEB\n- ❌ **macOS**: No compilado`;
+                    break;
+                case 'darwin':
+                    buildsCompleted = `- ❌ **Windows**: No compilado\n- ❌ **Linux**: No compilado\n- ✅ **macOS**: DMG + APP (comprimidos)`;
+                    break;
+                default:
+                    buildsCompleted = `- ❓ **Plataforma desconocida**`;
+            }
         }
 
         const body = `## 🔗 **Release Público**
@@ -366,46 +493,35 @@ ${isPrerelease ? '🧪 **PRE-RELEASE** - Versión de prueba' : '✅ **RELEASE ES
 ---
 **🔒 Solo uso interno** - Tracking para el equipo de desarrollo.`;
 
-        log(`  - Debug: Prerelease flag: ${isPrerelease} (Type: ${typeof isPrerelease})`, 'magenta');
-
-        // Handle existing release/tag same as public
-        const existingRelease = await findReleaseByTagSafe(octokit, PRIVATE_REPO_OWNER, PRIVATE_REPO_NAME, `v${version}`);
-        const releaseExists = Boolean(existingRelease);
-        const existingReleaseId = existingRelease?.id;
-
-        let tagExistsPrivate = false;
-        try { await octokit.git.getRef({ owner: PRIVATE_REPO_OWNER, repo: PRIVATE_REPO_NAME, ref: `tags/v${version}` }); tagExistsPrivate = true;} catch {}
-
+        // Actualizar o crear release según corresponda
         if (releaseExists) {
-            if (!forceFlag) {
-              const rl2 = readline.createInterface({ input: process.stdin, output: process.stdout });
-              const ans2 = await new Promise(res => rl2.question(`⚠️ Ya existe un release/tag v${version} en repo privado. ¿Reemplazarlo? (y/N): `, res));
-              rl2.close();
-              if (!['y', 'Y', 'yes', 'YES'].includes(ans2.trim())) {
-                throw new Error('Operación cancelada por el usuario.');
-              }
-            }
-            log('🔄 Eliminando release y tag previos en repo privado...', 'yellow');
-            if (releaseExists) {
-              await octokit.repos.deleteRelease({ owner: PRIVATE_REPO_OWNER, repo: PRIVATE_REPO_NAME, release_id: existingReleaseId });
-            }
-            if (tagExistsPrivate) {
-              try { await octokit.git.deleteRef({ owner: PRIVATE_REPO_OWNER, repo: PRIVATE_REPO_NAME, ref: `tags/v${version}` }); } catch {}
-            }
+            // Actualizar el release existente
+            await octokit.repos.updateRelease({
+                owner: PRIVATE_REPO_OWNER,
+                repo: PRIVATE_REPO_NAME,
+                release_id: existingRelease.id,
+                body,
+                prerelease: isPrerelease
+            });
+            
+            log(`✨ Release informativa actualizada en ${PRIVATE_REPO_NAME}!`, 'green');
+            log(`  • URL: ${existingRelease.html_url}`, 'green');
+            log(`  • Se añadió información de compilación para ${platformInfo[platform] || platform}`, 'green');
+        } else {
+            // Crear nuevo release
+            const { data: privateRelease } = await octokit.repos.createRelease({
+                owner: PRIVATE_REPO_OWNER,
+                repo: PRIVATE_REPO_NAME,
+                tag_name: `v${version}`,
+                name: `📝 Build v${version} Info`,
+                body,
+                prerelease: isPrerelease,
+                draft: false
+            });
+
+            log(`✨ Release informativa creada en ${PRIVATE_REPO_NAME}!`, 'green');
+            log(`  • URL: ${privateRelease.html_url}`, 'green');
         }
-
-        const { data: privateRelease } = await octokit.repos.createRelease({
-            owner: PRIVATE_REPO_OWNER,
-            repo: PRIVATE_REPO_NAME,
-            tag_name: `v${version}`,
-            name: `📝 Build v${version} Info`,
-            body,
-            prerelease: isPrerelease,
-            draft: false
-        });
-
-        log(`✨ Release informativa creada en ${PRIVATE_REPO_NAME}!`, 'green');
-        log(`  • URL: ${privateRelease.html_url}`, 'green');
 
     } catch (error) {
         log(`⚠️ Error al publicar en el repo privado: ${error.message}`, 'yellow');

@@ -180,7 +180,7 @@ fn generate_custom_jvm_args(_settings: &UserSettings, modpack: &Modpack) -> Vec<
 pub async fn launch_minecraft(modpack: Modpack, settings: UserSettings) -> Result<()> {
     let launcher_data_dir = dirs::data_dir()
         .ok_or_else(|| anyhow!("Could not determine data directory"))?
-        .join("LuminaKraftLauncher");
+        .join("LKLauncher");
     
     let instance_dir = launcher_data_dir
         .join("instances")

@@ -8,7 +8,7 @@ use std::fs;
 pub async fn install_modpack(modpack: Modpack) -> Result<()> {
     let app_data_dir = data_dir()
         .ok_or_else(|| anyhow!("Failed to get app data directory"))?
-        .join("LuminaKraftLauncher");
+        .join("LKLauncher");
     
     let instance_dir = app_data_dir.join("instances").join(&modpack.id);
     
@@ -54,7 +54,7 @@ pub async fn install_modpack(modpack: Modpack) -> Result<()> {
 pub async fn install_modpack_with_minecraft(modpack: Modpack, settings: UserSettings) -> Result<()> {
     let app_data_dir = data_dir()
         .ok_or_else(|| anyhow!("Failed to get app data directory"))?
-        .join("LuminaKraftLauncher");
+        .join("LKLauncher");
     
     let instance_dir = app_data_dir.join("instances").join(&modpack.id);
     

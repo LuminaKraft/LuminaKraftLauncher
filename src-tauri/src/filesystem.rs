@@ -10,7 +10,7 @@ pub fn get_launcher_data_dir() -> Result<PathBuf> {
     let data_dir = dirs::data_dir()
         .ok_or_else(|| anyhow!("Could not determine data directory"))?;
     
-    let launcher_dir = data_dir.join("LuminaKraftLauncher");
+    let launcher_dir = data_dir.join("LKLauncher");
     
     // Ensure the directory exists
     fs::create_dir_all(&launcher_dir)?;

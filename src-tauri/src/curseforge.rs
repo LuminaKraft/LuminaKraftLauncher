@@ -171,7 +171,7 @@ async fn download_mods(manifest: &CurseForgeManifest, instance_dir: &PathBuf) ->
     }
     
     let client = Client::builder()
-        .user_agent("LuminaKraft-Launcher")
+        .user_agent("LKLauncher")
         .timeout(std::time::Duration::from_secs(60))
         .build()?;
     
