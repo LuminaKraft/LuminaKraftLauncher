@@ -138,10 +138,25 @@ function buildApp() {
     cleanBuildCache();
     
     // Construir para la plataforma actual
-    log(`🎯 Construyendo para ${os.platform()}...`, 'cyan');
-    execSync('npm run tauri build', { stdio: 'inherit' });
+    const platform = os.platform();
     
-    log('✅ Build completado', 'green');
+    if (platform === 'darwin') {
+      // En macOS, construir para ambas arquitecturas
+      log(`🎯 Construyendo para macOS ARM (Apple Silicon)...`, 'cyan');
+      execSync('npm run tauri build -- --target aarch64-apple-darwin', { stdio: 'inherit' });
+      
+      // Añadir soporte para arquitectura Intel
+      log(`🎯 Construyendo para macOS Intel (x86_64)...`, 'cyan');
+      execSync('rustup target add x86_64-apple-darwin', { stdio: 'inherit' });
+      execSync('npm run tauri build -- --target x86_64-apple-darwin', { stdio: 'inherit' });
+      
+      log('✅ Build completado para ambas arquitecturas de macOS', 'green');
+    } else {
+      // Para Windows y Linux, construir normalmente
+      log(`🎯 Construyendo para ${platform}...`, 'cyan');
+      execSync('npm run tauri build', { stdio: 'inherit' });
+      log('✅ Build completado', 'green');
+    }
   } catch (error) {
     log(`❌ Error al construir: ${error.message}`, 'red');
     throw error;
@@ -182,32 +197,52 @@ function getInstallerFiles() {
       installers.push(...appimageFiles.map(f => path.join('bundle', 'appimage', f)));
     }
   } else if (platform === 'darwin') {
-    const dmgDir = path.join(bundleDir, 'dmg');
-    const macosDir = path.join(bundleDir, 'macos');
     const version = getCurrentVersion();
     
-    // Procesar archivos DMG
-    if (fs.existsSync(dmgDir)) {
-      const dmgFiles = fs.readdirSync(dmgDir).filter(f => f.endsWith('.dmg'));
-      installers.push(...dmgFiles.map(f => path.join('bundle', 'dmg', f)));
+    // Buscar compilados para Apple Silicon (aarch64)
+    const aarch64BundleDir = path.join(__dirname, 'src-tauri/target/aarch64-apple-darwin/release/bundle');
+    
+    if (fs.existsSync(path.join(aarch64BundleDir, 'dmg'))) {
+      const dmgFiles = fs.readdirSync(path.join(aarch64BundleDir, 'dmg')).filter(f => f.endsWith('.dmg'));
+      installers.push(...dmgFiles.map(f => path.join('src-tauri/target/aarch64-apple-darwin/release/bundle/dmg', f)));
+      
+      log(`  📦 Encontrados ${dmgFiles.length} archivos DMG para Apple Silicon`, 'cyan');
     }
     
-    // Procesar archivos APP (los incluimos siempre en macOS)
-    if (fs.existsSync(macosDir)) {
-      const appFiles = fs.readdirSync(macosDir).filter(f => f.endsWith('.app'));
+    if (fs.existsSync(path.join(aarch64BundleDir, 'macos'))) {
+      const appFiles = fs.readdirSync(path.join(aarch64BundleDir, 'macos')).filter(f => f.endsWith('.app'));
+      log(`  📦 Encontrados ${appFiles.length} archivos APP para Apple Silicon`, 'cyan');
       
-      // Detectar arquitectura
-      const isArm64 = os.arch() === 'arm64';
-      const arch = isArm64 ? 'aarch64' : 'x64';
-      
-      // Para cada .app, crear una entrada con un nombre formateado
       for (const appFile of appFiles) {
-        const formattedName = `LuminaKraft.Launcher_${version}_${arch}.app`;
-        const originalPath = path.join('bundle', 'macos', appFile);
+        const formattedName = `LuminaKraft.Launcher_${version}_aarch64.app.zip`;
+        const originalPath = path.join('src-tauri/target/aarch64-apple-darwin/release/bundle/macos', appFile);
         
-        log(`  📦 Preparando ${appFile} como ${formattedName}...`, 'cyan');
+        installers.push({
+          originalPath,
+          formattedName,
+          isApp: true
+        });
+      }
+    }
+    
+    // Buscar compilados para Intel (x86_64)
+    const x86_64BundleDir = path.join(__dirname, 'src-tauri/target/x86_64-apple-darwin/release/bundle');
+    
+    if (fs.existsSync(path.join(x86_64BundleDir, 'dmg'))) {
+      const dmgFiles = fs.readdirSync(path.join(x86_64BundleDir, 'dmg')).filter(f => f.endsWith('.dmg'));
+      installers.push(...dmgFiles.map(f => path.join('src-tauri/target/x86_64-apple-darwin/release/bundle/dmg', f)));
+      
+      log(`  📦 Encontrados ${dmgFiles.length} archivos DMG para Intel x86_64`, 'cyan');
+    }
+    
+    if (fs.existsSync(path.join(x86_64BundleDir, 'macos'))) {
+      const appFiles = fs.readdirSync(path.join(x86_64BundleDir, 'macos')).filter(f => f.endsWith('.app'));
+      log(`  📦 Encontrados ${appFiles.length} archivos APP para Intel x86_64`, 'cyan');
+      
+      for (const appFile of appFiles) {
+        const formattedName = `LuminaKraft.Launcher_${version}_x64.app.zip`;
+        const originalPath = path.join('src-tauri/target/x86_64-apple-darwin/release/bundle/macos', appFile);
         
-        // Lo añadimos a la lista con el nombre original (ruta interna) pero después lo subiremos con el nombre formateado
         installers.push({
           originalPath,
           formattedName,
@@ -283,8 +318,10 @@ ${isPrerelease ? '🧪 **Versión Pre-Release** - Esta es una versión de prueba
 - **RPM Package** (\`*.rpm\`) - Red Hat/Fedora
 
 ### 🍎 **macOS**
-- **Apple Silicon** (\`aarch64-apple-darwin.dmg\`) - M1/M2/M3/M4
-- **Intel Macs** (\`x86_64-apple-darwin.dmg\`) - Macs Intel
+- **Apple Silicon DMG** (\`*_aarch64.dmg\`) - Para M1/M2/M3/M4
+- **Apple Silicon APP** (\`*_aarch64.app.zip\`) - Versión portátil para ARM (aplicación .app comprimida)
+- **Intel Mac DMG** (\`*_x64.dmg\`) - Para Macs Intel
+- **Intel Mac APP** (\`*_x64.app.zip\`) - Versión portátil para Intel (aplicación .app comprimida)
 
 ## 🔗 Enlaces
 - 💬 **Discord**: [Únete a nuestra comunidad](https://discord.gg/UJZRrcUFMj)
@@ -443,7 +480,7 @@ async function publishToPrivate(version, isPrerelease, publicReleaseUrl, forceFl
                         buildsCompleted = `${compiledMatch[1].replace(/- ❌ \*\*Linux\*\*: No compilado/g, '- ✅ **Linux**: AppImage + DEB')}`;
                         break;
                     case 'darwin':
-                        buildsCompleted = `${compiledMatch[1].replace(/- ❌ \*\*macOS\*\*: No compilado/g, '- ✅ **macOS**: DMG + APP (comprimidos)')}`;
+                        buildsCompleted = `${compiledMatch[1].replace(/- ❌ \*\*macOS\*\*: No compilado/g, '- ✅ **macOS**: DMG + APP (Apple Silicon e Intel)')}`;
                         break;
                 }
             } else {
@@ -456,7 +493,7 @@ async function publishToPrivate(version, isPrerelease, publicReleaseUrl, forceFl
                         buildsCompleted = `- ❌ **Windows**: No compilado\n- ✅ **Linux**: AppImage + DEB\n- ❌ **macOS**: No compilado`;
                         break;
                     case 'darwin':
-                        buildsCompleted = `- ❌ **Windows**: No compilado\n- ❌ **Linux**: No compilado\n- ✅ **macOS**: DMG + APP (comprimidos)`;
+                        buildsCompleted = `- ❌ **Windows**: No compilado\n- ❌ **Linux**: No compilado\n- ✅ **macOS**: DMG + APP (Apple Silicon e Intel)`;
                         break;
                 }
             }
@@ -470,7 +507,7 @@ async function publishToPrivate(version, isPrerelease, publicReleaseUrl, forceFl
                     buildsCompleted = `- ❌ **Windows**: No compilado\n- ✅ **Linux**: AppImage + DEB\n- ❌ **macOS**: No compilado`;
                     break;
                 case 'darwin':
-                    buildsCompleted = `- ❌ **Windows**: No compilado\n- ❌ **Linux**: No compilado\n- ✅ **macOS**: DMG + APP (comprimidos)`;
+                    buildsCompleted = `- ❌ **Windows**: No compilado\n- ❌ **Linux**: No compilado\n- ✅ **macOS**: DMG + APP (Apple Silicon e Intel)`;
                     break;
                 default:
                     buildsCompleted = `- ❓ **Plataforma desconocida**`;
