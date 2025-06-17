@@ -199,54 +199,69 @@ function getInstallerFiles() {
   } else if (platform === 'darwin') {
     const version = getCurrentVersion();
     
-    // Buscar compilados para Apple Silicon (aarch64)
-    const aarch64BundleDir = path.join(__dirname, 'src-tauri/target/aarch64-apple-darwin/release/bundle');
+    // Definir las rutas base para las arquitecturas
+    const tauriTargetPath = path.dirname(path.dirname(ARTIFACTS_PATH)); // Subir dos niveles desde ARTIFACTS_PATH
+    const aarch64Path = path.join(tauriTargetPath, 'aarch64-apple-darwin', 'release');
+    const x86_64Path = path.join(tauriTargetPath, 'x86_64-apple-darwin', 'release');
     
-    if (fs.existsSync(path.join(aarch64BundleDir, 'dmg'))) {
-      const dmgFiles = fs.readdirSync(path.join(aarch64BundleDir, 'dmg')).filter(f => f.endsWith('.dmg'));
-      installers.push(...dmgFiles.map(f => path.join('src-tauri/target/aarch64-apple-darwin/release/bundle/dmg', f)));
-      
+    log(`🔍 Rutas de búsqueda:`, 'cyan');
+    log(`  • ARM64: ${aarch64Path}`, 'cyan');
+    log(`  • x86_64: ${x86_64Path}`, 'cyan');
+    
+    // Buscar compilados para Apple Silicon (aarch64)
+    if (fs.existsSync(path.join(aarch64Path, 'bundle', 'dmg'))) {
+      const dmgFiles = fs.readdirSync(path.join(aarch64Path, 'bundle', 'dmg')).filter(f => f.endsWith('.dmg'));
       log(`  📦 Encontrados ${dmgFiles.length} archivos DMG para Apple Silicon`, 'cyan');
+      
+      for (const dmgFile of dmgFiles) {
+        installers.push({
+          type: 'file',
+          path: path.join(aarch64Path, 'bundle', 'dmg', dmgFile),
+          name: dmgFile
+        });
+      }
     }
     
-    if (fs.existsSync(path.join(aarch64BundleDir, 'macos'))) {
-      const appFiles = fs.readdirSync(path.join(aarch64BundleDir, 'macos')).filter(f => f.endsWith('.app'));
+    if (fs.existsSync(path.join(aarch64Path, 'bundle', 'macos'))) {
+      const appFiles = fs.readdirSync(path.join(aarch64Path, 'bundle', 'macos')).filter(f => f.endsWith('.app'));
       log(`  📦 Encontrados ${appFiles.length} archivos APP para Apple Silicon`, 'cyan');
       
       for (const appFile of appFiles) {
         const formattedName = `LuminaKraft.Launcher_${version}_aarch64.app.zip`;
-        const originalPath = path.join('src-tauri/target/aarch64-apple-darwin/release/bundle/macos', appFile);
         
         installers.push({
-          originalPath,
-          formattedName,
-          isApp: true
+          isApp: true,
+          originalPath: path.join(aarch64Path, 'bundle', 'macos', appFile),
+          formattedName
         });
       }
     }
     
     // Buscar compilados para Intel (x86_64)
-    const x86_64BundleDir = path.join(__dirname, 'src-tauri/target/x86_64-apple-darwin/release/bundle');
-    
-    if (fs.existsSync(path.join(x86_64BundleDir, 'dmg'))) {
-      const dmgFiles = fs.readdirSync(path.join(x86_64BundleDir, 'dmg')).filter(f => f.endsWith('.dmg'));
-      installers.push(...dmgFiles.map(f => path.join('src-tauri/target/x86_64-apple-darwin/release/bundle/dmg', f)));
-      
+    if (fs.existsSync(path.join(x86_64Path, 'bundle', 'dmg'))) {
+      const dmgFiles = fs.readdirSync(path.join(x86_64Path, 'bundle', 'dmg')).filter(f => f.endsWith('.dmg'));
       log(`  📦 Encontrados ${dmgFiles.length} archivos DMG para Intel x86_64`, 'cyan');
+      
+      for (const dmgFile of dmgFiles) {
+        installers.push({
+          type: 'file',
+          path: path.join(x86_64Path, 'bundle', 'dmg', dmgFile),
+          name: dmgFile
+        });
+      }
     }
     
-    if (fs.existsSync(path.join(x86_64BundleDir, 'macos'))) {
-      const appFiles = fs.readdirSync(path.join(x86_64BundleDir, 'macos')).filter(f => f.endsWith('.app'));
+    if (fs.existsSync(path.join(x86_64Path, 'bundle', 'macos'))) {
+      const appFiles = fs.readdirSync(path.join(x86_64Path, 'bundle', 'macos')).filter(f => f.endsWith('.app'));
       log(`  📦 Encontrados ${appFiles.length} archivos APP para Intel x86_64`, 'cyan');
       
       for (const appFile of appFiles) {
         const formattedName = `LuminaKraft.Launcher_${version}_x64.app.zip`;
-        const originalPath = path.join('src-tauri/target/x86_64-apple-darwin/release/bundle/macos', appFile);
         
         installers.push({
-          originalPath,
-          formattedName,
-          isApp: true
+          isApp: true,
+          originalPath: path.join(x86_64Path, 'bundle', 'macos', appFile),
+          formattedName
         });
       }
     }
@@ -349,35 +364,11 @@ ${isPrerelease ? '⚠️ **Advertencia**: Esta versión puede contener errores. 
     let skippedCount = 0;
     
     for (const installer of installers) {
-      // Manejar instaladores normales y especiales (los .app)
-      if (typeof installer === 'string') {
-        // Formato tradicional - ruta simple
-        const filePath = path.join(ARTIFACTS_PATH, installer);
-        const fileName = path.basename(installer);
-        
-        // Verificar si el archivo ya existe en la release
-        if (existingAssetNames.includes(fileName)) {
-          log(`  ⏩ Omitiendo ${fileName} (ya existe en la release)`, 'yellow');
-          skippedCount++;
-          continue;
-        }
-        
-        log(`  📦 Subiendo ${fileName}...`, 'cyan');
-        await octokit.repos.uploadReleaseAsset({
-          owner: PUBLIC_REPO_OWNER,
-          repo: PUBLIC_REPO_NAME,
-          release_id: release.id,
-          name: fileName,
-          data: fs.readFileSync(filePath)
-        });
-        log(`  ✅ Subido: ${fileName}`, 'green');
-        uploadedCount++;
-      } else if (installer.isApp) {
-        // Formato especial para .app - usar originalPath y formattedName
-        const filePath = path.join(ARTIFACTS_PATH, installer.originalPath);
-        
-        // Crear un archivo .zip del .app para poder subirlo
-        const zipFileName = installer.formattedName.replace('.app', '.zip');
+      // Manejar instaladores según el tipo
+      if (installer.isApp) {
+        // Archivos .app (formato especial para macOS)
+        const filePath = installer.originalPath;
+        const zipFileName = installer.formattedName;
         
         // Verificar si el archivo ya existe en la release
         if (existingAssetNames.includes(zipFileName)) {
@@ -386,19 +377,20 @@ ${isPrerelease ? '⚠️ **Advertencia**: Esta versión puede contener errores. 
           continue;
         }
         
-        log(`  📦 Subiendo ${path.basename(installer.originalPath)} como ${installer.formattedName}...`, 'cyan');
+        log(`  📦 Subiendo ${path.basename(filePath)} como ${zipFileName}...`, 'cyan');
         
-        const zipFilePath = path.join(ARTIFACTS_PATH, 'temp_app_upload.zip');
+        // Crear un archivo .zip del .app para poder subirlo
+        const zipFilePath = path.join(path.dirname(ARTIFACTS_PATH), 'temp_app_upload.zip');
         
         // Crear directorio temporal si no existe
-        const tempDir = path.join(ARTIFACTS_PATH, 'temp');
+        const tempDir = path.dirname(zipFilePath);
         if (!fs.existsSync(tempDir)) {
           fs.mkdirSync(tempDir, { recursive: true });
         }
         
         try {
           // Comprimir el .app en un .zip
-          log(`  📦 Comprimiendo ${installer.formattedName}...`, 'cyan');
+          log(`  📦 Comprimiendo ${path.basename(filePath)}...`, 'cyan');
           execSync(`cd "${path.dirname(filePath)}" && zip -r "${zipFilePath}" "${path.basename(filePath)}"`, { stdio: 'inherit' });
           
           // Subir el .zip con el nombre formateado
@@ -419,6 +411,58 @@ ${isPrerelease ? '⚠️ **Advertencia**: Esta versión puede contener errores. 
           uploadedCount++;
         } catch (error) {
           log(`  ❌ Error al procesar .app: ${error.message}`, 'red');
+        }
+      } else if (installer.type === 'file') {
+        // Archivos normales (DMG, etc)
+        const filePath = installer.path;
+        const fileName = installer.name;
+        
+        // Verificar si el archivo ya existe en la release
+        if (existingAssetNames.includes(fileName)) {
+          log(`  ⏩ Omitiendo ${fileName} (ya existe en la release)`, 'yellow');
+          skippedCount++;
+          continue;
+        }
+        
+        log(`  📦 Subiendo ${fileName}...`, 'cyan');
+        try {
+          await octokit.repos.uploadReleaseAsset({
+            owner: PUBLIC_REPO_OWNER,
+            repo: PUBLIC_REPO_NAME,
+            release_id: release.id,
+            name: fileName,
+            data: fs.readFileSync(filePath)
+          });
+          log(`  ✅ Subido: ${fileName}`, 'green');
+          uploadedCount++;
+        } catch (error) {
+          log(`  ❌ Error al subir ${fileName}: ${error.message}`, 'red');
+        }
+      } else {
+        // Formato antiguo (string) - compatibilidad con versiones previas
+        const filePath = path.join(ARTIFACTS_PATH, installer);
+        const fileName = path.basename(installer);
+        
+        // Verificar si el archivo ya existe en la release
+        if (existingAssetNames.includes(fileName)) {
+          log(`  ⏩ Omitiendo ${fileName} (ya existe en la release)`, 'yellow');
+          skippedCount++;
+          continue;
+        }
+        
+        log(`  📦 Subiendo ${fileName}...`, 'cyan');
+        try {
+          await octokit.repos.uploadReleaseAsset({
+            owner: PUBLIC_REPO_OWNER,
+            repo: PUBLIC_REPO_NAME,
+            release_id: release.id,
+            name: fileName,
+            data: fs.readFileSync(filePath)
+          });
+          log(`  ✅ Subido: ${fileName}`, 'green');
+          uploadedCount++;
+        } catch (error) {
+          log(`  ❌ Error al subir ${fileName}: ${error.message}`, 'red');
         }
       }
     }
