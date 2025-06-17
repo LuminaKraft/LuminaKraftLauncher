@@ -68,17 +68,19 @@ La compilación directa para Linux desde macOS es muy compleja y propensa a erro
 
 El proceso de compilación cruzada con Docker funciona de la siguiente manera:
 
-1. **Verificación de Docker**: El script comprueba si Docker está instalado.
+1. **Verificación de Docker**: El script comprueba si Docker está instalado y en ejecución.
 
-2. **Creación de Imágenes**:
-   - Para Windows: Crea una imagen con MinGW y Wine
-   - Para Linux: Crea una imagen con las dependencias GTK necesarias
+2. **Uso de Imágenes Docker**:
+   - Para Windows: Usa `Dockerfile.windows-builder` con MinGW y Node.js 20
+   - Para Linux: Usa `Dockerfile.linux-builder` con GTK y dependencias necesarias
 
-3. **Montaje de Volumen**: Monta el directorio del proyecto en el contenedor Docker.
+3. **Montaje de Volúmenes**: 
+   - Monta el directorio del proyecto en `/app` dentro del contenedor
+   - Monta el directorio `.tauri` para cachear dependencias entre compilaciones
 
 4. **Compilación**: Ejecuta los comandos de compilación dentro del contenedor.
 
-5. **Copia de Artefactos**: Copia los archivos compilados a las ubicaciones esperadas.
+5. **Copia de Artefactos**: Copia los archivos compilados a las ubicaciones esperadas en el host.
 
 ## Solución de Problemas Comunes
 

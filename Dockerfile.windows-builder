@@ -1,0 +1,27 @@
+FROM rust:latest
+
+# Instalar dependencias básicas
+RUN apt-get update && apt-get install -y \
+    curl \
+    build-essential \
+    gcc-mingw-w64 \
+    g++-mingw-w64 \
+    wine64 \
+    wget \
+    gnupg \
+    ca-certificates
+    
+# Instalar Node.js 20 (versión compatible con Octokit)
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+RUN apt-get install -y nodejs
+RUN npm install -g npm@latest
+
+# Configurar Rust para Windows GNU
+RUN rustup target add x86_64-pc-windows-gnu
+
+# Configurar variables de entorno para cross-compilation
+ENV CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER=x86_64-w64-mingw32-gcc
+ENV CC_x86_64_pc_windows_gnu=x86_64-w64-mingw32-gcc
+ENV CXX_x86_64_pc_windows_gnu=x86_64-w64-mingw32-g++
+
+WORKDIR /app 

@@ -281,35 +281,8 @@ function buildApp() {
         if (canBuildWindows) {
           log(`🎯 Construyendo para Windows (x86_64) usando Docker...`, 'cyan');
           
-          // Crear un Dockerfile temporal para Windows
+          // Usamos el Dockerfile existente en lugar de crearlo dinámicamente
           const dockerfileWinPath = path.join(__dirname, 'Dockerfile.windows-builder');
-          const dockerfileWinContent = `FROM rust:latest
-RUN apt-get update && apt-get install -y \\
-    curl \\
-    build-essential \\
-    gcc-mingw-w64 \\
-    g++-mingw-w64 \\
-    wine64 \\
-    wget \\
-    gnupg
-    
-# Instalar Node.js 20 (versión compatible con Octokit)
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-RUN apt-get install -y nodejs
-RUN npm install -g npm@latest
-
-# Configurar Rust para Windows GNU
-RUN rustup target add x86_64-pc-windows-gnu
-RUN rustup toolchain install stable-x86_64-pc-windows-gnu
-
-# Configurar variables de entorno para cross-compilation
-ENV CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER=x86_64-w64-mingw32-gcc
-ENV CC_x86_64_pc_windows_gnu=x86_64-w64-mingw32-gcc
-ENV CXX_x86_64_pc_windows_gnu=x86_64-w64-mingw32-g++
-
-WORKDIR /app`;
-          
-          fs.writeFileSync(dockerfileWinPath, dockerfileWinContent);
           
           // Definir la variable buildWinScriptPath en el ámbito correcto
           const buildWinScriptPath = path.join(__dirname, 'build-windows.sh');
@@ -361,12 +334,13 @@ npm run tauri build -- --target x86_64-pc-windows-gnu -- --features custom-proto
           } catch (buildError) {
             log(`❌ Error al compilar para Windows: ${buildError.message}`, 'red');
           } finally {
-            // Eliminar archivos temporales
-            if (fs.existsSync(dockerfileWinPath)) {
-              fs.unlinkSync(dockerfileWinPath);
-            }
-            if (fs.existsSync(buildWinScriptPath)) {
-              fs.unlinkSync(buildWinScriptPath);
+            // Eliminar solo el script temporal, el Dockerfile es permanente
+            try {
+              if (fs.existsSync(buildWinScriptPath)) {
+                fs.unlinkSync(buildWinScriptPath);
+              }
+            } catch (unlinkError) {
+              log(`⚠️ No se pudo eliminar el script temporal: ${unlinkError.message}`, 'yellow');
             }
           }
         } else {
@@ -397,58 +371,22 @@ npm run tauri build -- --target x86_64-pc-windows-gnu -- --features custom-proto
             log('✅ Imagen Docker para Linux detectada', 'green');
             canBuildLinux = true;
           } catch (imageError) {
-            log('🔄 Creando imagen Docker para compilación de Linux...', 'cyan');
+            log('⚠️ Imagen Docker para Linux no encontrada, se creará una nueva', 'yellow');
+            log('🔄 Usando imagen Docker para compilación de Linux...', 'cyan');
             
-            // Crear un Dockerfile temporal
-            const dockerfilePath = path.join(__dirname, 'Dockerfile.tauri-builder');
-            const dockerfileContent = `FROM ubuntu:20.04
-ENV DEBIAN_FRONTEND=noninteractive
-
-# Instalar dependencias básicas
-RUN apt-get update && apt-get install -y \\
-    curl \\
-    build-essential \\
-    libssl-dev \\
-    libgtk-3-dev \\
-    libwebkit2gtk-4.0-dev \\
-    libappindicator3-dev \\
-    librsvg2-dev \\
-    patchelf \\
-    wget \\
-    gnupg \\
-    ca-certificates
-
-# Instalar Node.js 20 (versión compatible con Octokit)
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-RUN apt-get install -y nodejs
-RUN npm install -g npm@latest
-
-# Instalar Rust
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-ENV PATH="/root/.cargo/bin:${PATH}"
-
-# Configurar Rust para Linux
-RUN rustup default stable
-RUN rustup target add x86_64-unknown-linux-gnu
-
-WORKDIR /app`;
-            
-            fs.writeFileSync(dockerfilePath, dockerfileContent);
+            // Usamos el Dockerfile existente en lugar de crearlo dinámicamente
+            const dockerfilePath = path.join(__dirname, 'Dockerfile.linux-builder');
             
             try {
               // Construir la imagen Docker
-              execSync('docker build -t tauri-builder -f Dockerfile.tauri-builder .', { stdio: 'inherit' });
+              execSync('docker build -t tauri-builder -f Dockerfile.linux-builder .', { stdio: 'inherit' });
               log('✅ Imagen Docker para Linux creada correctamente', 'green');
               canBuildLinux = true;
               
-              // Eliminar el Dockerfile temporal
-              fs.unlinkSync(dockerfilePath);
+              // No eliminamos el Dockerfile porque ahora es permanente
             } catch (buildError) {
               log(`❌ Error al crear imagen Docker: ${buildError.message}`, 'red');
-              // Eliminar el Dockerfile temporal en caso de error
-              if (fs.existsSync(dockerfilePath)) {
-                fs.unlinkSync(dockerfilePath);
-              }
+                              // No eliminamos el Dockerfile porque ahora es permanente
             }
           }
         } else {
@@ -512,7 +450,8 @@ npm run tauri build -- --target x86_64-unknown-linux-gnu
           log('⚠️ Saltando compilación para Linux por falta de herramientas', 'yellow');
         }
       } catch (error) {
-        log(`⚠️ No se pudo compilar para Linux: ${error.message}`, 'yellow');
+        const errorMessage = error.message || 'Error desconocido';
+        log(`⚠️ No se pudo compilar para Linux: ${errorMessage}`, 'yellow');
         log('   Esto puede requerir configuración adicional de cross-compilation.', 'yellow');
       }
       
