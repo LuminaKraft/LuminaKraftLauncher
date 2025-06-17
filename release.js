@@ -705,6 +705,7 @@ async function main() {
       }
       
       // Check if tag exists
+      let tagExists = false;
       try {
         execSync(`git show-ref --tags v${newVersion}`, { stdio: 'pipe' });
         const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
@@ -713,6 +714,7 @@ async function main() {
         
         if (['y', 'Y', 'yes', 'YES'].includes(answer.trim())) {
           execSync(`git tag -d v${newVersion}`, { stdio: 'inherit' });
+          tagExists = true;  // Marcar que estamos reemplazando un tag existente
         } else {
           log('❌ Operación cancelada por el usuario', 'red');
           process.exit(1);
@@ -724,7 +726,15 @@ async function main() {
       // Create tag and push changes
       execSync(`git tag -a v${newVersion} -m "Release v${newVersion}"`, { stdio: 'inherit' });
       execSync('git push', { stdio: 'inherit' });
-      execSync(`git push origin v${newVersion}`, { stdio: 'inherit' });
+      
+      // Si estamos reemplazando un tag, usar --force
+      if (tagExists) {
+        execSync(`git push --force origin v${newVersion}`, { stdio: 'inherit' });
+        log('✅ Tag reemplazado en remoto', 'green');
+      } else {
+        execSync(`git push origin v${newVersion}`, { stdio: 'inherit' });
+        log('✅ Tag creado en remoto', 'green');
+      }
       
       log('✅ Commit y tag enviados a remoto', 'green');
     } catch (error) {
