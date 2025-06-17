@@ -141,17 +141,40 @@ function buildApp() {
     const platform = os.platform();
     
     if (platform === 'darwin') {
-      // En macOS, construir para ambas arquitecturas, primero Intel y luego ARM
-      // Añadir soporte para arquitectura Intel
+      // En macOS, construir para todas las plataformas
+      
+      // 1. Primero macOS Intel
       log(`🎯 Construyendo para macOS Intel (x86_64)...`, 'cyan');
       execSync('rustup target add x86_64-apple-darwin', { stdio: 'inherit' });
       execSync('npm run tauri build -- --target x86_64-apple-darwin', { stdio: 'inherit' });
       
-      // Luego construir para ARM (Apple Silicon)
+      // 2. Luego macOS ARM (Apple Silicon)
       log(`🎯 Construyendo para macOS ARM (Apple Silicon)...`, 'cyan');
       execSync('npm run tauri build -- --target aarch64-apple-darwin', { stdio: 'inherit' });
       
-      log('✅ Build completado para ambas arquitecturas de macOS', 'green');
+      // 3. Windows (requiere configuración de cross-compilation)
+      log(`🎯 Construyendo para Windows (x86_64)...`, 'cyan');
+      try {
+        execSync('rustup target add x86_64-pc-windows-msvc', { stdio: 'inherit' });
+        execSync('npm run tauri build -- --target x86_64-pc-windows-msvc', { stdio: 'inherit' });
+        log('✅ Build completado para Windows', 'green');
+      } catch (error) {
+        log(`⚠️ No se pudo compilar para Windows: ${error.message}`, 'yellow');
+        log('   Esto puede requerir configuración adicional de cross-compilation.', 'yellow');
+      }
+      
+      // 4. Linux (requiere configuración de cross-compilation)
+      log(`🎯 Construyendo para Linux (x86_64)...`, 'cyan');
+      try {
+        execSync('rustup target add x86_64-unknown-linux-gnu', { stdio: 'inherit' });
+        execSync('npm run tauri build -- --target x86_64-unknown-linux-gnu', { stdio: 'inherit' });
+        log('✅ Build completado para Linux', 'green');
+      } catch (error) {
+        log(`⚠️ No se pudo compilar para Linux: ${error.message}`, 'yellow');
+        log('   Esto puede requerir configuración adicional de cross-compilation.', 'yellow');
+      }
+      
+      log('✅ Proceso de build completado para todas las plataformas posibles', 'green');
     } else {
       // Para Windows y Linux, construir normalmente
       log(`🎯 Construyendo para ${platform}...`, 'cyan');
@@ -165,38 +188,91 @@ function buildApp() {
 }
 
 function getInstallerFiles() {
-  const bundleDir = path.join(ARTIFACTS_PATH, 'bundle');
   const installers = [];
+  const version = getCurrentVersion();
+  
+  // Definir la carpeta tauri base
+  const tauriDir = path.join(__dirname, 'src-tauri');
   
   // Buscar en las carpetas según la plataforma
   const platform = os.platform();
   
-  if (platform === 'win32') {
-    const msiDir = path.join(bundleDir, 'msi');
-    const nsisDir = path.join(bundleDir, 'nsis');
+  // Función auxiliar para buscar archivos Windows
+  function findWindowsFiles(basePath) {
+    const windowsFiles = [];
+    const msiDir = path.join(basePath, 'bundle', 'msi');
+    const nsisDir = path.join(basePath, 'bundle', 'nsis');
     
     if (fs.existsSync(msiDir)) {
       const msiFiles = fs.readdirSync(msiDir).filter(f => f.endsWith('.msi'));
-      installers.push(...msiFiles.map(f => path.join('bundle', 'msi', f)));
+      for (const file of msiFiles) {
+        windowsFiles.push({
+          type: 'file',
+          path: path.join(msiDir, file),
+          name: file
+        });
+      }
+      log(`  📦 Encontrados ${msiFiles.length} archivos MSI para Windows`, 'cyan');
     }
     
     if (fs.existsSync(nsisDir)) {
       const nsisFiles = fs.readdirSync(nsisDir).filter(f => f.endsWith('.exe'));
-      installers.push(...nsisFiles.map(f => path.join('bundle', 'nsis', f)));
+      for (const file of nsisFiles) {
+        windowsFiles.push({
+          type: 'file',
+          path: path.join(nsisDir, file),
+          name: file
+        });
+      }
+      log(`  📦 Encontrados ${nsisFiles.length} archivos EXE para Windows`, 'cyan');
     }
-  } else if (platform === 'linux') {
-    const debianDir = path.join(bundleDir, 'deb');
-    const appimageDir = path.join(bundleDir, 'appimage');
+    
+    return windowsFiles;
+  }
+  
+  // Función auxiliar para buscar archivos Linux
+  function findLinuxFiles(basePath) {
+    const linuxFiles = [];
+    const debianDir = path.join(basePath, 'bundle', 'deb');
+    const appimageDir = path.join(basePath, 'bundle', 'appimage');
     
     if (fs.existsSync(debianDir)) {
       const debFiles = fs.readdirSync(debianDir).filter(f => f.endsWith('.deb'));
-      installers.push(...debFiles.map(f => path.join('bundle', 'deb', f)));
+      for (const file of debFiles) {
+        linuxFiles.push({
+          type: 'file',
+          path: path.join(debianDir, file),
+          name: file
+        });
+      }
+      log(`  📦 Encontrados ${debFiles.length} archivos DEB para Linux`, 'cyan');
     }
     
     if (fs.existsSync(appimageDir)) {
       const appimageFiles = fs.readdirSync(appimageDir).filter(f => f.endsWith('.AppImage'));
-      installers.push(...appimageFiles.map(f => path.join('bundle', 'appimage', f)));
+      for (const file of appimageFiles) {
+        linuxFiles.push({
+          type: 'file',
+          path: path.join(appimageDir, file),
+          name: file
+        });
+      }
+      log(`  📦 Encontrados ${appimageFiles.length} archivos AppImage para Linux`, 'cyan');
     }
+    
+    return linuxFiles;
+  }
+  
+  if (platform === 'win32') {
+    // Buscar archivos Windows en la ruta estándar
+    const windowsPath = path.join(tauriDir, 'target', 'release');
+    installers.push(...findWindowsFiles(windowsPath));
+    
+  } else if (platform === 'linux') {
+    // Buscar archivos Linux en la ruta estándar
+    const linuxPath = path.join(tauriDir, 'target', 'release');
+    installers.push(...findLinuxFiles(linuxPath));
+    
   } else if (platform === 'darwin') {
     const version = getCurrentVersion();
     
@@ -288,6 +364,35 @@ function getInstallerFiles() {
       }
     } else {
       log(`  ❌ No se encontraron archivos APP para Apple Silicon en ${path.join(aarch64Path, 'bundle', 'macos')}`, 'yellow');
+    }
+    
+    // Si estamos en macOS, también buscar artefactos de Windows y Linux (cross-compilation)
+    log(`🔍 Buscando artefactos de Windows (cross-compilation)...`, 'cyan');
+    const windowsPath = path.join(tauriDir, 'target', 'x86_64-pc-windows-msvc', 'release');
+    if (fs.existsSync(windowsPath)) {
+      const windowsFiles = findWindowsFiles(windowsPath);
+      if (windowsFiles.length > 0) {
+        installers.push(...windowsFiles);
+        log(`  ✅ Se encontraron ${windowsFiles.length} archivos de Windows`, 'green');
+      } else {
+        log(`  ⚠️ No se encontraron archivos de Windows en ${windowsPath}`, 'yellow');
+      }
+    } else {
+      log(`  ⚠️ No existe la ruta para Windows: ${windowsPath}`, 'yellow');
+    }
+    
+    log(`🔍 Buscando artefactos de Linux (cross-compilation)...`, 'cyan');
+    const linuxPath = path.join(tauriDir, 'target', 'x86_64-unknown-linux-gnu', 'release');
+    if (fs.existsSync(linuxPath)) {
+      const linuxFiles = findLinuxFiles(linuxPath);
+      if (linuxFiles.length > 0) {
+        installers.push(...linuxFiles);
+        log(`  ✅ Se encontraron ${linuxFiles.length} archivos de Linux`, 'green');
+      } else {
+        log(`  ⚠️ No se encontraron archivos de Linux en ${linuxPath}`, 'yellow');
+      }
+    } else {
+      log(`  ⚠️ No existe la ruta para Linux: ${linuxPath}`, 'yellow');
     }
   }
   

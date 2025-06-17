@@ -46,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Incremental Releases**: New builds are added to existing releases
 - **Multiple Platforms**: A single release can contain builds for Windows, Linux, and macOS
 - **Build Status**: Clear tracking of which platforms are available
+- **Cross-Platform Building**: When running on macOS, automatically builds for all platforms (Windows, Linux, macOS)
 
 ## [0.0.4] - 2025-06-15
 
