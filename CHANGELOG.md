@@ -5,6 +5,48 @@ All notable changes to the LuminaKraft Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.5] - 2025-06-17
+
+### 🔄 Internal Naming Optimization
+
+#### **Internal Nomenclature Change**
+- **Simplified Technical Name**: Changed from "LuminaKraftLauncher" to "LKLauncher" for:
+  - Internal identifiers
+  - Process names
+  - Task names
+  - File paths
+  - API UserAgent
+
+#### **Data Directory Optimization**
+- **Optimized Data Folders**:
+  - Windows: `%AppData%/LKLauncher` (previously "LuminaKraftLauncher")
+  - macOS: `~/Library/Application Support/LKLauncher` (previously "LuminaKraftLauncher")
+  - Linux: `~/.local/share/LKLauncher` (previously "LuminaKraftLauncher")
+
+#### **Compatibility Improvements**
+- **Shorter Paths**: Reduces issues with path length limitations on Windows
+- **Special Character Compatibility**: Improves compatibility with UTF-8 characters in paths
+
+#### **Brand Consistency**
+- **User Interface Intact**: "LuminaKraft Launcher" is preserved as the visible name
+- **Brand Assets Preserved**: Logos and branding remain unchanged
+- **Shortcuts**: Desktop shortcuts still display "LuminaKraft Launcher"
+
+### 🚀 Release System Enhancements
+
+#### **Multiple macOS Architectures**
+- **Automatic Dual Building**: Generates builds for both Apple Silicon and Intel
+- **Standardized Naming Format**: File names following the format:
+  - `LuminaKraft.Launcher_[version]_aarch64.dmg` (Apple Silicon)
+  - `LuminaKraft.Launcher_[version]_x64.dmg` (Intel)
+  - `LuminaKraft.Launcher_[version]_aarch64.app.zip` (Portable app for Apple Silicon)
+  - `LuminaKraft.Launcher_[version]_x64.app.zip` (Portable app for Intel)
+
+#### **Cumulative Releases**
+- **Incremental Releases**: New builds are added to existing releases
+- **Multiple Platforms**: A single release can contain builds for Windows, Linux, and macOS
+- **Build Status**: Clear tracking of which platforms are available
+
 ## [0.0.4] - 2025-06-15
 
 ### 🌎 CurseForge API Integration
