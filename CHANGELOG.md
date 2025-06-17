@@ -49,10 +49,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Cross-Platform Building**: When running on macOS, automatically builds for all platforms with proper toolchains
 
 #### **Cross-Compilation Requirements**
-- **macOS to Windows**: Requires MinGW-w64 toolchain (instalado automáticamente)
-- **macOS to Linux**: Requires Linux GNU toolchain (instalado automáticamente)
-- **Automatic Installation**: Detecta Homebrew e instala automáticamente las dependencias necesarias
-- **Intelligent Detection**: Automatically detects available toolchains and skips unavailable platforms
+- **Docker-based Building**: Usa contenedores Docker para compilación cruzada
+- **Windows Support**: Compila para Windows desde macOS usando contenedores
+- **Linux Support**: Compila para Linux desde macOS usando contenedores
+- **No External Dependencies**: No requiere toolchains adicionales, solo Docker
+- **Intelligent Detection**: Detecta automáticamente Docker y crea las imágenes necesarias
 
 ## [0.0.4] - 2025-06-15
 

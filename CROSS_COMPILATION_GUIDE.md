@@ -4,7 +4,7 @@ Esta guía explica cómo configurar tu entorno de desarrollo macOS para compilar
 
 ## Instalación Automática de Dependencias
 
-El script `release.js` ahora detecta automáticamente si tienes Homebrew instalado y puede instalar todas las dependencias necesarias para la compilación cruzada automáticamente.
+El script `release.js` ahora utiliza Docker para la compilación cruzada, lo que simplifica enormemente el proceso.
 
 Simplemente ejecuta:
 ```bash
@@ -12,110 +12,105 @@ npm run release -- <version> [--prerelease]
 ```
 
 El script:
-1. Detectará si Homebrew está instalado
-2. Instalará automáticamente las herramientas necesarias para Windows y Linux
-3. Configurará las variables de entorno adecuadas
-4. Compilará para todas las plataformas disponibles
+1. Detectará si Docker está instalado
+2. Creará imágenes Docker específicas para cada plataforma
+3. Compilará para todas las plataformas posibles usando contenedores
 
-## Requisitos Previos (para instalación manual)
+## Requisitos Previos
 
 - macOS (Intel o Apple Silicon)
-- Homebrew instalado
-- Rust y Cargo instalados
+- Docker Desktop instalado
+- Rust y Cargo instalados (para compilación local)
 - Node.js y npm instalados
 
 ## Compilación para Windows desde macOS
 
-### 1. Instalar la target de Rust para Windows
+### Método Docker (Recomendado)
+
+1. **Instalar Docker Desktop**
+   Descarga e instala Docker Desktop desde [docker.com](https://www.docker.com/products/docker-desktop/)
+
+2. **Ejecutar la compilación**
+   ```bash
+   npm run release -- <version> [--prerelease]
+   ```
+
+   El script creará automáticamente una imagen Docker con todas las herramientas necesarias para compilar para Windows.
+
+### Método Alternativo (No recomendado)
+
+Si prefieres no usar Docker, puedes intentar la compilación directa, pero no es recomendado debido a problemas de compatibilidad:
 
 ```bash
-rustup target add x86_64-pc-windows-msvc
-```
-
-### 2. Instalar MinGW-w64 (compilador cruzado para Windows)
-
-```bash
+rustup target add x86_64-pc-windows-gnu
 brew install mingw-w64
 ```
 
-### 3. Configurar variables de entorno (opcional)
-
-Si encuentras problemas específicos, puedes necesitar configurar estas variables de entorno:
-
-```bash
-export CC_x86_64_pc_windows_msvc=x86_64-w64-mingw32-gcc
-export CXX_x86_64_pc_windows_msvc=x86_64-w64-mingw32-g++
-export AR_x86_64_pc_windows_msvc=x86_64-w64-mingw32-ar
-export CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER=x86_64-w64-mingw32-gcc
-```
-
-### 4. Problemas Comunes y Soluciones
-
-#### Error: `assert.h` no encontrado
-
-Este error ocurre con la biblioteca `ring`. Puedes intentar:
-
-1. Instalar las cabeceras de Windows con:
-   ```bash
-   brew install mingw-w64-headers
-   ```
-
-2. O usar una versión específica de `ring` que sea compatible con cross-compilation:
-   ```
-   # En Cargo.toml
-   ring = { version = "=0.16.20", features = ["std"] }
-   ```
-
 ## Compilación para Linux desde macOS
 
-### 1. Instalar la target de Rust para Linux
+### Método Docker (Recomendado)
+
+1. **Instalar Docker Desktop**
+   Descarga e instala Docker Desktop desde [docker.com](https://www.docker.com/products/docker-desktop/)
+
+2. **Ejecutar la compilación**
+   ```bash
+   npm run release -- <version> [--prerelease]
+   ```
+
+   El script creará automáticamente una imagen Docker con todas las herramientas necesarias para compilar para Linux.
+
+### Método Alternativo (No recomendado)
+
+La compilación directa para Linux desde macOS es muy compleja y propensa a errores debido a las dependencias de GTK y otras bibliotecas específicas de Linux.
+
+## Cómo Funciona la Compilación con Docker
+
+El proceso de compilación cruzada con Docker funciona de la siguiente manera:
+
+1. **Verificación de Docker**: El script comprueba si Docker está instalado.
+
+2. **Creación de Imágenes**:
+   - Para Windows: Crea una imagen con MinGW y Wine
+   - Para Linux: Crea una imagen con las dependencias GTK necesarias
+
+3. **Montaje de Volumen**: Monta el directorio del proyecto en el contenedor Docker.
+
+4. **Compilación**: Ejecuta los comandos de compilación dentro del contenedor.
+
+5. **Copia de Artefactos**: Copia los archivos compilados a las ubicaciones esperadas.
+
+## Solución de Problemas Comunes
+
+### Error: "Cannot connect to the Docker daemon"
+
+Si ves este error, asegúrate de que Docker Desktop está en ejecución.
+
+### Error: "Error response from daemon: invalid mount config"
+
+Este error puede ocurrir si Docker no tiene permisos para acceder al directorio del proyecto. Asegúrate de que has concedido permisos a Docker en Preferencias > Recursos > Compartición de archivos.
+
+### Error: "No space left on device"
+
+Si Docker se queda sin espacio, puedes limpiar imágenes y contenedores no utilizados:
 
 ```bash
-rustup target add x86_64-unknown-linux-gnu
+docker system prune -a
 ```
 
-### 2. Instalar el toolchain de GNU para Linux
+## Compilación Automatizada para Todas las Plataformas
 
-```bash
-brew tap SergioBenitez/osxct
-brew install x86_64-unknown-linux-gnu
-```
-
-### 3. Configurar variables de entorno
-
-Estas variables son necesarias para la compilación cruzada a Linux:
-
-```bash
-export CC_x86_64_unknown_linux_gnu=x86_64-linux-gnu-gcc
-export CXX_x86_64_unknown_linux_gnu=x86_64-linux-gnu-g++
-export AR_x86_64_unknown_linux_gnu=x86_64-linux-gnu-ar
-export CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=x86_64-linux-gnu-gcc
-```
-
-### 4. Problemas Comunes y Soluciones
-
-#### Error: Bibliotecas GTK no encontradas
-
-Para aplicaciones que usan GTK (como Tauri), necesitarás instalar las bibliotecas GTK para Linux:
-
-```bash
-brew install pkg-config
-brew install x86_64-unknown-linux-gnu-gtk3
-```
-
-## Uso del Script de Release
-
-El script `release.js` ahora detecta automáticamente si tienes las herramientas necesarias para la compilación cruzada:
-
-1. Si tienes todas las herramientas instaladas, compilará para todas las plataformas.
-2. Si falta alguna herramienta, te mostrará instrucciones sobre cómo instalarla.
-3. Continuará con las plataformas disponibles aunque algunas no estén configuradas.
-
-Para ejecutar el script:
+El script `release.js` ahora puede compilar automáticamente para todas las plataformas si tienes Docker instalado:
 
 ```bash
 npm run release -- <version> [--prerelease]
 ```
+
+Este comando:
+1. Compilará para macOS (Intel y Apple Silicon) de forma nativa
+2. Compilará para Windows usando Docker
+3. Compilará para Linux usando Docker
+4. Creará una release en GitHub con todos los artefactos
 
 ## Recursos Adicionales
 

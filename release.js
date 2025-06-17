@@ -153,6 +153,28 @@ function buildApp() {
       execSync('npm run tauri build -- --target aarch64-apple-darwin', { stdio: 'inherit' });
       
       // Función para verificar si Homebrew está instalado
+      function checkDocker() {
+        try {
+          // Primero verificar si Docker está instalado
+          execSync('which docker', { stdio: 'pipe' });
+          
+          // Luego verificar si Docker está en ejecución
+          try {
+            execSync('docker ps', { stdio: 'pipe' });
+            log('✅ Docker está instalado y en ejecución', 'green');
+            return true;
+          } catch (runError) {
+            log('⚠️ Docker está instalado pero no está en ejecución', 'yellow');
+            log('   Por favor, inicia Docker Desktop y vuelve a intentarlo', 'yellow');
+            return false;
+          }
+        } catch (error) {
+          log('⚠️ Docker no está instalado', 'yellow');
+          log('   Por favor, instala Docker Desktop desde https://www.docker.com/products/docker-desktop/', 'yellow');
+          return false;
+        }
+      }
+      
       function isHomebrewInstalled() {
         try {
           execSync('which brew', { stdio: 'pipe' });
@@ -198,50 +220,126 @@ function buildApp() {
         // Verificar si existe la target de Rust para Windows
         execSync('rustup target add x86_64-pc-windows-msvc', { stdio: 'inherit' });
         
-        // Verificar si tenemos las herramientas de cross-compilation para Windows
-        try {
-          // Intentar verificar si está instalado el toolchain para Windows
-          execSync('which x86_64-w64-mingw32-gcc || echo "No instalado"', { stdio: 'pipe' });
-          log('✅ Toolchain para Windows detectado', 'green');
+        // Verificar si Docker está disponible para compilación cruzada
+        const dockerAvailable = checkDocker();
+        
+        if (dockerAvailable) {
+          log('✅ Se usará Docker para compilación cruzada de Windows', 'green');
           canBuildWindows = true;
-        } catch (error) {
-          log('⚠️ No se detectó el toolchain para Windows', 'yellow');
+        } else {
+          // Método alternativo si Docker no está disponible
+          log('⚠️ Docker no está disponible, intentando método alternativo para Windows...', 'yellow');
           
-          // Instalar automáticamente si tenemos Homebrew
-          if (hasHomebrew) {
-            log('🔄 Intentando instalar toolchain para Windows automáticamente...', 'cyan');
-            const installed = installWithHomebrew(['mingw-w64']);
-            
-            if (installed) {
-              log('✅ Toolchain para Windows instalado correctamente', 'green');
+          try {
+            // Verificar si está instalado Visual Studio para Windows
+            try {
+              execSync('which xcrun', { stdio: 'pipe' });
+              log('✅ Toolchain para Windows detectado (xcrun)', 'green');
               canBuildWindows = true;
+            } catch (error) {
+              log('⚠️ No se detectó xcrun para Windows', 'yellow');
               
-              // Configurar variables de entorno para Windows
-              process.env.CC_x86_64_pc_windows_msvc = 'x86_64-w64-mingw32-gcc';
-              process.env.CXX_x86_64_pc_windows_msvc = 'x86_64-w64-mingw32-g++';
-              process.env.AR_x86_64_pc_windows_msvc = 'x86_64-w64-mingw32-ar';
-              process.env.CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER = 'x86_64-w64-mingw32-gcc';
-            } else {
-              log('❌ No se pudo instalar el toolchain para Windows', 'red');
+              // Intentar detectar mingw como alternativa
+              try {
+                execSync('which x86_64-w64-mingw32-gcc || echo "No instalado"', { stdio: 'pipe' });
+                log('✅ Toolchain para Windows detectado (mingw)', 'green');
+                canBuildWindows = true;
+              } catch (mingwError) {
+                log('⚠️ No se detectó mingw para Windows', 'yellow');
+                
+                // Instalar automáticamente si tenemos Homebrew
+                if (hasHomebrew) {
+                  log('🔄 Intentando instalar toolchain para Windows automáticamente...', 'cyan');
+                  
+                  // Instalar dependencias necesarias para Windows
+                  const installed = installWithHomebrew(['llvm']);
+                  
+                  if (installed) {
+                    log('✅ LLVM instalado correctamente', 'green');
+                    canBuildWindows = true;
+                    
+                    // Configurar variables de entorno para Windows con LLVM
+                    process.env.CC = 'clang';
+                    process.env.CXX = 'clang++';
+                  } else {
+                    log('❌ No se pudo instalar LLVM', 'red');
+                  }
+                } else {
+                  log('   Para compilar para Windows desde macOS, instala:', 'yellow');
+                  log('   brew install llvm', 'yellow');
+                }
+              }
             }
-          } else {
-            log('   Para compilar para Windows desde macOS, instala:', 'yellow');
-            log('   brew install mingw-w64', 'yellow');
+          } catch (error) {
+            log('⚠️ Error al verificar toolchain para Windows', 'yellow');
           }
         }
         
         if (canBuildWindows) {
-          log(`🎯 Construyendo para Windows (x86_64)...`, 'cyan');
-          // Configurar variables de entorno para la compilación cruzada
-          const env = {
-            ...process.env,
-            CC_x86_64_pc_windows_msvc: 'x86_64-w64-mingw32-gcc',
-            CXX_x86_64_pc_windows_msvc: 'x86_64-w64-mingw32-g++',
-            AR_x86_64_pc_windows_msvc: 'x86_64-w64-mingw32-ar',
-            CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER: 'x86_64-w64-mingw32-gcc'
-          };
-          execSync('npm run tauri build -- --target x86_64-pc-windows-msvc', { stdio: 'inherit', env });
-          log('✅ Build completado para Windows', 'green');
+          log(`🎯 Construyendo para Windows (x86_64) usando Docker...`, 'cyan');
+          
+          // Crear un Dockerfile temporal para Windows
+          const dockerfileWinPath = path.join(__dirname, 'Dockerfile.windows-builder');
+          const dockerfileWinContent = `FROM rust:latest
+RUN apt-get update && apt-get install -y \\
+    curl \\
+    build-essential \\
+    gcc-mingw-w64 \\
+    g++-mingw-w64 \\
+    wine64 \\
+    nodejs \\
+    npm
+RUN rustup target add x86_64-pc-windows-gnu
+WORKDIR /app`;
+          
+          fs.writeFileSync(dockerfileWinPath, dockerfileWinContent);
+          
+          try {
+            // Construir la imagen Docker para Windows
+            execSync('docker build -t windows-builder -f Dockerfile.windows-builder .', { stdio: 'inherit' });
+            log('✅ Imagen Docker para Windows creada correctamente', 'green');
+            
+            // Crear un script temporal para la compilación en Docker
+            const buildWinScriptPath = path.join(__dirname, 'build-windows.sh');
+            const buildWinScriptContent = `#!/bin/bash
+set -e
+cd /app
+npm install
+npm run tauri build -- --target x86_64-pc-windows-gnu
+`;
+            fs.writeFileSync(buildWinScriptPath, buildWinScriptContent);
+            fs.chmodSync(buildWinScriptPath, '755'); // Hacer ejecutable
+            
+            // Ejecutar la compilación en Docker
+            execSync(`docker run --rm -v "${__dirname}:/app" windows-builder /app/build-windows.sh`, { stdio: 'inherit' });
+            log('✅ Build completado para Windows usando Docker', 'green');
+            
+            // Copiar los archivos compilados a la ubicación esperada
+            const winBundleDir = path.join(__dirname, 'src-tauri', 'target', 'x86_64-pc-windows-gnu', 'release', 'bundle');
+            const winTargetDir = path.join(__dirname, 'src-tauri', 'target', 'x86_64-pc-windows-msvc', 'release', 'bundle');
+            
+            // Crear el directorio de destino si no existe
+            if (!fs.existsSync(path.dirname(winTargetDir))) {
+              fs.mkdirSync(path.dirname(winTargetDir), { recursive: true });
+            }
+            
+            // Copiar los archivos
+            if (fs.existsSync(winBundleDir)) {
+              execSync(`cp -r "${winBundleDir}" "${path.dirname(winTargetDir)}"`, { stdio: 'inherit' });
+              log('✅ Archivos de Windows copiados correctamente', 'green');
+            }
+            
+          } catch (buildError) {
+            log(`❌ Error al compilar para Windows: ${buildError.message}`, 'red');
+          } finally {
+            // Eliminar archivos temporales
+            if (fs.existsSync(dockerfileWinPath)) {
+              fs.unlinkSync(dockerfileWinPath);
+            }
+            if (fs.existsSync(buildWinScriptPath)) {
+              fs.unlinkSync(buildWinScriptPath);
+            }
+          }
         } else {
           log('⚠️ Saltando compilación para Windows por falta de herramientas', 'yellow');
         }
@@ -259,58 +357,103 @@ function buildApp() {
         // Verificar si existe la target de Rust para Linux
         execSync('rustup target add x86_64-unknown-linux-gnu', { stdio: 'inherit' });
         
-        // Verificar si tenemos las herramientas de cross-compilation para Linux
-        try {
-          // Intentar verificar si está instalado el toolchain para Linux
-          execSync('which x86_64-linux-gnu-gcc || echo "No instalado"', { stdio: 'pipe' });
-          log('✅ Toolchain para Linux detectado', 'green');
-          canBuildLinux = true;
-        } catch (error) {
-          log('⚠️ No se detectó el toolchain para Linux', 'yellow');
+        // Para Linux, vamos a usar Docker en lugar de cross-compilation directa
+        // Reutilizamos la verificación de Docker que ya hicimos antes
+        if (dockerAvailable) {
+          log('✅ Se usará Docker para compilación cruzada de Linux', 'green');
           
-          // Instalar automáticamente si tenemos Homebrew
-          if (hasHomebrew) {
-            log('🔄 Intentando instalar toolchain para Linux automáticamente...', 'cyan');
+          // Verificar si la imagen de Docker para compilación de Linux existe
+          try {
+            execSync('docker image ls | grep tauri-builder', { stdio: 'pipe' });
+            log('✅ Imagen Docker para Linux detectada', 'green');
+            canBuildLinux = true;
+          } catch (imageError) {
+            log('🔄 Creando imagen Docker para compilación de Linux...', 'cyan');
             
-            // Primero añadir el tap necesario
-            const tapAdded = installWithHomebrew([], { tap: 'SergioBenitez/osxct' });
+            // Crear un Dockerfile temporal
+            const dockerfilePath = path.join(__dirname, 'Dockerfile.tauri-builder');
+            const dockerfileContent = `FROM ubuntu:20.04
+RUN apt-get update && apt-get install -y \\
+    curl \\
+    build-essential \\
+    libssl-dev \\
+    libgtk-3-dev \\
+    libwebkit2gtk-4.0-dev \\
+    libappindicator3-dev \\
+    librsvg2-dev \\
+    patchelf \\
+    nodejs \\
+    npm
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+WORKDIR /app`;
             
-            if (tapAdded) {
-              // Luego instalar el toolchain
-              const installed = installWithHomebrew(['x86_64-unknown-linux-gnu']);
+            fs.writeFileSync(dockerfilePath, dockerfileContent);
+            
+            try {
+              // Construir la imagen Docker
+              execSync('docker build -t tauri-builder -f Dockerfile.tauri-builder .', { stdio: 'inherit' });
+              log('✅ Imagen Docker para Linux creada correctamente', 'green');
+              canBuildLinux = true;
               
-              if (installed) {
-                log('✅ Toolchain para Linux instalado correctamente', 'green');
-                
-                // También instalar dependencias GTK para Linux
-                log('🔄 Instalando dependencias GTK para Linux...', 'cyan');
-                installWithHomebrew(['pkg-config', 'x86_64-unknown-linux-gnu-gtk3']);
-                
-                canBuildLinux = true;
-              } else {
-                log('❌ No se pudo instalar el toolchain para Linux', 'red');
+              // Eliminar el Dockerfile temporal
+              fs.unlinkSync(dockerfilePath);
+            } catch (buildError) {
+              log(`❌ Error al crear imagen Docker: ${buildError.message}`, 'red');
+              // Eliminar el Dockerfile temporal en caso de error
+              if (fs.existsSync(dockerfilePath)) {
+                fs.unlinkSync(dockerfilePath);
               }
             }
-          } else {
-            log('   Para compilar para Linux desde macOS, instala:', 'yellow');
-            log('   brew tap SergioBenitez/osxct', 'yellow');
-            log('   brew install x86_64-unknown-linux-gnu', 'yellow');
           }
+        } else {
+          log('⚠️ Docker no está disponible para compilación de Linux', 'yellow');
+          log('   La compilación cruzada para Linux requiere Docker', 'yellow');
+          log('   Por favor, instala Docker Desktop desde https://www.docker.com/products/docker-desktop/', 'yellow');
         }
         
         if (canBuildLinux) {
-          log(`🎯 Construyendo para Linux (x86_64)...`, 'cyan');
-          // Configurar variables de entorno para la compilación cruzada
-          const env = {
-            ...process.env,
-            CC_x86_64_unknown_linux_gnu: 'x86_64-linux-gnu-gcc',
-            CXX_x86_64_unknown_linux_gnu: 'x86_64-linux-gnu-g++',
-            AR_x86_64_unknown_linux_gnu: 'x86_64-linux-gnu-ar',
-            CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER: 'x86_64-linux-gnu-gcc',
-            PKG_CONFIG_PATH: '/usr/lib/x86_64-linux-gnu/pkgconfig'
-          };
-          execSync('npm run tauri build -- --target x86_64-unknown-linux-gnu', { stdio: 'inherit', env });
-          log('✅ Build completado para Linux', 'green');
+          log(`🎯 Construyendo para Linux (x86_64) usando Docker...`, 'cyan');
+          
+          // Crear un script temporal para la compilación en Docker
+          const buildScriptPath = path.join(__dirname, 'build-linux.sh');
+          const buildScriptContent = `#!/bin/bash
+set -e
+cd /app
+npm install
+npm run tauri build
+`;
+          fs.writeFileSync(buildScriptPath, buildScriptContent);
+          fs.chmodSync(buildScriptPath, '755'); // Hacer ejecutable
+          
+          try {
+            // Ejecutar la compilación en Docker
+            execSync(`docker run --rm -v "${__dirname}:/app" tauri-builder /app/build-linux.sh`, { stdio: 'inherit' });
+            log('✅ Build completado para Linux usando Docker', 'green');
+            
+            // Copiar los archivos compilados a la ubicación esperada
+            const linuxBundleDir = path.join(__dirname, 'src-tauri', 'target', 'release', 'bundle');
+            const linuxTargetDir = path.join(__dirname, 'src-tauri', 'target', 'x86_64-unknown-linux-gnu', 'release', 'bundle');
+            
+            // Crear el directorio de destino si no existe
+            if (!fs.existsSync(path.dirname(linuxTargetDir))) {
+              fs.mkdirSync(path.dirname(linuxTargetDir), { recursive: true });
+            }
+            
+            // Copiar los archivos
+            if (fs.existsSync(linuxBundleDir)) {
+              execSync(`cp -r "${linuxBundleDir}" "${path.dirname(linuxTargetDir)}"`, { stdio: 'inherit' });
+              log('✅ Archivos de Linux copiados correctamente', 'green');
+            }
+            
+          } catch (buildError) {
+            log(`❌ Error al compilar para Linux: ${buildError.message}`, 'red');
+          } finally {
+            // Eliminar el script temporal
+            if (fs.existsSync(buildScriptPath)) {
+              fs.unlinkSync(buildScriptPath);
+            }
+          }
         } else {
           log('⚠️ Saltando compilación para Linux por falta de herramientas', 'yellow');
         }
