@@ -98,6 +98,22 @@ Si Docker se queda sin espacio, puedes limpiar imágenes y contenedores no utili
 docker system prune -a
 ```
 
+### Error: "http status: 503" al compilar para Windows
+
+Este error puede ocurrir cuando NSIS no puede descargar sus dependencias. La solución es:
+
+1. Asegúrate de que Docker tiene acceso a Internet
+2. El script ahora monta el directorio `.tauri` como volumen para cachear las dependencias
+3. Ejecuta el script auxiliar para descargar manualmente las dependencias:
+   ```bash
+   npm run download-nsis
+   ```
+   Este script descargará las dependencias de NSIS directamente en el directorio cache
+
+### Error: "EBADENGINE" en npm
+
+Este error ocurre porque algunas dependencias requieren Node.js 20+. El script ahora configura automáticamente Node.js 20 en los contenedores Docker.
+
 ## Compilación Automatizada para Todas las Plataformas
 
 El script `release.js` ahora puede compilar automáticamente para todas las plataformas si tienes Docker instalado:

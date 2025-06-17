@@ -211,6 +211,9 @@ function buildApp() {
         log('⚠️ Homebrew no detectado, las dependencias deberán instalarse manualmente', 'yellow');
       }
       
+      // Verificar si Docker está disponible (definir la variable globalmente)
+      const dockerAvailable = checkDocker();
+      
       // 3. Windows (requiere configuración de cross-compilation)
       log(`🎯 Verificando requisitos para compilación de Windows...`, 'cyan');
       
@@ -287,12 +290,29 @@ RUN apt-get update && apt-get install -y \\
     gcc-mingw-w64 \\
     g++-mingw-w64 \\
     wine64 \\
-    nodejs \\
-    npm
+    wget \\
+    gnupg
+    
+# Instalar Node.js 20 (versión compatible con Octokit)
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+RUN apt-get install -y nodejs
+RUN npm install -g npm@latest
+
+# Configurar Rust para Windows GNU
 RUN rustup target add x86_64-pc-windows-gnu
+RUN rustup toolchain install stable-x86_64-pc-windows-gnu
+
+# Configurar variables de entorno para cross-compilation
+ENV CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER=x86_64-w64-mingw32-gcc
+ENV CC_x86_64_pc_windows_gnu=x86_64-w64-mingw32-gcc
+ENV CXX_x86_64_pc_windows_gnu=x86_64-w64-mingw32-g++
+
 WORKDIR /app`;
           
           fs.writeFileSync(dockerfileWinPath, dockerfileWinContent);
+          
+          // Definir la variable buildWinScriptPath en el ámbito correcto
+          const buildWinScriptPath = path.join(__dirname, 'build-windows.sh');
           
           try {
             // Construir la imagen Docker para Windows
@@ -300,18 +320,27 @@ WORKDIR /app`;
             log('✅ Imagen Docker para Windows creada correctamente', 'green');
             
             // Crear un script temporal para la compilación en Docker
-            const buildWinScriptPath = path.join(__dirname, 'build-windows.sh');
             const buildWinScriptContent = `#!/bin/bash
 set -e
 cd /app
 npm install
-npm run tauri build -- --target x86_64-pc-windows-gnu
+# Usar la versión GNU de Windows en lugar de MSVC
+npm run tauri build -- --target x86_64-pc-windows-gnu -- --features custom-protocol
 `;
             fs.writeFileSync(buildWinScriptPath, buildWinScriptContent);
             fs.chmodSync(buildWinScriptPath, '755'); // Hacer ejecutable
             
-            // Ejecutar la compilación en Docker
-            execSync(`docker run --rm -v "${__dirname}:/app" windows-builder /app/build-windows.sh`, { stdio: 'inherit' });
+            // Ejecutar la compilación en Docker con cache local para NSIS
+            const homeDir = os.homedir();
+            const cacheDir = path.join(homeDir, '.tauri');
+            
+            // Crear directorio de cache si no existe
+            if (!fs.existsSync(cacheDir)) {
+              fs.mkdirSync(cacheDir, { recursive: true });
+            }
+            
+            // Ejecutar con volumen adicional para cache
+            execSync(`docker run --rm -v "${__dirname}:/app" -v "${cacheDir}:/root/.tauri" windows-builder /app/build-windows.sh`, { stdio: 'inherit' });
             log('✅ Build completado para Windows usando Docker', 'green');
             
             // Copiar los archivos compilados a la ubicación esperada
@@ -373,6 +402,9 @@ npm run tauri build -- --target x86_64-pc-windows-gnu
             // Crear un Dockerfile temporal
             const dockerfilePath = path.join(__dirname, 'Dockerfile.tauri-builder');
             const dockerfileContent = `FROM ubuntu:20.04
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Instalar dependencias básicas
 RUN apt-get update && apt-get install -y \\
     curl \\
     build-essential \\
@@ -382,10 +414,23 @@ RUN apt-get update && apt-get install -y \\
     libappindicator3-dev \\
     librsvg2-dev \\
     patchelf \\
-    nodejs \\
-    npm
+    wget \\
+    gnupg \\
+    ca-certificates
+
+# Instalar Node.js 20 (versión compatible con Octokit)
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+RUN apt-get install -y nodejs
+RUN npm install -g npm@latest
+
+# Instalar Rust
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Configurar Rust para Linux
+RUN rustup default stable
+RUN rustup target add x86_64-unknown-linux-gnu
+
 WORKDIR /app`;
             
             fs.writeFileSync(dockerfilePath, dockerfileContent);
@@ -412,7 +457,7 @@ WORKDIR /app`;
           log('   Por favor, instala Docker Desktop desde https://www.docker.com/products/docker-desktop/', 'yellow');
         }
         
-        if (canBuildLinux) {
+                  if (canBuildLinux) {
           log(`🎯 Construyendo para Linux (x86_64) usando Docker...`, 'cyan');
           
           // Crear un script temporal para la compilación en Docker
@@ -421,14 +466,23 @@ WORKDIR /app`;
 set -e
 cd /app
 npm install
-npm run tauri build
+npm run tauri build -- --target x86_64-unknown-linux-gnu
 `;
           fs.writeFileSync(buildScriptPath, buildScriptContent);
           fs.chmodSync(buildScriptPath, '755'); // Hacer ejecutable
           
           try {
-            // Ejecutar la compilación en Docker
-            execSync(`docker run --rm -v "${__dirname}:/app" tauri-builder /app/build-linux.sh`, { stdio: 'inherit' });
+            // Ejecutar la compilación en Docker con cache local para Tauri
+            const homeDir = os.homedir();
+            const cacheDir = path.join(homeDir, '.tauri');
+            
+            // Crear directorio de cache si no existe
+            if (!fs.existsSync(cacheDir)) {
+              fs.mkdirSync(cacheDir, { recursive: true });
+            }
+            
+            // Ejecutar con volumen adicional para cache
+            execSync(`docker run --rm -v "${__dirname}:/app" -v "${cacheDir}:/root/.tauri" tauri-builder /app/build-linux.sh`, { stdio: 'inherit' });
             log('✅ Build completado para Linux usando Docker', 'green');
             
             // Copiar los archivos compilados a la ubicación esperada

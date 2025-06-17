@@ -23,7 +23,8 @@
     "release:major-pre": "node release.js major --prerelease --push",
     "release:patch-force": "node release.js patch -f",
     "release:minor-force": "node release.js minor -f",
-    "release:major-force": "node release.js major -f"
+    "release:major-force": "node release.js major -f",
+    "download-nsis": "node download-nsis-deps.js"
   },
   "dependencies": {
     "@octokit/rest": "^22.0.0",
