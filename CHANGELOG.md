@@ -46,7 +46,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Incremental Releases**: New builds are added to existing releases
 - **Multiple Platforms**: A single release can contain builds for Windows, Linux, and macOS
 - **Build Status**: Clear tracking of which platforms are available
-- **Cross-Platform Building**: When running on macOS, automatically builds for all platforms (Windows, Linux, macOS)
+- **Cross-Platform Building**: When running on macOS, automatically builds for all platforms with proper toolchains
+
+#### **Cross-Compilation Requirements**
+- **macOS to Windows**: Requires MinGW-w64 toolchain (instalado automáticamente)
+- **macOS to Linux**: Requires Linux GNU toolchain (instalado automáticamente)
+- **Automatic Installation**: Detecta Homebrew e instala automáticamente las dependencias necesarias
+- **Intelligent Detection**: Automatically detects available toolchains and skips unavailable platforms
 
 ## [0.0.4] - 2025-06-15
 

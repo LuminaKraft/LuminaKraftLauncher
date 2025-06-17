@@ -152,23 +152,168 @@ function buildApp() {
       log(`🎯 Construyendo para macOS ARM (Apple Silicon)...`, 'cyan');
       execSync('npm run tauri build -- --target aarch64-apple-darwin', { stdio: 'inherit' });
       
+      // Función para verificar si Homebrew está instalado
+      function isHomebrewInstalled() {
+        try {
+          execSync('which brew', { stdio: 'pipe' });
+          return true;
+        } catch (error) {
+          return false;
+        }
+      }
+      
+      // Función para instalar herramientas con Homebrew
+      function installWithHomebrew(packages, options = {}) {
+        const { tap } = options;
+        
+        try {
+          if (tap) {
+            log(`🍺 Añadiendo tap: ${tap}...`, 'cyan');
+            execSync(`brew tap ${tap}`, { stdio: 'inherit' });
+          }
+          
+          log(`🍺 Instalando con Homebrew: ${packages.join(', ')}...`, 'cyan');
+          execSync(`brew install ${packages.join(' ')}`, { stdio: 'inherit' });
+          return true;
+        } catch (error) {
+          log(`⚠️ Error al instalar con Homebrew: ${error.message}`, 'yellow');
+          return false;
+        }
+      }
+      
+      // Verificar si Homebrew está instalado
+      const hasHomebrew = isHomebrewInstalled();
+      if (hasHomebrew) {
+        log('✅ Homebrew detectado, se pueden instalar dependencias automáticamente', 'green');
+      } else {
+        log('⚠️ Homebrew no detectado, las dependencias deberán instalarse manualmente', 'yellow');
+      }
+      
       // 3. Windows (requiere configuración de cross-compilation)
-      log(`🎯 Construyendo para Windows (x86_64)...`, 'cyan');
+      log(`🎯 Verificando requisitos para compilación de Windows...`, 'cyan');
+      
+      // Verificar si tenemos las herramientas necesarias para Windows
+      let canBuildWindows = false;
       try {
+        // Verificar si existe la target de Rust para Windows
         execSync('rustup target add x86_64-pc-windows-msvc', { stdio: 'inherit' });
-        execSync('npm run tauri build -- --target x86_64-pc-windows-msvc', { stdio: 'inherit' });
-        log('✅ Build completado para Windows', 'green');
+        
+        // Verificar si tenemos las herramientas de cross-compilation para Windows
+        try {
+          // Intentar verificar si está instalado el toolchain para Windows
+          execSync('which x86_64-w64-mingw32-gcc || echo "No instalado"', { stdio: 'pipe' });
+          log('✅ Toolchain para Windows detectado', 'green');
+          canBuildWindows = true;
+        } catch (error) {
+          log('⚠️ No se detectó el toolchain para Windows', 'yellow');
+          
+          // Instalar automáticamente si tenemos Homebrew
+          if (hasHomebrew) {
+            log('🔄 Intentando instalar toolchain para Windows automáticamente...', 'cyan');
+            const installed = installWithHomebrew(['mingw-w64']);
+            
+            if (installed) {
+              log('✅ Toolchain para Windows instalado correctamente', 'green');
+              canBuildWindows = true;
+              
+              // Configurar variables de entorno para Windows
+              process.env.CC_x86_64_pc_windows_msvc = 'x86_64-w64-mingw32-gcc';
+              process.env.CXX_x86_64_pc_windows_msvc = 'x86_64-w64-mingw32-g++';
+              process.env.AR_x86_64_pc_windows_msvc = 'x86_64-w64-mingw32-ar';
+              process.env.CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER = 'x86_64-w64-mingw32-gcc';
+            } else {
+              log('❌ No se pudo instalar el toolchain para Windows', 'red');
+            }
+          } else {
+            log('   Para compilar para Windows desde macOS, instala:', 'yellow');
+            log('   brew install mingw-w64', 'yellow');
+          }
+        }
+        
+        if (canBuildWindows) {
+          log(`🎯 Construyendo para Windows (x86_64)...`, 'cyan');
+          // Configurar variables de entorno para la compilación cruzada
+          const env = {
+            ...process.env,
+            CC_x86_64_pc_windows_msvc: 'x86_64-w64-mingw32-gcc',
+            CXX_x86_64_pc_windows_msvc: 'x86_64-w64-mingw32-g++',
+            AR_x86_64_pc_windows_msvc: 'x86_64-w64-mingw32-ar',
+            CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER: 'x86_64-w64-mingw32-gcc'
+          };
+          execSync('npm run tauri build -- --target x86_64-pc-windows-msvc', { stdio: 'inherit', env });
+          log('✅ Build completado para Windows', 'green');
+        } else {
+          log('⚠️ Saltando compilación para Windows por falta de herramientas', 'yellow');
+        }
       } catch (error) {
         log(`⚠️ No se pudo compilar para Windows: ${error.message}`, 'yellow');
         log('   Esto puede requerir configuración adicional de cross-compilation.', 'yellow');
       }
       
       // 4. Linux (requiere configuración de cross-compilation)
-      log(`🎯 Construyendo para Linux (x86_64)...`, 'cyan');
+      log(`🎯 Verificando requisitos para compilación de Linux...`, 'cyan');
+      
+      // Verificar si tenemos las herramientas necesarias para Linux
+      let canBuildLinux = false;
       try {
+        // Verificar si existe la target de Rust para Linux
         execSync('rustup target add x86_64-unknown-linux-gnu', { stdio: 'inherit' });
-        execSync('npm run tauri build -- --target x86_64-unknown-linux-gnu', { stdio: 'inherit' });
-        log('✅ Build completado para Linux', 'green');
+        
+        // Verificar si tenemos las herramientas de cross-compilation para Linux
+        try {
+          // Intentar verificar si está instalado el toolchain para Linux
+          execSync('which x86_64-linux-gnu-gcc || echo "No instalado"', { stdio: 'pipe' });
+          log('✅ Toolchain para Linux detectado', 'green');
+          canBuildLinux = true;
+        } catch (error) {
+          log('⚠️ No se detectó el toolchain para Linux', 'yellow');
+          
+          // Instalar automáticamente si tenemos Homebrew
+          if (hasHomebrew) {
+            log('🔄 Intentando instalar toolchain para Linux automáticamente...', 'cyan');
+            
+            // Primero añadir el tap necesario
+            const tapAdded = installWithHomebrew([], { tap: 'SergioBenitez/osxct' });
+            
+            if (tapAdded) {
+              // Luego instalar el toolchain
+              const installed = installWithHomebrew(['x86_64-unknown-linux-gnu']);
+              
+              if (installed) {
+                log('✅ Toolchain para Linux instalado correctamente', 'green');
+                
+                // También instalar dependencias GTK para Linux
+                log('🔄 Instalando dependencias GTK para Linux...', 'cyan');
+                installWithHomebrew(['pkg-config', 'x86_64-unknown-linux-gnu-gtk3']);
+                
+                canBuildLinux = true;
+              } else {
+                log('❌ No se pudo instalar el toolchain para Linux', 'red');
+              }
+            }
+          } else {
+            log('   Para compilar para Linux desde macOS, instala:', 'yellow');
+            log('   brew tap SergioBenitez/osxct', 'yellow');
+            log('   brew install x86_64-unknown-linux-gnu', 'yellow');
+          }
+        }
+        
+        if (canBuildLinux) {
+          log(`🎯 Construyendo para Linux (x86_64)...`, 'cyan');
+          // Configurar variables de entorno para la compilación cruzada
+          const env = {
+            ...process.env,
+            CC_x86_64_unknown_linux_gnu: 'x86_64-linux-gnu-gcc',
+            CXX_x86_64_unknown_linux_gnu: 'x86_64-linux-gnu-g++',
+            AR_x86_64_unknown_linux_gnu: 'x86_64-linux-gnu-ar',
+            CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER: 'x86_64-linux-gnu-gcc',
+            PKG_CONFIG_PATH: '/usr/lib/x86_64-linux-gnu/pkgconfig'
+          };
+          execSync('npm run tauri build -- --target x86_64-unknown-linux-gnu', { stdio: 'inherit', env });
+          log('✅ Build completado para Linux', 'green');
+        } else {
+          log('⚠️ Saltando compilación para Linux por falta de herramientas', 'yellow');
+        }
       } catch (error) {
         log(`⚠️ No se pudo compilar para Linux: ${error.message}`, 'yellow');
         log('   Esto puede requerir configuración adicional de cross-compilation.', 'yellow');

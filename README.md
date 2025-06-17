@@ -484,5 +484,6 @@ Desarrollado con ❤️ por el equipo de **LuminaKraft Studios**.
 ## 📋 Documentación Adicional
 
 - [`CHANGELOG.md`](CHANGELOG.md) - Registro detallado de todos los cambios
+- [`CROSS_COMPILATION_GUIDE.md`](CROSS_COMPILATION_GUIDE.md) - Guía para compilación cruzada (macOS → Windows/Linux)
 - [`docs/`](docs/) - Documentación técnica detallada
   - [Integración con Lyceris](docs/LYCERIS_INTEGRATION_SUMMARY.md)
