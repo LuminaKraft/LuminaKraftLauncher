@@ -112,6 +112,21 @@ Este error puede ocurrir cuando NSIS no puede descargar sus dependencias. La sol
    ```
    Este script descargará las dependencias de NSIS directamente en el directorio cache
 
+### Error: "pkg-config has not been configured to support cross-compilation"
+
+Este error ocurre cuando pkg-config no está configurado para compilación cruzada en Linux:
+
+1. El Dockerfile.linux-builder ya incluye pkg-config y las variables de entorno necesarias
+2. Se ha creado un archivo `.cargo/config.toml` con la configuración para cross-compilation
+3. Las variables de entorno se configuran automáticamente en el script de compilación
+
+### Error: "the package does not contain this feature: custom-protocol"
+
+Este error ocurre cuando se intenta compilar con características (features) que no están definidas:
+
+1. Asegúrate de que no estás usando `--features` en los comandos de compilación
+2. Si necesitas características personalizadas, primero defínelas en el archivo Cargo.toml
+
 ### Error: "EBADENGINE" en npm
 
 Este error ocurre porque algunas dependencias requieren Node.js 20+. El script ahora configura automáticamente Node.js 20 en los contenedores Docker.
