@@ -141,14 +141,15 @@ function buildApp() {
     const platform = os.platform();
     
     if (platform === 'darwin') {
-      // En macOS, construir para ambas arquitecturas
-      log(`🎯 Construyendo para macOS ARM (Apple Silicon)...`, 'cyan');
-      execSync('npm run tauri build -- --target aarch64-apple-darwin', { stdio: 'inherit' });
-      
+      // En macOS, construir para ambas arquitecturas, primero Intel y luego ARM
       // Añadir soporte para arquitectura Intel
       log(`🎯 Construyendo para macOS Intel (x86_64)...`, 'cyan');
       execSync('rustup target add x86_64-apple-darwin', { stdio: 'inherit' });
       execSync('npm run tauri build -- --target x86_64-apple-darwin', { stdio: 'inherit' });
+      
+      // Luego construir para ARM (Apple Silicon)
+      log(`🎯 Construyendo para macOS ARM (Apple Silicon)...`, 'cyan');
+      execSync('npm run tauri build -- --target aarch64-apple-darwin', { stdio: 'inherit' });
       
       log('✅ Build completado para ambas arquitecturas de macOS', 'green');
     } else {
@@ -199,44 +200,18 @@ function getInstallerFiles() {
   } else if (platform === 'darwin') {
     const version = getCurrentVersion();
     
-    // Definir las rutas base para las arquitecturas
-    const tauriTargetPath = path.dirname(path.dirname(ARTIFACTS_PATH)); // Subir dos niveles desde ARTIFACTS_PATH
-    const aarch64Path = path.join(tauriTargetPath, 'aarch64-apple-darwin', 'release');
-    const x86_64Path = path.join(tauriTargetPath, 'x86_64-apple-darwin', 'release');
+    // Definir la carpeta tauri base
+    const tauriDir = path.join(__dirname, 'src-tauri');
+    
+    // Definir las rutas correctas para ambas arquitecturas incluyendo 'target'
+    const aarch64Path = path.join(tauriDir, 'target', 'aarch64-apple-darwin', 'release');
+    const x86_64Path = path.join(tauriDir, 'target', 'x86_64-apple-darwin', 'release');
     
     log(`🔍 Rutas de búsqueda:`, 'cyan');
     log(`  • ARM64: ${aarch64Path}`, 'cyan');
     log(`  • x86_64: ${x86_64Path}`, 'cyan');
     
-    // Buscar compilados para Apple Silicon (aarch64)
-    if (fs.existsSync(path.join(aarch64Path, 'bundle', 'dmg'))) {
-      const dmgFiles = fs.readdirSync(path.join(aarch64Path, 'bundle', 'dmg')).filter(f => f.endsWith('.dmg'));
-      log(`  📦 Encontrados ${dmgFiles.length} archivos DMG para Apple Silicon`, 'cyan');
-      
-      for (const dmgFile of dmgFiles) {
-        installers.push({
-          type: 'file',
-          path: path.join(aarch64Path, 'bundle', 'dmg', dmgFile),
-          name: dmgFile
-        });
-      }
-    }
-    
-    if (fs.existsSync(path.join(aarch64Path, 'bundle', 'macos'))) {
-      const appFiles = fs.readdirSync(path.join(aarch64Path, 'bundle', 'macos')).filter(f => f.endsWith('.app'));
-      log(`  📦 Encontrados ${appFiles.length} archivos APP para Apple Silicon`, 'cyan');
-      
-      for (const appFile of appFiles) {
-        const formattedName = `LuminaKraft.Launcher_${version}_aarch64.app.zip`;
-        
-        installers.push({
-          isApp: true,
-          originalPath: path.join(aarch64Path, 'bundle', 'macos', appFile),
-          formattedName
-        });
-      }
-    }
-    
+    // Primero buscamos x86_64 (Intel) ya que lo compilamos primero
     // Buscar compilados para Intel (x86_64)
     if (fs.existsSync(path.join(x86_64Path, 'bundle', 'dmg'))) {
       const dmgFiles = fs.readdirSync(path.join(x86_64Path, 'bundle', 'dmg')).filter(f => f.endsWith('.dmg'));
@@ -249,6 +224,8 @@ function getInstallerFiles() {
           name: dmgFile
         });
       }
+    } else {
+      log(`  ❌ No se encontraron archivos DMG para Intel x86_64 en ${path.join(x86_64Path, 'bundle', 'dmg')}`, 'yellow');
     }
     
     if (fs.existsSync(path.join(x86_64Path, 'bundle', 'macos'))) {
@@ -264,8 +241,45 @@ function getInstallerFiles() {
           formattedName
         });
       }
+    } else {
+      log(`  ❌ No se encontraron archivos APP para Intel x86_64 en ${path.join(x86_64Path, 'bundle', 'macos')}`, 'yellow');
+    }
+    
+    // Buscar compilados para Apple Silicon (aarch64)
+    if (fs.existsSync(path.join(aarch64Path, 'bundle', 'dmg'))) {
+      const dmgFiles = fs.readdirSync(path.join(aarch64Path, 'bundle', 'dmg')).filter(f => f.endsWith('.dmg'));
+      log(`  📦 Encontrados ${dmgFiles.length} archivos DMG para Apple Silicon`, 'cyan');
+      
+      for (const dmgFile of dmgFiles) {
+        installers.push({
+          type: 'file',
+          path: path.join(aarch64Path, 'bundle', 'dmg', dmgFile),
+          name: dmgFile
+        });
+      }
+    } else {
+      log(`  ❌ No se encontraron archivos DMG para Apple Silicon en ${path.join(aarch64Path, 'bundle', 'dmg')}`, 'yellow');
+    }
+    
+    if (fs.existsSync(path.join(aarch64Path, 'bundle', 'macos'))) {
+      const appFiles = fs.readdirSync(path.join(aarch64Path, 'bundle', 'macos')).filter(f => f.endsWith('.app'));
+      log(`  📦 Encontrados ${appFiles.length} archivos APP para Apple Silicon`, 'cyan');
+      
+      for (const appFile of appFiles) {
+        const formattedName = `LuminaKraft.Launcher_${version}_aarch64.app.zip`;
+        
+        installers.push({
+          isApp: true,
+          originalPath: path.join(aarch64Path, 'bundle', 'macos', appFile),
+          formattedName
+        });
+      }
+    } else {
+      log(`  ❌ No se encontraron archivos APP para Apple Silicon en ${path.join(aarch64Path, 'bundle', 'macos')}`, 'yellow');
     }
   }
+  
+  log(`  📦 Total: ${installers.length} archivos para subir`, 'cyan');
   
   return installers;
 }
@@ -643,21 +657,17 @@ async function main() {
   const versionArg = versionArgs[0];
   let newVersion;
 
-  // Handle semantic version increments
-  if (['patch', 'minor', 'major'].includes(versionArg)) {
+  // Check if we should increment version or use given one
+  if (['major', 'minor', 'patch'].includes(versionArg)) {
     const currentVersion = getCurrentVersion();
-    const [major, minor, patch] = currentVersion.split('.').map(Number);
+    const versionParts = currentVersion.split('.');
     
-    switch (versionArg) {
-      case 'patch':
-        newVersion = `${major}.${minor}.${patch + 1}`;
-        break;
-      case 'minor':
-        newVersion = `${major}.${minor + 1}.0`;
-        break;
-      case 'major':
-        newVersion = `${major + 1}.0.0`;
-        break;
+    if (versionArg === 'major') {
+      newVersion = `${parseInt(versionParts[0]) + 1}.0.0`;
+    } else if (versionArg === 'minor') {
+      newVersion = `${versionParts[0]}.${parseInt(versionParts[1]) + 1}.0`;
+    } else if (versionArg === 'patch') {
+      newVersion = `${versionParts[0]}.${versionParts[1]}.${parseInt(versionParts[2]) + 1}`;
     }
   } else {
     newVersion = versionArg;
@@ -665,89 +675,127 @@ async function main() {
 
   validateVersion(newVersion);
 
-  try {
-    log('\n🚀 Iniciando proceso de release', 'bright');
-    log(`📊 Versión actual: ${getCurrentVersion()}`, 'magenta');
-    log(`🎯 Nueva versión: ${newVersion}${isPrerelease ? ' (pre-release)' : ''}`, 'green');
-    log(`💻 Plataforma: ${os.platform()}`, 'cyan');
-    log('');
-    
-    // Actualizar versión
-    updateVersion(newVersion, isPrerelease);
+  log('\n🚀 Iniciando proceso de release', 'bright');
+  log(`📊 Versión actual: ${getCurrentVersion()}`, 'cyan');
+  log(`🎯 Nueva versión: ${newVersion}${isPrerelease ? ' (pre-release)' : ''}`, 'cyan');
+  log(`💻 Plataforma: ${os.platform()}`, 'cyan');
+  log('');
 
-    // Commit, tag and push before building/publishing
+  // Update version number in files
+  try {
+    updateVersion(newVersion, isPrerelease);
+  } catch (error) {
+    log(`❌ Error al actualizar versión: ${error.message}`, 'red');
+    process.exit(1);
+  }
+
+  if (process.env.SKIP_GIT !== 'true') {
+    // Commit and push tag
     try {
       log('📚 Commit y tag en Git...', 'cyan');
-      execSync('git add -A', { stdio: 'inherit' });
-      // Realizar commit solo si hay cambios
-      try {
-        execSync(`git commit -m "chore(release): v${newVersion}${isPrerelease ? ' (pre-release)' : ''}"`, { stdio: 'inherit' });
-      } catch { /* Sin cambios que commitear */ }
-
-      // Reemplazar tag si ya existe
-      let tagExists = false;
-      try {
-        execSync(`git rev-parse --quiet --verify refs/tags/v${newVersion}`, { stdio: 'ignore' });
-        tagExists = true;
-      } catch {}
-
-      if (tagExists) {
-        if (!forceFlag) {
-          const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-          const answer = await new Promise(res => rl.question(`⚠️ El tag v${newVersion} ya existe. ¿Reemplazarlo? (y/N): `, res));
-          rl.close();
-          if (!['y', 'Y', 'yes', 'YES'].includes(answer.trim())) {
-            throw new Error('Operación cancelada por el usuario.');
-          }
-        }
-        execSync(`git tag -d v${newVersion}`, { stdio: 'inherit' });
+      
+      // Check Git status
+      const gitStatus = execSync('git status').toString();
+      console.log(gitStatus);
+      
+      // Add changes
+      if (!gitStatus.includes('nothing to commit')) {
+        execSync('git add .', { stdio: 'inherit' });
+        execSync(`git commit -m "build: release v${newVersion}"`, { stdio: 'inherit' });
       }
-
-      // Crear/forzar tag
-      execSync(`git tag -a -f v${newVersion} -m "v${newVersion}"`, { stdio: 'inherit' });
-
-      // Push commit (si lo hubo) y tag forzado
+      
+      // Check if tag exists
+      try {
+        execSync(`git show-ref --tags v${newVersion}`, { stdio: 'pipe' });
+        const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+        const answer = await new Promise(res => rl.question(`⚠️ El tag v${newVersion} ya existe. ¿Reemplazarlo? (y/N): `, res));
+        rl.close();
+        
+        if (['y', 'Y', 'yes', 'YES'].includes(answer.trim())) {
+          execSync(`git tag -d v${newVersion}`, { stdio: 'inherit' });
+        } else {
+          log('❌ Operación cancelada por el usuario', 'red');
+          process.exit(1);
+        }
+      } catch (error) {
+        // Tag doesn't exist, continue
+      }
+      
+      // Create tag and push changes
+      execSync(`git tag -a v${newVersion} -m "Release v${newVersion}"`, { stdio: 'inherit' });
       execSync('git push', { stdio: 'inherit' });
-      execSync(`git push --force origin v${newVersion}`, { stdio: 'inherit' });
-
+      execSync(`git push origin v${newVersion}`, { stdio: 'inherit' });
+      
       log('✅ Commit y tag enviados a remoto', 'green');
-    } catch (gitErr) {
-      log(`⚠️ No se pudo hacer commit/push: ${gitErr.message}`, 'yellow');
+    } catch (error) {
+      log(`❌ Error en Git: ${error.message}`, 'red');
+      process.exit(1);
     }
+  }
 
-    // Construir
+  // Build the app
+  try {
     buildApp();
+  } catch (error) {
+    log(`❌ Error al construir la aplicación: ${error.message}`, 'red');
+    process.exit(1);
+  }
 
-    // Verificar token y crear cliente Octokit una vez
-    const token = process.env.GITHUB_TOKEN;
-    if (!token) {
-      throw new Error('GITHUB_TOKEN no encontrado. Revisa tu archivo .env o las variables de entorno del sistema.');
-    }
-    log(`🔑 Token encontrado: ${token.substring(0, 12)}...`, 'cyan');
+  // Read GitHub token
+  const token = process.env.GITHUB_TOKEN;
+  if (!token) {
+    log(`❌ No se encontró el token de GitHub. Cree un archivo .env con GITHUB_TOKEN=su_token_aquí`, 'red');
+    process.exit(1);
+  }
+  
+  log('🔑 Token encontrado: ' + token.substring(0, 10) + '...', 'green');
+
+  // Create release on GitHub
+  try {
+    // Set up Octokit
     const octokit = new Octokit({
-      auth: token,
-      userAgent: 'LuminaKraft-Launcher-Release-Script'
+      auth: token
     });
-
-    // Publicar en repo público
-    const publicRelease = await publishToPublic(newVersion, isPrerelease, forceFlag, octokit);
-
-    // Si es exitoso, publicar en repo privado
-    if (publicRelease) {
-      await publishToPrivate(newVersion, isPrerelease, publicRelease.html_url, forceFlag, octokit);
+    
+    // Publish the release
+    let publicRelease;
+    try {
+      // Upload to public repo
+      publicRelease = await publishToPublic(newVersion, isPrerelease, forceFlag, octokit);
+      if (!publicRelease) {
+        throw new Error('No se pudo crear la release pública.');
+      }
+    } catch (error) {
+      log(`❌ Error al publicar en el repo público: ${error.message}`, 'red');
+      // Intentar crear release informativa igualmente en el repo privado
+      try {
+        // Pasar URL falsa ya que no se creó la release pública
+        await publishToPrivate(newVersion, isPrerelease, "ERROR: No se creó la release pública", forceFlag, octokit);
+        log(`✅ Se creó la release informativa en el repo privado a pesar del error en la release pública.`, 'green');
+      } catch (privateError) {
+        log(`❌ Error al publicar en el repo privado: ${privateError.message}`, 'red');
+      }
+      throw error;
     }
 
-    log('\n✅ ¡Proceso completado con éxito!', 'green');
-    log('🌐 Visita el repositorio público para ver los archivos:', 'cyan');
-    log('   https://github.com/kristiangarcia/luminakraft-launcher-releases/releases\n');
+    // Crear release informativa en el repo privado
+    try {
+      await publishToPrivate(newVersion, isPrerelease, publicRelease.html_url, forceFlag, octokit);
+    } catch (error) {
+      log(`⚠️ Error al publicar en el repo privado: ${error.message}`, 'yellow');
+      log('   Esto no es un error crítico, el release público fue exitoso.', 'yellow');
+    }
 
   } catch (error) {
-    log('\n❌ Error en el proceso de release:', 'red');
+    log(`\n❌ Error en el proceso de release:`, 'red');
     log(error.message, 'red');
     process.exit(1);
-  } finally {
-    process.chdir(originalDir);
   }
+
+  log(`\n✨ Release v${newVersion}${isPrerelease ? ' (pre-release)' : ''} completada con éxito!`, 'green');
+  log(`   Actualiza tu documentación y notifica al equipo.`, 'cyan');
+
+  process.exit(0);
 }
 
 main(); 
