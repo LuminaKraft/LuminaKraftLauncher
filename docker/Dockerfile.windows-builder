@@ -1,0 +1,67 @@
+FROM --platform=linux/amd64 ubuntu:22.04
+
+RUN apt-get update && apt-get install -y \
+    curl \
+    build-essential \
+    pkg-config \
+    libssl-dev \
+    gcc-mingw-w64-x86-64 \
+    g++-mingw-w64-x86-64 \
+    zip \
+    unzip \
+    libwebkit2gtk-4.0-dev \
+    liblzma-dev \
+    mingw-w64-tools \
+    mingw-w64-x86-64-dev \
+    mingw-w64 \
+    wget
+
+# Install NSIS (Nullsoft Scriptable Install System)
+RUN apt-get update && apt-get install -y nsis
+
+# Download and install Windows liblzma
+RUN mkdir -p /usr/x86_64-w64-mingw32/lib/ && \
+    mkdir -p /usr/x86_64-w64-mingw32/include/lzma && \
+    wget https://github.com/tukaani-project/xz/releases/download/v5.8.1/xz-5.8.1-windows.zip && \
+    unzip xz-5.8.1-windows.zip && \
+    cp bin_x86-64/liblzma.dll /usr/x86_64-w64-mingw32/lib/ && \
+    cp -r include/* /usr/x86_64-w64-mingw32/include/ && \
+    # Use the def file from the documentation
+    cp doc/liblzma.def /usr/x86_64-w64-mingw32/lib/ && \
+    # Generate import library from the def file
+    x86_64-w64-mingw32-dlltool -d /usr/x86_64-w64-mingw32/lib/liblzma.def -D liblzma.dll -l /usr/x86_64-w64-mingw32/lib/liblzma.a && \
+    # Find the GCC directory for the symlink
+    GCC_DIR=$(find /usr/lib/gcc/x86_64-w64-mingw32 -maxdepth 1 -type d | grep -v "^/usr/lib/gcc/x86_64-w64-mingw32$" | head -n 1) && \
+    # Create a symlink to ensure the library is found
+    ln -sf /usr/x86_64-w64-mingw32/lib/liblzma.a $GCC_DIR/liblzma.a && \
+    # Create empty resolv lib for Windows
+    echo "LIBRARY resolv.dll" > resolv.def && \
+    echo "EXPORTS" >> resolv.def && \
+    x86_64-w64-mingw32-dlltool -d resolv.def -l /usr/x86_64-w64-mingw32/lib/libresolv.a
+
+# Install Rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Add the Windows target
+RUN rustup target add x86_64-pc-windows-gnu
+
+# Set up the Windows cross-compilation environment
+ENV CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER=x86_64-w64-mingw32-gcc \
+    CC_x86_64_pc_windows_gnu=x86_64-w64-mingw32-gcc \
+    CXX_x86_64_pc_windows_gnu=x86_64-w64-mingw32-g++ \
+    PKG_CONFIG_ALLOW_CROSS=1 \
+    RUSTFLAGS="-C link-arg=-Wl,--no-gc-sections -C link-arg=-llzma -C link-arg=-Wl,--allow-multiple-definition"
+
+# Install Node.js
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+    apt-get install -y nodejs
+
+# Install Tauri CLI
+RUN cargo install tauri-cli
+
+WORKDIR /app
+
+# Copy package.json and install dependencies
+COPY package.json package-lock.json ./
+RUN npm install --platform=linux --arch=x64 

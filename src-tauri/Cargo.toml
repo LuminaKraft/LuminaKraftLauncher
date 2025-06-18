@@ -39,6 +39,7 @@ sha1 = "0.10.6"
 thiserror = "2.0.9"
 
 [features]
+# No features here, they're now in the tauri dependency
 default = []
 macos-no-sign = []
 

@@ -5,7 +5,7 @@ All notable changes to the LuminaKraft Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.0.5] - 2025-06-17
+## [0.0.5] - 2024-05-22
 
 ### 🔄 Internal Naming Optimization
 
@@ -54,6 +54,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Linux Support**: Compila para Linux desde macOS usando contenedores
 - **No External Dependencies**: No requiere toolchains adicionales, solo Docker
 - **Intelligent Detection**: Detecta automáticamente Docker y crea las imágenes necesarias
+
+### 🔧 Optimized and Fixed
+
+- **Path optimization**: Simplified internal paths for macOS, Windows and Linux
+- **Improved release process**: 
+  - Standardized build scripts for all platforms
+  - Added support for both Intel and Apple Silicon in a single release
+  - Fixed file upload issues - now replaces files instead of adding timestamps
+  - Reduced release script complexity for easier maintenance
+- **Docker builds**: Docker images are now created automatically if they don't exist
+- **Build script organization**: Modularized build process with dedicated scripts for each platform
 
 ## [0.0.4] - 2025-06-15
 
@@ -184,129 +195,4 @@ pub struct UserSettings {
 
 #### **Fully Automatic Updates**
 - **Zero Manual Installation** - Users can now update with one click, no manual downloads required
-- **Tauri Built-in Updater** - Integrated `@tauri-apps/plugin-updater` for seamless updates
-- **Automatic App Restart** - App restarts automatically after successful update installation
-- **Intelligent Fallback** - Falls back to manual download if automatic installation fails
-- **Enhanced Update Dialog** - Updated UI to reflect automatic installation capabilities
-
-#### **Lyceris v1.1.3 Minecraft Launcher Integration**
-- **Complete rewrite** of Minecraft launching system using Lyceris Rust library
-- **Automatic Java Management** - Lyceris downloads and manages Java versions automatically
-- **Multi-threaded Downloads** - 3-5x faster download speeds with parallel processing
-- **Enhanced Mod Loader Support**:
-  - Forge (1.12.2+) ✅
-  - NeoForge ✅
-  - Fabric ✅
-  - Quilt ✅
-- **Automatic File Verification** - Built-in corruption detection and repair
-- **Real-time Progress Tracking** - Live download and installation progress
-
-### 🔧 Technical Improvements
-
-#### **Update System Architecture**
-- **Backend Integration**:
-  - Added `tauri-plugin-updater = "2"` dependency
-  - Added `tauri-plugin-process = "2"` for app restart functionality
-  - Configured updater endpoints in `tauri.conf.json`
-  - Integrated updater plugin in `main.rs`
-
-- **Frontend Enhancements**:
-  - Rewritten `UpdateService` to use Tauri's built-in updater
-  - Added `downloadAndInstallUpdate()` method for automatic installation
-  - Enhanced error handling with fallback to manual download
-  - Updated `UpdateDialog` component for automatic installation UI
-
-#### **Development Tools**
-- **Enhanced Port Cleanup**:
-  - `kill-port.js` script with ES module syntax
-  - Cross-platform process detection and termination
-  - Improved logging and error handling
-  - 2-second wait time for proper port release
-
-#### **Dependencies**
-- **Added Lyceris v1.1.3** with all 15 required dependencies:
-  - `base64 v0.22.1`
-  - `event-emitter-rs v0.1.4`
-  - `futures v0.3.31`
-  - `oauth2 v4.4.2`
-  - `rayon v1.10.0`
-  - `regex v1.11.1`
-  - `sha1 v0.10.6`
-  - `thiserror v2.0.9`
-- **Updated Core Dependencies**:
-  - `reqwest v0.12.9` (upgraded from v0.11)
-  - `uuid v1.11.0` with enhanced features
-  - `zip v2.2.1` (upgraded from v0.6)
-
-### 🎨 User Experience
-
-#### **Update Process Transformation**
-- **Before**: "The update will be downloaded and you'll need to install it manually."
-- **After**: "The update will be downloaded and installed automatically. The app will restart when complete."
-
-#### **UI/UX Improvements**
-- **Button Text**: Changed from "Download" to "Install Update"
-- **Progress Indicators**: Shows "Installing..." instead of "Opening..."
-- **Success Messages**: "Update installed successfully! App will restart..."
-- **Error Handling**: Clear error messages with fallback options
-
-### 🔒 Security & Reliability
-
-#### **Security Features**
-- **Tauri Security**: Uses Tauri's built-in updater with signature verification support
-- **User Consent**: Requires user approval before installation
-- **HTTPS Only**: All communications are encrypted
-- **Signed Updates**: Support for cryptographically signed updates
-
-#### **Reliability Features**
-- **Automatic Fallback**: If Tauri updater fails, falls back to manual download
-- **Error Recovery**: Clear error messages and recovery options
-- **Non-Blocking**: Update failures don't crash the app
-- **Smart Caching**: Avoids excessive update checks
-
-### 🐛 Bug Fixes
-
-#### **Critical Memory Issue Fixed**
-- **Problem**: JVM error "Initial heap size set to a larger value than the maximum heap size"
-- **Root Cause**: Conflicting memory settings between launcher and Lyceris
-- **Solution**: Replaced `JAVA_TOOL_OPTIONS` with Lyceris' built-in `.memory()` configuration
-- **Result**: Clean 4GB RAM allocation without conflicts
-
-#### **Development Issues Fixed**
-- **Port Conflict**: Fixed "Port 1420 is already in use" error in development
-- **ES Module Compatibility**: Updated scripts to work with modern JavaScript modules
-- **Process Cleanup**: Improved process termination for cleaner development experience
-- **Runtime Improvements**:
-  - Fixed Tauri context detection with `isTauriContext()` function
-  - Fixed safe command execution with `safeInvoke()` wrapper
-  - Fixed TypeScript compatibility issues with modpack status types
-  - Added development mode warning banner for browser testing
-
-### 📦 Dependencies Added
-
-#### **Frontend**
-- `@tauri-apps/plugin-updater` - Automatic update checking and installation
-- `@tauri-apps/plugin-process` - App restart functionality
-
-#### **Backend**
-- `tauri-plugin-updater = "2"` - Tauri updater plugin
-
-### 🔄 Breaking Changes
-- **None** - Full backward compatibility maintained
-- **API Enhancement**: Added new automatic update methods while preserving existing functionality
-
-### 📚 Documentation
-
-#### **New Documentation**
-- **LAUNCHER_API_UPDATER_REQUIREMENTS.md**: Comprehensive backend API requirements
-- **AUTOMATIC_UPDATES_SUMMARY.md**: Complete implementation summary
-- **UPDATE_FEATURE_SUMMARY.md**: Enhanced with automatic installation details
-- **LYCERIS_INTEGRATION_SUMMARY.md**: Technical implementation details
-- **Migration Guide**: Step-by-step upgrade instructions
-
-### 🎯 Future Enhancements
-- ✅ **Auto-Install**: ~~Implement automatic update installation~~ **COMPLETED**
-- **Update Notifications**: System tray notifications
-- **Rollback Support**: Ability to revert updates
-- **Beta Channel**: Support for pre-release versions
-- **Update History**: Show changelog and update history
+- **Tauri Built-in Updater** - Integrated `

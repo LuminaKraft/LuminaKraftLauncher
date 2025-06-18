@@ -1,0 +1,59 @@
+FROM --platform=linux/amd64 ubuntu:22.04
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Instalar dependencias básicas
+RUN apt-get update && apt-get install -y \
+    curl \
+    build-essential \
+    libssl-dev \
+    libgtk-3-dev \
+    libwebkit2gtk-4.0-dev \
+    libwebkit2gtk-4.1-dev \
+    libappindicator3-dev \
+    librsvg2-dev \
+    libsoup-3.0-dev \
+    libjavascriptcoregtk-4.1-dev \
+    pkg-config \
+    patchelf \
+    wget \
+    gnupg \
+    ca-certificates \
+    git \
+    liblzma-dev \
+    zip \
+    unzip \
+    xdg-utils \
+    fuse \
+    libfuse2
+
+# Instalar Node.js 20 (versión compatible con Octokit)
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+RUN apt-get install -y nodejs
+RUN npm install -g npm@latest
+
+# Instalar Rust con la última versión estable
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Add Windows target
+RUN rustup target add x86_64-pc-windows-gnu
+RUN apt-get update && apt-get install -y gcc-mingw-w64-x86-64
+
+# Create a dummy project to install Tauri CLI with the correct binary
+WORKDIR /tmp
+RUN npm init -y && \
+    npm install --save-dev @tauri-apps/cli && \
+    npx tauri --version || echo "Tauri CLI installed"
+
+# Configurar variables para controlar el uso de memoria
+ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
+ENV RUSTFLAGS="-C target-feature=-crt-static"
+
+# Forzar arquitectura x64 para npm
+ENV npm_config_arch=x64
+ENV npm_config_target_arch=x64
+
+# Preparar entorno para AppImage
+RUN chmod 755 / 
+
+WORKDIR /app 

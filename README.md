@@ -487,3 +487,89 @@ Desarrollado con ❤️ por el equipo de **LuminaKraft Studios**.
 - [`CROSS_COMPILATION_GUIDE.md`](CROSS_COMPILATION_GUIDE.md) - Guía para compilación cruzada (macOS → Windows/Linux)
 - [`docs/`](docs/) - Documentación técnica detallada
   - [Integración con Lyceris](docs/LYCERIS_INTEGRATION_SUMMARY.md)
+
+## Requisitos
+
+- Rust y Cargo
+- Node.js y npm
+- Docker (para compilación cruzada)
+- macOS (para compilación nativa de macOS)
+
+## Configuración del Entorno
+
+1. Instalar dependencias de Rust:
+   ```bash
+   rustup target add x86_64-pc-windows-gnu  # Para compilación de Windows
+   ```
+
+2. Instalar dependencias de Node.js:
+   ```bash
+   npm install
+   ```
+
+## Compilación
+
+### Método Sencillo (Recomendado)
+
+Usa el script automatizado para compilar para todas las plataformas o una específica:
+
+```bash
+./build-all.sh
+```
+
+Este script te presentará un menú para elegir las plataformas de compilación.
+
+### Compilación Manual
+
+#### Para macOS (Nativo)
+
+```bash
+cargo build --release
+```
+
+El ejecutable estará disponible en `target/release/luminakraft-launcher`.
+
+#### Para Windows (Usando Docker)
+
+```bash
+# Construir la imagen Docker para Windows
+docker build -t luminakraft-windows-builder -f Dockerfile.windows-builder .
+
+# Compilar para Windows
+./build-windows.sh
+```
+
+El ejecutable estará disponible en `dist/luminakraft-launcher.exe`.
+
+#### Para Linux (Usando Docker)
+
+```bash
+# Construir la imagen Docker para Linux
+docker build -t luminakraft-linux-builder -f Dockerfile.linux-builder .
+
+# Compilar para Linux
+./build-linux.sh
+```
+
+El ejecutable estará disponible en `dist/luminakraft-launcher-linux`.
+
+## Solución de Problemas
+
+Si encuentras problemas durante la compilación cruzada, consulta:
+
+- [Guía de Compilación Cruzada](./CROSS_COMPILATION_GUIDE.md) - Instrucciones detalladas y solución de problemas
+- [Solución de Problemas de Compilación](./CROSS_COMPILATION_SOLUTION.md) - Soluciones específicas para problemas conocidos
+
+## Estructura del Proyecto
+
+- `src/` - Código fuente de la interfaz de usuario (frontend)
+- `src-tauri/` - Código fuente del backend en Rust
+- `Dockerfile.windows-builder` - Configuración de Docker para compilación de Windows
+- `Dockerfile.linux-builder` - Configuración de Docker para compilación de Linux
+- `build-windows.sh` - Script para compilación de Windows
+- `build-linux.sh` - Script para compilación de Linux
+- `build-all.sh` - Script para compilación de todas las plataformas
+
+## Licencia
+
+Este proyecto está licenciado bajo [LICENCIA].
