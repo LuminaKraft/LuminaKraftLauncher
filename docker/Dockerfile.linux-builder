@@ -26,10 +26,20 @@ RUN apt-get update && apt-get install -y \
     fuse \
     libfuse2
 
-# Instalar Node.js 20 (versión compatible con Octokit)
+# Install Node.js 20 (compatible with Octokit)
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
 RUN apt-get install -y nodejs
 RUN npm install -g npm@latest
+
+# Pre-download AppImage dependencies to avoid issues
+RUN mkdir -p /tmp/appimage-deps && cd /tmp/appimage-deps && \
+    wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/AppRun-x86_64 && \
+    wget -q https://github.com/tauri-apps/binary-releases/releases/download/linuxdeploy/linuxdeploy-x86_64.AppImage && \
+    wget -q https://raw.githubusercontent.com/tauri-apps/linuxdeploy-plugin-gtk/master/linuxdeploy-plugin-gtk.sh && \
+    wget -q https://raw.githubusercontent.com/tauri-apps/linuxdeploy-plugin-gstreamer/master/linuxdeploy-plugin-gstreamer.sh && \
+    chmod +x linuxdeploy-x86_64.AppImage AppRun-x86_64 linuxdeploy-plugin-gtk.sh linuxdeploy-plugin-gstreamer.sh && \
+    mkdir -p /root/.cache/tauri/linuxdeploy && \
+    cp * /root/.cache/tauri/linuxdeploy/
 
 # Instalar Rust con la última versión estable
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y

@@ -108,6 +108,46 @@ npm run tauri build
 ```
 Genera los ejecutables para distribución con firma automática y configuración de actualizaciones.
 
+### Comandos de Release
+
+#### Release Estándar
+```bash
+# Release con versión específica (sin commit/push)
+npm run release -- 1.2.3
+
+# Release con commit y push automático
+npm run release -- 1.2.3 --push
+
+# Release prerelease
+npm run release -- 1.2.3 --prerelease
+```
+
+#### Comandos Abreviados
+```bash
+# Release con push automático
+npm run release:push -- 1.2.3
+
+# Release por tipo de versión (patch/minor/major)
+npm run release:patch -- 1.2.3  # Incrementa versión patch
+npm run release:minor -- 1.2.3  # Incrementa versión minor
+npm run release:major -- 1.2.3  # Incrementa versión major
+
+# Combinaciones (con push)
+npm run release:patch-push -- 1.2.3
+npm run release:minor-push -- 1.2.3
+npm run release:major-push -- 1.2.3
+
+# Prereleases
+npm run release:patch-pre -- 1.2.3
+npm run release:minor-pre -- 1.2.3
+npm run release:major-pre -- 1.2.3
+
+# Prereleases con push
+npm run release:patch-pre-push -- 1.2.3
+npm run release:minor-pre-push -- 1.2.3
+npm run release:major-pre-push -- 1.2.3
+```
+
 ### Solo Frontend (para desarrollo de UI)
 ```bash
 npm run dev

@@ -66,6 +66,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Docker builds**: Docker images are now created automatically if they don't exist
 - **Build script organization**: Modularized build process with dedicated scripts for each platform
 
+### 🔧 Build System Improvements
+
+#### **Docker Environment Updates**
+- **Node.js 20 Upgrade**: Updated Windows Docker builder from Node.js 18 to 20 for Octokit compatibility
+- **AppImage Fix**: Pre-downloaded AppImage dependencies in Linux Docker container to prevent build failures
+- **Environment Consistency**: Standardized Node.js versions across all build environments
+
+#### **Release Process Enhancements**
+- **Git Integration**: Added automatic Git commit and tag creation during release process
+- **Push Option**: New `--push` flag to automatically push changes to remote repository
+- **Streamlined Scripts**: Updated npm scripts with consistent naming for push operations
+- **Release Documentation**: Improved release command documentation
+
 ## [0.0.4] - 2025-06-15
 
 ### 🌎 CurseForge API Integration

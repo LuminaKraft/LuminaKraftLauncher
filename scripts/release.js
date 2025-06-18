@@ -107,19 +107,61 @@ function updateVersion(newVersion, isPrerelease = false) {
     }
   ];
 
-  log(`📝 Actualizando versión a ${newVersion}${isPrerelease ? ' (pre-release)' : ''} en todos los archivos...`, 'cyan');
+  log(`📝 Updating version to ${newVersion}${isPrerelease ? ' (pre-release)' : ''} in all files...`, 'cyan');
   
   files.forEach(file => {
     try {
       const content = fs.readFileSync(file.path, 'utf8');
       const updatedContent = file.update(content);
       fs.writeFileSync(file.path, updatedContent);
-      log(`  ✅ Actualizado ${file.path}`, 'green');
+      log(`  ✅ Updated ${file.path}`, 'green');
     } catch (error) {
-      log(`  ❌ Error al actualizar ${file.path}: ${error.message}`, 'red');
+      log(`  ❌ Error updating ${file.path}: ${error.message}`, 'red');
       process.exit(1);
     }
   });
+}
+
+// Create a Git commit and tag for the release
+function createGitCommit(version, isPrerelease) {
+  log('📝 Creating Git commit and tag...', 'cyan');
+  try {
+    // Add all modified files
+    execSync('git add .', { stdio: 'inherit' });
+    
+    // Create commit
+    const commitMessage = `Release v${version}${isPrerelease ? ' (pre-release)' : ''}`;
+    execSync(`git commit -m "${commitMessage}"`, { stdio: 'inherit' });
+    
+    // Create tag
+    const tagName = `v${version}`;
+    const tagMessage = `Version ${version}${isPrerelease ? ' (pre-release)' : ''}`;
+    execSync(`git tag -f -a ${tagName} -m "${tagMessage}"`, { stdio: 'inherit' });
+    
+    log('✅ Git commit and tag created successfully', 'green');
+    return true;
+  } catch (error) {
+    log(`❌ Error creating Git commit: ${error.message}`, 'red');
+    return false;
+  }
+}
+
+// Push changes and tags to remote repository
+function pushToGitRemote() {
+  log('🚀 Pushing changes to remote repository...', 'cyan');
+  try {
+    // Push commits
+    execSync('git push', { stdio: 'inherit' });
+    
+    // Push tags
+    execSync('git push --tags --force', { stdio: 'inherit' });
+    
+    log('✅ Changes pushed to remote successfully', 'green');
+    return true;
+  } catch (error) {
+    log(`❌ Error pushing to remote: ${error.message}`, 'red');
+    return false;
+  }
 }
 
 function validateVersion(version) {
@@ -641,6 +683,7 @@ async function main() {
         const newVersion = process.argv[versionArgIndex];
         const isPrerelease = process.argv.includes('--prerelease');
         const forceFlag = process.argv.includes('--force');
+        const shouldPush = process.argv.includes('--push');
 
         log(`🚀 Starting release process for v${newVersion}${isPrerelease ? ' (pre-release)' : ''}...`, 'cyan');
 
@@ -649,8 +692,18 @@ async function main() {
 
         // 2. Update version in files
         updateVersion(newVersion, isPrerelease);
+        
+        // 3. Create Git commit and tag
+        createGitCommit(newVersion, isPrerelease);
+        
+        // Push changes if requested
+        if (shouldPush) {
+            pushToGitRemote();
+        } else {
+            log('ℹ️  Changes committed locally. Use --push flag to push to remote.', 'yellow');
+        }
 
-        // 3. Build the application
+        // 4. Build the application
         log('🔨 Building the application for release...', 'cyan');
         try {
             buildApp();
@@ -662,12 +715,12 @@ async function main() {
             }
         }
 
-        // 4. Create GitHub client
+        // 5. Create GitHub client
         const octokit = new Octokit({
             auth: process.env.GITHUB_TOKEN
         });
 
-        // 5. Publish to public repo
+        // 6. Publish to public repo
         log('📤 Publishing to public repository...', 'cyan');
         let publicRelease;
         try {
@@ -678,7 +731,7 @@ async function main() {
             // Continue anyway to create the private repo info
         }
 
-        // 6. Publish info to private repo
+        // 7. Publish info to private repo
         log('📝 Updating information in private repository...', 'cyan');
         try {
             await publishToPrivate(
