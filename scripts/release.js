@@ -835,6 +835,16 @@ async function main() {
 
         log(`🚀 Starting release process for v${newVersion}${isPrerelease ? ' (pre-release)' : ''}...`, 'cyan');
 
+        // 0. Install dependencies first
+        log('📦 Installing dependencies...', 'cyan');
+        try {
+            execSync('npm install', { stdio: 'inherit' });
+            log('✅ Dependencies installed successfully', 'green');
+        } catch (error) {
+            log(`❌ Error installing dependencies: ${error.message}`, 'red');
+            process.exit(1);
+        }
+
         // 1. Validate version format
         validateVersion(newVersion);
 
