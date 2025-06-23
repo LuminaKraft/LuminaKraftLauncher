@@ -7,6 +7,8 @@ echo "--- Cleaning Docker Environment ---"
 echo "Removing existing builder images..."
 docker rmi -f windows-builder 2>/dev/null || echo "No windows-builder image found"
 docker rmi -f linux-builder 2>/dev/null || echo "No linux-builder image found"
+docker rmi -f luminakraft-windows-builder 2>/dev/null || echo "No luminakraft-windows-builder image found"
+docker rmi -f luminakraft-linux-builder 2>/dev/null || echo "No luminakraft-linux-builder image found"
 
 # Clean up Docker system
 echo "Cleaning Docker system..."
