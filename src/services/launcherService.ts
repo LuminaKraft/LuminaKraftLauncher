@@ -8,7 +8,8 @@ import type {
   Translations,
   ModpackFeatures,
   AvailableLanguages,
-  Modpack 
+  Modpack,
+  ProgressInfo
 } from '../types/launcher';
 
 interface CacheEntry<T = any> {
@@ -364,7 +365,7 @@ class LauncherService {
     };
   }
 
-  async installModpack(modpackId: string, _onProgress?: (progress: number) => void): Promise<void> {
+  async installModpack(modpackId: string, onProgress?: (progress: ProgressInfo) => void): Promise<void> {
     const modpack = this.launcherData?.modpacks.find(m => m.id === modpackId);
     if (!modpack) {
       throw new Error('Modpack no encontrado');
@@ -372,6 +373,39 @@ class LauncherService {
 
     if (!modpack.urlModpackZip) {
       throw new Error('Este servidor no requiere instalación de modpack');
+    }
+
+    try {
+      // Set up progress listener if callback provided
+      let unlistenProgress: (() => void) | null = null;
+      
+      if (onProgress && isTauriContext()) {
+        const { listen } = await import('@tauri-apps/api/event');
+        unlistenProgress = await listen(
+          `modpack_progress_${modpackId}`,
+          (event: any) => {
+            const data = event.payload;
+            if (data) {
+              // Filtrar mensajes que no deben aparecer en currentFile
+              let currentFile = '';
+              if (data.detailMessage) {
+                currentFile = data.detailMessage;
+              } else if (data.message && !data.message.startsWith('downloading_modpack:')) {
+                currentFile = data.message;
+              }
+              
+              onProgress({
+                percentage: data.percentage || 0,
+                currentFile: currentFile,
+                downloadSpeed: data.downloadSpeed || '',
+                eta: data.eta || '', // ETA del backend (por ahora vacío, se calcula en frontend)
+                step: data.step || '',
+                generalMessage: data.generalMessage || '',
+                detailMessage: data.detailMessage || ''
+              });
+            }
+          }
+        );
     }
 
     try {
@@ -383,6 +417,12 @@ class LauncherService {
         modpack: transformedModpack,
         settings: transformedSettings
       });
+      } finally {
+        // Clean up event listener
+        if (unlistenProgress) {
+          unlistenProgress();
+        }
+      }
     } catch (error) {
       if (!isTauriContext()) {
         throw new Error('Esta función requiere ejecutar la aplicación con Tauri. Por favor, usa "npm run tauri:dev" en lugar de "npm run dev".');
@@ -392,7 +432,9 @@ class LauncherService {
     }
   }
 
-  async updateModpack(modpackId: string, onProgress?: (progress: number) => void): Promise<void> {
+  async updateModpack(modpackId: string, onProgress?: (progress: ProgressInfo) => void): Promise<void> {
+    // Las actualizaciones usan la misma función que instalación
+    // pero el backend detecta automáticamente si es instalación inicial o actualización
     return this.installModpack(modpackId, onProgress);
   }
 
@@ -420,18 +462,9 @@ class LauncherService {
     }
   }
 
-  async repairModpack(modpackId: string, onProgress?: (progress: number) => void): Promise<void> {
-    try {
-      await safeInvoke('delete_instance', { modpackId });
-      // The installModpack method already handles the transformation
-      await this.installModpack(modpackId, onProgress);
-    } catch (error) {
-      if (!isTauriContext()) {
-        throw new Error('Esta función requiere ejecutar la aplicación con Tauri. Por favor, usa "npm run tauri:dev" en lugar de "npm run dev".');
-      }
-      console.error('Error repairing modpack:', error);
-      throw new Error('Error al reparar el modpack');
-    }
+  async repairModpack(modpackId: string, onProgress?: (progress: ProgressInfo) => void): Promise<void> {
+    // Para reparación, simplemente reinstalamos el modpack
+    return this.installModpack(modpackId, onProgress);
   }
 
   async checkForLauncherUpdate(): Promise<{ hasUpdate: boolean; downloadUrl?: string }> {
@@ -516,6 +549,94 @@ class LauncherService {
   // Check if we're running in Tauri context
   isTauriAvailable(): boolean {
     return isTauriContext();
+  }
+
+  async removeModpack(modpackId: string): Promise<void> {
+    try {
+      console.log('🔧 LauncherService: Removing modpack', modpackId);
+      await safeInvoke('remove_modpack', { modpackId });
+      console.log('✅ LauncherService: Modpack removed successfully');
+    } catch (error) {
+      console.error('❌ LauncherService: Error removing modpack:', error);
+      if (!isTauriContext()) {
+        throw new Error('Esta función requiere ejecutar la aplicación con Tauri. Por favor, usa "npm run tauri:dev" en lugar de "npm run dev".');
+      }
+      console.error('Error removing modpack:', error);
+      throw new Error('Error al remover el modpack');
+    }
+  }
+
+  async openInstanceFolder(modpackId: string): Promise<void> {
+    try {
+      console.log('📂 LauncherService: Opening instance folder for', modpackId);
+      await safeInvoke('open_instance_folder', { modpackId });
+      console.log('✅ LauncherService: Instance folder opened successfully');
+    } catch (error) {
+      console.error('❌ LauncherService: Error opening instance folder:', error);
+      if (!isTauriContext()) {
+        throw new Error('Esta función requiere ejecutar la aplicación con Tauri. Por favor, usa "npm run tauri:dev" en lugar de "npm run dev".');
+      }
+      console.error('Error opening instance folder:', error);
+      throw new Error('Error al abrir la carpeta de la instancia');
+    }
+  }
+
+  async installModpackWithFailedTracking(modpackId: string, onProgress?: (progress: ProgressInfo) => void): Promise<any[]> {
+    const modpack = this.launcherData?.modpacks.find(m => m.id === modpackId);
+    if (!modpack) {
+      throw new Error('Modpack no encontrado');
+    }
+
+    let unlistenProgress: (() => void) | undefined;
+
+    // Configurar listener de progreso si se proporciona callback
+    if (onProgress && isTauriContext()) {
+      const { listen } = await import('@tauri-apps/api/event');
+      
+      unlistenProgress = await listen(
+        `modpack-progress-${modpackId}`,
+        (event: any) => {
+          const data = event.payload;
+          if (data) {
+            // Filtrar mensajes que no deben aparecer en currentFile
+            let currentFile = '';
+            if (data.detailMessage) {
+              currentFile = data.detailMessage;
+            } else if (data.message && !data.message.startsWith('downloading_modpack:')) {
+              currentFile = data.message;
+            }
+            
+            onProgress({
+              percentage: data.percentage || 0,
+              currentFile: currentFile,
+              downloadSpeed: data.downloadSpeed || '',
+              eta: data.eta || '', // ETA del backend (por ahora vacío, se calcula en frontend)
+              step: data.step || '',
+              generalMessage: data.generalMessage || '',
+              detailMessage: data.detailMessage || ''
+            });
+          }
+        }
+      );
+    }
+
+    try {
+      // Transform the modpack structure to match backend expectations
+      const transformedModpack = this.transformModpackForBackend(modpack);
+      const transformedSettings = this.transformUserSettingsForBackend(this.userSettings);
+      
+      const failedMods = await safeInvoke<any[]>('install_modpack_with_failed_tracking', {
+        modpack: transformedModpack,
+        settings: transformedSettings
+      });
+      
+      return failedMods;
+    } finally {
+      // Clean up event listener
+      if (unlistenProgress) {
+        unlistenProgress();
+      }
+    }
   }
 }
 

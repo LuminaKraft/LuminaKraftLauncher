@@ -70,6 +70,12 @@ export interface CurseForgeFileInfo {
   downloadCount: number;
   fileStatus: number;
   gameVersions: string[];
+  hashes: CurseForgeFileHash[];
+}
+
+export interface CurseForgeFileHash {
+  value: string;
+  algo: number; // 1 = SHA1, 2 = MD5
 }
 
 /**

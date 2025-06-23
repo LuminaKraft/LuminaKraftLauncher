@@ -6,34 +6,27 @@ ENV DEBIAN_FRONTEND=noninteractive \
     CARGO_BUILD_JOBS=2 \
     RUSTFLAGS="-C link-arg=-Wl,--no-keep-memory -C link-arg=-Wl,--reduce-memory-overheads"
 
-# Install basic dependencies
+# Install dependencies for all Linux package formats
 RUN apt-get update && apt-get install -y \
     curl \
     build-essential \
     libssl-dev \
     libgtk-3-dev \
-    libwebkit2gtk-4.0-dev \
     libwebkit2gtk-4.1-dev \
     libappindicator3-dev \
     librsvg2-dev \
-    libsoup-3.0-dev \
-    libjavascriptcoregtk-4.1-dev \
     pkg-config \
     patchelf \
     wget \
-    gnupg \
     ca-certificates \
     git \
     liblzma-dev \
     zip \
     unzip \
-    xdg-utils \
     fuse \
     libfuse2 \
     rpm \
     file \
-    desktop-file-utils \
-    shared-mime-info \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js 20 (compatible with latest npm packages)
@@ -41,13 +34,12 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y nodejs && \
     npm install -g npm@latest
 
-# Pre-download AppImage dependencies to avoid build issues
+# Pre-download essential AppImage dependencies only
 RUN mkdir -p /tmp/appimage-deps && cd /tmp/appimage-deps && \
     wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/AppRun-x86_64 && \
     wget -q https://github.com/tauri-apps/binary-releases/releases/download/linuxdeploy/linuxdeploy-x86_64.AppImage && \
     wget -q https://raw.githubusercontent.com/tauri-apps/linuxdeploy-plugin-gtk/master/linuxdeploy-plugin-gtk.sh && \
-    wget -q https://raw.githubusercontent.com/tauri-apps/linuxdeploy-plugin-gstreamer/master/linuxdeploy-plugin-gstreamer.sh && \
-    chmod +x linuxdeploy-x86_64.AppImage AppRun-x86_64 linuxdeploy-plugin-gtk.sh linuxdeploy-plugin-gstreamer.sh && \
+    chmod +x linuxdeploy-x86_64.AppImage AppRun-x86_64 linuxdeploy-plugin-gtk.sh && \
     mkdir -p /root/.cache/tauri/linuxdeploy && \
     cp * /root/.cache/tauri/linuxdeploy/
 
@@ -64,7 +56,7 @@ ENV PKG_CONFIG_ALLOW_CROSS=1 \
     PKG_CONFIG_SYSROOT_DIR=/
 
 # Install Tauri CLI via npm (consistent with Windows build)
-RUN npm install -g @tauri-apps/cli@latest
+RUN npm install -g @tauri-apps/cli@2
 
 # Prepare environment for AppImage
 RUN chmod 755 /

@@ -72,11 +72,94 @@ pub async fn get_instance_metadata(modpack_id: &str) -> Result<Option<InstanceMe
 pub async fn delete_instance(modpack_id: &str) -> Result<()> {
     let instance_dir = get_instance_dir(modpack_id)?;
     
-    if instance_dir.exists() {
-        fs::remove_dir_all(instance_dir)?;
+    if !instance_dir.exists() {
+        println!("Directory doesn't exist, nothing to delete: {:?}", instance_dir);
+        return Ok(());
+    }
+    
+    println!("Attempting to delete directory: {:?}", instance_dir);
+    
+    // Try to get directory metadata to check permissions
+    match fs::metadata(&instance_dir) {
+        Ok(metadata) => {
+            println!("Directory metadata - readonly: {}, is_dir: {}", metadata.permissions().readonly(), metadata.is_dir());
+        },
+        Err(e) => {
+            println!("Could not read directory metadata: {}", e);
+        }
+    }
+    
+    // Attempt deletion with detailed error reporting
+    match fs::remove_dir_all(&instance_dir) {
+        Ok(_) => {
+            println!("Directory deleted successfully");
+            Ok(())
+        },
+        Err(e) => {
+            let error_kind = e.kind();
+            let error_msg = format!("Failed to delete directory: {} (kind: {:?})", e, error_kind);
+            println!("❌ {}", error_msg);
+            
+            // Try to provide more specific error information for macOS
+            match error_kind {
+                std::io::ErrorKind::PermissionDenied => {
+                    return Err(anyhow!("Permission denied: Cannot delete modpack files. Please check that the launcher has proper permissions or try running as administrator."));
+                },
+                std::io::ErrorKind::NotFound => {
+                    // Directory was already deleted, consider this success
+                    println!("Directory was already deleted during removal process");
+                    return Ok(());
+                },
+                _ => {
+                    return Err(anyhow!("{}", error_msg));
+                }
+            }
+        }
+    }
+}
+
+/// Remove a modpack completely (alias for delete_instance for clarity)
+pub async fn remove_modpack_completely(modpack_id: &str) -> Result<()> {
+    println!("🗑️ Starting removal process for modpack: {}", modpack_id);
+    
+    // Get the instance directory path first to check if it exists
+    let instance_dir = match get_instance_dir(modpack_id) {
+        Ok(dir) => {
+            println!("📁 Instance directory path: {:?}", dir);
+            dir
+        },
+        Err(e) => {
+            println!("❌ Error getting instance directory: {}", e);
+            return Err(e);
+        }
+    };
+    
+    // Check if directory exists before trying to delete
+    if !instance_dir.exists() {
+        println!("⚠️ Instance directory does not exist: {:?}", instance_dir);
+        return Ok(()); // Consider this a success since the goal is achieved
+    }
+    
+    println!("🔍 Directory exists, proceeding with deletion...");
+    
+    // Use the existing delete_instance function
+    match delete_instance(modpack_id).await {
+        Ok(_) => {
+            println!("✅ Modpack {} removed successfully", modpack_id);
+            
+            // Double-check that the directory was actually deleted
+            if instance_dir.exists() {
+                println!("⚠️ Warning: Directory still exists after deletion attempt");
+                return Err(anyhow!("Directory was not completely removed"));
     }
     
     Ok(())
+        },
+        Err(e) => {
+            println!("❌ Error during deletion: {}", e);
+            Err(e)
+        }
+    }
 }
 
 /// Calculate the total size of an instance

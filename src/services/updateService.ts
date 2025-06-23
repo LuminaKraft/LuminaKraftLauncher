@@ -7,12 +7,14 @@ export interface UpdateInfo {
   downloadUrl?: string;
   platform: string;
   releaseNotes?: string;
+  isPrerelease?: boolean;
 }
 
 interface GitHubRelease {
   tag_name: string;
   name: string;
   body: string;
+  prerelease: boolean;
   assets: Array<{
     name: string;
     browser_download_url: string;
@@ -24,10 +26,8 @@ class UpdateService {
   private updateCheckInterval: number | null = null;
   private lastCheckTime: number = 0;
   private readonly CHECK_INTERVAL = 60 * 60 * 1000; // 1 hour
-  // Primary: Public releases repository - no token needed!
-  private readonly GITHUB_API_URL = 'https://api.github.com/repos/kristiangarcia/luminakraft-launcher-releases/releases/latest';
-  // Fallback: Private repository (will need token, but try anyway)
-  private readonly FALLBACK_GITHUB_API_URL = 'https://api.github.com/repos/kristiangarcia/luminakraft-launcher/releases/latest';
+  // Only use public repository and get all releases (including prereleases)
+  private readonly GITHUB_API_URL = 'https://api.github.com/repos/kristiangarcia/luminakraft-launcher-releases/releases';
 
   private constructor() {}
 
@@ -85,8 +85,8 @@ class UpdateService {
   /**
    * Try to fetch from a specific GitHub releases URL
    */
-  private async fetchGitHubRelease(url: string, repoName: string): Promise<GitHubRelease> {
-    console.log(`Attempting to fetch from ${repoName}: ${url}`);
+  private async fetchGitHubReleases(url: string, repoName: string): Promise<GitHubRelease[]> {
+    console.log(`Attempting to fetch releases from ${repoName}: ${url}`);
     
     const headers: Record<string, string> = {
       'Accept': 'application/vnd.github.v3+json',
@@ -104,9 +104,24 @@ class UpdateService {
       throw new Error(`GitHub API request failed for ${repoName}: ${response.status} ${response.statusText}`);
     }
 
-    const release: GitHubRelease = await response.json();
-    console.log(`✅ Successfully fetched release from ${repoName}:`, release.tag_name);
-    return release;
+    const releases: GitHubRelease[] = await response.json();
+    console.log(`✅ Successfully fetched ${releases.length} releases from ${repoName}`);
+    return releases;
+  }
+
+  /**
+   * Find the latest release (including prereleases)
+   */
+  private findLatestRelease(releases: GitHubRelease[]): GitHubRelease | null {
+    if (!releases || releases.length === 0) {
+      return null;
+    }
+
+    // Releases are already sorted by GitHub API (newest first)
+    // Take the first one which will be the most recent (including prereleases)
+    const latestRelease = releases[0];
+    console.log(`🔍 Latest release found: ${latestRelease.tag_name} (prerelease: ${latestRelease.prerelease})`);
+    return latestRelease;
   }
 
   /**
@@ -128,18 +143,18 @@ class UpdateService {
       
       // Try public repository first
       try {
-        release = await this.fetchGitHubRelease(this.GITHUB_API_URL, 'public releases repository');
+        const releases = await this.fetchGitHubReleases(this.GITHUB_API_URL, 'public releases repository');
+        const latestRelease = this.findLatestRelease(releases);
+        
+        if (!latestRelease) {
+          throw new Error('No releases found in the repository');
+        }
+        
+        release = latestRelease;
       } catch (publicError) {
         console.warn('Failed to fetch from public repository:', publicError);
         
-        // Try fallback to private repository
-        try {
-          console.log('🔄 Trying fallback to private repository...');
-          release = await this.fetchGitHubRelease(this.FALLBACK_GITHUB_API_URL, 'private repository');
-        } catch (fallbackError) {
-          console.error('Both repositories failed:', fallbackError);
-          
-          // If both fail, return no update available
+        // If repository fails, return no update available
           const updateInfo: UpdateInfo = {
             hasUpdate: false,
             currentVersion,
@@ -148,9 +163,8 @@ class UpdateService {
             releaseNotes: 'Unable to check for updates: No releases found. This is normal for new installations.'
           };
           
-          console.log('❌ No releases found in any repository, returning no update');
+        console.log('❌ No releases found in repository, returning no update');
           return updateInfo;
-        }
       }
 
       const latestVersion = release.tag_name.replace('v', '');
@@ -168,7 +182,8 @@ class UpdateService {
         latestVersion,
         platform,
         downloadUrl: hasUpdate ? this.getDownloadAsset(release.assets, platform) : undefined,
-        releaseNotes: hasUpdate ? release.body : undefined
+        releaseNotes: hasUpdate ? release.body : undefined,
+        isPrerelease: hasUpdate ? release.prerelease : false
       };
 
       this.lastCheckTime = Date.now();

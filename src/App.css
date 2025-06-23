@@ -29,6 +29,10 @@
     @apply bg-yellow-600 hover:bg-yellow-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200;
 }
 
+  .btn-danger {
+    @apply bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200;
+  }
+
   .card {
     @apply bg-dark-800 border border-dark-700 rounded-lg p-4;
 }

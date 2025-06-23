@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Download, X, RefreshCw, AlertCircle, CheckCircle, ExternalLink } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { Download, X, RefreshCw, AlertCircle, CheckCircle, ExternalLink, AlertTriangle } from 'lucide-react';
 import { UpdateInfo } from '../services/updateService';
 
 interface UpdateDialogProps {
@@ -15,6 +16,7 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
   onDownload,
   isDownloading = false
 }) => {
+  const { t } = useTranslation();
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const handleDownload = async () => {
@@ -30,13 +32,25 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
     }
   };
 
+  const getTitle = () => {
+    return updateInfo.isPrerelease ? t('about.prereleaseUpdate') : 'Update Available';
+  };
+
+  const getIcon = () => {
+    return updateInfo.isPrerelease ? (
+      <AlertTriangle className="w-6 h-6 text-yellow-500 mr-2" />
+    ) : (
+      <RefreshCw className="w-6 h-6 text-lumina-500 mr-2" />
+    );
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-dark-800 rounded-lg p-6 max-w-md w-full mx-4 border border-dark-600">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
-            <RefreshCw className="w-6 h-6 text-lumina-500 mr-2" />
-            <h2 className="text-xl font-semibold text-white">Update Available</h2>
+            {getIcon()}
+            <h2 className="text-xl font-semibold text-white">{getTitle()}</h2>
           </div>
           <button
             onClick={onClose}
@@ -48,8 +62,15 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
         </div>
 
         <div className="mb-6">
+          {updateInfo.isPrerelease && (
+            <div className="mb-4 p-3 bg-yellow-900/30 border border-yellow-600 text-yellow-200 rounded-lg flex items-center">
+              <AlertTriangle className="w-4 h-4 mr-2 flex-shrink-0" />
+              <span className="text-sm">{t('about.prereleaseWarning')}</span>
+            </div>
+          )}
+          
           <p className="text-dark-300 mb-4">
-            A new version of LuminaKraft Launcher is available!
+            {updateInfo.isPrerelease ? t('about.prereleaseUpdateDesc') : 'A new version of LuminaKraft Launcher is available!'}
           </p>
           
           <div className="bg-dark-700 rounded-lg p-4 mb-4">

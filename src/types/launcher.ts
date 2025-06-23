@@ -107,17 +107,28 @@ export interface UserSettings {
   microsoftAccount?: MicrosoftAccount;
 }
 
-export interface DownloadProgress {
-  downloaded: number;
-  total: number;
+export interface ProgressInfo {
+  downloaded?: number;
+  total?: number;
   percentage: number;
-  speed: number; // bytes per second
-  currentFile?: string; // nombre del archivo que se está descargando
+  speed?: number; // bytes per second
+  currentFile?: string; // nombre del archivo que se está descargando o descripción del paso
   downloadSpeed?: string; // velocidad formateada (ej: "2.5 MB/s")
   eta?: string; // tiempo estimado restante (ej: "2m 30s")
+  step?: string; // paso actual: 'checking', 'downloading', 'processing', etc.
+  generalMessage?: string; // mensaje general para mostrar arriba (más estático)
+  detailMessage?: string; // mensaje detallado para mostrar abajo (más específico)
 }
 
+// Mantener DownloadProgress por compatibilidad
+export type DownloadProgress = ProgressInfo;
+
 export type ModpackStatus = 'not_installed' | 'installed' | 'outdated' | 'installing' | 'updating' | 'launching' | 'error';
+
+export interface ProgressHistoryEntry {
+  percentage: number;
+  timestamp: number;
+}
 
 export interface ModpackState {
   status: ModpackStatus;
@@ -129,4 +140,12 @@ export interface ModpackState {
     shortDescription: string;
   };
   features?: Feature[];
+  progressHistory?: ProgressHistoryEntry[];
+  lastEtaSeconds?: number; // Para suavizado del cálculo de ETA
+}
+
+export interface FailedMod {
+  projectId: number;
+  fileId: number;
+  fileName?: string;
 } 

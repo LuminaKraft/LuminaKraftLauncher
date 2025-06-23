@@ -1,6 +1,5 @@
 [build]
 # Optimize for memory usage during cross-compilation
-codegen-units = 1
 jobs = 2
 
 [target.x86_64-unknown-linux-gnu]
@@ -16,7 +15,6 @@ rustflags = [
     "-C", "link-arg=-Wl,--allow-multiple-definition",
     "-C", "link-arg=-Wl,--no-keep-memory",
     "-C", "link-arg=-Wl,--reduce-memory-overheads",
-    "-C", "codegen-units=1",
     "-C", "opt-level=1"
 ]
 

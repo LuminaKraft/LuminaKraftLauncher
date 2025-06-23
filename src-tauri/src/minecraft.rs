@@ -102,13 +102,17 @@ fn get_auth_method(settings: &UserSettings) -> AuthMethod {
     }
 }
 
-/// Install Minecraft and mod loader using Lyceris
-pub async fn install_minecraft_with_lyceris(
+/// Install Minecraft and mod loader using Lyceris with progress callback
+pub async fn install_minecraft_with_lyceris_progress<F>(
     modpack: &Modpack,
     settings: &UserSettings,
     instance_dir: PathBuf,
-) -> Result<()> {
-    let emitter = create_emitter();
+    emit_progress: F,
+) -> Result<()> 
+where
+    F: Fn(String, f32, String) + Send + Sync + 'static + Clone,
+{
+    let emitter = create_emitter_with_progress(emit_progress.clone());
     
     let auth_method = get_auth_method(settings);
     
@@ -129,6 +133,112 @@ pub async fn install_minecraft_with_lyceris(
     }
     
     Ok(())
+}
+
+/// Install Minecraft and mod loader using Lyceris (backward compatibility)
+#[allow(dead_code)]
+pub async fn install_minecraft_with_lyceris(
+    modpack: &Modpack,
+    settings: &UserSettings,
+    instance_dir: PathBuf,
+) -> Result<()> {
+    let no_progress = |_: String, _: f32, _: String| {};
+    install_minecraft_with_lyceris_progress(modpack, settings, instance_dir, no_progress).await
+}
+
+/// Create a Lyceris emitter with progress callback for progress tracking
+pub fn create_emitter_with_progress<F>(emit_progress: F) -> Emitter 
+where
+    F: Fn(String, f32, String) + Send + Sync + 'static + Clone,
+{
+    let emitter = Emitter::default();
+    
+    // Set up single download progress tracking (NO mostrar porcentaje individual)
+    tokio::spawn({
+        let emitter = emitter.clone();
+        let emit_progress = emit_progress.clone();
+        async move {
+            emitter
+                .on(
+                    Event::SingleDownloadProgress,
+                    move |(path, current, total): (String, u64, u64)| {
+                        let file_name = std::path::Path::new(&path)
+                            .file_name()
+                            .and_then(|n| n.to_str())
+                            .unwrap_or(&path);
+                        
+                        // No actualizar porcentaje para archivos individuales, solo mostrar detalle
+                        emit_progress(
+                            format!("Descargando {}", file_name), 
+                            -1.0, // -1 indica que no se debe actualizar el porcentaje
+                            "downloading_minecraft_file".to_string()
+                        );
+                        println!("Downloading {} - {}/{}", file_name, current, total);
+                    },
+                )
+                .await;
+        }
+    });
+    
+    // Set up multiple download progress tracking for general progress
+    tokio::spawn({
+        let emitter = emitter.clone();
+        let emit_progress = emit_progress.clone();
+        async move {
+            emitter
+                .on(
+                    Event::MultipleDownloadProgress,
+                    move |(_, current, total, current_file): (String, u64, u64, String)| {
+                        let percentage = if total > 0 { 
+                            (current as f64 / total as f64 * 100.0) as f32 
+                        } else { 
+                            0.0 
+                        };
+                        
+                        // Parsear el tipo de archivo para el mensaje general (se usa en los eventos)
+                        let _component_name = match current_file.as_str() {
+                            name if name.contains("Java") || name.contains("java") => "Java",
+                            name if name.contains("Asset") || name.contains("asset") => "Assets",
+                            name if name.contains("Library") || name.contains("library") => "Librerías",
+                            name if name.contains("Native") || name.contains("native") => "Nativos",
+                            _ => "Archivos"
+                        };
+                        
+                        // Este es el progreso general que debe usarse para el porcentaje principal
+                        emit_progress(
+                            format!("Progress: {}/{} - {} ({:.2}%)", current, total, current_file, percentage), 
+                            percentage.clamp(0.0, 100.0), 
+                            "downloading_minecraft_general".to_string()
+                        );
+                        println!("Progress: {}/{} - {} ({}%)", current, total, current_file, percentage);
+                    },
+                )
+                .await;
+        }
+    });
+    
+    // Set up console output tracking
+    tokio::spawn({
+        let emitter = emitter.clone();
+        let emit_progress = emit_progress.clone();
+        async move {
+            emitter
+                .on(Event::Console, move |line: String| {
+                    println!("Minecraft: {}", line);
+                    // Opcional: parsear líneas del console para mostrar progreso específico
+                    if line.contains("Installing") {
+                        emit_progress(
+                            format!("Instalando: {}", line), 
+                            -1.0, // -1 indica progreso indeterminado
+                            "installing_component".to_string()
+                        );
+                    }
+                })
+                .await;
+        }
+    });
+    
+    emitter
 }
 
 /// Generate custom JVM arguments (excluding memory - handled by Lyceris)

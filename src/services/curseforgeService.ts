@@ -60,7 +60,13 @@ export class CurseForgeService {
       const response = await axios.get<ProxyResponse>(url);
       
       if (response.data.status === 200 && response.data.data) {
-        return response.data.data;
+        const fileInfo = response.data.data;
+        
+        // La API de CurseForge devuelve información completa incluyendo hashes
+        // fileName, downloadUrl, y hashes están disponibles directamente
+        console.log(`Información obtenida para archivo ${fileId}: ${fileInfo.fileName || fileInfo.displayName}`);
+        
+        return fileInfo;
       }
       
       console.error('Error fetching mod file info:', response.data.message);

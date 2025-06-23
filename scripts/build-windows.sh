@@ -47,13 +47,10 @@ docker run \
     bash -c "
         echo 'Setting up environment...'
         export PATH=/root/.cargo/bin:\$PATH
-        echo 'Cleaning and reinstalling npm dependencies...'
-        # Force remove node_modules with all numbered duplicates
-        find node_modules -name '* 2' -type d -exec rm -rf {} + 2>/dev/null || true
-        find node_modules -name '* 3' -type d -exec rm -rf {} + 2>/dev/null || true
-        find node_modules -name '* 4' -type d -exec rm -rf {} + 2>/dev/null || true
-        rm -rf node_modules package-lock.json 2>/dev/null || true
-        npm install
+        echo 'Installing production dependencies only...'
+        # Clean up any existing modules
+        rm -rf node_modules 2>/dev/null || true
+        npm ci --omit=dev --omit=optional
         echo 'Building Windows executable with memory optimizations...'
         npx tauri build --target x86_64-pc-windows-gnu --verbose
         

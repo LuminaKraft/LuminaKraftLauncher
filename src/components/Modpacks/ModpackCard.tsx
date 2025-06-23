@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Download, Play, RefreshCw, Wrench, AlertTriangle, Loader2, Globe, Copy } from 'lucide-react';
+import { Download, Play, RefreshCw, Wrench, AlertTriangle, Loader2, Globe, Copy, Trash2, FolderOpen } from 'lucide-react';
 import type { Modpack, ModpackState } from '../../types/launcher';
 import { useLauncher } from '../../contexts/LauncherContext';
+import ConfirmDialog from '../ConfirmDialog';
+import LauncherService from '../../services/launcherService';
 
 interface ModpackCardProps {
   modpack: Modpack;
@@ -12,7 +14,9 @@ interface ModpackCardProps {
 
 const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) => {
   const { t } = useTranslation();
-  const { installModpack, updateModpack, launchModpack, repairModpack, translations } = useLauncher();
+  const { installModpack, updateModpack, launchModpack, repairModpack, removeModpack, translations } = useLauncher();
+  const [showRemoveDialog, setShowRemoveDialog] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
 
   const getServerStatusBadge = () => {
     if (modpack.isNew) {
@@ -148,6 +152,75 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
   const displayName = modpackTranslations?.name || modpack.name;
   const displayDescription = modpackTranslations?.shortDescription || modpackTranslations?.description || t('modpacks.description');
 
+  const getStepMessage = (step?: string): string => {
+    if (!step) return '';
+    
+    const stepMessages: { [key: string]: string } = {
+      'checking': 'Verificando archivos...',
+      'initializing': 'Iniciando...',
+      'preparing_installation': 'Preparando instalación...',
+      'verifying_modpack_config': 'Verificando configuración...',
+      'configuring_minecraft': 'Configurando Minecraft...',
+      'downloading_minecraft': 'Descargando archivos de Minecraft...',
+      'installing_minecraft': 'Instalando Minecraft y modloader...',
+      'downloading_minecraft_file': 'Descargando archivos de Minecraft...',
+      'downloading_minecraft_multiple': 'Descargando múltiples archivos...',
+      'installing_component': 'Instalando componentes...',
+      'minecraft_ready': 'Minecraft instalado',
+      'downloading_modpack': 'Descargando modpack...',
+      'processing_modpack': 'Procesando modpack...',
+      'processing_curseforge': 'Procesando modpack de CurseForge...',
+      'extracting_modpack': 'Extrayendo modpack...',
+      'downloading': 'Descargando archivos...',
+      'downloading_update': 'Descargando actualización...',
+      'processing': 'Procesando archivos...',
+      'processing_update': 'Procesando actualización...',
+      'extracting': 'Extrayendo archivos...',
+      'modpack_ready': 'Archivos del modpack listos',
+      'modpack_extracted': 'Modpack extraído exitosamente',
+      'no_modpack_files': 'Sin archivos adicionales',
+      'finalizing': 'Finalizando...',
+      'updating': 'Actualizando...',
+      'updating_curseforge_mods': 'Actualizando mods...',
+      'replacing_mods': 'Reemplazando mods...',
+      'updating_configs': 'Actualizando configuraciones...',
+      'updating_standard_modpack': 'Actualizando modpack...',
+      'backing_up_minecraft': 'Respaldando Minecraft...',
+      'extracting_new_version': 'Extrayendo nueva versión...',
+      'restoring_minecraft': 'Restaurando Minecraft...',
+      'finalizing_update': 'Finalizando actualización...',
+      'completed': 'Completado'
+    };
+    
+    return stepMessages[step] || step;
+  };
+
+  const handleRemoveModpack = async () => {
+    console.log('🔴 Starting modpack removal for:', modpack.id);
+    setIsRemoving(true);
+    
+    try {
+      await removeModpack(modpack.id);
+      console.log('✅ Modpack removed successfully');
+      setShowRemoveDialog(false);
+    } catch (error) {
+      console.error('❌ Error removing modpack:', error);
+      // El error se manejará en el contexto, aquí solo cerramos el diálogo
+    } finally {
+      setIsRemoving(false);
+    }
+  };
+
+  const handleOpenInstanceFolder = async () => {
+    try {
+      console.log('📂 Opening instance folder for:', modpack.id);
+      await LauncherService.getInstance().openInstanceFolder(modpack.id);
+    } catch (error) {
+      console.error('❌ Error opening instance folder:', error);
+      // Aquí podrías mostrar un toast o mensaje de error si tienes uno configurado
+    }
+  };
+
   return (
     <div className="card hover:bg-dark-700 transition-colors duration-200 cursor-pointer group">
       <div onClick={onSelect} className="flex-1">
@@ -211,7 +284,9 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
         {isLoading && state.progress && (
           <div className="mt-4">
             <div className="flex justify-between text-sm text-dark-300 mb-1">
-              <span className="truncate">{buttonConfig.text}</span>
+              <span className="truncate">
+                {state.progress.generalMessage || getStepMessage(state.progress.step) || buttonConfig.text}
+              </span>
               <span className="font-mono">{Math.round(state.progress.percentage)}%</span>
             </div>
             <div className="w-full bg-dark-700 rounded-full h-2 overflow-hidden">
@@ -220,24 +295,54 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
                 style={{ width: `${state.progress.percentage}%` }}
               />
             </div>
-            {/* Progress details */}
-            {state.progress.currentFile && (
-              <div className="mt-2 text-xs text-dark-400">
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-lumina-600 rounded-full animate-pulse"></div>
-                  <span className="truncate">{state.progress.currentFile}</span>
+            {/* Progress details - mostrar detalles de archivos individuales y ETA */}
+            {(state.progress.detailMessage && state.progress.detailMessage.trim() !== '') || state.progress.eta || state.progress.downloadSpeed ? (
+              <div className="mt-2 text-xs">
+                <div className="flex justify-between items-start">
+                  {/* Lado izquierdo: detalles del archivo actual */}
+                  <div className="flex items-center space-x-2 flex-1 min-w-0">
+                    {state.progress.detailMessage && state.progress.detailMessage.trim() !== '' && (() => {
+                      const message = state.progress.detailMessage;
+                      let displayText = message;
+                      let bulletClass = "w-2 h-2 bg-lumina-600 rounded-full animate-pulse";
+                      
+                      // Si el mensaje tiene prefijo de estado, extraer el texto y cambiar el bullet
+                      if (message.startsWith("✅ ")) {
+                        displayText = message.substring(2); // Remover "✅ "
+                        bulletClass = "w-2 h-2 bg-green-500 rounded-full"; // Verde para completado/existe
+                      } else if (message.startsWith("❌ ")) {
+                        displayText = message.substring(2); // Remover "❌ "  
+                        bulletClass = "w-2 h-2 bg-red-500 rounded-full"; // Rojo para error
+                      }
+                      
+                      return (
+                        <>
+                          <div className={bulletClass}></div>
+                          <span className="truncate text-dark-400">
+                            {displayText}
+                          </span>
+                        </>
+                      );
+                    })()}
+                    {/* Velocidad de descarga */}
+                    {state.progress.downloadSpeed && (
+                      <span className="text-dark-500 ml-3">⚡ {state.progress.downloadSpeed}</span>
+                    )}
+                  </div>
+                  
+                  {/* Lado derecho: ETA alineado con el porcentaje */}
+                  <div className="flex-shrink-0 font-mono">
+                    {/* Placeholder para mantener el espacio */}
+                    <div className="relative">
+                      <span className="opacity-0 pointer-events-none select-none">00m 00s</span>
+                      {state.progress.eta && (
+                        <span className="absolute top-0 right-0 text-dark-400">{state.progress.eta}</span>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
-            )}
-            {/* Speed and ETA */}
-            <div className="mt-1 flex justify-between text-xs text-dark-500">
-              {state.progress.downloadSpeed && (
-                <span>⚡ {state.progress.downloadSpeed}</span>
-              )}
-              {state.progress.eta && (
-                <span>⏱️ {state.progress.eta}</span>
-              )}
-            </div>
+            ) : null}
           </div>
         )}
 
@@ -254,20 +359,67 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
 
       {/* Action Button */}
       <div className="mt-4 pt-4 border-t border-dark-700">
+        <div className="flex gap-2">
         <button
           onClick={(e) => {
             e.stopPropagation();
             buttonConfig.onClick();
           }}
           disabled={buttonConfig.disabled}
-          className={`${buttonConfig.className} w-full flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed`}
+            className={`${buttonConfig.className} flex-1 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           <ButtonIcon 
             className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`}
           />
           <span>{buttonConfig.text}</span>
         </button>
+          
+          {/* Botón de abrir carpeta solo para modpacks instalados o con errores */}
+          {['installed', 'outdated', 'error'].includes(state.status) && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenInstanceFolder();
+              }}
+              disabled={isLoading}
+              className="btn-secondary px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              title={t('modpacks.openFolderTooltip')}
+            >
+              <FolderOpen className="w-4 h-4" />
+            </button>
+          )}
+          
+          {/* Botón de remover solo para modpacks instalados o con errores */}
+          {['installed', 'outdated', 'error'].includes(state.status) && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                console.log('🔴 Remove button clicked for modpack:', modpack.id);
+                setShowRemoveDialog(true);
+              }}
+              disabled={isLoading}
+              className="btn-danger px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              title={t('modpacks.removeTooltip')}
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Diálogo de confirmación para remover */}
+      {showRemoveDialog && (
+        <ConfirmDialog
+          title={t('modpacks.removeConfirmTitle')}
+          message={t('modpacks.removeConfirmMessage', { name: displayName })}
+          confirmText={t('modpacks.removeButton')}
+          cancelText={t('app.cancel')}
+          onConfirm={handleRemoveModpack}
+          onCancel={() => setShowRemoveDialog(false)}
+          isLoading={isRemoving}
+          type="danger"
+        />
+      )}
     </div>
   );
 };

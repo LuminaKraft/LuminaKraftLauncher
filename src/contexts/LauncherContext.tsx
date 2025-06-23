@@ -1,7 +1,16 @@
-import { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useReducer, useEffect, ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { LauncherData, ModpackState, UserSettings, Translations, ModpackFeatures } from '../types/launcher';
+import type { 
+  LauncherData, 
+  ModpackState, 
+  UserSettings, 
+  Translations, 
+  ModpackFeatures,
+  ProgressInfo,
+  FailedMod
+} from '../types/launcher';
 import LauncherService from '../services/launcherService';
+import { FailedModsDialog } from '../components/FailedModsDialog';
 
 interface LauncherContextType {
   launcherData: LauncherData | null;
@@ -20,6 +29,7 @@ interface LauncherContextType {
   getModpackTranslations: (id: string) => any;
   getModpackFeatures: (id: string) => Promise<ModpackFeatures | null>;
   changeLanguage: (language: string) => Promise<void>;
+  removeModpack: (id: string) => Promise<void>;
 }
 
 type LauncherAction =
@@ -30,7 +40,7 @@ type LauncherAction =
   | { type: 'SET_LANGUAGE'; payload: string }
   | { type: 'SET_USER_SETTINGS'; payload: UserSettings }
   | { type: 'SET_MODPACK_STATE'; payload: { id: string; state: ModpackState } }
-  | { type: 'UPDATE_MODPACK_PROGRESS'; payload: { id: string; progress: number } };
+  | { type: 'UPDATE_MODPACK_PROGRESS'; payload: { id: string; progress: ProgressInfo } };
 
 interface LauncherState {
   launcherData: LauncherData | null;
@@ -81,18 +91,81 @@ function launcherReducer(state: LauncherState, action: LauncherAction): Launcher
         },
       };
     case 'UPDATE_MODPACK_PROGRESS':
+      const currentProgress = state.modpackStates[action.payload.id]?.progress;
+      const newProgress = action.payload.progress;
+      
+      // Calcular tiempo estimado
+      const currentTime = Date.now();
+      const currentState = state.modpackStates[action.payload.id];
+      let eta = '';
+      let progressHistory = currentState?.progressHistory || [];
+      
+      // Agregar nueva entrada al historial (mantener últimas 20 entradas para mayor estabilidad)
+      progressHistory = [...progressHistory.slice(-19), {
+        percentage: newProgress.percentage,
+        timestamp: currentTime
+      }];
+      
+      // Calcular ETA solo si tenemos suficientes datos y progreso > 10% y < 95%
+      if (progressHistory.length >= 5 && newProgress.percentage > 10 && newProgress.percentage < 95) {
+        // Usar ventana más grande para mayor estabilidad - últimos 10 puntos si están disponibles
+        const windowSize = Math.min(10, progressHistory.length);
+        const windowStart = progressHistory.length - windowSize;
+        const window = progressHistory.slice(windowStart);
+        
+        const oldest = window[0];
+        const newest = window[window.length - 1];
+        
+        const timeElapsed = (newest.timestamp - oldest.timestamp) / 1000; // segundos
+        const progressMade = newest.percentage - oldest.percentage;
+        
+        if (progressMade > 0.5 && timeElapsed > 2) { // Más restrictivo para evitar saltos
+          const remainingProgress = 100 - newProgress.percentage;
+          let estimatedTimeRemaining = (remainingProgress * timeElapsed) / progressMade;
+          
+          // Suavizar el ETA usando promedio móvil con el ETA anterior
+          if (currentState?.lastEtaSeconds) {
+            const weight = 0.7; // 70% del valor anterior, 30% del nuevo (más suave)
+            estimatedTimeRemaining = (currentState.lastEtaSeconds * weight) + (estimatedTimeRemaining * (1 - weight));
+          }
+          
+          // Solo mostrar si es razonable (menos de 30 minutos)
+          if (estimatedTimeRemaining < 1800) {
+            const minutes = Math.floor(estimatedTimeRemaining / 60);
+            const seconds = Math.floor(estimatedTimeRemaining % 60);
+            eta = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+          }
+          
+          // Guardar el valor en segundos para suavizado futuro (solo si currentState existe)
+          if (currentState) {
+            currentState.lastEtaSeconds = estimatedTimeRemaining;
+          }
+        }
+      }
+      
+      // Prevenir que el porcentaje baje (excepto cuando se reinicia al 0-5%)
+      let finalPercentage = newProgress.percentage;
+      if (currentProgress && newProgress.percentage > 5) {
+        finalPercentage = Math.max(currentProgress.percentage, newProgress.percentage);
+      }
+      
+      // Mantener el último mensaje general y ETA si el nuevo no tiene uno (evitar saltos visuales)
+      const finalProgress = {
+        ...newProgress,
+        percentage: finalPercentage,
+        eta: eta || currentProgress?.eta || '', // Preservar ETA anterior si no hay uno nuevo
+        generalMessage: newProgress.generalMessage || currentProgress?.generalMessage || '',
+        detailMessage: newProgress.detailMessage || ''
+      };
+      
       return {
         ...state,
         modpackStates: {
           ...state.modpackStates,
           [action.payload.id]: {
             ...state.modpackStates[action.payload.id],
-            progress: {
-              downloaded: 0,
-              total: 100,
-              percentage: action.payload.progress,
-              speed: 0,
-            },
+            progress: finalProgress,
+            progressHistory: progressHistory
           },
         },
       };
@@ -105,6 +178,8 @@ const LauncherContext = createContext<LauncherContextType | undefined>(undefined
 
 export function LauncherProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(launcherReducer, initialState);
+  const [failedMods, setFailedMods] = useState<FailedMod[]>([]);
+  const [showFailedModsDialog, setShowFailedModsDialog] = useState(false);
   const launcherService = LauncherService.getInstance();
   const { i18n } = useTranslation();
 
@@ -306,7 +381,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    const actionStatus = action === 'launch' ? 'launching' : `${action}ing` as any;
+    const actionStatus = action === 'launch' ? 'launching' : action === 'update' ? 'updating' : `${action}ing` as any;
 
     dispatch({
       type: 'SET_MODPACK_STATE',
@@ -320,16 +395,31 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     });
 
     try {
-      const onProgress = (progress: number) => {
+      const onProgress = (progress: ProgressInfo) => {
         dispatch({
           type: 'UPDATE_MODPACK_PROGRESS',
-          payload: { id: modpackId, progress },
+          payload: { 
+            id: modpackId, 
+            progress: {
+              percentage: progress.percentage,
+              currentFile: progress.currentFile,
+              downloadSpeed: progress.downloadSpeed,
+              eta: progress.eta,
+              step: progress.step,
+              generalMessage: progress.generalMessage,
+              detailMessage: progress.detailMessage
+            }
+          },
         });
       };
 
       switch (action) {
         case 'install':
-          await launcherService.installModpack(modpackId, onProgress);
+          const failedModsResult = await launcherService.installModpackWithFailedTracking(modpackId, onProgress);
+          if (failedModsResult && failedModsResult.length > 0) {
+            setFailedMods(failedModsResult);
+            setShowFailedModsDialog(true);
+          }
           break;
         case 'update':
           await launcherService.updateModpack(modpackId, onProgress);
@@ -375,6 +465,54 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
   const updateModpack = (id: string) => performModpackAction('update', id);
   const launchModpack = (id: string) => performModpackAction('launch', id);
   const repairModpack = (id: string) => performModpackAction('repair', id);
+  
+  const removeModpack = async (id: string) => {
+    try {
+      console.log('🗑️ Removing modpack:', id);
+      
+      dispatch({
+        type: 'SET_MODPACK_STATE',
+        payload: {
+          id,
+          state: { 
+            ...state.modpackStates[id],
+            status: 'installing' // Usar installing como estado temporal mientras se elimina
+          },
+        },
+      });
+      
+      console.log('📡 Calling removeModpack service...');
+      await launcherService.removeModpack(id);
+      
+      console.log('✅ Modpack removed successfully, updating state');
+      // Después de eliminar exitosamente, cambiar el estado a not_installed
+      dispatch({
+        type: 'SET_MODPACK_STATE',
+        payload: {
+          id,
+          state: { 
+            status: 'not_installed',
+            progress: undefined,
+            error: undefined
+          },
+        },
+      });
+    } catch (error) {
+      console.error('❌ Error removing modpack:', error);
+      dispatch({
+        type: 'SET_MODPACK_STATE',
+        payload: {
+          id,
+          state: { 
+            ...state.modpackStates[id],
+            status: 'error', 
+            error: error instanceof Error ? error.message : 'Error al remover el modpack'
+          },
+        },
+      });
+      throw error;
+    }
+  };
 
   const contextValue: LauncherContextType = {
     launcherData: state.launcherData,
@@ -393,11 +531,17 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     getModpackTranslations,
     getModpackFeatures,
     changeLanguage,
+    removeModpack,
   };
 
   return (
     <LauncherContext.Provider value={contextValue}>
       {children}
+      <FailedModsDialog
+        isOpen={showFailedModsDialog}
+        onClose={() => setShowFailedModsDialog(false)}
+        failedMods={failedMods}
+      />
     </LauncherContext.Provider>
   );
 }
