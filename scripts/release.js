@@ -224,20 +224,7 @@ function getInstallerFiles() {
   // Helper function to find Windows files
   function findWindowsFiles(basePath) {
     const windowsFiles = [];
-    const msiDir = path.join(basePath, 'bundle', 'msi');
     const nsisDir = path.join(basePath, 'bundle', 'nsis');
-    
-    if (fs.existsSync(msiDir)) {
-      const msiFiles = fs.readdirSync(msiDir).filter(f => f.endsWith('.msi'));
-      for (const file of msiFiles) {
-        windowsFiles.push({
-          type: 'file',
-          path: path.join(msiDir, file),
-          name: file
-        });
-      }
-      log(`  📦 Found ${msiFiles.length} MSI files for Windows`, 'cyan');
-    }
     
     if (fs.existsSync(nsisDir)) {
       const nsisFiles = fs.readdirSync(nsisDir).filter(f => f.endsWith('.exe'));
@@ -248,8 +235,11 @@ function getInstallerFiles() {
           name: file
         });
       }
-      log(`  📦 Found ${nsisFiles.length} EXE files for Windows`, 'cyan');
+      log(`  📦 Found ${nsisFiles.length} NSIS installer(s) for Windows`, 'cyan');
     }
+    
+    // Note: MSI files are not generated during cross-compilation
+    // They require native Windows build environment with WiX Toolset
     
     return windowsFiles;
   }
@@ -463,8 +453,7 @@ async function publishToPublic(version, isPrerelease, forceFlag, octokit) {
 ${isPrerelease ? '🧪 **Versión Pre-Release** - Esta es una versión de prueba con características experimentales' : '🎉 **Versión Estable** - Versión lista para producción'}
 
 ### 🪟 **Windows**
-- **MSI Installer** (\`*.msi\`) - Recomendado
-- **NSIS Installer** (\`*.exe\`) - Alternativo
+- **NSIS Installer** (\`*.exe\`) - Recomendado (instalador universal)
 
 ### 🐧 **Linux**
 - **DEB Package** (\`*.deb\`) - Debian/Ubuntu/Mint
@@ -621,7 +610,7 @@ async function publishToPrivate(version, isPrerelease, publicReleaseUrl, forceFl
         
         // Generate build status for all platforms
         const buildStatus = {
-            windows: platform === 'win32' ? '✅ **Windows**: MSI + NSIS' : '❌ **Windows**: Not built',
+            windows: platform === 'win32' ? '✅ **Windows**: NSIS Installer' : '❌ **Windows**: Not built',
             linux: platform === 'linux' ? '✅ **Linux**: DEB + RPM' : '❌ **Linux**: Not built',
             macos: platform === 'darwin' ? '✅ **macOS**: DMG + APP (Apple Silicon + Intel)' : '❌ **macOS**: Not built'
         };
@@ -632,12 +621,12 @@ async function publishToPrivate(version, isPrerelease, publicReleaseUrl, forceFl
             const bodyText = existingRelease.body || '';
             
             // Update build status based on existing info
-            if (bodyText.includes('✅ **Windows**')) buildStatus.windows = '✅ **Windows**: MSI + NSIS';
+            if (bodyText.includes('✅ **Windows**')) buildStatus.windows = '✅ **Windows**: NSIS Installer';
             if (bodyText.includes('✅ **Linux**')) buildStatus.linux = '✅ **Linux**: DEB + RPM';
             if (bodyText.includes('✅ **macOS**')) buildStatus.macos = '✅ **macOS**: DMG + APP (Apple Silicon + Intel)';
             
             // Now update current platform
-            if (platform === 'win32') buildStatus.windows = '✅ **Windows**: MSI + NSIS';
+            if (platform === 'win32') buildStatus.windows = '✅ **Windows**: NSIS Installer';
             if (platform === 'linux') buildStatus.linux = '✅ **Linux**: DEB + RPM';
             if (platform === 'darwin') buildStatus.macos = '✅ **macOS**: DMG + APP (Apple Silicon + Intel)';
         }

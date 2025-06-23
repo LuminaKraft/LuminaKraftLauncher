@@ -133,13 +133,14 @@ npm run download-nsis  # Pre-download NSIS dependencies
 ## ⚙️ Configuration Files
 
 ### Bundle Configuration
-Tauri automatically chooses the appropriate bundle types for each target platform:
+Due to cross-compilation limitations, we specify bundle types explicitly:
 
-- **Linux**: DEB and RPM packages
-- **Windows**: MSI and NSIS installers  
-- **macOS**: DMG and APP bundles
+- **Linux**: DEB and RPM packages (`--bundles deb,rpm`)
+- **Windows**: NSIS installer only (`--bundles nsis`)
+  - *Note: MSI requires native Windows build with WiX Toolset*
+- **macOS**: DMG and APP bundles (automatic for native builds)
 
-The `tauri.conf.json` uses `"targets": "all"` to allow all bundle types, and the build scripts use `--target` to specify the platform without explicitly setting bundle types.
+The `tauri.conf.json` uses `"targets": "all"` to allow all bundle types.
 
 ### Cross-Compilation Settings (`src-tauri/.cargo/config.toml`)
 ```toml
@@ -186,6 +187,33 @@ After successful builds, you'll find:
 3. **Dependency caching**: Mount `.tauri` directory for faster rebuilds
 4. **Version consistency**: Let the release script manage version updates
 5. **Testing**: Use fast test workflows before full releases
+
+## 🪟 MSI Installer Generation (Advanced)
+
+**Current Limitation**: Cross-compilation produces NSIS installers only.
+
+**For MSI installers, you need a native Windows environment:**
+
+### Option 1: Windows Machine
+```bash
+# Install WiX Toolset on Windows
+npm run tauri build -- --bundles msi,nsis
+```
+
+### Option 2: GitHub Actions (Recommended)
+```yaml
+- name: Build Windows MSI
+  if: matrix.platform == 'windows-latest'
+  run: npm run tauri build -- --bundles msi,nsis
+```
+
+### Why Cross-Compilation Can't Generate MSI:
+- **MSI format** requires WiX Toolset integration
+- **WiX Toolset** is Windows-specific and doesn't work in Linux containers  
+- **MinGW target** (`x86_64-pc-windows-gnu`) produces executables, not installers
+- **NSIS works** because it's available on Linux and cross-platform
+
+**🎯 Current Solution**: NSIS installer provides excellent Windows compatibility and user experience.
 
 ---
 
