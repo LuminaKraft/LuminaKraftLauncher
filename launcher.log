@@ -1,0 +1,69 @@
+
+> luminakraft-launcher@0.0.5 tauri
+> tauri dev
+
+     Running BeforeDevCommand (`npm run dev`)
+
+> luminakraft-launcher@0.0.5 dev
+> vite
+
+
+✘ vite v6.3.5 is not yet supported in the Community edition of Console Ninja.
+We are working hard on it for you https://tinyurl.com/3h9mtwra.
+
+Estimated release dates:
+  - Community users: around 5th July, 2025 (subject to team availability)
+  - PRO users:       priority access is available now
+
+
+  VITE v6.3.5  ready in 316 ms
+
+  ➜  Local:   http://localhost:1420/
+     Running DevCommand (`cargo  run --no-default-features --color always --`)
+        Info Watching /Users/kristian/Documents/Repos/luminakraft-launcher/src-tauri for changes...
+[1m[32m   Compiling[0m objc2-exception-helper v0.1.1
+[1m[32m   Compiling[0m ring v0.17.14
+[1m[36m    Building[0m [==========>              ] 292/647: objc2-exception-helper(bu...[K[1m[32m   Compiling[0m objc2 v0.6.1
+[1m[36m    Building[0m [==========>              ] 293/647: ring(build), objc2(build)   [1m[36m    Building[0m [==========>              ] 294/647: ring(build), objc2-except...[1m[36m    Building[0m [==========>              ] 295/647: objc2, ring(build)          [K[1m[32m   Compiling[0m objc2-core-foundation v0.3.1
+[1m[36m    Building[0m [==========>              ] 296/647: ring(build), objc2-core-f...[K[1m[32m   Compiling[0m block2 v0.6.1
+[1m[36m    Building[0m [==========>              ] 297/647: ring(build), block2         [K[1m[32m   Compiling[0m objc2-foundation v0.3.1
+[1m[36m    Building[0m [==========>              ] 306/647: ring(build), objc2-founda...[1m[36m    Building[0m [===========>             ] 323/647: ring, objc2-foundation      [K[1m[32m   Compiling[0m objc2-core-graphics v0.3.1
+[1m[36m    Building[0m [============>            ] 359/647: objc2-core-graphics, objc...[K[1m[32m   Compiling[0m rustls v0.21.12
+[1m[36m    Building[0m [=================>       ] 483/647: rustls(build), objc2-foun...[K[1m[32m   Compiling[0m zstd-sys v2.0.15+zstd.1.5.7
+[1m[36m    Building[0m [=================>       ] 487/647: zstd-sys(build), objc2-fo...[K[1m[32m   Compiling[0m objc2-core-data v0.3.1
+[1m[36m    Building[0m [=================>       ] 488/647: objc2-core-data, objc2-fo...[K[1m[32m   Compiling[0m objc2-core-image v0.3.1
+[1m[36m    Building[0m [=================>       ] 489/647: objc2-core-image, objc2-f...[K[1m[32m   Compiling[0m objc2-quartz-core v0.3.1
+[1m[36m    Building[0m [=================>       ] 490/647: objc2-core-image, objc2-q...[K[1m[32m   Compiling[0m objc2-cloud-kit v0.3.1
+[1m[36m    Building[0m [=================>       ] 491/647: objc2-cloud-kit, objc2-qu...[K[1m[32m   Compiling[0m objc2-app-kit v0.3.1
+[1m[36m    Building[0m [==================>      ] 492/647: objc2-quartz-core, objc2-...[K[1m[32m   Compiling[0m sct v0.7.1
+[1m[36m    Building[0m [==================>      ] 497/647: sct, objc2-app-kit          [K[1m[32m   Compiling[0m rustls-webpki v0.101.7
+[1m[36m    Building[0m [==================>      ] 498/647: rustls-webpki, objc2-app-kit[K[1m[32m   Compiling[0m rustls v0.23.28
+[1m[36m    Building[0m [==================>      ] 507/647: rustls(build), objc2-app-kit[1m[36m    Building[0m [==================>      ] 513/647: rustls, objc2-app-kit       [K[1m[32m   Compiling[0m rustls-webpki v0.103.3
+[1m[36m    Building[0m [===================>     ] 522/647: rustls-webpki, objc2-app-kit[K[1m[32m   Compiling[0m zstd-safe v7.2.4
+[1m[36m    Building[0m [===================>     ] 533/647: zstd-safe(build), objc2-a...[K[1m[32m   Compiling[0m lzma-sys v0.1.20
+[1m[36m    Building[0m [===================>     ] 539/647: lzma-sys(build), objc2-ap...[K[1m[32m   Compiling[0m objc2-web-kit v0.3.1
+[1m[36m    Building[0m [===================>     ] 540/647: objc2-web-kit, objc2-app-kit[K[1m[32m   Compiling[0m wry v0.51.2
+[1m[36m    Building[0m [===================>     ] 541/647: wry, objc2-app-kit          [K[1m[32m   Compiling[0m tao v0.33.0
+[1m[36m    Building[0m [===================>     ] 542/647: tao, objc2-app-kit          [K[1m[32m   Compiling[0m tauri-runtime-wry v2.6.0
+[1m[36m    Building[0m [===================>     ] 543/647: tauri-runtime-wry, objc2-...[K[1m[32m   Compiling[0m muda v0.16.1
+[1m[36m    Building[0m [====================>    ] 544/647: muda, objc2-app-kit         [K[1m[32m   Compiling[0m window-vibrancy v0.6.0
+[1m[36m    Building[0m [====================>    ] 545/647: window-vibrancy, objc2-ap...[K[1m[32m   Compiling[0m bzip2-sys v0.1.13+1.0.8
+[1m[36m    Building[0m [====================>    ] 546/647: window-vibrancy, bzip2-sy...[1m[36m    Building[0m [====================>    ] 548/647: bzip2-sys(build), rustls    [K[1m[32m   Compiling[0m tokio-rustls v0.24.1
+[1m[36m    Building[0m [====================>    ] 552/647: tokio-rustls, rustls        [1m[36m    Building[0m [====================>    ] 554/647: zstd-sys, rustls            [K[1m[32m   Compiling[0m tauri v2.5.1
+[1m[36m    Building[0m [====================>    ] 569/647: tauri, rustls               [K[1m[32m   Compiling[0m tokio-rustls v0.26.2
+[1m[36m    Building[0m [=====================>   ] 570/647: tokio-rustls, tauri         [1m[36m    Building[0m [=====================>   ] 578/647: zstd-safe, tauri            [K[1m[32m   Compiling[0m hyper-rustls v0.24.2
+[1m[36m    Building[0m [=====================>   ] 580/647: tauri, hyper-rustls         [1m[36m    Building[0m [=====================>   ] 581/647: bzip2-sys, tauri            [1m[36m    Building[0m [=====================>   ] 583/647: lzma-sys, tauri             [K[1m[32m   Compiling[0m reqwest v0.11.27
+[1m[36m    Building[0m [======================>  ] 600/647: tauri, reqwest              [K[1m[32m   Compiling[0m hyper-rustls v0.27.7
+[1m[36m    Building[0m [======================>  ] 610/647: hyper-rustls, reqwest       [K[1m[32m   Compiling[0m xz2 v0.1.7
+[1m[36m    Building[0m [======================>  ] 613/647: xz2, reqwest                [K[1m[32m   Compiling[0m bzip2 v0.5.2
+[1m[36m    Building[0m [======================>  ] 614/647: bzip2, reqwest              [K[1m[32m   Compiling[0m zstd v0.13.3
+[1m[36m    Building[0m [======================>  ] 615/647: zstd, reqwest               [K[1m[32m   Compiling[0m zip v2.4.2
+[1m[36m    Building[0m [=======================> ] 630/647: zip, reqwest                [K[1m[32m   Compiling[0m oauth2 v4.4.2
+[1m[36m    Building[0m [=======================> ] 632/647: zip, oauth2                 [K[1m[32m   Compiling[0m reqwest v0.12.20
+[1m[36m    Building[0m [=======================> ] 635/647: oauth2, reqwest             [K[1m[32m   Compiling[0m tauri-plugin-shell v2.2.2
+[1m[36m    Building[0m [=======================> ] 641/647: tauri-plugin-shell, reqwest [K[1m[32m   Compiling[0m lyceris v1.1.3
+[1m[36m    Building[0m [=======================> ] 642/647: lyceris, reqwest            [K[1m[32m   Compiling[0m tauri-plugin-opener v2.3.0
+[1m[36m    Building[0m [=======================> ] 643/647: lyceris, tauri-plugin-opener[K[1m[32m   Compiling[0m tauri-plugin-fs v2.3.0
+[1m[36m    Building[0m [=======================> ] 644/647: lyceris, tauri-plugin-fs    [1m[36m    Building[0m [=======================> ] 645/647: lyceris                     [K[1m[32m   Compiling[0m luminakraft-launcher v0.0.5 (/Users/kristian/Documents/Repos/luminakraft-launcher/src-tauri)
+[1m[36m    Building[0m [=======================> ] 646/647: luminakraft-launcher(bin)   [K[1m[32m    Finished[0m ]8;;https://doc.rust-lang.org/cargo/reference/profiles.html#default-profiles\`dev` profile [unoptimized + debuginfo]]8;;\ target(s) in 47.08s
+[1m[32m     Running[0m `target/debug/luminakraft-launcher`

@@ -144,7 +144,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Settings Preserved**: All existing user settings and authentication maintained
 - **Progressive Enhancement**: New features activate as needed without disrupting existing functionality
 
-## [0.0.5] - 2024-05-22
+## [0.0.5] - 2025-05-22
 
 ### 🔄 Internal Naming Optimization
 
