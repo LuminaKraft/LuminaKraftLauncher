@@ -21,17 +21,16 @@ SHM_SIZE="2g"
 
 echo "Using memory settings: limit=$MEMORY_LIMIT, swap=$MEMORY_SWAP, shm=$SHM_SIZE"
 
-# Build Windows version (NSIS installer only due to cross-compilation limitations)
-# Note: MSI generation requires native Windows build environment with WiX Toolset
-echo "Building for Windows using Docker (NSIS installer)..."
+# Build Windows version (let Tauri choose appropriate bundles for target)
+echo "Building for Windows using Docker..."
 docker run --rm -m $MEMORY_LIMIT --memory-swap $MEMORY_SWAP --shm-size=$SHM_SIZE \
     -v "$(pwd):/app" \
     -v "$CACHE_DIR:/root/.tauri" \
     windows-builder \
-    bash -c "cd /app && npm install && npm run tauri build -- --target x86_64-pc-windows-gnu --bundles nsis"
+    bash -c "cd /app && npm install && npm run tauri build -- --target x86_64-pc-windows-gnu"
 
-echo "Windows build completed! NSIS installer has been created."
-echo "Note: MSI installer requires native Windows build environment with WiX Toolset."
+echo "Windows build completed! Windows installer has been created."
+echo "Note: Cross-compilation typically produces NSIS installer (.exe) only."
 
 # Copy the build artifacts to expected locations if needed
 WIN_BUNDLE_DIR="src-tauri/target/x86_64-pc-windows-gnu/release/bundle"

@@ -133,14 +133,14 @@ npm run download-nsis  # Pre-download NSIS dependencies
 ## ⚙️ Configuration Files
 
 ### Bundle Configuration
-Due to cross-compilation limitations, we specify bundle types explicitly:
+Tauri automatically selects appropriate bundle types based on the target platform:
 
-- **Linux**: DEB and RPM packages (`--bundles deb,rpm`)
-- **Windows**: NSIS installer only (`--bundles nsis`)
+- **Linux**: DEB, RPM, and AppImage packages (DEB/RPM succeed, AppImage may fail in Docker)
+- **Windows**: NSIS installer (.exe) when cross-compiling
   - *Note: MSI requires native Windows build with WiX Toolset*
-- **macOS**: DMG and APP bundles (automatic for native builds)
+- **macOS**: DMG and APP bundles (native builds)
 
-The `tauri.conf.json` uses `"targets": "all"` to allow all bundle types.
+The `tauri.conf.json` uses `"targets": "all"` to allow all bundle types, and build scripts use `--target` to specify the platform without bundle restrictions.
 
 ### Cross-Compilation Settings (`src-tauri/.cargo/config.toml`)
 ```toml
