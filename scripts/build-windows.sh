@@ -47,10 +47,11 @@ docker run \
     bash -c "
         echo 'Setting up environment...'
         export PATH=/root/.cargo/bin:\$PATH
-        echo 'Installing production dependencies only...'
-        # Clean up any existing modules
-        rm -rf node_modules 2>/dev/null || true
-        npm ci --omit=dev --omit=optional
+        echo 'Installing dependencies with clean slate...'
+        # Clean up any existing modules and lock file
+        rm -rf node_modules package-lock.json 2>/dev/null || true
+        npm cache clean --force
+        npm install
         echo 'Building Windows executable with memory optimizations...'
         npx tauri build --target x86_64-pc-windows-gnu --verbose
         

@@ -27,6 +27,7 @@ RUN apt-get update && apt-get install -y \
     libfuse2 \
     rpm \
     file \
+    xdg-utils \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js 20 (compatible with latest npm packages)

@@ -47,9 +47,10 @@ docker run \
     bash -c "
         echo 'Setting up environment...' && \
         export PATH=/root/.cargo/bin:\$PATH && \
-        echo 'Installing production dependencies only...' && \
-        rm -rf node_modules 2>/dev/null || true && \
-        npm ci --omit=dev --omit=optional && \
+        echo 'Installing dependencies with clean slate...' && \
+        rm -rf node_modules package-lock.json 2>/dev/null || true && \
+        npm cache clean --force && \
+        npm install && \
         echo 'Building Linux executable with memory optimizations...' && \
         npx tauri build --target x86_64-unknown-linux-gnu --verbose && \
         echo 'Copying build artifacts to dist directory...' && \
