@@ -129,9 +129,7 @@ Antes de cada release, verificar:
 - `LuminaKraft Launcher_0.0.1_x64-setup.exe`
 
 ✅ **Linux:**
-- `LuminaKraft Launcher_0.0.1_amd64.AppImage`
 - `LuminaKraft Launcher_0.0.1_amd64.deb`
-- `LuminaKraft Launcher-0.0.1-1.x86_64.rpm`
 
 ✅ **macOS:**
 - `LuminaKraft Launcher_0.0.1_aarch64.dmg`

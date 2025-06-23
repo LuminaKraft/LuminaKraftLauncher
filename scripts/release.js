@@ -258,8 +258,9 @@ function getInstallerFiles() {
   function findLinuxFiles(basePath) {
     const linuxFiles = [];
     const debianDir = path.join(basePath, 'bundle', 'deb');
-    const appimageDir = path.join(basePath, 'bundle', 'appimage');
+    const rpmDir = path.join(basePath, 'bundle', 'rpm');
     
+    // Find DEB files
     if (fs.existsSync(debianDir)) {
       const debFiles = fs.readdirSync(debianDir).filter(f => f.endsWith('.deb'));
       for (const file of debFiles) {
@@ -272,16 +273,44 @@ function getInstallerFiles() {
       log(`  📦 Found ${debFiles.length} DEB files for Linux`, 'cyan');
     }
     
-    if (fs.existsSync(appimageDir)) {
-      const appimageFiles = fs.readdirSync(appimageDir).filter(f => f.endsWith('.AppImage'));
-      for (const file of appimageFiles) {
+    // Find RPM files
+    if (fs.existsSync(rpmDir)) {
+      const rpmFiles = fs.readdirSync(rpmDir).filter(f => f.endsWith('.rpm'));
+      for (const file of rpmFiles) {
         linuxFiles.push({
           type: 'file',
-          path: path.join(appimageDir, file),
+          path: path.join(rpmDir, file),
           name: file
         });
       }
-      log(`  📦 Found ${appimageFiles.length} AppImage files for Linux`, 'cyan');
+      log(`  📦 Found ${rpmFiles.length} RPM files for Linux`, 'cyan');
+    }
+    
+    // Also check the dist/linux directories for packages
+    const distDebDir = path.join(process.cwd(), 'dist', 'linux', 'deb');
+    if (fs.existsSync(distDebDir)) {
+      const distDebFiles = fs.readdirSync(distDebDir).filter(f => f.endsWith('.deb'));
+      for (const file of distDebFiles) {
+        linuxFiles.push({
+          type: 'file',
+          path: path.join(distDebDir, file),
+          name: file
+        });
+      }
+      log(`  📦 Found ${distDebFiles.length} DEB files in dist/linux/deb`, 'cyan');
+    }
+    
+    const distRpmDir = path.join(process.cwd(), 'dist', 'linux', 'rpm');
+    if (fs.existsSync(distRpmDir)) {
+      const distRpmFiles = fs.readdirSync(distRpmDir).filter(f => f.endsWith('.rpm'));
+      for (const file of distRpmFiles) {
+        linuxFiles.push({
+          type: 'file',
+          path: path.join(distRpmDir, file),
+          name: file
+        });
+      }
+      log(`  📦 Found ${distRpmFiles.length} RPM files in dist/linux/rpm`, 'cyan');
     }
     
     return linuxFiles;
@@ -438,9 +467,8 @@ ${isPrerelease ? '🧪 **Versión Pre-Release** - Esta es una versión de prueba
 - **NSIS Installer** (\`*.exe\`) - Alternativo
 
 ### 🐧 **Linux**
-- **AppImage** (\`*.AppImage\`) - Recomendado (portable)
-- **DEB Package** (\`*.deb\`) - Debian/Ubuntu
-- **RPM Package** (\`*.rpm\`) - Red Hat/Fedora
+- **DEB Package** (\`*.deb\`) - Debian/Ubuntu/Mint
+- **RPM Package** (\`*.rpm\`) - Red Hat/Fedora/openSUSE
 
 ### 🍎 **macOS**
 - **Apple Silicon DMG** (\`*_aarch64.dmg\`) - Para M1/M2/M3/M4
@@ -594,7 +622,7 @@ async function publishToPrivate(version, isPrerelease, publicReleaseUrl, forceFl
         // Generate build status for all platforms
         const buildStatus = {
             windows: platform === 'win32' ? '✅ **Windows**: MSI + NSIS' : '❌ **Windows**: Not built',
-            linux: platform === 'linux' ? '✅ **Linux**: AppImage + DEB' : '❌ **Linux**: Not built',
+            linux: platform === 'linux' ? '✅ **Linux**: DEB' : '❌ **Linux**: Not built',
             macos: platform === 'darwin' ? '✅ **macOS**: DMG + APP (Apple Silicon + Intel)' : '❌ **macOS**: Not built'
         };
         
@@ -605,12 +633,12 @@ async function publishToPrivate(version, isPrerelease, publicReleaseUrl, forceFl
             
             // Update build status based on existing info
             if (bodyText.includes('✅ **Windows**')) buildStatus.windows = '✅ **Windows**: MSI + NSIS';
-            if (bodyText.includes('✅ **Linux**')) buildStatus.linux = '✅ **Linux**: AppImage + DEB';
+            if (bodyText.includes('✅ **Linux**')) buildStatus.linux = '✅ **Linux**: DEB';
             if (bodyText.includes('✅ **macOS**')) buildStatus.macos = '✅ **macOS**: DMG + APP (Apple Silicon + Intel)';
             
             // Now update current platform
             if (platform === 'win32') buildStatus.windows = '✅ **Windows**: MSI + NSIS';
-            if (platform === 'linux') buildStatus.linux = '✅ **Linux**: AppImage + DEB';
+            if (platform === 'linux') buildStatus.linux = '✅ **Linux**: DEB';
             if (platform === 'darwin') buildStatus.macos = '✅ **macOS**: DMG + APP (Apple Silicon + Intel)';
         }
         

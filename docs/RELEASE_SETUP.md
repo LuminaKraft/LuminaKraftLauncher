@@ -1,158 +1,272 @@
-# 🚀 Sistema de Releases LuminaKraft Launcher
+# 🚀 Release System for LuminaKraft Launcher
 
-## 📋 Arquitectura de Repositorios
+Complete guide for creating and managing releases of the LuminaKraft Launcher.
 
-### 📁 Repositorio Privado (Código Fuente)
-- **Repositorio**: `kristiangarcia/luminakraft-launcher`
-- **Contenido**: Código fuente completo, desarrollo, workflow de build
-- **Acceso**: Privado (solo desarrolladores)
-- **Propósito**: Proteger el código fuente y ejecutar builds
+## 📋 Repository Architecture
 
-### 📦 Repositorio Público (Solo Releases)
-- **Repositorio**: `kristiangarcia/luminakraft-launcher-releases`
-- **Contenido**: Solo releases, binarios y documentación para usuarios
-- **Acceso**: Público (todos los usuarios)
-- **Propósito**: Distribución pública del launcher
+### 🔒 Private Repository (Source Code)
+- **Repository**: `kristiangarcia/luminakraft-launcher`
+- **Content**: Complete source code, development, build workflows
+- **Access**: Private (developers only)
+- **Purpose**: Protect source code and execute builds
 
-## 🎮 Comandos de Release
+### 🌍 Public Repository (Distribution)
+- **Repository**: `kristiangarcia/luminakraft-launcher-releases`
+- **Content**: Releases, binaries, and user documentation only
+- **Access**: Public (all users)
+- **Purpose**: Public distribution of the launcher
 
-### 📋 Releases Estables
+### 💰 Hybrid Benefits
+- **🔒 Security**: Source code remains private
+- **💸 Cost**: Uses unlimited free GitHub Actions minutes on public repo
+- **🚀 Efficiency**: Parallel builds on multiple platforms
+- **👥 Community**: Users can report issues and download releases publicly
+
+## 🎮 Release Commands
+
+### 📋 Stable Releases
 ```bash
-# Incrementos automáticos
-npm run release patch     # 0.3.1 -> 0.3.2
-npm run release minor     # 0.3.1 -> 0.4.0  
-npm run release major     # 0.3.1 -> 1.0.0
+# Automatic version increments
+npm run release:patch      # 0.3.1 → 0.3.2
+npm run release:minor      # 0.3.1 → 0.4.0  
+npm run release:major      # 0.3.1 → 1.0.0
 
-# Versión específica
-npm run release 1.2.3     # Release estable v1.2.3
+# Specific version
+npm run release:version 1.2.3     # Stable release v1.2.3
 ```
 
-### 🧪 Pre-Releases (Nuevas!)
+### 🧪 Pre-Releases
 ```bash
-# Pre-releases con incrementos
-npm run release patch --prerelease     # Pre-release patch
-npm run release minor --prerelease     # Pre-release minor
+# Pre-releases with increments
+npm run release:patch-pre     # Pre-release patch
+npm run release:minor-pre     # Pre-release minor
 
-# Pre-release con versión específica
-npm run release 0.5.0 --prerelease     # Pre-release v0.5.0
-npm run release 1.0.0-alpha.1 --prerelease  # Pre-release v1.0.0-alpha.1
+# Pre-release with specific version
+npm run release:pre 0.5.0                # Pre-release v0.5.0
+npm run release:pre 1.0.0-alpha.1        # Pre-release v1.0.0-alpha.1
 ```
 
-### ⚡ Flags Disponibles
-- `--prerelease`: Marca el release como pre-release
-- `--push`: Auto-push sin confirmación (para CI)
+### 🛠️ Direct Commands (Advanced)
+```bash
+# Using the release script directly
+node release.js 0.5.0                    # Stable (with confirmation)
+node release.js 0.5.0 --prerelease       # Pre-release (with confirmation)
+node release.js 0.5.0 --push             # Stable (auto-push)
+node release.js 0.5.0 --prerelease --push # Pre-release (auto-push)
 
-## 🏗️ Workflow Multi-Plataforma
+# Through npm with flags
+npm run release -- 0.5.0 --prerelease    # Specific version pre-release
+npm run release -- patch --push          # Auto-increment with push
+```
 
-### 📦 Builds Automáticos
+### ⚡ Available Flags
+- `--prerelease`: Mark release as pre-release
+- `--push`: Auto-push without confirmation (for CI)
+
+## 🏗️ Multi-Platform Workflow
+
+### 📦 Automatic Builds
 - **🪟 Windows**: MSI + NSIS installers
-- **🐧 Linux**: AppImage + DEB + RPM packages
-- **🍎 macOS**: DMG para ARM64 (Apple Silicon) + x86_64 (Intel)
+- **🐧 Linux**: DEB + RPM packages  
+- **🍎 macOS**: DMG for ARM64 (Apple Silicon) + x86_64 (Intel)
 
-### 🔄 Proceso Automático
-1. **Tag Detection**: Workflow se activa con tags `v*`
-2. **Multi-Platform Build**: Builds paralelos en 3 runners
-3. **Dual Release**: Publica en repositorio público y privado
-4. **Spanish Content**: Releases en español, formato corto
+### 🔄 Automatic Process
+1. **Tag Detection**: Workflow triggers on `v*` tags
+2. **Multi-Platform Build**: Parallel builds on 3 runners
+3. **Dual Release**: Publishes to both public and private repositories
+4. **Spanish Content**: Releases in Spanish with short format
 
-## 📝 Contenido de Releases
+## 📝 Release Content
 
-### 🌐 Release Público (Español)
-- Instrucciones de descarga por plataforma
-- Características principales del launcher
-- Enlaces de soporte (Discord, Issues)
-- Advertencias para pre-releases
+### 🌍 Public Release (Spanish)
+- Download instructions by platform
+- Main launcher features
+- Support links (Discord, Issues)
+- Warnings for pre-releases
 
-### 🔒 Release Privado (Tracking)
-- Información técnica de build
-- Enlaces al release público
-- Datos para desarrollo interno
+### 🔒 Private Release (Internal Tracking)
+- Technical build information
+- Links to public release
+- Development team data
 
-## ✅ Estado Actual del Sistema
+## ✅ Current System Status
 
-- ✅ **Workflow Configurado**: Multi-plataforma completo
-- ✅ **Dual Repository**: Público + privado funcionando
-- ✅ **Pre-release Manual**: Control con flag `--prerelease`
-- ✅ **Versiones Dinámicas**: Sidebar se actualiza automáticamente
-- ✅ **Contenido en Español**: Releases cortos y claros
-- ✅ **TOKEN Configurado**: `PUBLIC_REPO_TOKEN` funcionando
+- ✅ **Multi-Platform Workflow**: Complete setup
+- ✅ **Dual Repository**: Public + private working
+- ✅ **Manual Pre-release**: Control with `--prerelease` flag
+- ✅ **Dynamic Versions**: Sidebar updates automatically
+- ✅ **Spanish Content**: Short and clear releases
+- ✅ **TOKEN Configured**: `PUBLIC_REPO_TOKEN` working
 
-## 🔧 Configuración Técnica
+## 🔧 Technical Configuration
 
-### 🔑 GitHub Secrets (Ya configurados)
-- `PUBLIC_REPO_TOKEN`: Token para escribir en repo público
-- `TAURI_PRIVATE_KEY`: Firma de aplicaciones (opcional)
-- `TAURI_KEY_PASSWORD`: Password para firma (opcional)
+### 🔑 GitHub Secrets (Already Configured)
+- `PUBLIC_REPO_TOKEN`: Token to write to public repo
+- `TAURI_PRIVATE_KEY`: App signing (optional)
+- `TAURI_KEY_PASSWORD`: Signing password (optional)
 
 ### 📋 Package.json Extensions
-- `version`: Versión actual (auto-actualizada)
-- `isPrerelease`: Flag para pre-releases (nuevo)
+- `version`: Current version (auto-updated)
+- `isPrerelease`: Flag for pre-releases
 
-### 🔄 Auto-Update de Versiones
-- `package.json`: Versión principal
-- `src-tauri/Cargo.toml`: Versión de Rust
-- `src-tauri/tauri.conf.json`: Configuración Tauri
-- `src/components/About/AboutPage.tsx`: Versión en About
-- `src/components/Layout/Sidebar.tsx`: Versión en Sidebar (nuevo)
+### 🔄 Auto-Version Updates
+The release script automatically updates version in:
+- `package.json`: Main version
+- `src-tauri/Cargo.toml`: Rust version
+- `src-tauri/tauri.conf.json`: Tauri configuration
+- `src/components/Layout/Sidebar.tsx`: Version in Sidebar
 
-## 🎯 Ejemplos Prácticos
+## 🎯 Practical Examples
 
-### 🚀 Release Estable
+### 🚀 Stable Release
 ```bash
-npm run release 1.0.0
-# Resultado:
-# - ✅ Release estable v1.0.0
-# - 📦 Todos los binarios generados
-# - 🌐 Release público en español
-# - 🔒 Tracking interno
+npm run release:version 1.0.0
+# Result:
+# - ✅ Stable release v1.0.0
+# - 📦 All binaries generated
+# - 🌍 Public release in Spanish
+# - 🔒 Internal tracking
 ```
 
 ### 🧪 Pre-Release
 ```bash
-npm run release 1.1.0-beta.1 --prerelease
-# Resultado:
+npm run release:pre 1.1.0-beta.1
+# Result:
 # - 🧪 Pre-release v1.1.0-beta.1
-# - ⚠️ Marcado como pre-release en GitHub
-# - 📝 Advertencias en descripción
-# - 🔍 Visible en releases pero marcado como experimental
+# - ⚠️ Marked as pre-release on GitHub
+# - 📝 Warnings in description
+# - 🔍 Visible in releases but marked as experimental
 ```
 
-### 📈 Incremento Automático
+### 📈 Automatic Increment
 ```bash
-# Si la versión actual es 0.5.2
-npm run release minor --prerelease
-# Resultado: Pre-release v0.6.0
+# If current version is 0.5.2
+npm run release:minor-pre
+# Result: Pre-release v0.6.0
 ```
 
-## 🔗 Enlaces Importantes
+## 🔄 Release Workflow
+
+### 🏷️ **Complete Release** (Tag)
+
+```
+Developer creates tag v1.0.0
+           ↓
+push-to-public.yml executes
+           ↓
+Cleans sensitive files
+           ↓
+Push code to public repo
+           ↓
+Push tags to public repo
+           ↓
+Trigger build-release.yml
+           ↓
+Build on 4 parallel platforms
+           ↓
+Automatic release with assets
+           ↓
+Users can download
+```
+
+### 🔄 **Continuous Development** (Push to main)
+
+```
+Developer push to main
+           ↓
+push-to-public.yml executes
+           ↓
+Syncs code only
+           ↓
+test-build.yml verifies compilation
+           ↓
+No release generated
+```
+
+## 🛠️ Troubleshooting
+
+### Common Issues
+
+#### ❌ Build Cache Problems
+**Solution**: Release script includes automatic cache cleaning
+```bash
+# Manual cache clean if needed
+rm -rf src-tauri/target/release/bundle/
+```
+
+#### ❌ Version Conflicts in Releases
+**Solution**: Implemented in GitHub Actions:
+- Automatic cache cleaning before builds
+- Version conflict detection
+- Detailed debugging output
+
+#### ❌ "Failed to trigger build workflow"
+**Solution**: Verify workflow exists in public repo
+```bash
+curl -H "Authorization: token $TOKEN" \
+     https://api.github.com/repos/kristiangarcia/luminakraft-launcher-releases/actions/workflows
+```
+
+#### ❌ 403 Error in Update Service
+**Solution**: Update service now has fallback strategy to private repo
+
+## 📊 Monitoring
+
+### Metrics to Monitor
+- ✅ **Sync Success Rate**: % of successful syncs
+- ⏱️ **Build Time**: Average build time
+- 📦 **Release Size**: Size of generated assets
+- 🔄 **Sync Frequency**: Frequency of synchronizations
+
+### Configured Alerts
+- 🚨 Automatic sync failure
+- ⚠️ Build time > 30 minutes
+- 📧 Draft release generated (notification)
+
+## 🔗 Important Links
 
 - **🔨 GitHub Actions**: https://github.com/kristiangarcia/luminakraft-launcher/actions
-- **📦 Releases Públicos**: https://github.com/kristiangarcia/luminakraft-launcher-releases/releases
-- **🔒 Releases Privados**: https://github.com/kristiangarcia/luminakraft-launcher/releases
+- **📦 Public Releases**: https://github.com/kristiangarcia/luminakraft-launcher-releases/releases
+- **🔒 Private Releases**: https://github.com/kristiangarcia/luminakraft-launcher/releases
 
-## 📋 Comandos de Mantenimiento
+## 📋 Maintenance Commands
 
-### 🗑️ Limpiar Tags
+### 🗑️ Clean Tags
 ```bash
-# Borrar todos los tags locales
+# Delete all local tags
 git tag | xargs git tag -d
 
-# Borrar tags remotos (cuidado!)
+# Delete remote tags (careful!)
 git push origin --delete $(git tag -l)
 ```
 
-### 🔍 Verificar Estado
+### 🔍 Verify Status
 ```bash
-# Ver tags actuales
+# View current tags
 git tag -l
 
-# Ver último commit
+# View last commit
 git log --oneline -1
 
-# Ver configuración de remotes
+# View remote configuration
 git remote -v
+```
+
+## 🚀 Quick Start
+
+For most releases, use these commands:
+
+```bash
+# Development/testing
+npm run release:minor-pre    # New features (pre-release)
+npm run release:patch-pre    # Bug fixes (pre-release)
+
+# Production releases
+npm run release:minor        # New features (stable)
+npm run release:patch        # Bug fixes (stable)
+npm run release:major        # Major changes (stable)
 ```
 
 ---
 
-**🎉 Sistema completamente operativo y listo para uso en producción!** 
+**🎉 System fully operational and ready for production use!** 

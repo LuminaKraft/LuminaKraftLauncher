@@ -16,8 +16,19 @@ RUN apt-get update && apt-get install -y \
     mingw-w64 \
     wget
 
-# Install NSIS (Nullsoft Scriptable Install System)
+# Install NSIS (Nullsoft Scriptable Install System) and WiX for MSI creation
 RUN apt-get update && apt-get install -y nsis
+
+# Install WiX toolset for MSI creation
+RUN mkdir -p /opt/wix && \
+    cd /opt/wix && \
+    wget https://github.com/wixtoolset/wix3/releases/download/wix3112rtm/wix311-binaries.zip && \
+    unzip wix311-binaries.zip && \
+    chmod +x *.exe && \
+    rm wix311-binaries.zip
+
+# Add WiX to PATH
+ENV PATH="/opt/wix:${PATH}"
 
 # Download and install Windows liblzma
 RUN mkdir -p /usr/x86_64-w64-mingw32/lib/ && \

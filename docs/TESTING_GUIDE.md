@@ -14,7 +14,7 @@
 
 ### ✅ Issue 3: Slow Workflow
 - **Problem**: Full multi-platform build takes too long for testing
-- **Fix**: Created fast test workflow that only builds Linux AppImage
+- **Fix**: Created fast test workflow that only builds Linux DEB package
 - **Test**: Use `test-*` tags to trigger fast workflow
 
 ## 🚀 Testing Steps
@@ -44,7 +44,7 @@ git push origin main --tags
 ```
 
 This will trigger the **Fast Release Test** workflow which:
-- Only builds Linux AppImage (much faster)
+- Only builds Linux DEB package (much faster)
 - Tests prerelease detection
 - Creates releases in both repositories
 - Shows detailed debugging output

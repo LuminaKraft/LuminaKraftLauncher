@@ -14,15 +14,22 @@ HOME_DIR="$HOME"
 CACHE_DIR="$HOME_DIR/.tauri"
 mkdir -p "$CACHE_DIR"
 
-# Build Windows version
-echo "Building for Windows using Docker..."
-docker run --rm -m 8g --memory-swap 12g --shm-size=2g \
+# Set memory limits for the build process
+MEMORY_LIMIT="8g"
+MEMORY_SWAP="12g"
+SHM_SIZE="2g"
+
+echo "Using memory settings: limit=$MEMORY_LIMIT, swap=$MEMORY_SWAP, shm=$SHM_SIZE"
+
+# Build Windows version with both MSI and NSIS installers
+echo "Building for Windows using Docker (MSI + NSIS installers)..."
+docker run --rm -m $MEMORY_LIMIT --memory-swap $MEMORY_SWAP --shm-size=$SHM_SIZE \
     -v "$(pwd):/app" \
     -v "$CACHE_DIR:/root/.tauri" \
     windows-builder \
-    bash -c "cd /app && npm install && npm run tauri build -- --target x86_64-pc-windows-gnu"
+    bash -c "cd /app && npm install && npm run tauri build -- --target x86_64-pc-windows-gnu --bundles msi,nsis"
 
-echo "Windows build completed!"
+echo "Windows build completed! Both MSI and NSIS installers have been created."
 
 # Copy the build artifacts to expected locations if needed
 WIN_BUNDLE_DIR="src-tauri/target/x86_64-pc-windows-gnu/release/bundle"

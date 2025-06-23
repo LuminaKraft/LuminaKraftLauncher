@@ -1,22 +1,60 @@
 # 📚 LuminaKraft Launcher Documentation
 
-This folder contains detailed technical documentation for the LuminaKraft Launcher project.
+This folder contains comprehensive technical documentation for the LuminaKraft Launcher project.
 
 ## 📋 Documentation Index
+
+### 🏗️ **Build & Development**
+- [`CROSS_COMPILATION_GUIDE.md`](./CROSS_COMPILATION_GUIDE.md) - Complete guide for building across platforms using Docker
+- [`RELEASE_SETUP.md`](./RELEASE_SETUP.md) - Complete release system guide with commands and workflows
+
+### 🧪 **Testing & Troubleshooting**
+- [`TESTING_GUIDE.md`](./TESTING_GUIDE.md) - Testing procedures for releases and fixes
+- [`CACHE_FIX_GUIDE.md`](./CACHE_FIX_GUIDE.md) - Solutions for build cache and version conflict issues
 
 ### ⚡ **Technical Integration**
 - [`LYCERIS_INTEGRATION_SUMMARY.md`](./LYCERIS_INTEGRATION_SUMMARY.md) - Details of the Lyceris v1.1.3 Minecraft launcher library integration
 
-## 🔗 **Main Documentation**
+## 🎯 Quick Navigation
 
-For general information, installation, and usage instructions, see the main [`README.md`](../README.md) in the project root.
+### 👨‍💻 **For Developers**
+1. **First Time Setup**: Start with `CROSS_COMPILATION_GUIDE.md` for build environment setup
+2. **Creating Releases**: Use `RELEASE_SETUP.md` for release commands and workflows
+3. **Technical Details**: Check `LYCERIS_INTEGRATION_SUMMARY.md` for architecture understanding
 
-For version history and changes, see [`CHANGELOG.md`](../CHANGELOG.md) in the project root.
+### 🔧 **For Troubleshooting**
+1. **Build Issues**: Check `CROSS_COMPILATION_GUIDE.md` troubleshooting section
+2. **Release Problems**: See `CACHE_FIX_GUIDE.md` for version conflicts
+3. **Testing**: Use `TESTING_GUIDE.md` for validation procedures
 
-## 🎯 **Quick Links**
+### 👥 **For Users**
+- **Installation & Usage**: See the main [`README.md`](../README.md) in the project root
+- **Version History**: Check [`CHANGELOG.md`](../CHANGELOG.md) in the project root
 
-- **For Developers**: Start with `LYCERIS_INTEGRATION_SUMMARY.md` to understand the technical architecture
-- **For Users**: Check the main README for installation and usage instructions
+## 🚀 Quick Start Commands
+
+### Build Commands
+```bash
+# Build all platforms
+npm run release -- 1.0.0
+
+# Individual platform builds
+bash scripts/build-windows.sh    # Windows (MSI + NSIS)
+bash scripts/build-linux.sh      # Linux (DEB + RPM)
+bash scripts/build-macos.sh      # macOS (DMG + APP)
+```
+
+### Release Commands
+```bash
+# Stable releases
+npm run release:patch      # Bug fixes
+npm run release:minor      # New features
+npm run release:major      # Major changes
+
+# Pre-releases
+npm run release:patch-pre  # Pre-release bug fixes
+npm run release:minor-pre  # Pre-release new features
+```
 
 ## 🔄 **Update System**
 
@@ -43,6 +81,22 @@ The launcher uses a **simplified GitHub-based update system**:
 - ✅ **Secure**: Downloads directly from GitHub
 - ✅ **Maintainable**: No additional infrastructure to maintain
 
+## 📊 Documentation Structure
+
+The documentation has been consolidated from 12 files to 5 focused guides:
+
+- **Removed Duplicates**: Eliminated 7 overlapping documents
+- **Merged Content**: Combined related information into comprehensive guides
+- **Improved Navigation**: Clear structure for developers and users
+- **Better Maintenance**: Fewer files to keep updated
+
+## 🔗 External Links
+
+- **🔨 GitHub Actions**: https://github.com/kristiangarcia/luminakraft-launcher/actions
+- **📦 Public Releases**: https://github.com/kristiangarcia/luminakraft-launcher-releases/releases
+- **💬 Discord Community**: https://discord.gg/UJZRrcUFMj
+- **🐛 Report Issues**: https://github.com/kristiangarcia/luminakraft-launcher-releases/issues
+
 ---
 
-**Need help?** Join our [Discord](https://discord.gg/UJZRrcUFMj) or check the main README for support information. 
+**Need help?** Join our [Discord](https://discord.gg/UJZRrcUFMj) or check the specific guides above for detailed information. 

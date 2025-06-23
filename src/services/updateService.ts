@@ -71,7 +71,7 @@ class UpdateService {
       if (platformLower === 'windows') {
         return name.endsWith('.msi') || name.endsWith('.exe');
       } else if (platformLower === 'linux') {
-        return name.endsWith('.appimage');
+        return name.endsWith('.deb');
       } else if (platformLower === 'macos' || platformLower === 'darwin') {
         return name.endsWith('.dmg');
       }

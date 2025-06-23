@@ -103,10 +103,30 @@ Inicia el servidor de desarrollo con hot reload (puede ser inestable en algunos 
 > **⚠️ Problema Resuelto**: El problema de puertos ocupados después de cerrar el desarrollo ha sido solucionado con el script de auto-limpieza integrado.
 
 ### Build de Producción
+
+#### Build para todas las plataformas
 ```bash
 npm run tauri build
 ```
 Genera los ejecutables para distribución con firma automática y configuración de actualizaciones.
+
+#### Build específico por plataforma
+
+```bash
+# Build para Windows (desde macOS o Linux usando Docker)
+./scripts/build-windows.sh
+
+# Build para Linux (desde cualquier plataforma usando Docker)
+./scripts/build-linux.sh
+
+# Build para macOS (solo desde macOS)
+./scripts/build-macos.sh
+
+# Build para todas las plataformas (usando Docker para Windows/Linux)
+./scripts/build-all.sh
+```
+
+> **📝 Nota**: Para más detalles sobre el build para Linux, consulta [LINUX_BUILD_GUIDE.md](docs/LINUX_BUILD_GUIDE.md)
 
 ### Comandos de Release
 
@@ -272,7 +292,7 @@ El launcher obtiene la información de modpacks desde un archivo JSON remoto. El
   "launcherDownloadUrls": {
     "windows": "https://url-al-ejecutable-windows.exe",
     "macos": "https://url-al-dmg-macos.dmg",
-    "linux": "https://url-al-appimage-linux.AppImage"
+    "linux": "https://url-al-deb-linux.deb"
   },
   "modpacks": [
     {

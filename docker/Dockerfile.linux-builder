@@ -24,7 +24,8 @@ RUN apt-get update && apt-get install -y \
     unzip \
     xdg-utils \
     fuse \
-    libfuse2
+    libfuse2 \
+    rpm
 
 # Install Node.js 20 (compatible with Octokit)
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
@@ -45,15 +46,8 @@ RUN mkdir -p /tmp/appimage-deps && cd /tmp/appimage-deps && \
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 
-# Add Windows target
-RUN rustup target add x86_64-pc-windows-gnu
-RUN apt-get update && apt-get install -y gcc-mingw-w64-x86-64
-
-# Create a dummy project to install Tauri CLI with the correct binary
-WORKDIR /tmp
-RUN npm init -y && \
-    npm install --save-dev @tauri-apps/cli && \
-    npx tauri --version || echo "Tauri CLI installed"
+# Add Linux target
+RUN rustup target add x86_64-unknown-linux-gnu
 
 # Configurar variables para controlar el uso de memoria
 ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
@@ -62,6 +56,11 @@ ENV RUSTFLAGS="-C target-feature=-crt-static"
 # Forzar arquitectura x64 para npm
 ENV npm_config_arch=x64
 ENV npm_config_target_arch=x64
+
+# Ensure pkg-config is properly set up
+ENV PKG_CONFIG_ALLOW_CROSS=1
+ENV PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig
+ENV PKG_CONFIG_SYSROOT_DIR=/
 
 # Preparar entorno para AppImage
 RUN chmod 755 / 

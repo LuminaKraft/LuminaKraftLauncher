@@ -70,7 +70,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### **Docker Environment Updates**
 - **Node.js 20 Upgrade**: Updated Windows Docker builder from Node.js 18 to 20 for Octokit compatibility
-- **AppImage Fix**: Pre-downloaded AppImage dependencies in Linux Docker container to prevent build failures
+- **Linux Build Fix**: Simplified Linux build process with DEB package support
 - **Environment Consistency**: Standardized Node.js versions across all build environments
 
 #### **Release Process Enhancements**
