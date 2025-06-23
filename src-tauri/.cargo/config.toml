@@ -1,21 +1,31 @@
 [build]
 # Optimize for memory usage during cross-compilation
 codegen-units = 1
+jobs = 2
 
 [target.x86_64-unknown-linux-gnu]
 linker = "x86_64-linux-gnu-gcc"
-rustflags = ["-C", "target-feature=-crt-static"]
+rustflags = ["-C", "target-feature=-crt-static", "-C", "link-arg=-Wl,--no-keep-memory", "-C", "link-arg=-Wl,--reduce-memory-overheads"]
 
 [target.x86_64-pc-windows-gnu]
 linker = "x86_64-w64-mingw32-gcc"
 ar = "x86_64-w64-mingw32-gcc-ar"
+rustflags = [
+    "-C", "link-arg=-Wl,--no-gc-sections", 
+    "-C", "link-arg=-llzma", 
+    "-C", "link-arg=-Wl,--allow-multiple-definition",
+    "-C", "link-arg=-Wl,--no-keep-memory",
+    "-C", "link-arg=-Wl,--reduce-memory-overheads",
+    "-C", "codegen-units=1",
+    "-C", "opt-level=1"
+]
 
 [net]
 git-fetch-with-cli = true
 retry = 5
 
 [http]
-timeout = 60
+timeout = 120
 multiplexing = false
 check-revoke = false
 
@@ -24,6 +34,15 @@ codegen-units = 1
 opt-level = 1
 debug = false
 strip = "symbols"
+lto = "thin"
+panic = "abort"
+
+[profile.dev]
+codegen-units = 256
+opt-level = 0
+debug = 1
 
 [env]
 PKG_CONFIG_ALLOW_CROSS = "1"
+CARGO_NET_GIT_FETCH_WITH_CLI = "true"
+RUSTC_FORCE_INCREMENTAL = "1"

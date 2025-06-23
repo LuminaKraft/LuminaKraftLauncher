@@ -4,9 +4,9 @@ set -e
 echo "--- Building LuminaKraft Launcher for Windows ---"
 
 # Verify Docker image exists, if not build it
-if ! docker image inspect windows-builder &> /dev/null; then
+if ! docker image inspect luminakraft-windows-builder &> /dev/null; then
     echo "Building Docker image for Windows..."
-    docker build -t windows-builder -f docker/Dockerfile.windows-builder .
+    docker build -t luminakraft-windows-builder -f docker/Dockerfile.windows-builder .
 fi
 
 # Create cache directory if doesn't exist
@@ -14,34 +14,71 @@ HOME_DIR="$HOME"
 CACHE_DIR="$HOME_DIR/.tauri"
 mkdir -p "$CACHE_DIR"
 
-# Set memory limits for the build process
-MEMORY_LIMIT="8g"
-MEMORY_SWAP="12g"
-SHM_SIZE="2g"
+# Create dist directory
+mkdir -p dist
+
+# Set aggressive memory limits for the build process
+MEMORY_LIMIT="6g"
+MEMORY_SWAP="8g"
+SHM_SIZE="1g"
 
 echo "Using memory settings: limit=$MEMORY_LIMIT, swap=$MEMORY_SWAP, shm=$SHM_SIZE"
 
-# Build Windows version (let Tauri choose appropriate bundles for target)
+# Build Windows version with strict memory controls
 echo "Building for Windows using Docker..."
-docker run --rm -m $MEMORY_LIMIT --memory-swap $MEMORY_SWAP --shm-size=$SHM_SIZE \
+docker run \
+    --rm \
     -v "$(pwd):/app" \
     -v "$CACHE_DIR:/root/.tauri" \
-    windows-builder \
-    bash -c "cd /app && npm install && npm run tauri build -- --target x86_64-pc-windows-gnu"
+    -w /app \
+    --memory="$MEMORY_LIMIT" \
+    --memory-swap="$MEMORY_SWAP" \
+    --shm-size="$SHM_SIZE" \
+    --cpus="2.0" \
+    --memory-swappiness=10 \
+    --oom-kill-disable=false \
+    -e CARGO_BUILD_JOBS=2 \
+    -e CARGO_NET_GIT_FETCH_WITH_CLI=true \
+    -e RUSTFLAGS="-C link-arg=-Wl,--no-keep-memory -C link-arg=-Wl,--reduce-memory-overheads -C codegen-units=1 -C opt-level=1" \
+    -e RUSTC_FORCE_INCREMENTAL=1 \
+    -e CARGO_INCREMENTAL=1 \
+    -e CARGO_TARGET_DIR=/tmp/target-windows \
+    luminakraft-windows-builder \
+    bash -c "
+        echo 'Setting up environment...'
+        export PATH=/root/.cargo/bin:\$PATH
+        echo 'Cleaning and reinstalling npm dependencies...'
+        rm -rf node_modules package-lock.json
+        npm install
+        echo 'Building Windows executable with memory optimizations...'
+        npx tauri build --target x86_64-pc-windows-gnu --verbose
+        
+        echo 'Copying build artifacts to host directory...'
+        mkdir -p /app/dist
+        if [ -f /tmp/target-windows/x86_64-pc-windows-gnu/release/luminakraft-launcher.exe ]; then
+            cp /tmp/target-windows/x86_64-pc-windows-gnu/release/luminakraft-launcher.exe /app/dist/
+            echo 'Copied luminakraft-launcher.exe to dist/'
+        else
+            echo 'luminakraft-launcher.exe not found!'
+        fi
+        if [ -f '/tmp/target-windows/x86_64-pc-windows-gnu/release/bundle/nsis/LuminaKraft Launcher_0.0.5_x64-setup.exe' ]; then
+            cp '/tmp/target-windows/x86_64-pc-windows-gnu/release/bundle/nsis/LuminaKraft Launcher_0.0.5_x64-setup.exe' /app/dist/
+            echo 'Copied LuminaKraft Launcher_0.0.5_x64-setup.exe to dist/'
+        else
+            echo 'Installer not found!'
+        fi
+        
+        echo 'Listing contents of target directory:'
+        ls -la /tmp/target-windows/x86_64-pc-windows-gnu/release/ || echo 'Target directory not found'
+        if [ -d /tmp/target-windows/x86_64-pc-windows-gnu/release/bundle ]; then
+            ls -la /tmp/target-windows/x86_64-pc-windows-gnu/release/bundle/
+            if [ -d /tmp/target-windows/x86_64-pc-windows-gnu/release/bundle/nsis ]; then
+                ls -la /tmp/target-windows/x86_64-pc-windows-gnu/release/bundle/nsis/
+            fi
+        fi
+    "
 
-echo "Windows build completed! Windows installer has been created."
-echo "Note: Cross-compilation typically produces NSIS installer (.exe) only."
-
-# Copy the build artifacts to expected locations if needed
-WIN_BUNDLE_DIR="src-tauri/target/x86_64-pc-windows-gnu/release/bundle"
-WIN_TARGET_DIR="src-tauri/target/x86_64-pc-windows-msvc/release"
-
-# Create target directory if it doesn't exist
-mkdir -p "$WIN_TARGET_DIR"
-
-# Copy files
-if [ -d "$WIN_BUNDLE_DIR" ]; then
-    echo "Copying Windows build artifacts..."
-    cp -r "$WIN_BUNDLE_DIR" "$(dirname "$WIN_TARGET_DIR")"
-    echo "Windows artifacts copied successfully"
-fi 
+echo "✅ Windows build completed successfully!"
+echo "Build artifacts available in:"
+echo "  - dist/luminakraft-launcher.exe (executable)"
+echo "  - dist/LuminaKraft Launcher_0.0.5_x64-setup.exe (installer)" 

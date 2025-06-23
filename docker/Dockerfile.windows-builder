@@ -1,5 +1,11 @@
 FROM --platform=linux/amd64 ubuntu:22.04
 
+# Set environment variables for memory optimization
+ENV DEBIAN_FRONTEND=noninteractive \
+    CARGO_NET_GIT_FETCH_WITH_CLI=true \
+    CARGO_BUILD_JOBS=2 \
+    RUSTFLAGS="-C link-arg=-Wl,--no-keep-memory -C link-arg=-Wl,--reduce-memory-overheads"
+
 RUN apt-get update && apt-get install -y \
     curl \
     build-essential \
@@ -14,10 +20,11 @@ RUN apt-get update && apt-get install -y \
     mingw-w64-tools \
     mingw-w64-x86-64-dev \
     mingw-w64 \
-    wget
+    wget \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install NSIS (Nullsoft Scriptable Install System) and WiX for MSI creation
-RUN apt-get update && apt-get install -y nsis
+RUN apt-get update && apt-get install -y nsis && rm -rf /var/lib/apt/lists/*
 
 # Install WiX toolset for MSI creation
 RUN mkdir -p /opt/wix && \
@@ -48,31 +55,43 @@ RUN mkdir -p /usr/x86_64-w64-mingw32/lib/ && \
     # Create empty resolv lib for Windows
     echo "LIBRARY resolv.dll" > resolv.def && \
     echo "EXPORTS" >> resolv.def && \
-    x86_64-w64-mingw32-dlltool -d resolv.def -l /usr/x86_64-w64-mingw32/lib/libresolv.a
+    x86_64-w64-mingw32-dlltool -d resolv.def -l /usr/x86_64-w64-mingw32/lib/libresolv.a && \
+    # Clean up
+    rm -rf xz-5.8.1-windows.zip bin_x86-64 doc include resolv.def
 
-# Install Rust
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+# Install Node.js 20 first (needed for npm tauri-cli)
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Rust with compatible version for current dependencies
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.82.0
 ENV PATH="/root/.cargo/bin:${PATH}"
 
 # Add the Windows target
 RUN rustup target add x86_64-pc-windows-gnu
 
-# Set up the Windows cross-compilation environment
+# Set up the Windows cross-compilation environment with memory optimizations
 ENV CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER=x86_64-w64-mingw32-gcc \
     CC_x86_64_pc_windows_gnu=x86_64-w64-mingw32-gcc \
     CXX_x86_64_pc_windows_gnu=x86_64-w64-mingw32-g++ \
     PKG_CONFIG_ALLOW_CROSS=1 \
-    RUSTFLAGS="-C link-arg=-Wl,--no-gc-sections -C link-arg=-llzma -C link-arg=-Wl,--allow-multiple-definition"
+    RUSTFLAGS="-C link-arg=-Wl,--no-gc-sections -C link-arg=-llzma -C link-arg=-Wl,--allow-multiple-definition -C link-arg=-Wl,--no-keep-memory -C link-arg=-Wl,--reduce-memory-overheads" \
+    CARGO_BUILD_JOBS=2 \
+    CARGO_NET_GIT_FETCH_WITH_CLI=true \
+    RUSTC_FORCE_INCREMENTAL=1
 
-# Install Node.js 20
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
-    apt-get install -y nodejs
+# Install npm version of Tauri CLI to avoid Rust dependency issues
+RUN npm install -g @tauri-apps/cli@1.5.11
 
-# Install Tauri CLI
-RUN cargo install tauri-cli
+# Set memory limits for the container
+RUN echo "* soft memlock unlimited" >> /etc/security/limits.conf && \
+    echo "* hard memlock unlimited" >> /etc/security/limits.conf && \
+    echo "* soft nofile 65536" >> /etc/security/limits.conf && \
+    echo "* hard nofile 65536" >> /etc/security/limits.conf
 
 WORKDIR /app
 
-# Copy package.json and install dependencies
+# Copy package.json and install dependencies without platform restrictions
 COPY package.json package-lock.json ./
-RUN npm install --platform=linux --arch=x64 
+RUN npm install --no-optional --prefer-offline 

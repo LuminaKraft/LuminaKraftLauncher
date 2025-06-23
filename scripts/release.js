@@ -208,7 +208,7 @@ function buildApp() {
     log('🔨 Running build-all.sh script...', 'cyan');
     execSync('bash scripts/build-all.sh all', { stdio: 'inherit' });
     log('✅ Build completed successfully', 'green');
-  } catch (error) {
+        } catch (error) {
     log(`❌ Build error: ${error.message}`, 'red');
     throw error;
   }
@@ -360,35 +360,35 @@ function getInstallerFiles() {
   log('🔍 Looking for Windows artifacts...', 'cyan');
   if (fs.existsSync(paths.windows)) {
     const windowsFiles = findWindowsFiles(paths.windows);
-    installers.push(...windowsFiles);
-  } else {
+        installers.push(...windowsFiles);
+      } else {
     log('  ⚠️ Windows build directory not found', 'yellow');
-  }
+      }
   
   // Check Linux files
   log('🔍 Looking for Linux artifacts...', 'cyan');
   if (fs.existsSync(paths.linux)) {
     const linuxFiles = findLinuxFiles(paths.linux);
     installers.push(...linuxFiles);
-  } else {
+    } else {
     log('  ⚠️ Linux build directory not found', 'yellow');
-  }
-  
+    }
+    
   // Check macOS Intel files
   log('🔍 Looking for macOS Intel artifacts...', 'cyan');
   if (fs.existsSync(paths.macosIntel)) {
     const macosIntelFiles = findMacOSFiles(paths.macosIntel, 'x64');
     installers.push(...macosIntelFiles);
-  } else {
+      } else {
     log('  ⚠️ macOS Intel build directory not found', 'yellow');
-  }
+      }
   
   // Check macOS ARM files
   log('🔍 Looking for macOS ARM artifacts...', 'cyan');
   if (fs.existsSync(paths.macosArm)) {
     const macosArmFiles = findMacOSFiles(paths.macosArm, 'aarch64');
     installers.push(...macosArmFiles);
-  } else {
+    } else {
     log('  ⚠️ macOS ARM build directory not found', 'yellow');
   }
   
@@ -614,7 +614,7 @@ async function publishToPrivate(version, isPrerelease, publicReleaseUrl, forceFl
             linux: platform === 'linux' ? '✅ **Linux**: DEB + RPM' : '❌ **Linux**: Not built',
             macos: platform === 'darwin' ? '✅ **macOS**: DMG + APP (Apple Silicon + Intel)' : '❌ **macOS**: Not built'
         };
-        
+            
         // If release exists, update build status from existing info
         if (releaseExists) {
             log(`🔍 Found existing release in private repo`, 'yellow');
@@ -629,7 +629,7 @@ async function publishToPrivate(version, isPrerelease, publicReleaseUrl, forceFl
             if (platform === 'win32') buildStatus.windows = '✅ **Windows**: NSIS Installer';
             if (platform === 'linux') buildStatus.linux = '✅ **Linux**: DEB + RPM';
             if (platform === 'darwin') buildStatus.macos = '✅ **macOS**: DMG + APP (Apple Silicon + Intel)';
-        }
+                }
         
         // Combine build statuses
         buildsCompleted = `- ${buildStatus.windows}\n- ${buildStatus.linux}\n- ${buildStatus.macos}`;
@@ -709,7 +709,7 @@ async function main() {
 
         // 2. Update version in files
         updateVersion(newVersion, isPrerelease);
-        
+
         // 3. Create Git commit and tag
         createGitCommit(newVersion, isPrerelease);
         

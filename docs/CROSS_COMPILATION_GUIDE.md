@@ -41,7 +41,7 @@ The project uses **Docker-based cross-compilation** for reliable builds:
 ## 🪟 Windows Cross-Compilation
 
 ### Build Process
-```bash
+   ```bash
 bash scripts/build-windows.sh
 ```
 
@@ -82,7 +82,7 @@ bash scripts/build-linux.sh
 ## 🍎 macOS Native Compilation
 
 ### Build Process
-```bash
+   ```bash
 bash scripts/build-macos.sh
 ```
 
