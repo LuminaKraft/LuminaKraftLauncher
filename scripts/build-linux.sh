@@ -21,7 +21,7 @@ SHM_SIZE="2g"
 
 echo "Using memory settings: limit=$MEMORY_LIMIT, swap=$MEMORY_SWAP, shm=$SHM_SIZE"
 
-# Build Linux version (Tauri will automatically choose DEB and RPM for Linux target)
+# Build Linux version (DEB and RPM only, skip AppImage due to Docker limitations)
 echo "Building for Linux using Docker..."
 
 # Run the build command inside the container
@@ -29,6 +29,6 @@ docker run --rm -m $MEMORY_LIMIT --memory-swap $MEMORY_SWAP --shm-size=$SHM_SIZE
     -v "$(pwd):/app" \
     -v "$CACHE_DIR:/root/.tauri" \
     linux-builder \
-    bash -c "cd /app && npm install && npm run tauri build -- --target x86_64-unknown-linux-gnu"
+    bash -c "cd /app && npm install && npm run tauri build -- --target x86_64-unknown-linux-gnu --bundles deb,rpm"
 
 echo "Linux build completed! DEB and RPM packages have been created." 
