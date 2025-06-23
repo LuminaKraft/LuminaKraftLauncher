@@ -133,13 +133,13 @@ npm run download-nsis  # Pre-download NSIS dependencies
 ## ⚙️ Configuration Files
 
 ### Bundle Configuration
-Bundle types are specified via command line arguments in the build scripts:
+Tauri automatically chooses the appropriate bundle types for each target platform:
 
-- **Linux**: `--bundles deb,rpm`
-- **Windows**: `--bundles msi,nsis`  
-- **macOS**: `--bundles dmg,app`
+- **Linux**: DEB and RPM packages
+- **Windows**: MSI and NSIS installers  
+- **macOS**: DMG and APP bundles
 
-The `tauri.conf.json` uses `"targets": "all"` to allow all bundle types.
+The `tauri.conf.json` uses `"targets": "all"` to allow all bundle types, and the build scripts use `--target` to specify the platform without explicitly setting bundle types.
 
 ### Cross-Compilation Settings (`src-tauri/.cargo/config.toml`)
 ```toml
