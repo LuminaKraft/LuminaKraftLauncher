@@ -104,6 +104,12 @@ function updateVersion(newVersion, isPrerelease = false) {
       update: (content) => {
         return content.replace(/const\s+currentVersion\s*=\s*".*?"/, `const currentVersion = "${newVersion}"`);
       }
+    },
+    {
+      path: 'src/components/About/AboutPage.tsx',
+      update: (content) => {
+        return content.replace(/const\s+currentVersion\s*=\s*".*?"/, `const currentVersion = "${newVersion}"`);
+      }
     }
   ];
 
@@ -281,6 +287,25 @@ function getInstallerFiles() {
   // Helper function to find Windows files
   function findWindowsFiles(basePath) {
     const windowsFiles = [];
+    
+    // First check the dist directory
+    const distDirectory = path.join(process.cwd(), 'dist');
+    if (fs.existsSync(distDirectory)) {
+      const exeFiles = fs.readdirSync(distDirectory).filter(f => f.endsWith('.exe') && f.includes('setup'));
+      for (const file of exeFiles) {
+        windowsFiles.push({
+          type: 'file',
+          path: path.join(distDirectory, file),
+          name: file
+        });
+      }
+      if (exeFiles.length > 0) {
+        log(`  📦 Found ${exeFiles.length} Windows installer(s) in dist/`, 'cyan');
+        return windowsFiles; // Return early if found in dist
+      }
+    }
+    
+    // Fallback to traditional location
     const nsisDir = path.join(basePath, 'bundle', 'nsis');
     
     if (fs.existsSync(nsisDir)) {
@@ -333,6 +358,46 @@ function getInstallerFiles() {
   // Helper function to find Linux files
   function findLinuxFiles(basePath) {
     const linuxFiles = [];
+    
+    // First check the dist directory for all Linux artifacts
+    const distDirectory = path.join(process.cwd(), 'dist');
+    if (fs.existsSync(distDirectory)) {
+      const debFiles = fs.readdirSync(distDirectory).filter(f => f.endsWith('.deb'));
+      const rpmFiles = fs.readdirSync(distDirectory).filter(f => f.endsWith('.rpm'));
+      const appImageFiles = fs.readdirSync(distDirectory).filter(f => f.endsWith('.AppImage'));
+      
+      // Add all found files
+      for (const file of debFiles) {
+        linuxFiles.push({
+          type: 'file',
+          path: path.join(distDirectory, file),
+          name: file
+        });
+      }
+      for (const file of rpmFiles) {
+        linuxFiles.push({
+          type: 'file',
+          path: path.join(distDirectory, file),
+          name: file
+        });
+      }
+      for (const file of appImageFiles) {
+        linuxFiles.push({
+          type: 'file',
+          path: path.join(distDirectory, file),
+          name: file
+        });
+      }
+      
+      if (linuxFiles.length > 0) {
+        log(`  📦 Found ${debFiles.length} DEB files for Linux`, 'cyan');
+        log(`  📦 Found ${rpmFiles.length} RPM files for Linux`, 'cyan');
+        log(`  📦 Found ${appImageFiles.length} AppImage files for Linux`, 'cyan');
+        return linuxFiles; // Return early if found in dist
+      }
+    }
+    
+    // Fallback to traditional locations
     const debianDir = path.join(basePath, 'bundle', 'deb');
     const rpmDir = path.join(basePath, 'bundle', 'rpm');
     
@@ -409,6 +474,50 @@ function getInstallerFiles() {
   // Helper function to find macOS files
   function findMacOSFiles(basePath, arch) {
     const macosFiles = [];
+    
+    // First check the dist directory for DMG files
+    const distDirectory = path.join(process.cwd(), 'dist');
+    if (fs.existsSync(distDirectory)) {
+      const distDmgFiles = fs.readdirSync(distDirectory).filter(f => f.endsWith('.dmg'));
+      // Filter for the specific architecture
+      const archDmgFiles = distDmgFiles.filter(f => 
+        (arch === 'x64' && f.includes('_x64.dmg')) ||
+        (arch === 'aarch64' && f.includes('_aarch64.dmg'))
+      );
+      
+      for (const file of archDmgFiles) {
+        macosFiles.push({
+          type: 'file',
+          path: path.join(distDirectory, file),
+          name: file
+        });
+      }
+      
+      // Also check for .app files in dist
+      const distAppFiles = fs.readdirSync(distDirectory).filter(f => f.endsWith('.app'));
+      const archAppFiles = distAppFiles.filter(f => 
+        (arch === 'x64' && f.includes('Intel.app')) ||
+        (arch === 'aarch64' && f.includes('ARM64.app'))
+      );
+      
+      for (const appFile of archAppFiles) {
+        const appNameWithoutExt = appFile.replace('.app', '');
+        const formattedName = `${appNameWithoutExt}_${getCurrentVersion()}_${arch}.app.zip`;
+        
+        macosFiles.push({
+          isApp: true,
+          originalPath: path.join(distDirectory, appFile),
+          formattedName
+        });
+      }
+      
+      if (macosFiles.length > 0) {
+        log(`  📦 Found ${archDmgFiles.length} DMG files and ${archAppFiles.length} .app files for macOS ${arch} in dist/`, 'cyan');
+        return macosFiles; // Return early if found in dist
+      }
+    }
+    
+    // Fallback to traditional locations
     const dmgDir = path.join(basePath, 'bundle', 'dmg');
     const macosDir = path.join(basePath, 'bundle', 'macos');
     

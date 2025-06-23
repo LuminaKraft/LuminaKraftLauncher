@@ -24,8 +24,9 @@ npx tauri build --target aarch64-apple-darwin
 echo "Copying macOS artifacts to dist directory..."
 
 # Copy Intel artifacts
-if [ -f "src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/LuminaKraft Launcher_0.0.5_x64.dmg" ]; then
-    cp "src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/LuminaKraft Launcher_0.0.5_x64.dmg" "dist/"
+INTEL_DMG=$(find "src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/" -name "*_x64.dmg" 2>/dev/null | head -1)
+if [ -n "$INTEL_DMG" ]; then
+    cp "$INTEL_DMG" "dist/"
     echo "✅ Copied Intel DMG to dist/"
 fi
 
@@ -35,8 +36,9 @@ if [ -d "src-tauri/target/x86_64-apple-darwin/release/bundle/macos/LuminaKraft L
 fi
 
 # Copy ARM64 artifacts
-if [ -f "src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/LuminaKraft Launcher_0.0.5_aarch64.dmg" ]; then
-    cp "src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/LuminaKraft Launcher_0.0.5_aarch64.dmg" "dist/"
+ARM_DMG=$(find "src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/" -name "*_aarch64.dmg" 2>/dev/null | head -1)
+if [ -n "$ARM_DMG" ]; then
+    cp "$ARM_DMG" "dist/"
     echo "✅ Copied ARM64 DMG to dist/"
 fi
 

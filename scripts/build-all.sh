@@ -34,6 +34,19 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Clean old artifacts function
+clean_old_artifacts() {
+    echo -e "${YELLOW}Limpiando artefactos antiguos...${NC}"
+    
+    # Clean dist folder completely to start fresh
+    rm -rf dist/*
+    
+    # Clean old artifacts from target directories to prevent confusion
+    find src-tauri/target -name "*.exe" -o -name "*.dmg" -o -name "*.deb" -o -name "*.rpm" -o -name "*.AppImage" 2>/dev/null | xargs rm -f 2>/dev/null || true
+    
+    echo -e "${GREEN}Artefactos antiguos limpiados.${NC}"
+}
+
 # Crear directorio para distribución
 mkdir -p dist
 
@@ -99,6 +112,9 @@ build_linux() {
 build_all_non_interactive() {
     echo -e "${YELLOW}Construyendo todas las plataformas secuencialmente para optimizar memoria...${NC}"
     
+    # Clean old artifacts first to ensure fresh build
+    clean_old_artifacts
+    
     if [ "$CLEAN_DOCKER" = true ]; then
         echo -e "${YELLOW}Nota: Limpieza de Docker habilitada - compilación será más lenta pero más confiable${NC}"
     else
@@ -157,12 +173,15 @@ case $option in
         build_all_non_interactive
         ;;
     2)
+        echo -e "${YELLOW}Nota: Construyendo solo macOS, no se limpiarán artefactos existentes${NC}"
         build_macos
         ;;
     3)
+        echo -e "${YELLOW}Nota: Construyendo solo Windows, no se limpiarán artefactos existentes${NC}"
         build_windows
         ;;
     4)
+        echo -e "${YELLOW}Nota: Construyendo solo Linux, no se limpiarán artefactos existentes${NC}"
         build_linux
         ;;
     5)

@@ -63,9 +63,12 @@ docker run \
         else
             echo 'luminakraft-launcher.exe not found!'
         fi
-        if [ -f '/tmp/target-windows/x86_64-pc-windows-gnu/release/bundle/nsis/LuminaKraft Launcher_0.0.5_x64-setup.exe' ]; then
-            cp '/tmp/target-windows/x86_64-pc-windows-gnu/release/bundle/nsis/LuminaKraft Launcher_0.0.5_x64-setup.exe' /app/dist/
-            echo 'Copied LuminaKraft Launcher_0.0.5_x64-setup.exe to dist/'
+        # Find and copy the installer with dynamic versioning
+        INSTALLER_PATH=\$(find /tmp/target-windows/x86_64-pc-windows-gnu/release/bundle/nsis/ -name '*setup*.exe' 2>/dev/null | head -1)
+        if [ -n \"\$INSTALLER_PATH\" ]; then
+            INSTALLER_NAME=\$(basename \"\$INSTALLER_PATH\")
+            cp \"\$INSTALLER_PATH\" /app/dist/
+            echo \"Copied \$INSTALLER_NAME to dist/\"
         else
             echo 'Installer not found!'
         fi
@@ -83,4 +86,7 @@ docker run \
 echo "✅ Windows build completed successfully!"
 echo "Build artifacts available in:"
 echo "  - dist/luminakraft-launcher.exe (executable)"
-echo "  - dist/LuminaKraft Launcher_0.0.5_x64-setup.exe (installer)" 
+echo "  - dist/*setup*.exe (installer)"
+echo ""
+echo "📋 Windows build artifacts:"
+ls -la dist/ | grep -E '\.(exe)$' || echo "No Windows artifacts found in dist/" 
