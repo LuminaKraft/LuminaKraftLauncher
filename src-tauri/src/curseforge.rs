@@ -182,7 +182,7 @@ pub async fn process_curseforge_modpack_with_progress<F>(
 where
     F: Fn(String, f32, String) + Send + Sync + 'static + Clone,
 {
-    let (modloader, modloader_version, failed_mods) = process_curseforge_modpack_with_failed_tracking(modpack_zip_path, instance_dir, emit_progress).await?;
+    let (modloader, modloader_version, _failed_mods) = process_curseforge_modpack_with_failed_tracking(modpack_zip_path, instance_dir, emit_progress).await?;
     Ok((modloader, modloader_version))
 }
 
@@ -276,11 +276,13 @@ where
 }
 
 /// Descarga los mods listados en el manifest
+#[allow(dead_code)]
 async fn download_mods(manifest: &CurseForgeManifest, instance_dir: &PathBuf) -> Result<()> {
     download_mods_with_progress(manifest, instance_dir, |_message, _percentage, _step| {}).await
 }
 
 /// Descarga los mods listados en el manifest con callback de progreso
+#[allow(dead_code)]
 async fn download_mods_with_progress<F>(
     manifest: &CurseForgeManifest, 
     instance_dir: &PathBuf,
@@ -289,7 +291,7 @@ async fn download_mods_with_progress<F>(
 where
     F: Fn(String, f32, String) + Send + Sync + 'static,
 {
-    let failed_mods = download_mods_with_failed_tracking(manifest, instance_dir, emit_progress).await?;
+    let _failed_mods = download_mods_with_failed_tracking(manifest, instance_dir, emit_progress).await?;
     Ok(())
 }
 
@@ -1241,7 +1243,7 @@ where
              );
              continue;
          } else {
-             println!("📥 Descargando mod: {}", file_name);
+             println!("Descargando mod: {}", file_name);
          }
         
         // Si llegamos aquí, necesitamos descargar el mod

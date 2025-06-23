@@ -277,5 +277,13 @@
     "downloadComplete": "Download completed",
     "launchingMinecraft": "Launching Minecraft...",
     "minecraftClosed": "Minecraft has closed"
+  },
+  "failedMods": {
+    "title": "Unavailable Mods",
+    "description": "The following mods could not be downloaded because they are not available for public download. Click on each link to go directly to the mod's download page and add it manually to the instance's mods/ folder:",
+    "loading": "Getting mod information...",
+    "error": "Could not get mod information",
+    "fileName": "File:",
+    "close": "Close"
   }
 } 

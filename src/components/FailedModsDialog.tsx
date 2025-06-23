@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, ExternalLink, AlertTriangle } from 'lucide-react';
+import { invoke } from '@tauri-apps/api/core';
+import { useTranslation } from 'react-i18next';
 
 interface FailedMod {
   projectId: number;
@@ -27,6 +29,7 @@ export const FailedModsDialog: React.FC<FailedModsDialogProps> = ({
   onClose,
   failedMods
 }) => {
+  const { t } = useTranslation();
   const [modInfos, setModInfos] = useState<ModInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
@@ -64,15 +67,22 @@ export const FailedModsDialog: React.FC<FailedModsDialogProps> = ({
       setModInfos(data.data || []);
     } catch (err) {
       console.error('Error fetching mod information:', err);
-      setError('No se pudo obtener la información de los mods');
+      setError(t('failedMods.error'));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleModClick = (mod: ModInfo, fileId: number) => {
+  const handleModClick = async (mod: ModInfo, fileId: number) => {
     const url = `${mod.links.websiteUrl}/files/${fileId}`;
-    window.open(url, '_blank');
+    try {
+      // Try using Tauri API to open external URLs
+      await invoke('open_url', { url });
+    } catch (error) {
+      // Fallback to regular window.open for web environment
+      console.warn('Tauri command not available, using fallback:', error);
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
   };
 
   const getModInfo = (projectId: number): ModInfo | undefined => {
@@ -89,7 +99,7 @@ export const FailedModsDialog: React.FC<FailedModsDialogProps> = ({
           <div className="flex items-center space-x-3">
             <AlertTriangle className="w-6 h-6 text-yellow-500" />
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Mods no disponibles
+              {t('failedMods.title')}
             </h3>
           </div>
           <button
@@ -103,15 +113,14 @@ export const FailedModsDialog: React.FC<FailedModsDialogProps> = ({
         {/* Content */}
         <div className="p-6">
           <p className="text-gray-600 dark:text-gray-300 mb-4">
-            Los siguientes mods no se pudieron descargar porque no están disponibles para descarga pública. 
-            Haz clic en cada mod para ver más detalles en CurseForge:
+            {t('failedMods.description')}
           </p>
 
           {loading && (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
               <span className="ml-2 text-gray-600 dark:text-gray-300">
-                Obteniendo información de los mods...
+                {t('failedMods.loading')}
               </span>
             </div>
           )}
@@ -139,7 +148,7 @@ export const FailedModsDialog: React.FC<FailedModsDialogProps> = ({
                       </div>
                       {failedMod.fileName && (
                         <div className="text-sm text-gray-500 dark:text-gray-400">
-                          Archivo: {failedMod.fileName}
+                          {t('failedMods.fileName')} {failedMod.fileName}
                         </div>
                       )}
                       <div className="text-xs text-gray-400 dark:text-gray-500">
@@ -160,7 +169,7 @@ export const FailedModsDialog: React.FC<FailedModsDialogProps> = ({
             onClick={onClose}
             className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors"
           >
-            Cerrar
+            {t('failedMods.close')}
           </button>
         </div>
       </div>

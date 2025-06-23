@@ -368,7 +368,7 @@ async fn install_modpack_with_failed_tracking(app: tauri::AppHandle, modpack: Mo
                 } else if file_name.contains("error") || file_name.contains("❌") {
                     format!("❌ {}", file_name.replace("error", "").replace("❌", "").trim())
                 } else {
-                    format!("📥 {}", file_name)
+                    file_name.to_string()
                 };
                 
                 // Actualizar el último detailMessage válido
@@ -424,7 +424,7 @@ async fn install_modpack_with_failed_tracking(app: tauri::AppHandle, modpack: Mo
             } else if message.starts_with("mod_name:") {
                 // Para archivos individuales de mods: "mod_name:filename"
                 let file_name = message.strip_prefix("mod_name:").unwrap_or(&message);
-                let detail_msg = format!("📥 {}", file_name);
+                let detail_msg = file_name.to_string();
                 
                 // Actualizar el último detailMessage válido
                 if let Ok(mut last) = last_detail_message.lock() {

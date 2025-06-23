@@ -277,5 +277,13 @@
     "downloadComplete": "Descarga completada",
     "launchingMinecraft": "Iniciando Minecraft...",
     "minecraftClosed": "Minecraft se ha cerrado"
+  },
+  "failedMods": {
+    "title": "Mods no disponibles",
+    "description": "Los siguientes mods no se pudieron descargar porque no están disponibles para descarga pública. Haz clic en cada enlace para ir directamente a la página de descarga del mod y agrégalo manualmente a la carpeta mods/ de la instancia:",
+    "loading": "Obteniendo información de los mods...",
+    "error": "No se pudo obtener la información de los mods",
+    "fileName": "Archivo:",
+    "close": "Cerrar"
   }
 } 

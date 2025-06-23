@@ -515,6 +515,7 @@ where
 }
 
 /// Update only the modpack files without reinstalling Minecraft/Lyceris with progress
+#[allow(dead_code)]
 async fn update_modpack_only_with_progress<F>(
     modpack: Modpack, 
     instance_dir: PathBuf,
