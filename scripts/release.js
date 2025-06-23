@@ -192,6 +192,60 @@ function cleanBuildCache() {
   }
 }
 
+function cleanDuplicateInstallers() {
+  log('🧹 Cleaning duplicate installer files...', 'cyan');
+  try {
+    const nsisPath = 'src-tauri/target/x86_64-pc-windows-gnu/release/bundle/nsis';
+    
+    if (fs.existsSync(nsisPath)) {
+      const files = fs.readdirSync(nsisPath).filter(f => f.endsWith('.exe'));
+      const duplicates = files.filter(f => / \d+\.exe$/.test(f));
+      
+      duplicates.forEach(duplicate => {
+        const fullPath = path.join(nsisPath, duplicate);
+        try {
+          fs.unlinkSync(fullPath);
+          log(`  🗑️ Removed duplicate: ${duplicate}`, 'green');
+        } catch (error) {
+          log(`  ⚠️ Could not remove ${duplicate}: ${error.message}`, 'yellow');
+        }
+      });
+      
+      if (duplicates.length === 0) {
+        log('  ✅ No duplicate installers found', 'green');
+      } else {
+        log(`  ✅ Cleaned ${duplicates.length} duplicate installer(s)`, 'green');
+      }
+    }
+    
+    // Clean duplicate macOS .app files
+    const macOSPaths = [
+      'src-tauri/target/x86_64-apple-darwin/release/bundle/macos',
+      'src-tauri/target/aarch64-apple-darwin/release/bundle/macos'
+    ];
+    
+    macOSPaths.forEach(macOSPath => {
+      if (fs.existsSync(macOSPath)) {
+        const appFiles = fs.readdirSync(macOSPath).filter(f => f.endsWith('.app'));
+        const duplicateApps = appFiles.filter(f => / \d+\.app$/.test(f));
+        
+        duplicateApps.forEach(duplicate => {
+          const fullPath = path.join(macOSPath, duplicate);
+          try {
+            fs.rmSync(fullPath, { recursive: true, force: true });
+            log(`  🗑️ Removed duplicate app: ${duplicate}`, 'green');
+          } catch (error) {
+            log(`  ⚠️ Could not remove ${duplicate}: ${error.message}`, 'yellow');
+          }
+        });
+      }
+    });
+    
+  } catch (error) {
+    log(`  ⚠️ Error cleaning duplicates: ${error.message}`, 'yellow');
+  }
+}
+
 function buildApp() {
   log('🔨 Building the application...', 'cyan');
   try {
@@ -208,7 +262,10 @@ function buildApp() {
     log('🔨 Running build-all.sh script...', 'cyan');
     execSync('bash scripts/build-all.sh all', { stdio: 'inherit' });
     log('✅ Build completed successfully', 'green');
-        } catch (error) {
+    
+    // Clean up duplicate installer files after build
+    cleanDuplicateInstallers();
+  } catch (error) {
     log(`❌ Build error: ${error.message}`, 'red');
     throw error;
   }
@@ -228,14 +285,43 @@ function getInstallerFiles() {
     
     if (fs.existsSync(nsisDir)) {
       const nsisFiles = fs.readdirSync(nsisDir).filter(f => f.endsWith('.exe'));
-      for (const file of nsisFiles) {
+      
+      // Filter out numbered duplicates - prefer the original file without numbers
+      const filteredFiles = [];
+      const seenBaseNames = new Set();
+      
+      // Sort files so non-numbered versions come first
+      const sortedFiles = nsisFiles.sort((a, b) => {
+        const aHasNumber = / \d+\.exe$/.test(a);
+        const bHasNumber = / \d+\.exe$/.test(b);
+        
+        if (aHasNumber && !bHasNumber) return 1;  // b comes first
+        if (!aHasNumber && bHasNumber) return -1; // a comes first
+        return a.localeCompare(b); // alphabetical for same type
+      });
+      
+      for (const file of sortedFiles) {
+        // Extract base name without numbered suffix
+        const baseName = file.replace(/ \d+\.exe$/, '.exe');
+        
+        // Only keep the first occurrence (which will be the non-numbered version)
+        if (!seenBaseNames.has(baseName)) {
+          seenBaseNames.add(baseName);
+          filteredFiles.push(file);
+        } else {
+          log(`  ⚠️ Skipping duplicate: ${file} (keeping original version)`, 'yellow');
+        }
+      }
+      
+      for (const file of filteredFiles) {
         windowsFiles.push({
           type: 'file',
           path: path.join(nsisDir, file),
           name: file
         });
       }
-      log(`  📦 Found ${nsisFiles.length} NSIS installer(s) for Windows`, 'cyan');
+      
+      log(`  📦 Found ${filteredFiles.length} NSIS installer(s) for Windows (${nsisFiles.length - filteredFiles.length} duplicates filtered)`, 'cyan');
     }
     
     // Note: MSI files are not generated during cross-compilation
@@ -274,6 +360,20 @@ function getInstallerFiles() {
         });
       }
       log(`  📦 Found ${rpmFiles.length} RPM files for Linux`, 'cyan');
+    }
+
+    // Find AppImage files in dist directory
+    const distDir = path.join(process.cwd(), 'dist');
+    if (fs.existsSync(distDir)) {
+      const appImageFiles = fs.readdirSync(distDir).filter(f => f.endsWith('.AppImage'));
+      for (const file of appImageFiles) {
+        linuxFiles.push({
+          type: 'file',
+          path: path.join(distDir, file),
+          name: file
+        });
+      }
+      log(`  📦 Found ${appImageFiles.length} AppImage files for Linux`, 'cyan');
     }
     
     // Also check the dist/linux directories for packages
@@ -328,18 +428,45 @@ function getInstallerFiles() {
     // Find APP files to zip
     if (fs.existsSync(macosDir)) {
       const appFiles = fs.readdirSync(macosDir).filter(f => f.endsWith('.app'));
-      for (const appFile of appFiles) {
+      
+      // Filter out numbered duplicates - prefer the original file without numbers
+      const filteredAppFiles = [];
+      const seenBaseNames = new Set();
+      
+      // Sort files so non-numbered versions come first
+      const sortedAppFiles = appFiles.sort((a, b) => {
+        const aHasNumber = / \d+\.app$/.test(a);
+        const bHasNumber = / \d+\.app$/.test(b);
+        
+        if (aHasNumber && !bHasNumber) return 1;  // b comes first
+        if (!aHasNumber && bHasNumber) return -1; // a comes first
+        return a.localeCompare(b); // alphabetical for same type
+      });
+      
+      for (const appFile of sortedAppFiles) {
         if (appFile.startsWith("LuminaKraft")) {
-          const appNameWithoutExt = appFile.replace('.app', '');
-          const formattedName = `${appNameWithoutExt}_${version}_${arch}.app.zip`;
+          // Extract base name without numbered suffix
+          const baseName = appFile.replace(/ \d+\.app$/, '.app');
           
-          macosFiles.push({
-            isApp: true,
-            originalPath: path.join(macosDir, appFile),
-            formattedName
-          });
-          break;
+          // Only keep the first occurrence (which will be the non-numbered version)
+          if (!seenBaseNames.has(baseName)) {
+            seenBaseNames.add(baseName);
+            filteredAppFiles.push(appFile);
+          } else {
+            log(`  ⚠️ Skipping duplicate app: ${appFile} (keeping original version)`, 'yellow');
+          }
         }
+      }
+      
+      for (const appFile of filteredAppFiles) {
+        const appNameWithoutExt = appFile.replace('.app', '');
+        const formattedName = `${appNameWithoutExt}_${version}_${arch}.app.zip`;
+        
+        macosFiles.push({
+          isApp: true,
+          originalPath: path.join(macosDir, appFile),
+          formattedName
+        });
       }
     }
     
@@ -456,6 +583,7 @@ ${isPrerelease ? '🧪 **Versión Pre-Release** - Esta es una versión de prueba
 - **NSIS Installer** (\`*.exe\`) - Recomendado (instalador universal)
 
 ### 🐧 **Linux**
+- **AppImage** (\`*.AppImage\`) - Portable executable (recommended)
 - **DEB Package** (\`*.deb\`) - Debian/Ubuntu/Mint
 - **RPM Package** (\`*.rpm\`) - Red Hat/Fedora/openSUSE
 
@@ -605,32 +733,35 @@ async function publishToPrivate(version, isPrerelease, publicReleaseUrl, forceFl
         const existingRelease = await findReleaseByTagSafe(octokit, PRIVATE_REPO_OWNER, PRIVATE_REPO_NAME, `v${version}`);
         const releaseExists = Boolean(existingRelease);
         
-        // Generate build status based on current platform
+        // Check if build-all.sh was used by looking at command line args or environment
+        const buildAllUsed = process.argv.includes('build-all') || 
+                           process.env.BUILD_ALL === 'true' ||
+                           fs.existsSync('src-tauri/target/x86_64-pc-windows-gnu') &&
+                           fs.existsSync('src-tauri/target/x86_64-unknown-linux-gnu') &&
+                           fs.existsSync('src-tauri/target/x86_64-apple-darwin');
+        
+        // Generate build status based on current platform or build-all usage
         let buildsCompleted = '';
         
         // Generate build status for all platforms
         const buildStatus = {
-            windows: platform === 'win32' ? '✅ **Windows**: NSIS Installer' : '❌ **Windows**: Not built',
-            linux: platform === 'linux' ? '✅ **Linux**: DEB + RPM' : '❌ **Linux**: Not built',
-            macos: platform === 'darwin' ? '✅ **macOS**: DMG + APP (Apple Silicon + Intel)' : '❌ **macOS**: Not built'
+            windows: '❌ **Windows**: Not built',
+            linux: '❌ **Linux**: Not built', 
+            macos: '❌ **macOS**: Not built'
         };
-            
-        // If release exists, update build status from existing info
-        if (releaseExists) {
-            log(`🔍 Found existing release in private repo`, 'yellow');
-            const bodyText = existingRelease.body || '';
-            
-            // Update build status based on existing info
-            if (bodyText.includes('✅ **Windows**')) buildStatus.windows = '✅ **Windows**: NSIS Installer';
-            if (bodyText.includes('✅ **Linux**')) buildStatus.linux = '✅ **Linux**: DEB + RPM';
-            if (bodyText.includes('✅ **macOS**')) buildStatus.macos = '✅ **macOS**: DMG + APP (Apple Silicon + Intel)';
-            
-            // Now update current platform
-            if (platform === 'win32') buildStatus.windows = '✅ **Windows**: NSIS Installer';
-            if (platform === 'linux') buildStatus.linux = '✅ **Linux**: DEB + RPM';
-            if (platform === 'darwin') buildStatus.macos = '✅ **macOS**: DMG + APP (Apple Silicon + Intel)';
-                }
         
+        // If build-all was used, mark all platforms as completed
+        if (buildAllUsed) {
+            buildStatus.windows = '✅ **Windows**: NSIS Installer';
+            buildStatus.linux = '✅ **Linux**: AppImage + DEB + RPM';
+            buildStatus.macos = '✅ **macOS**: DMG + APP (Apple Silicon + Intel)';
+        } else {
+            // Individual platform builds
+            if (platform === 'win32') buildStatus.windows = '✅ **Windows**: NSIS Installer';
+            if (platform === 'linux') buildStatus.linux = '✅ **Linux**: AppImage + DEB + RPM';
+            if (platform === 'darwin') buildStatus.macos = '✅ **macOS**: DMG + APP (Apple Silicon + Intel)';
+        }
+            
         // Combine build statuses
         buildsCompleted = `- ${buildStatus.windows}\n- ${buildStatus.linux}\n- ${buildStatus.macos}`;
 

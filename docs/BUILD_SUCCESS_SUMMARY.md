@@ -71,6 +71,22 @@ The LuminaKraft Launcher cross-compilation issues have been **completely resolve
 - Optimized Cargo configuration with memory limits
 - **Optional Docker cleanup** for faster subsequent builds
 
+### 6. **Duplicate Installer Prevention**
+**Problem**: Multiple numbered installer files being uploaded (setup.exe, setup 2.exe, setup 3.exe)
+**Solution**: 
+- Intelligent duplicate filtering in release script
+- Automatic cleanup of numbered installer duplicates
+- Single Windows toolchain targeting (GNU over MSVC)
+- Post-build cleanup to prevent accumulation
+
+### 7. **Release Script Improvements**
+**Problem**: AppImage files not published, build status inaccurate, duplicate macOS apps
+**Solution**: 
+- AppImage detection from dist/ directory
+- Build-all.sh detection for accurate build status
+- macOS app duplicate filtering and cleanup
+- Enhanced release descriptions with AppImage support
+
 ---
 
 ## 🛠 **Technical Infrastructure**
