@@ -622,7 +622,7 @@ async function publishToPrivate(version, isPrerelease, publicReleaseUrl, forceFl
         // Generate build status for all platforms
         const buildStatus = {
             windows: platform === 'win32' ? '✅ **Windows**: MSI + NSIS' : '❌ **Windows**: Not built',
-            linux: platform === 'linux' ? '✅ **Linux**: DEB' : '❌ **Linux**: Not built',
+            linux: platform === 'linux' ? '✅ **Linux**: DEB + RPM' : '❌ **Linux**: Not built',
             macos: platform === 'darwin' ? '✅ **macOS**: DMG + APP (Apple Silicon + Intel)' : '❌ **macOS**: Not built'
         };
         
@@ -633,12 +633,12 @@ async function publishToPrivate(version, isPrerelease, publicReleaseUrl, forceFl
             
             // Update build status based on existing info
             if (bodyText.includes('✅ **Windows**')) buildStatus.windows = '✅ **Windows**: MSI + NSIS';
-            if (bodyText.includes('✅ **Linux**')) buildStatus.linux = '✅ **Linux**: DEB';
+            if (bodyText.includes('✅ **Linux**')) buildStatus.linux = '✅ **Linux**: DEB + RPM';
             if (bodyText.includes('✅ **macOS**')) buildStatus.macos = '✅ **macOS**: DMG + APP (Apple Silicon + Intel)';
             
             // Now update current platform
             if (platform === 'win32') buildStatus.windows = '✅ **Windows**: MSI + NSIS';
-            if (platform === 'linux') buildStatus.linux = '✅ **Linux**: DEB';
+            if (platform === 'linux') buildStatus.linux = '✅ **Linux**: DEB + RPM';
             if (platform === 'darwin') buildStatus.macos = '✅ **macOS**: DMG + APP (Apple Silicon + Intel)';
         }
         
