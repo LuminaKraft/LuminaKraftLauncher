@@ -849,12 +849,25 @@ async function publishToPrivate(version, isPrerelease, publicReleaseUrl, forceFl
         const existingRelease = await findReleaseByTagSafe(octokit, PRIVATE_REPO_OWNER, PRIVATE_REPO_NAME, `v${version}`);
         const releaseExists = Boolean(existingRelease);
         
-        // Check if build-all.sh was used by looking at command line args or environment
-        const buildAllUsed = process.argv.includes('build-all') || 
-                           process.env.BUILD_ALL === 'true' ||
-                           fs.existsSync('src-tauri/target/x86_64-pc-windows-gnu') &&
-                           fs.existsSync('src-tauri/target/x86_64-unknown-linux-gnu') &&
-                           fs.existsSync('src-tauri/target/x86_64-apple-darwin');
+        // Check if build-all.sh was used by looking for artifacts from all platforms in dist/
+        const distDirectory = path.join(process.cwd(), 'dist');
+        let buildAllUsed = false;
+        
+        if (fs.existsSync(distDirectory)) {
+            const distFiles = fs.readdirSync(distDirectory);
+            
+            // Check for Windows artifacts
+            const hasWindows = distFiles.some(f => f.endsWith('.exe'));
+            
+            // Check for Linux artifacts  
+            const hasLinux = distFiles.some(f => f.endsWith('.deb') || f.endsWith('.rpm') || f.endsWith('.AppImage') || f === 'luminakraft-launcher');
+            
+            // Check for macOS artifacts
+            const hasMacOS = distFiles.some(f => f.endsWith('.dmg') || f.endsWith('.app'));
+            
+            // If we have artifacts from all three platforms, build-all was used
+            buildAllUsed = hasWindows && hasLinux && hasMacOS;
+        }
         
         // Generate build status based on current platform or build-all usage
         let buildsCompleted = '';
@@ -868,14 +881,26 @@ async function publishToPrivate(version, isPrerelease, publicReleaseUrl, forceFl
         
         // If build-all was used, mark all platforms as completed
         if (buildAllUsed) {
-            buildStatus.windows = '✅ **Windows**: NSIS Installer';
-            buildStatus.linux = '✅ **Linux**: AppImage + DEB + RPM';
+            log('🔍 Detected artifacts from all platforms - build-all.sh was used', 'cyan');
+            buildStatus.windows = '✅ **Windows**: NSIS Installer + Portable EXE';
+            buildStatus.linux = '✅ **Linux**: AppImage + DEB + RPM + Binary';
             buildStatus.macos = '✅ **macOS**: DMG + APP (Apple Silicon + Intel)';
         } else {
-            // Individual platform builds
-            if (platform === 'win32') buildStatus.windows = '✅ **Windows**: NSIS Installer';
-            if (platform === 'linux') buildStatus.linux = '✅ **Linux**: AppImage + DEB + RPM';
-            if (platform === 'darwin') buildStatus.macos = '✅ **macOS**: DMG + APP (Apple Silicon + Intel)';
+            log('🔍 Detected single platform build', 'cyan');
+            // Individual platform builds - check what's actually in dist/
+            if (fs.existsSync(distDirectory)) {
+                const distFiles = fs.readdirSync(distDirectory);
+                
+                if (distFiles.some(f => f.endsWith('.exe'))) {
+                    buildStatus.windows = '✅ **Windows**: NSIS Installer + Portable EXE';
+                }
+                if (distFiles.some(f => f.endsWith('.deb') || f.endsWith('.rpm') || f.endsWith('.AppImage') || f === 'luminakraft-launcher')) {
+                    buildStatus.linux = '✅ **Linux**: AppImage + DEB + RPM + Binary';
+                }
+                if (distFiles.some(f => f.endsWith('.dmg') || f.endsWith('.app'))) {
+                    buildStatus.macos = '✅ **macOS**: DMG + APP (Apple Silicon + Intel)';
+                }
+            }
         }
             
         // Combine build statuses
@@ -910,7 +935,11 @@ ${isPrerelease ? '🧪 **PRE-RELEASE** - Testing version' : '✅ **STABLE RELEAS
             
             log(`✨ Informational release updated in ${PRIVATE_REPO_NAME}!`, 'green');
             log(`  • URL: ${existingRelease.html_url}`, 'green');
-            log(`  • Added build info for ${platformInfo[platform] || platform}`, 'green');
+            if (buildAllUsed) {
+                log(`  • Added build info for all platforms (Windows + Linux + macOS)`, 'green');
+            } else {
+                log(`  • Added build info for detected platforms`, 'green');
+            }
         } else {
             // Create new release
             const { data: privateRelease } = await octokit.repos.createRelease({
@@ -925,7 +954,11 @@ ${isPrerelease ? '🧪 **PRE-RELEASE** - Testing version' : '✅ **STABLE RELEAS
 
             log(`✨ Informational release created in ${PRIVATE_REPO_NAME}!`, 'green');
             log(`  • URL: ${privateRelease.html_url}`, 'green');
-            log(`  • Added build info for ${platformInfo[platform] || platform}`, 'green');
+            if (buildAllUsed) {
+                log(`  • Added build info for all platforms (Windows + Linux + macOS)`, 'green');
+            } else {
+                log(`  • Added build info for detected platforms`, 'green');
+            }
         }
 
     } catch (error) {

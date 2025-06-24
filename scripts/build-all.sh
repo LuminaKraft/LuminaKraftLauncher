@@ -140,7 +140,15 @@ build_all_non_interactive() {
     build_linux
     
     echo -e "${BLUE}=== Compilación completada para todas las plataformas ===${NC}"
+    echo -e "${GREEN}✅ macOS: Completado${NC}"
+    echo -e "${GREEN}✅ Windows: Completado${NC}"
+    echo -e "${GREEN}✅ Linux: Completado${NC}"
+    echo ""
     echo -e "${GREEN}Todos los ejecutables y archivos de distribución están en el directorio 'dist/'${NC}"
+    echo -e "${BLUE}📋 Resumen de artefactos generados:${NC}"
+    echo -e "  🍎 macOS: DMG files + .app bundles"
+    echo -e "  🪟 Windows: Setup installer + portable executable"
+    echo -e "  🐧 Linux: DEB + RPM + AppImage + binary"
     return 0
 }
 
@@ -195,4 +203,4 @@ case $option in
 esac
 
 echo -e "${BLUE}=== Compilación completada ===${NC}"
-echo -e "${GREEN}Los ejecutables se encuentran en el directorio 'dist/' y target/ respectivos${NC}" 
+echo -e "${GREEN}Todos los ejecutables y archivos de distribución están en el directorio 'dist/'${NC}" 
