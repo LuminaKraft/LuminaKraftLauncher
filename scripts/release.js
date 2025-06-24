@@ -592,41 +592,25 @@ function getInstallerFiles() {
     macosArm: path.join(tauriDir, 'target', 'aarch64-apple-darwin', 'release')
   };
   
-  // Check Windows files
+  // Check Windows files (always call findWindowsFiles - it checks dist/ first)
   log('🔍 Looking for Windows artifacts...', 'cyan');
-  if (fs.existsSync(paths.windows)) {
-    const windowsFiles = findWindowsFiles(paths.windows);
-        installers.push(...windowsFiles);
-      } else {
-    log('  ⚠️ Windows build directory not found', 'yellow');
-      }
+  const windowsFiles = findWindowsFiles(paths.windows);
+  installers.push(...windowsFiles);
   
-  // Check Linux files
+  // Check Linux files (always call findLinuxFiles - it checks dist/ first)
   log('🔍 Looking for Linux artifacts...', 'cyan');
-  if (fs.existsSync(paths.linux)) {
-    const linuxFiles = findLinuxFiles(paths.linux);
-    installers.push(...linuxFiles);
-    } else {
-    log('  ⚠️ Linux build directory not found', 'yellow');
-    }
+  const linuxFiles = findLinuxFiles(paths.linux);
+  installers.push(...linuxFiles);
     
-  // Check macOS Intel files
+    // Check macOS Intel files (always call findMacOSFiles - it checks dist/ first)
   log('🔍 Looking for macOS Intel artifacts...', 'cyan');
-  if (fs.existsSync(paths.macosIntel)) {
-    const macosIntelFiles = findMacOSFiles(paths.macosIntel, 'x64');
-    installers.push(...macosIntelFiles);
-      } else {
-    log('  ⚠️ macOS Intel build directory not found', 'yellow');
-      }
+  const macosIntelFiles = findMacOSFiles(paths.macosIntel, 'x64');
+  installers.push(...macosIntelFiles);
   
-  // Check macOS ARM files
+  // Check macOS ARM files (always call findMacOSFiles - it checks dist/ first)
   log('🔍 Looking for macOS ARM artifacts...', 'cyan');
-  if (fs.existsSync(paths.macosArm)) {
-    const macosArmFiles = findMacOSFiles(paths.macosArm, 'aarch64');
-    installers.push(...macosArmFiles);
-    } else {
-    log('  ⚠️ macOS ARM build directory not found', 'yellow');
-  }
+  const macosArmFiles = findMacOSFiles(paths.macosArm, 'aarch64');
+  installers.push(...macosArmFiles);
   
   log(`📦 Total: ${installers.length} files to upload`, 'cyan');
   return installers;
