@@ -91,7 +91,7 @@ build_windows() {
     bash scripts/build-windows.sh
     echo -e "${GREEN}Compilación para Windows completada.${NC}"
     echo -e "${BLUE}Artefactos generados:${NC}"
-    echo -e "  - Ejecutable: luminakraft-launcher.exe"
+    echo -e "  - Ejecutable portable: LuminaKraft Launcher_*_x64_portable.exe"
     echo -e "  - Instalador: LuminaKraft Launcher_*_x64-setup.exe"
 }
 
@@ -102,10 +102,10 @@ build_linux() {
     bash scripts/build-linux.sh
     echo -e "${GREEN}Compilación para Linux completada.${NC}"
     echo -e "${BLUE}Artefactos generados:${NC}"
-    echo -e "  - AppImage: LuminaKraft Launcher_*_amd64.AppImage (portable)"
+    echo -e "  - AppImage: LuminaKraft Launcher_*_amd64.AppImage (portable GUI)"
     echo -e "  - Debian: LuminaKraft Launcher_*_amd64.deb (Ubuntu/Debian)"
     echo -e "  - RPM: LuminaKraft Launcher-*-1.x86_64.rpm (Red Hat/Fedora)"
-    echo -e "  - Ejecutable: luminakraft-launcher (binary)"
+    echo -e "  - Binario: luminakraft-launcher (ejecutable Linux)"
 }
 
 # Compilar todos sin interacción (para uso en scripts) - secuencial para evitar conflictos de memoria

@@ -24,14 +24,14 @@ All platforms now build successfully with optimized performance:
 All build outputs are generated in the `dist/` directory:
 ```
 dist/
-├── LuminaKraft Launcher_0.0.5_x64-setup.exe          # Windows installer
-├── luminakraft-launcher.exe                           # Windows executable
-├── LuminaKraft Launcher_0.0.5_x64.dmg                # macOS Intel DMG
-├── LuminaKraft Launcher_0.0.5_aarch64.dmg            # macOS ARM64 DMG
-├── LuminaKraft Launcher_0.0.5_amd64.AppImage         # Linux AppImage (portable)
-├── LuminaKraft Launcher_0.0.5_amd64.deb              # Linux Debian package
-├── LuminaKraft Launcher-0.0.5-1.x86_64.rpm           # Linux RPM package
-└── luminakraft-launcher                               # Linux binary
+├── LuminaKraft Launcher_0.0.6_x64-setup.exe          # Windows installer
+├── LuminaKraft Launcher_0.0.6_x64_portable.exe       # Windows portable executable
+├── LuminaKraft Launcher_0.0.6_x64.dmg                # macOS Intel DMG
+├── LuminaKraft Launcher_0.0.6_aarch64.dmg            # macOS ARM64 DMG
+├── LuminaKraft Launcher_0.0.6_amd64.AppImage         # Linux AppImage (portable GUI)
+├── LuminaKraft Launcher_0.0.6_amd64.deb              # Linux Debian package
+├── LuminaKraft Launcher-0.0.6-1.x86_64.rpm           # Linux RPM package
+└── luminakraft-launcher                              # Linux binary
 ```
 
 ## 🛠 **Building from Source**

@@ -58,7 +58,11 @@ docker run \
         find /tmp/target-linux/x86_64-unknown-linux-gnu/release/bundle -name '*.deb' -exec cp {} /app/dist/ \; && \
         find /tmp/target-linux/x86_64-unknown-linux-gnu/release/bundle -name '*.rpm' -exec cp {} /app/dist/ \; && \
         find /tmp/target-linux/x86_64-unknown-linux-gnu/release/bundle -name '*.AppImage' -exec cp {} /app/dist/ \; && \
-        find /tmp/target-linux/x86_64-unknown-linux-gnu/release -name 'luminakraft-launcher' -type f -executable -exec cp {} /app/dist/ \; && \
+        # Copy the Linux binary with standard naming
+        if [ -f /tmp/target-linux/x86_64-unknown-linux-gnu/release/luminakraft-launcher ]; then
+            cp /tmp/target-linux/x86_64-unknown-linux-gnu/release/luminakraft-launcher /app/dist/luminakraft-launcher
+            echo \"Copied Linux binary as luminakraft-launcher\"
+        fi && \
         echo 'Linux build artifacts copied to dist/' && \
         ls -la /app/dist/
     "

@@ -291,16 +291,30 @@ function getInstallerFiles() {
     // First check the dist directory
     const distDirectory = path.join(process.cwd(), 'dist');
     if (fs.existsSync(distDirectory)) {
-      const exeFiles = fs.readdirSync(distDirectory).filter(f => f.endsWith('.exe') && f.includes('setup'));
-      for (const file of exeFiles) {
+      const setupFiles = fs.readdirSync(distDirectory).filter(f => f.endsWith('.exe') && f.includes('setup'));
+      const portableFiles = fs.readdirSync(distDirectory).filter(f => f.endsWith('.exe') && f.includes('portable'));
+      
+      // Add setup files (installers)
+      for (const file of setupFiles) {
         windowsFiles.push({
           type: 'file',
           path: path.join(distDirectory, file),
           name: file
         });
       }
-      if (exeFiles.length > 0) {
-        log(`  📦 Found ${exeFiles.length} Windows installer(s) in dist/`, 'cyan');
+      
+      // Add portable files (executables)
+      for (const file of portableFiles) {
+        windowsFiles.push({
+          type: 'file',
+          path: path.join(distDirectory, file),
+          name: file
+        });
+      }
+      
+      if (windowsFiles.length > 0) {
+        log(`  📦 Found ${setupFiles.length} Windows installer(s) in dist/`, 'cyan');
+        log(`  📦 Found ${portableFiles.length} Windows portable executable(s) in dist/`, 'cyan');
         return windowsFiles; // Return early if found in dist
       }
     }
@@ -365,6 +379,7 @@ function getInstallerFiles() {
       const debFiles = fs.readdirSync(distDirectory).filter(f => f.endsWith('.deb'));
       const rpmFiles = fs.readdirSync(distDirectory).filter(f => f.endsWith('.rpm'));
       const appImageFiles = fs.readdirSync(distDirectory).filter(f => f.endsWith('.AppImage'));
+      const binaryFiles = fs.readdirSync(distDirectory).filter(f => f === 'luminakraft-launcher');
       
       // Add all found files
       for (const file of debFiles) {
@@ -388,11 +403,19 @@ function getInstallerFiles() {
           name: file
         });
       }
+      for (const file of binaryFiles) {
+        linuxFiles.push({
+          type: 'file',
+          path: path.join(distDirectory, file),
+          name: file
+        });
+      }
       
       if (linuxFiles.length > 0) {
         log(`  📦 Found ${debFiles.length} DEB files for Linux`, 'cyan');
         log(`  📦 Found ${rpmFiles.length} RPM files for Linux`, 'cyan');
         log(`  📦 Found ${appImageFiles.length} AppImage files for Linux`, 'cyan');
+        log(`  📦 Found ${binaryFiles.length} Linux binary files`, 'cyan');
         return linuxFiles; // Return early if found in dist
       }
     }

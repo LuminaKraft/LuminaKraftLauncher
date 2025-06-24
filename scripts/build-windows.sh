@@ -58,8 +58,11 @@ docker run \
         echo 'Copying build artifacts to host directory...'
         mkdir -p /app/dist
         if [ -f /tmp/target-windows/x86_64-pc-windows-gnu/release/luminakraft-launcher.exe ]; then
-            cp /tmp/target-windows/x86_64-pc-windows-gnu/release/luminakraft-launcher.exe /app/dist/
-            echo 'Copied luminakraft-launcher.exe to dist/'
+            # Get version from package.json
+            VERSION=\$(node -p \"require('./package.json').version\")
+            PORTABLE_NAME=\"LuminaKraft Launcher_\${VERSION}_x64_portable.exe\"
+            cp /tmp/target-windows/x86_64-pc-windows-gnu/release/luminakraft-launcher.exe \"/app/dist/\$PORTABLE_NAME\"
+            echo \"Copied portable executable as \$PORTABLE_NAME\"
         else
             echo 'luminakraft-launcher.exe not found!'
         fi
@@ -85,7 +88,7 @@ docker run \
 
 echo "✅ Windows build completed successfully!"
 echo "Build artifacts available in:"
-echo "  - dist/luminakraft-launcher.exe (executable)"
+echo "  - dist/*portable*.exe (portable executable)"
 echo "  - dist/*setup*.exe (installer)"
 echo ""
 echo "📋 Windows build artifacts:"
