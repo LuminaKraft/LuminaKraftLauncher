@@ -4,7 +4,9 @@ FROM --platform=linux/amd64 ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive \
     CARGO_NET_GIT_FETCH_WITH_CLI=true \
     CARGO_BUILD_JOBS=2 \
-    RUSTFLAGS="-C link-arg=-Wl,--no-keep-memory -C link-arg=-Wl,--reduce-memory-overheads"
+    RUSTFLAGS="-C link-arg=-Wl,--no-gc-sections -C link-arg=-llzma -C link-arg=-Wl,--allow-multiple-definition -C link-arg=-Wl,--no-keep-memory -C link-arg=-Wl,--reduce-memory-overheads" \
+    LZMA_API_STATIC=1 \
+    XZ_STATIC=1
 
 RUN apt-get update && apt-get install -y \
     curl \
@@ -23,20 +25,19 @@ RUN apt-get update && apt-get install -y \
     nsis \
     && rm -rf /var/lib/apt/lists/*
 
-# Download and install Windows liblzma
+# Download and install Windows liblzma for static linking
 RUN mkdir -p /usr/x86_64-w64-mingw32/lib/ && \
     mkdir -p /usr/x86_64-w64-mingw32/include/lzma && \
     wget https://github.com/tukaani-project/xz/releases/download/v5.8.1/xz-5.8.1-windows.zip && \
     unzip xz-5.8.1-windows.zip && \
-    cp bin_x86-64/liblzma.dll /usr/x86_64-w64-mingw32/lib/ && \
     cp -r include/* /usr/x86_64-w64-mingw32/include/ && \
-    # Use the def file from the documentation
+    # Use the def file from the documentation to create import library
     cp doc/liblzma.def /usr/x86_64-w64-mingw32/lib/ && \
-    # Generate import library from the def file
+    # Generate import library from the def file for static linking
     x86_64-w64-mingw32-dlltool -d /usr/x86_64-w64-mingw32/lib/liblzma.def -D liblzma.dll -l /usr/x86_64-w64-mingw32/lib/liblzma.a && \
     # Find the GCC directory for the symlink
     GCC_DIR=$(find /usr/lib/gcc/x86_64-w64-mingw32 -maxdepth 1 -type d | grep -v "^/usr/lib/gcc/x86_64-w64-mingw32$" | head -n 1) && \
-    # Create a symlink to ensure the library is found
+    # Create symlinks to ensure the library is found
     ln -sf /usr/x86_64-w64-mingw32/lib/liblzma.a $GCC_DIR/liblzma.a && \
     # Create empty resolv lib for Windows
     echo "LIBRARY resolv.dll" > resolv.def && \

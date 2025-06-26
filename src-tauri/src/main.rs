@@ -596,7 +596,6 @@ async fn check_instance_needs_update(modpack: Modpack) -> Result<bool, String> {
 async fn check_curseforge_modpack(modpack_url: String) -> Result<bool, String> {
     use dirs::data_dir;
     use std::fs;
-    use zip::ZipArchive;
     
     let app_data_dir = data_dir()
         .ok_or_else(|| "Failed to get app data directory".to_string())?;
@@ -615,25 +614,11 @@ async fn check_curseforge_modpack(modpack_url: String) -> Result<bool, String> {
     // Descargar el archivo
     match downloader::download_file(&modpack_url, &temp_file).await {
         Ok(_) => {
-            // Verificar si contiene manifest.json
-            let file = fs::File::open(&temp_file)
-                .map_err(|e| format!("Failed to open temp file: {}", e))?;
-            
-            let mut archive = ZipArchive::new(file)
-                .map_err(|e| format!("Failed to read zip file: {}", e))?;
-            
-            let mut is_curseforge = false;
-            
-            // Buscar manifest.json en la raíz
-            for i in 0..archive.len() {
-                let file = archive.by_index(i)
-                    .map_err(|e| format!("Failed to read zip entry: {}", e))?;
-                
-                if file.name() == "manifest.json" {
-                    is_curseforge = true;
-                    break;
-                }
-            }
+            // Verificar si contiene manifest.json usando lyceris
+            let is_curseforge = match lyceris::util::extract::read_file_from_jar(&temp_file, "manifest.json") {
+                Ok(_) => true,  // Si se puede leer manifest.json, es un modpack de CurseForge
+                Err(_) => false, // Si no se encuentra, no es un modpack de CurseForge
+            };
             
             // Limpiar el archivo temporal
             if temp_file.exists() {

@@ -37,6 +37,8 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+
+    "externalBin": [],
     "macOS": {
       "frameworks": [],
       "minimumSystemVersion": "10.13",
@@ -47,6 +49,11 @@
     "windows": {
       "webviewInstallMode": {
         "type": "downloadBootstrapper"
+      },
+      "allowDowngrades": true,
+      "wix": null,
+      "nsis": {
+        "displayLanguageSelector": true
       }
     }
   },

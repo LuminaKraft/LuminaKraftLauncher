@@ -113,20 +113,10 @@ where
         
         downloader::download_file(&modpack.url_modpack_zip, &temp_zip_path).await?;
         
-        // Check if it's CurseForge
-        let is_curseforge_modpack = {
-            let file = fs::File::open(&temp_zip_path)?;
-            let mut archive = zip::ZipArchive::new(file)?;
-            
-            let mut found_manifest = false;
-            for i in 0..archive.len() {
-                let file = archive.by_index(i)?;
-                if file.name() == "manifest.json" {
-                    found_manifest = true;
-                    break;
-                }
-            }
-            found_manifest
+        // Check if it's CurseForge using lyceris
+        let is_curseforge_modpack = match lyceris::util::extract::read_file_from_jar(&temp_zip_path, "manifest.json") {
+            Ok(_) => true,  // Si se puede leer manifest.json, es un modpack de CurseForge
+            Err(_) => false, // Si no se encuentra, no es un modpack de CurseForge
         };
         
         if is_curseforge_modpack {
@@ -226,22 +216,10 @@ where
         }
         fs::create_dir_all(&temp_extract_dir)?;
         
-        // Extraer solo manifest.json para verificar
-        let is_curseforge_modpack = {
-            let file = fs::File::open(&temp_zip_path)?;
-            let mut archive = zip::ZipArchive::new(file)?;
-            
-            // Buscar manifest.json en la raíz
-            let mut found_manifest = false;
-            for i in 0..archive.len() {
-                let file = archive.by_index(i)?;
-                if file.name() == "manifest.json" {
-                    found_manifest = true;
-                    break;
-                }
-            }
-            
-            found_manifest
+        // Verificar si es un modpack de CurseForge usando lyceris
+        let is_curseforge_modpack = match lyceris::util::extract::read_file_from_jar(&temp_zip_path, "manifest.json") {
+            Ok(_) => true,  // Si se puede leer manifest.json, es un modpack de CurseForge
+            Err(_) => false, // Si no se encuentra, no es un modpack de CurseForge
         };
         
         println!("🔄 Procesando modpack para: {}", instance_dir.display());
@@ -343,21 +321,10 @@ where
     // Phase 2: Process modpack files
     emit_progress("Procesando nuevos archivos...".to_string(), 30.0, "processing_update".to_string());
     
-    // Verificar si es un modpack de CurseForge
-    let is_curseforge_modpack = {
-        let file = fs::File::open(&temp_zip_path)?;
-        let mut archive = zip::ZipArchive::new(file)?;
-        
-        let mut found_manifest = false;
-        for i in 0..archive.len() {
-            let file = archive.by_index(i)?;
-            if file.name() == "manifest.json" {
-                found_manifest = true;
-                break;
-            }
-        }
-        
-        found_manifest
+    // Verificar si es un modpack de CurseForge usando lyceris
+    let is_curseforge_modpack = match lyceris::util::extract::read_file_from_jar(&temp_zip_path, "manifest.json") {
+        Ok(_) => true,  // Si se puede leer manifest.json, es un modpack de CurseForge
+        Err(_) => false, // Si no se encuentra, no es un modpack de CurseForge
     };
     
     let failed_mods = if is_curseforge_modpack {
@@ -589,81 +556,40 @@ pub fn validate_modpack(modpack: &Modpack) -> Result<()> {
 }
 
 fn extract_zip(zip_path: &PathBuf, extract_to: &PathBuf) -> Result<()> {
-    let file = std::fs::File::open(zip_path)?;
-    let mut archive = zip::ZipArchive::new(file)?;
-    
-    for i in 0..archive.len() {
-        let mut file = archive.by_index(i)?;
-        let outpath = match file.enclosed_name() {
-            Some(path) => extract_to.join(path),
-            None => continue,
-        };
-        
-        if (*file.name()).ends_with('/') {
-            std::fs::create_dir_all(&outpath)?;
-        } else {
-            if let Some(p) = outpath.parent() {
-                if !p.exists() {
-                    std::fs::create_dir_all(p)?;
-                }
-            }
-            let mut outfile = std::fs::File::create(&outpath)?;
-            std::io::copy(&mut file, &mut outfile)?;
-        }
-        
-        // Get and Set permissions
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            if let Some(mode) = file.unix_mode() {
-                std::fs::set_permissions(&outpath, std::fs::Permissions::from_mode(mode))?;
-            }
-        }
-    }
-    
-    Ok(())
+    lyceris::util::extract::extract_file(zip_path, extract_to)
+        .map_err(|e| anyhow!("Failed to extract ZIP file: {}", e))
 }
 
 /// Get modloader information from CurseForge manifest without full processing
 async fn get_curseforge_modloader_info(zip_path: &PathBuf) -> Result<(String, String)> {
-    let file = fs::File::open(zip_path)?;
-    let mut archive = zip::ZipArchive::new(file)?;
+    // Read manifest.json using lyceris
+    let contents = lyceris::util::extract::read_file_from_jar(zip_path, "manifest.json")
+        .map_err(|e| anyhow!("Could not read manifest.json: {}", e))?;
     
-    // Find and read manifest.json
-    for i in 0..archive.len() {
-        let mut file = archive.by_index(i)?;
-        if file.name() == "manifest.json" {
-            let mut contents = String::new();
-            std::io::Read::read_to_string(&mut file, &mut contents)?;
-            
-            // Parse JSON
-            let manifest: serde_json::Value = serde_json::from_str(&contents)?;
-            
-            // Extract modloader info
-            if let Some(loaders) = manifest.get("minecraft").and_then(|mc| mc.get("modLoaders")) {
-                if let Some(loader_array) = loaders.as_array() {
-                    if let Some(first_loader) = loader_array.first() {
-                        if let Some(id) = first_loader.get("id").and_then(|id| id.as_str()) {
-                            // Parse the loader ID (e.g., "forge-47.3.0" -> ("forge", "47.3.0"))
-                            if let Some(dash_pos) = id.find('-') {
-                                let loader_name = &id[..dash_pos];
-                                let loader_version = &id[dash_pos + 1..];
-                                return Ok((loader_name.to_string(), loader_version.to_string()));
-                            }
-                        }
+    // Parse JSON
+    let manifest: serde_json::Value = serde_json::from_str(&contents)?;
+    
+    // Extract modloader info
+    if let Some(loaders) = manifest.get("minecraft").and_then(|mc| mc.get("modLoaders")) {
+        if let Some(loader_array) = loaders.as_array() {
+            if let Some(first_loader) = loader_array.first() {
+                if let Some(id) = first_loader.get("id").and_then(|id| id.as_str()) {
+                    // Parse the loader ID (e.g., "forge-47.3.0" -> ("forge", "47.3.0"))
+                    if let Some(dash_pos) = id.find('-') {
+                        let loader_name = &id[..dash_pos];
+                        let loader_version = &id[dash_pos + 1..];
+                        return Ok((loader_name.to_string(), loader_version.to_string()));
                     }
                 }
             }
-            
-            // Fallback: try to get from manifestType
-            if let Some(manifest_type) = manifest.get("manifestType").and_then(|mt| mt.as_str()) {
-                if manifest_type == "minecraftModpack" {
-                    // Default to forge if we can't determine
-                    return Ok(("forge".to_string(), "latest".to_string()));
-                }
-            }
-            
-            break;
+        }
+    }
+    
+    // Fallback: try to get from manifestType
+    if let Some(manifest_type) = manifest.get("manifestType").and_then(|mt| mt.as_str()) {
+        if manifest_type == "minecraftModpack" {
+            // Default to forge if we can't determine
+            return Ok(("forge".to_string(), "latest".to_string()));
         }
     }
     

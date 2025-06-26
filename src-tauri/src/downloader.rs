@@ -1,7 +1,7 @@
 use anyhow::{Result, anyhow};
 use std::path::PathBuf;
 use reqwest::Client;
-use futures_util::StreamExt;
+use futures::StreamExt;
 use tokio::io::AsyncWriteExt;
 
 /// Format bytes to human readable string

@@ -15,8 +15,16 @@ rustflags = [
     "-C", "link-arg=-Wl,--allow-multiple-definition",
     "-C", "link-arg=-Wl,--no-keep-memory",
     "-C", "link-arg=-Wl,--reduce-memory-overheads",
+    "-C", "link-arg=-static-libgcc",
     "-C", "opt-level=1"
 ]
+
+# Add macOS targets for universal compatibility
+[target.x86_64-apple-darwin]
+rustflags = ["-C", "link-arg=-Wl,-dead_strip"]
+
+[target.aarch64-apple-darwin]
+rustflags = ["-C", "link-arg=-Wl,-dead_strip"]
 
 [net]
 git-fetch-with-cli = true
@@ -44,3 +52,6 @@ debug = 1
 PKG_CONFIG_ALLOW_CROSS = "1"
 CARGO_NET_GIT_FETCH_WITH_CLI = "true"
 RUSTC_FORCE_INCREMENTAL = "1"
+# Static linking preferences for Windows
+LZMA_API_STATIC = "1"
+XZ_STATIC = "1"

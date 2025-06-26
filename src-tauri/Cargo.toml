@@ -16,14 +16,15 @@ tauri-plugin-opener = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-shell = "2"
 
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-tokio = { version = "1", features = ["full"] }
-reqwest = { version = "0.12", features = ["json", "stream", "rustls-tls"] }
-zip = "2.2"
+# Using the same versions as lyceris to avoid conflicts
+serde = { version = "1.0.215", features = ["derive"] }
+serde_json = "1.0.134"
+tokio = { version = "1.42.0", features = ["full"] }
+reqwest = { version = "0.12.9", default-features = false, features = ["json", "stream", "rustls-tls"] }
+futures = "0.3.31"
+
 anyhow = "1.0"
 dirs = "5.0"
-futures-util = "0.3"
 chrono = { version = "0.4", features = ["serde"] }
 lyceris = "1.1.3"
 

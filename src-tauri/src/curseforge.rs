@@ -127,41 +127,10 @@ struct GetModFilesRequest {
     file_ids: Vec<i64>,
 }
 
-/// Extrae un archivo zip
+/// Extrae un archivo zip usando lyceris
 fn extract_zip(zip_path: &PathBuf, extract_to: &PathBuf) -> Result<()> {
-    let file = std::fs::File::open(zip_path)?;
-    let mut archive = zip::ZipArchive::new(file)?;
-    
-    for i in 0..archive.len() {
-        let mut file = archive.by_index(i)?;
-        let outpath = match file.enclosed_name() {
-            Some(path) => extract_to.join(path),
-            None => continue,
-        };
-        
-        if (*file.name()).ends_with('/') {
-            std::fs::create_dir_all(&outpath)?;
-        } else {
-            if let Some(p) = outpath.parent() {
-                if !p.exists() {
-                    std::fs::create_dir_all(p)?;
-                }
-            }
-            let mut outfile = std::fs::File::create(&outpath)?;
-            std::io::copy(&mut file, &mut outfile)?;
-        }
-        
-        // Get and Set permissions
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            if let Some(mode) = file.unix_mode() {
-                std::fs::set_permissions(&outpath, std::fs::Permissions::from_mode(mode))?;
-            }
-        }
-    }
-    
-    Ok(())
+    lyceris::util::extract::extract_file(zip_path, extract_to)
+        .map_err(|e| anyhow!("Failed to extract ZIP file: {}", e))
 }
 
 /// Extrae un archivo modpack de CurseForge y procesa su contenido

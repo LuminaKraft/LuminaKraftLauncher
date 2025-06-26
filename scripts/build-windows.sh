@@ -43,6 +43,8 @@ docker run \
     -e RUSTC_FORCE_INCREMENTAL=1 \
     -e CARGO_INCREMENTAL=1 \
     -e CARGO_TARGET_DIR=/tmp/target-windows \
+    -e LZMA_API_STATIC=1 \
+    -e XZ_STATIC=1 \
     luminakraft-windows-builder \
     bash -c "
         echo 'Setting up environment...'
@@ -63,6 +65,8 @@ docker run \
             PORTABLE_NAME=\"LuminaKraft Launcher_\${VERSION}_x64_portable.exe\"
             cp /tmp/target-windows/x86_64-pc-windows-gnu/release/luminakraft-launcher.exe \"/app/dist/\$PORTABLE_NAME\"
             echo \"Copied portable executable as \$PORTABLE_NAME\"
+            
+
         else
             echo 'luminakraft-launcher.exe not found!'
         fi
@@ -92,4 +96,4 @@ echo "  - dist/*portable*.exe (portable executable)"
 echo "  - dist/*setup*.exe (installer)"
 echo ""
 echo "📋 Windows build artifacts:"
-ls -la dist/ | grep -E '\.(exe)$' || echo "No Windows artifacts found in dist/" 
+ls -la dist/ | grep -E '\.(exe|dll)$' || echo "No Windows artifacts found in dist/" 
