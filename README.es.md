@@ -1,4 +1,4 @@
-# LuminaKraft Launcher 🚀
+# LuminaKraft Launcher 💎
 
 [![en](https://img.shields.io/badge/lang-en-red.svg)](https://github.com/LuminaKraft/luminakraftlauncher/blob/main/README.md)
 [![es](https://img.shields.io/badge/lang-es-yellow.svg)](https://github.com/LuminaKraft/luminakraftlauncher/blob/main/README.es.md)
