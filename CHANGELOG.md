@@ -7,45 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.6-alpha.2] - 2025-06-27
 
-### 🔧 **Release Description & Documentation Improvements**
-
-#### **Release Description Formatting**
-- **Fixed Line Breaks**: Corrected release descriptions that were appearing as single lines
-- **Improved Readability**: Proper formatting with line breaks and spacing
-- **Enhanced Structure**: Better organization of download instructions and sections
-
-#### **Community Integration**
-- **Discord Integration**: Added official Discord community link to all release descriptions
-- **Community Support**: Direct access to community support and discussions
-- **Feedback Channels**: Easier access for users to provide feedback and report issues
-
-#### **Documentation Updates**
-- **Version Consistency**: Updated all changelog entries to use proper `-alpha.1` format
-- **Alpha Status Clarification**: Enhanced documentation about alpha development status
-- **Release Process**: Improved release description generation and formatting
-
-### 🎯 **Version Standardization Completion**
-
-#### **Changelog Consistency**
-- **Retroactive Updates**: All changelog entries now consistently use `-alpha.1` format
-- **Version Alignment**: Project version files updated to match new alpha.2 release
-- **Documentation Sync**: All references to versions now follow semantic versioning
-
-#### **Release Management**
-- **Template Improvements**: Enhanced release description template with better formatting
-- **Community Links**: Integrated Discord community link in release descriptions
-- **Professional Presentation**: Cleaner, more professional release descriptions
-
-### 📋 **Breaking Changes**
-- **None**: All changes are backward compatible with existing installations
-
-### 🔧 **Migration Notes**
-- **Automatic**: All improvements activate automatically
-- **No User Action**: Users will see improved release descriptions in future updates
-- **Settings Preserved**: All user settings and authentication maintained
-
-## [0.0.6-alpha.1] - 2025-01-07
-
 ### 🔧 **Release System & Update Detection Overhaul**
 
 #### **Enhanced Version Comparison System**
@@ -95,12 +56,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Error Handling**: Graceful handling of malformed versions and network issues
 - **Backward Compatibility**: Maintains compatibility with existing version formats
 
+### 📝 **Release Description & Documentation Improvements**
+
+#### **Release Description Formatting**
+- **Fixed Line Breaks**: Corrected release descriptions that were appearing as single lines
+- **Improved Readability**: Proper formatting with line breaks and spacing
+- **Enhanced Structure**: Better organization of download instructions and sections
+
+#### **Community Integration**
+- **Discord Integration**: Added official Discord community link to all release descriptions
+- **Community Support**: Direct access to community support and discussions
+- **Feedback Channels**: Easier access for users to provide feedback and report issues
+
+#### **Documentation Updates**
+- **Version Consistency**: Updated all changelog entries to use proper `-alpha.1` format
+- **Alpha Status Clarification**: Enhanced documentation about alpha development status
+- **Release Process**: Improved release description generation and formatting
+
 ### 📋 **Breaking Changes**
 - **None**: All changes are backward compatible with existing installations
 
 ### 🔧 **Migration Notes**
-- **Automatic**: Version comparison improvements activate automatically
-- **No User Action**: Existing installations will benefit from improved update detection
+- **Automatic**: All improvements activate automatically
+- **No User Action**: Users will see improved release descriptions in future updates
 - **Settings Preserved**: All user settings and authentication maintained
 
 ## [0.0.6-alpha.1] - 2025-06-23
@@ -372,77 +350,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### **Technical Implementation**
 - **Backend Integration**:
   - Complete Lyceris Microsoft authentication integration
-  - Tauri commands: `authenticate_microsoft`, `refresh_microsoft_token`, `validate_microsoft_token`
-  - Modal window with URL polling for redirect detection
-  - Optimized 100ms polling for responsive auth detection
-
-- **Frontend Architecture**:
-  - `AuthService` singleton for centralized authentication management
-  - `MicrosoftAuth` React component with modern UI/UX
-  - Seamless integration with existing settings system
-  - Automatic fallback from modal to URL method
-
-#### **User Experience**
-- **Simplified Authentication**: Click "Sign in with Microsoft" → Complete login → Automatic closure
-- **Visual Status Indicators**: Clear authentication state with refresh/sign-out options
-- **Error Handling**: Intelligent error messages with automatic method switching
-- **Performance Optimized**: Removed debug logs, efficient URL monitoring
-
-#### **Data Structures**
-```rust
-pub struct MicrosoftAccount {
-    pub xuid: String,
-    pub exp: u64,
-    pub uuid: String,
-    pub username: String,
-    pub access_token: String,
-    pub refresh_token: String,
-    pub client_id: String,
-}
-
-pub struct UserSettings {
-    // ... existing fields
-    pub auth_method: String, // "offline" or "microsoft"
-    pub microsoft_account: Option<MicrosoftAccount>,
-}
-```
-
-#### **Translations Added**
-- **English**: Complete auth section with 20+ translated strings
-- **Spanish**: Full Spanish translations for all authentication UI
-- **Dynamic Language**: Real-time language switching support
-
-### 🚀 Performance Improvements
-- **Optimized URL Polling**: Efficient 100ms intervals with proper cleanup
-- **Removed Debug Logs**: Clean production code without performance overhead
-- **Smart Error Handling**: Reduced redundant operations and improved response times
-
-### 🎨 Enhanced User Interface
-- **Modern Authentication UI**: Clean, intuitive Microsoft authentication interface
-- **Responsive Design**: Proper window sizing and resizing support
-- **Visual Feedback**: Loading states, progress indicators, and status messages
-- **Accessibility**: Proper ARIA labels and keyboard navigation support
-
-### 🔧 Technical Enhancements
-- **Rust Backend**: Complete Microsoft OAuth2 flow implementation
-- **TypeScript Frontend**: Type-safe authentication service and components
-- **React Integration**: Seamless integration with existing React architecture
-- **State Management**: Proper authentication state persistence and synchronization
-
-### 🐛 Bug Fixes
-- **Modal Window Issues**: Fixed modal authentication with proper URL detection
-- **Event Handling**: Resolved Tauri 2.x event system compatibility
-- **Token Management**: Fixed token refresh and validation edge cases
-- **Window Management**: Proper modal window lifecycle management
-
-### 📦 Dependencies
-- **No New Dependencies**: Leveraged existing Lyceris integration
-- **Optimized Imports**: Cleaned up unused imports and improved compilation
-
-## [0.0.1-alpha.1] - 2025-06-13
-
-### 🚀 Major Features Added
-
-#### **Fully Automatic Updates**
-- **Zero Manual Installation** - Users can now update with one click, no manual downloads required
-- **Tauri Built-in Updater** - Integrated `
+  - Tauri commands: `
