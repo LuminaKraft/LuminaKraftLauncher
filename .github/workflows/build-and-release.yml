@@ -102,17 +102,26 @@ jobs:
       - name: Fix MSI version format (Windows only)
         if: matrix.platform == 'windows-latest'
         run: |
-          # Convert alpha.X to numeric format for MSI compatibility only in tauri.conf.json
-          # Keep Cargo.toml with proper semver format
+          # Convert alpha.X to valid semver format for MSI compatibility
+          # Keep proper semver format but use patch version for MSI numbering
           $version = (Get-Content package.json | ConvertFrom-Json).version
-          if ($version -match '(\d+\.\d+\.\d+)-alpha\.(\d+)') {
-            $msiVersion = "$($matches[1]).$($matches[2])"
+          if ($version -match '(\d+)\.(\d+)\.(\d+)-alpha\.(\d+)') {
+            $major = [int]$matches[1]
+            $minor = [int]$matches[2]  
+            $patch = [int]$matches[3]
+            $alpha = [int]$matches[4]
+            # Create MSI-compatible version: increment patch by alpha number
+            $msiVersion = "$major.$minor.$($patch + $alpha)"
             Write-Host "Converting version from $version to $msiVersion for MSI compatibility"
             # Only modify tauri.conf.json for MSI, keep Cargo.toml with original version
             (Get-Content src-tauri/tauri.conf.json) -replace '"version": "[^"]*"', "`"version`": `"$msiVersion`"" | Set-Content src-tauri/tauri.conf.json
-          } elseif ($version -match '(\d+\.\d+\.\d+)-beta\.(\d+)') {
-            $betaNum = [int]$matches[2] + 100
-            $msiVersion = "$($matches[1]).$betaNum"
+          } elseif ($version -match '(\d+)\.(\d+)\.(\d+)-beta\.(\d+)') {
+            $major = [int]$matches[1]
+            $minor = [int]$matches[2]
+            $patch = [int]$matches[3]
+            $beta = [int]$matches[4]
+            # Create MSI-compatible version: increment patch by 10 + beta number
+            $msiVersion = "$major.$minor.$($patch + 10 + $beta)"
             Write-Host "Converting version from $version to $msiVersion for MSI compatibility"
             # Only modify tauri.conf.json for MSI, keep Cargo.toml with original version
             (Get-Content src-tauri/tauri.conf.json) -replace '"version": "[^"]*"', "`"version`": `"$msiVersion`"" | Set-Content src-tauri/tauri.conf.json
