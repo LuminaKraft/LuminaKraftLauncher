@@ -24,7 +24,7 @@ reqwest = { version = "0.12.9", default-features = false, features = ["json", "s
 futures = "0.3.31"
 
 anyhow = "1.0"
-dirs = "5.0"
+dirs = "6.0"
 chrono = { version = "0.4", features = ["serde"] }
 lyceris = "1.1.3"
 
