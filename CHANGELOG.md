@@ -5,17 +5,44 @@ All notable changes to the LuminaKraft Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## ⚠️ **Alpha Development Status**
+## [0.0.6-alpha.2] - 2025-06-27
 
-**All current versions (0.0.1 through 0.0.6) are alpha releases.** These versions are intended for testing and development purposes. Alpha releases may contain bugs, incomplete features, and are subject to significant changes.
+### 🔧 **Release Description & Documentation Improvements**
 
-**What this means:**
-- 🧪 **Testing Phase**: Features are experimental and may change
-- 🐛 **Bug Reports Welcome**: Please report any issues you encounter
-- ⚡ **Rapid Development**: Frequent updates with new features and fixes
-- 🔄 **Breaking Changes Possible**: Updates may require fresh installations
+#### **Release Description Formatting**
+- **Fixed Line Breaks**: Corrected release descriptions that were appearing as single lines
+- **Improved Readability**: Proper formatting with line breaks and spacing
+- **Enhanced Structure**: Better organization of download instructions and sections
 
-**Stable Release Timeline:** We plan to release the first stable version (1.0.0) after comprehensive testing and feature completion.
+#### **Community Integration**
+- **Discord Integration**: Added official Discord community link to all release descriptions
+- **Community Support**: Direct access to community support and discussions
+- **Feedback Channels**: Easier access for users to provide feedback and report issues
+
+#### **Documentation Updates**
+- **Version Consistency**: Updated all changelog entries to use proper `-alpha.1` format
+- **Alpha Status Clarification**: Enhanced documentation about alpha development status
+- **Release Process**: Improved release description generation and formatting
+
+### 🎯 **Version Standardization Completion**
+
+#### **Changelog Consistency**
+- **Retroactive Updates**: All changelog entries now consistently use `-alpha.1` format
+- **Version Alignment**: Project version files updated to match new alpha.2 release
+- **Documentation Sync**: All references to versions now follow semantic versioning
+
+#### **Release Management**
+- **Template Improvements**: Enhanced release description template with better formatting
+- **Community Links**: Integrated Discord community link in release descriptions
+- **Professional Presentation**: Cleaner, more professional release descriptions
+
+### 📋 **Breaking Changes**
+- **None**: All changes are backward compatible with existing installations
+
+### 🔧 **Migration Notes**
+- **Automatic**: All improvements activate automatically
+- **No User Action**: Users will see improved release descriptions in future updates
+- **Settings Preserved**: All user settings and authentication maintained
 
 ## [0.0.6-alpha.1] - 2025-01-07
 
@@ -76,7 +103,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **No User Action**: Existing installations will benefit from improved update detection
 - **Settings Preserved**: All user settings and authentication maintained
 
-## [0.0.6] - 2025-06-23
+## [0.0.6-alpha.1] - 2025-06-23
 
 ### 🚀 Major Features Added
 
@@ -215,7 +242,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Settings Preserved**: All existing user settings and authentication maintained
 - **Progressive Enhancement**: New features activate as needed without disrupting existing functionality
 
-## [0.0.5] - 2025-05-22
+## [0.0.5-alpha.1] - 2025-05-22
 
 ### 🔄 Internal Naming Optimization
 
@@ -289,7 +316,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Streamlined Scripts**: Updated npm scripts with consistent naming for push operations
 - **Release Documentation**: Improved release command documentation
 
-## [0.0.4] - 2025-06-15
+## [0.0.4-alpha.1] - 2025-06-15
 
 ### 🌎 CurseForge API Integration
 
@@ -319,12 +346,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Reduced Log Volume**: Removed verbose debug logging for better performance
 - **Error Reporting**: Streamlined error reporting for faster response times
 
-## [0.0.3] - 2025-06-14
+## [0.0.3-alpha.1] - 2025-06-14
 
 ### 🐛 Bug Fixes
 - **CPU Compatibility Fix**: Resolved a startup crash (`Exception code: 0xc000001d`) on older PCs by removing CPU-specific optimizations (`target-cpu=native`). The launcher is now compatible with a wider range of processors.
 
-## [0.0.2] - 2025-06-13
+## [0.0.2-alpha.1] - 2025-06-13
 
 ### 🔐 Microsoft Authentication System
 
@@ -412,7 +439,7 @@ pub struct UserSettings {
 - **No New Dependencies**: Leveraged existing Lyceris integration
 - **Optimized Imports**: Cleaned up unused imports and improved compilation
 
-## [0.0.1] - 2025-06-13
+## [0.0.1-alpha.1] - 2025-06-13
 
 ### 🚀 Major Features Added
 
