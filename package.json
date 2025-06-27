@@ -22,6 +22,8 @@
     "release:patch-push": "node scripts/release.js patch --push",
     "release:minor-push": "node scripts/release.js minor --push",
     "release:major-push": "node scripts/release.js major --push",
+    "release:alpha": "node scripts/release.js",
+    "release:alpha-push": "node scripts/release.js --push",
     "clean": "rm -rf node_modules/.vite && rm -rf dist && rm -rf src-tauri/target"
   },
   "dependencies": {

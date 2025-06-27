@@ -86,8 +86,35 @@ function commitAndTag(version, isPrerelease = false) {
       return;
     }
 
-    // Add all modified files
-    execSync('git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml', { stdio: 'inherit' });
+    // Check for unstaged changes beyond version files
+    const versionFiles = ['package.json', 'src-tauri/tauri.conf.json', 'src-tauri/Cargo.toml'];
+    const statusLines = status.trim().split('\n');
+    const unstagedChanges = statusLines.filter(line => {
+      const file = line.slice(3).trim();
+      return line.startsWith(' M') && !versionFiles.includes(file);
+    });
+
+    if (unstagedChanges.length > 0) {
+      log('  ⚠️ Warning: There are unstaged changes in other files:', 'yellow');
+      unstagedChanges.forEach(line => log(`    ${line}`, 'yellow'));
+      log('  ℹ️ Only committing version files. Please commit other changes separately.', 'cyan');
+    }
+
+    // Add only version files
+    versionFiles.forEach(file => {
+      try {
+        execSync(`git add ${file}`, { stdio: 'pipe' });
+      } catch (error) {
+        // File might not exist or have changes, ignore
+      }
+    });
+    
+    // Check if any version files were actually staged
+    const stagedStatus = execSync('git status --porcelain --cached', { encoding: 'utf8' });
+    if (!stagedStatus.trim()) {
+      log('  ℹ️ No version files to commit', 'yellow');
+      return;
+    }
     
     // Create commit
     const commitMessage = `Release v${version}${isPrerelease ? ' (pre-release)' : ''}`;
