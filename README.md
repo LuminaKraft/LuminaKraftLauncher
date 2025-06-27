@@ -1,12 +1,12 @@
 # 💎 LuminaKraft Launcher
 
-[![en](https://img.shields.io/badge/lang-en-red.svg)](https://github.com/LuminaKraft/luminakraftlauncher/blob/main/README.md)
-[![es](https://img.shields.io/badge/lang-es-yellow.svg)](https://github.com/LuminaKraft/luminakraftlauncher/blob/main/README.es.md)
+[![en](https://img.shields.io/badge/lang-en-red.svg)](https://github.com/LuminaKraft/LuminakraftLauncher/blob/main/README.md)
+[![es](https://img.shields.io/badge/lang-es-yellow.svg)](https://github.com/LuminaKraft/LuminakraftLauncher/blob/main/README.es.md)
 
-[![Downloads](https://img.shields.io/github/downloads/LuminaKraft/luminakraftlauncher/total.svg)](https://github.com/LuminaKraft/luminakraftlauncher/releases)
-[![Release](https://img.shields.io/github/release/LuminaKraft/luminakraftlauncher.svg)](https://github.com/LuminaKraft/luminakraftlauncher/releases/latest)
-[![License](https://img.shields.io/github/license/LuminaKraft/luminakraftlauncher.svg)](LICENSE)
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/LuminaKraft/luminakraftlauncher/actions)
+[![Downloads](https://img.shields.io/github/downloads/LuminaKraft/LuminakraftLauncher/total.svg)](https://github.com/LuminaKraft/LuminakraftLauncher/releases)
+[![Release](https://img.shields.io/github/release/LuminaKraft/LuminakraftLauncher.svg)](https://github.com/LuminaKraft/LuminakraftLauncher/releases/latest)
+[![License](https://img.shields.io/github/license/LuminaKraft/LuminakraftLauncher.svg)](LICENSE)
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/LuminaKraft/LuminakraftLauncher/actions)
 
 A modern, cross-platform Minecraft launcher built with **Tauri** and **React**, featuring automatic updates, Microsoft authentication, and modpack management using the **Lyceris** library.
 
@@ -60,7 +60,7 @@ dist/
 
 #### 🪟 **Windows** (Recommended Platform)
 
-1. **Download**: Go to [Releases](https://github.com/LuminaKraft/luminakraftlauncher/releases/latest) → Download `LuminaKraft Launcher_x.x.x_x64-setup.exe`
+1. **Download**: Go to [Releases](https://github.com/LuminaKraft/LuminakraftLauncher/releases/latest) → Download `LuminaKraft Launcher_x.x.x_x64-setup.exe`
 
 2. **Run Installer**: Double-click the downloaded `.exe` file
 
@@ -172,8 +172,8 @@ dist/
 
 ```bash
 # Clone the repository
-git clone https://github.com/LuminaKraft/luminakraftlauncher.git
-cd luminakraftlauncher
+git clone https://github.com/LuminaKraft/LuminakraftLauncher.git
+cd LuminakraftLauncher
 
 # Install dependencies
 npm install
@@ -222,7 +222,7 @@ npm run clean
 
 ### Project Structure
 ```
-luminakraft-launcher/
+LuminakraftLauncher/
 ├── src/                    # React frontend source code
 │   ├── components/         # UI components
 │   ├── services/          # API and service layers
@@ -306,7 +306,7 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 
 ## 🐛 Bug Reports & Feature Requests
 
-Found a bug or have a feature request? Please check our [Issues page](https://github.com/LuminaKraft/luminakraft-launcher/issues) and create a new issue if needed.
+Found a bug or have a feature request? Please check our [Issues page](https://github.com/LuminaKraft/LuminakraftLauncher/issues) and create a new issue if needed.
 
 ## 📄 License
 
@@ -326,8 +326,8 @@ See [COPYING.md](COPYING.md) for detailed information about third-party dependen
 ## 📞 Support
 
 - 📖 **Documentation**: Check our [docs](docs/) directory
-- 🐛 **Bug Reports**: [GitHub Issues](https://github.com/LuminaKraft/luminakraft-launcher/issues)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/LuminaKraft/luminakraft-launcher/discussions)
+- 🐛 **Bug Reports**: [GitHub Issues](https://github.com/LuminaKraft/LuminakraftLauncher/issues)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/LuminaKraft/LuminakraftLauncher/discussions)
 - 🌐 **Website**: Coming soon!
 
 ---

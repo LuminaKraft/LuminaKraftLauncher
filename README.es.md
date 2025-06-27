@@ -1,12 +1,12 @@
 # 💎 LuminaKraft Launcher
 
-[![en](https://img.shields.io/badge/lang-en-red.svg)](https://github.com/LuminaKraft/luminakraftlauncher/blob/main/README.md)
-[![es](https://img.shields.io/badge/lang-es-yellow.svg)](https://github.com/LuminaKraft/luminakraftlauncher/blob/main/README.es.md)
+[![en](https://img.shields.io/badge/lang-en-red.svg)](https://github.com/LuminaKraft/LuminakraftLauncher/blob/main/README.md)
+[![es](https://img.shields.io/badge/lang-es-yellow.svg)](https://github.com/LuminaKraft/LuminakraftLauncher/blob/main/README.es.md)
 
-[![Descargas](https://img.shields.io/github/downloads/LuminaKraft/luminakraftlauncher/total.svg)](https://github.com/LuminaKraft/luminakraftlauncher/releases)
-[![Versión](https://img.shields.io/github/release/LuminaKraft/luminakraftlauncher.svg)](https://github.com/LuminaKraft/luminakraftlauncher/releases/latest)
-[![Licencia](https://img.shields.io/github/license/LuminaKraft/luminakraftlauncher.svg)](LICENSE)
-[![Estado de Compilación](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/LuminaKraft/luminakraftlauncher/actions)
+[![Descargas](https://img.shields.io/github/downloads/LuminaKraft/LuminakraftLauncher/total.svg)](https://github.com/LuminaKraft/LuminakraftLauncher/releases)
+[![Versión](https://img.shields.io/github/release/LuminaKraft/LuminakraftLauncher.svg)](https://github.com/LuminaKraft/LuminakraftLauncher/releases/latest)
+[![Licencia](https://img.shields.io/github/license/LuminaKraft/LuminakraftLauncher.svg)](LICENSE)
+[![Estado de Compilación](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/LuminaKraft/LuminakraftLauncher/actions)
 
 Un launcher moderno y multiplataforma para Minecraft construido con **Tauri** y **React**, que incluye actualizaciones automáticas, autenticación de Microsoft y gestión de modpacks usando la librería **Lyceris**.
 
@@ -60,7 +60,7 @@ dist/
 
 #### 🪟 **Windows** (Plataforma Recomendada)
 
-1. **Descargar**: Ve a [Versiones](https://github.com/LuminaKraft/luminakraftlauncher/releases/latest) → Descarga `LuminaKraft Launcher_x.x.x_x64-setup.exe`
+1. **Descargar**: Ve a [Versiones](https://github.com/LuminaKraft/LuminakraftLauncher/releases/latest) → Descarga `LuminaKraft Launcher_x.x.x_x64-setup.exe`
 
 2. **Ejecutar Instalador**: Haz doble clic en el archivo `.exe` descargado
 
@@ -172,8 +172,8 @@ dist/
 
 ```bash
 # Clonar el repositorio
-git clone https://github.com/LuminaKraft/luminakraftlauncher.git
-cd luminakraftlauncher
+git clone https://github.com/LuminaKraft/LuminakraftLauncher.git
+cd LuminakraftLauncher
 
 # Instalar dependencias
 npm install
@@ -222,7 +222,7 @@ npm run clean
 
 ### Estructura del Proyecto
 ```
-luminakraft-launcher/
+LuminakraftLauncher/
 ├── src/                    # Código fuente del frontend React
 │   ├── components/         # Componentes de UI
 │   ├── services/          # Capas de API y servicios
@@ -306,7 +306,7 @@ Para contribuir con traducciones:
 
 ## 🐛 Reportes de Errores y Solicitudes de Características
 
-¿Encontraste un error o tienes una solicitud de característica? Por favor revisa nuestra [página de Issues](https://github.com/LuminaKraft/luminakraft-launcher/issues) y crea un nuevo issue si es necesario.
+¿Encontraste un error o tienes una solicitud de característica? Por favor revisa nuestra [página de Issues](https://github.com/LuminaKraft/LuminakraftLauncher/issues) y crea un nuevo issue si es necesario.
 
 ## 📄 Licencia
 
@@ -326,8 +326,8 @@ Revisa [COPYING.md](COPYING.md) para información detallada sobre dependencias d
 ## 📞 Soporte
 
 - 📖 **Documentación**: Revisa nuestro directorio [docs](docs/)
-- 🐛 **Reportes de Errores**: [GitHub Issues](https://github.com/LuminaKraft/luminakraft-launcher/issues)
-- 💬 **Discusiones**: [GitHub Discussions](https://github.com/LuminaKraft/luminakraft-launcher/discussions)
+- 🐛 **Reportes de Errores**: [GitHub Issues](https://github.com/LuminaKraft/LuminakraftLauncher/issues)
+- 💬 **Discusiones**: [GitHub Discussions](https://github.com/LuminaKraft/LuminakraftLauncher/discussions)
 - 🌐 **Sitio Web**: ¡Próximamente!
 
 ---
