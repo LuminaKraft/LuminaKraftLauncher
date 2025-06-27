@@ -36,7 +36,6 @@
     "react-dom": "^18.3.1",
     "react-i18next": "^15.5.2"
   },
-
   "devDependencies": {
     "@tauri-apps/cli": "^2",
     "@types/node": "^24.0.3",
