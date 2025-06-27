@@ -33,25 +33,24 @@ A modern, cross-platform Minecraft launcher built with **Tauri** and **React**, 
 
 ## 🎯 Cross-Platform Build Success
 
-All platforms now build successfully with optimized performance:
+All platforms are built automatically via GitHub Actions:
 
 ### ✅ Supported Platforms
-- **Windows**: `.exe` executable + NSIS installer
+- **Windows**: `.exe` executable (NSIS) + `.msi` installer (WiX) 
 - **macOS**: Universal DMG files (Intel + ARM64) + `.app` bundles  
-- **Linux**: AppImage + .deb/.rpm packages + binary
+- **Linux**: AppImage + .deb/.rpm packages
 
 ### 📦 Build Artifacts
-All build outputs are generated in the `dist/` directory:
+All build outputs are automatically generated via GitHub Actions and available in Releases:
 ```
-dist/
-├── LuminaKraft Launcher_0.0.6_x64-setup.exe          # Windows installer
-├── LuminaKraft Launcher_0.0.6_x64_portable.exe       # Windows portable executable
-├── LuminaKraft Launcher_0.0.6_x64.dmg                # macOS Intel DMG
-├── LuminaKraft Launcher_0.0.6_aarch64.dmg            # macOS ARM64 DMG
-├── LuminaKraft Launcher_0.0.6_amd64.AppImage         # Linux AppImage (portable GUI)
-├── LuminaKraft Launcher_0.0.6_amd64.deb              # Linux Debian package
-├── LuminaKraft Launcher-0.0.6-1.x86_64.rpm           # Linux RPM package
-└── luminakraft-launcher                              # Linux binary
+Releases/
+├── LuminaKraft Launcher_x.x.x_x64-setup.exe          # Windows NSIS installer (RECOMMENDED)
+├── LuminaKraft Launcher_x.x.x_x64_en-US.msi          # Windows MSI installer
+├── LuminaKraft Launcher_x.x.x_x64.dmg                # macOS Intel DMG
+├── LuminaKraft Launcher_x.x.x_aarch64.dmg            # macOS ARM64 DMG
+├── LuminaKraft Launcher_x.x.x_amd64.AppImage         # Linux AppImage
+├── LuminaKraft Launcher_x.x.x_amd64.deb              # Linux Debian package
+└── LuminaKraft Launcher-x.x.x-1.x86_64.rpm           # Linux RPM package
 ```
 
 ## 🚀 Installation
@@ -60,9 +59,11 @@ dist/
 
 #### 🪟 **Windows** (Recommended Platform)
 
-1. **Download**: Go to [Releases](https://github.com/LuminaKraft/LuminakraftLauncher/releases/latest) → Download `LuminaKraft Launcher_x.x.x_x64-setup.exe`
+1. **Download**: Go to [Releases](https://github.com/LuminaKraft/LuminakraftLauncher/releases/latest)
+   - **🔥 RECOMMENDED**: `LuminaKraft Launcher_x.x.x_x64-setup.exe` (NSIS installer - allows data cleanup on uninstall)
+   - **Alternative**: `LuminaKraft Launcher_x.x.x_x64_en-US.msi` (MSI installer - for corporate environments)
 
-2. **Run Installer**: Double-click the downloaded `.exe` file
+2. **Run Installer**: Double-click the downloaded file
 
 3. **⚠️ Windows Defender SmartScreen Warning**:
    - If you see "**Windows protected your PC**":
@@ -71,6 +72,8 @@ dist/
    - This happens because the app isn't signed with an expensive certificate yet
 
 4. **Install**: Follow the installer prompts → Launch!
+
+> **Why .exe over .msi?** The NSIS `.exe` installer gives you the option to delete user data when uninstalling, while the `.msi` follows Windows standard behavior of preserving user data.
 
 #### 🍎 **macOS**
 
@@ -161,14 +164,26 @@ dist/
 - **Missing dependencies**: Install GTK 3.24+ and WebKit2GTK
 - **Package conflicts**: Use AppImage for universal compatibility
 
-## 🛠 Building from Source
+## 🛠 Building and Releases
 
-### Prerequisites
-- **Node.js** 20+ and npm
-- **Rust** 1.82.0+
-- **Docker** (for Windows/Linux cross-compilation on macOS)
+### Automated Builds via GitHub Actions
 
-### Quick Build Commands
+All builds are now handled automatically through GitHub Actions. No local compilation needed!
+
+### Creating a Release
+
+1. **Update Version**: Update version in `package.json` and `src-tauri/tauri.conf.json`
+2. **Create Git Tag**: 
+   ```bash
+   git tag v0.0.7
+   git push origin v0.0.7
+   ```
+3. **Automatic Build**: GitHub Actions will automatically build all platforms and create a release
+4. **Manual Trigger**: You can also trigger builds manually from the GitHub Actions tab
+
+### Local Development Build (Optional)
+
+For development purposes only:
 
 ```bash
 # Clone the repository
@@ -178,27 +193,11 @@ cd LuminakraftLauncher
 # Install dependencies
 npm install
 
-# Build for current platform only
+# Build for current platform only (development)
 npm run tauri build
-
-# Build all platforms (fast mode - recommended for development)
-bash scripts/build-all.sh all
-
-# Build all platforms (with Docker cleanup - for first build or CI)
-bash scripts/build-all.sh all --clean-docker
-
-# Build specific platforms
-bash scripts/build-macos.sh    # macOS (Intel + ARM64)
-bash scripts/build-windows.sh  # Windows (via Docker)
-bash scripts/build-linux.sh    # Linux AppImage (via Docker)
 ```
 
-### 🚀 Build Performance
-
-- **Fast Mode**: Skip Docker cleanup for 2-3x faster subsequent builds
-- **Reliable Mode**: Full Docker cleanup for maximum compatibility
-- **Memory Optimized**: Uses 6GB max memory with 2-core limits
-- **Sequential Builds**: Prevents memory conflicts between platforms
+> **Note**: Production releases should always use GitHub Actions for consistency and proper signing.
 
 ## 📋 Development
 
@@ -245,8 +244,8 @@ LuminakraftLauncher/
 ### Architecture
 - **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS
 - **Backend**: Rust + Tauri 2.5.1
-- **Cross-compilation**: Docker + MinGW/GNU toolchains
-- **Packaging**: Native installers + AppImage for Linux
+- **Build System**: GitHub Actions with cross-platform compilation
+- **Packaging**: Native installers (NSIS + MSI) + AppImage for Linux
 - **Minecraft Library**: Lyceris for authentication and game management
 - **UI Icons**: Lucide React for modern iconography
 - **HTTP Client**: Axios (frontend) + Reqwest (backend)
@@ -259,10 +258,10 @@ LuminakraftLauncher/
 - **i18next**: Internationalization
 - **Lucide React**: Icon library
 
-### Memory Optimization
-- Docker containers limited to 6GB RAM, 2 CPU cores
-- Rust compilation optimized for memory efficiency
-- Incremental builds for faster iteration
+### Build Optimization
+- Automated builds via GitHub Actions
+- Cross-platform compilation without local Docker setup
+- Optimized CI/CD pipeline for faster releases
 
 ## 🌍 Internationalization
 
@@ -278,10 +277,9 @@ To contribute translations:
 
 ## 📚 Documentation
 
-- [Complete Build Guide](docs/BUILD_SUCCESS_SUMMARY.md) - Comprehensive build documentation
-- [Memory Optimization](docs/MEMORY_OPTIMIZATION_GUIDE.md) - Performance tuning details
-- [Windows Build Success](docs/WINDOWS_BUILD_SUCCESS.md) - Windows-specific solutions
-- [Cross Compilation Guide](docs/CROSS_COMPILATION_GUIDE.md) - Multi-platform building
+- [Documentation Overview](docs/README.md) - Complete documentation guide
+- [Testing Guide](docs/TESTING_GUIDE.md) - Testing procedures and quality assurance
+- [Lyceris Integration](docs/LYCERIS_INTEGRATION_SUMMARY.md) - Core launcher library details
 - [Contributing Guidelines](CONTRIBUTING.md) - How to contribute to the project
 - [Code of Conduct](CODE_OF_CONDUCT.md) - Community guidelines
 
@@ -332,7 +330,7 @@ See [COPYING.md](COPYING.md) for detailed information about third-party dependen
 
 ---
 
-**🎉 Ready for multi-platform distribution!** LuminaKraft Launcher successfully builds for Windows, macOS, and Linux with optimized performance and automated build processes.
+**🎉 Ready for automated multi-platform distribution!** LuminaKraft Launcher builds automatically for Windows, macOS, and Linux via GitHub Actions with optimized CI/CD pipelines.
 
 <div align="center">
   <sub>Built with ❤️ by the LuminaKraft Studios team</sub>

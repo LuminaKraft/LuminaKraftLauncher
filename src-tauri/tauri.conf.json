@@ -51,9 +51,33 @@
         "type": "downloadBootstrapper"
       },
       "allowDowngrades": true,
-      "wix": null,
+      "wix": {
+        "language": ["en-US", "es-ES"],
+        "template": null,
+        "fragmentPaths": [],
+        "componentGroupRefs": [],
+        "componentRefs": [],
+        "featureGroupRefs": [],
+        "featureRefs": [],
+        "mergeRefs": [],
+        "skipWebviewInstall": false,
+        "license": null,
+        "enableElevatedUpdateTask": false,
+        "bannerPath": null,
+        "dialogImagePath": null
+      },
       "nsis": {
-        "displayLanguageSelector": true
+        "displayLanguageSelector": true,
+        "installerIcon": null,
+        "installMode": "perMachine",
+        "languages": ["English", "Spanish"],
+        "displayLanguageSelector": true,
+        "compression": null,
+        "template": null,
+        "headerImage": null,
+        "sidebarImage": null,
+        "installerHooks": null,
+        "deleteAppDataOnUninstall": true
       }
     }
   },

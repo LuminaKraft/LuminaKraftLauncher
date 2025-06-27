@@ -33,25 +33,24 @@ Un launcher moderno y multiplataforma para Minecraft construido con **Tauri** y 
 
 ## 🎯 Éxito de Compilación Multiplataforma
 
-Todas las plataformas ahora se compilan exitosamente con rendimiento optimizado:
+Todas las plataformas se compilan automáticamente via GitHub Actions:
 
 ### ✅ Plataformas Soportadas
-- **Windows**: Ejecutable `.exe` + instalador NSIS
+- **Windows**: Ejecutable `.exe` (NSIS) + instalador `.msi` (WiX)
 - **macOS**: Archivos DMG universales (Intel + ARM64) + paquetes `.app`  
-- **Linux**: AppImage + paquetes .deb/.rpm + binario
+- **Linux**: AppImage + paquetes .deb/.rpm
 
 ### 📦 Artefactos de Compilación
-Todas las salidas de compilación se generan en el directorio `dist/`:
+Todas las salidas de compilación se generan automáticamente via GitHub Actions y están disponibles en Releases:
 ```
-dist/
-├── LuminaKraft Launcher_0.0.6_x64-setup.exe          # Instalador de Windows
-├── LuminaKraft Launcher_0.0.6_x64_portable.exe       # Ejecutable portable de Windows
-├── LuminaKraft Launcher_0.0.6_x64.dmg                # DMG de macOS Intel
-├── LuminaKraft Launcher_0.0.6_aarch64.dmg            # DMG de macOS ARM64
-├── LuminaKraft Launcher_0.0.6_amd64.AppImage         # AppImage de Linux (GUI portable)
-├── LuminaKraft Launcher_0.0.6_amd64.deb              # Paquete Debian de Linux
-├── LuminaKraft Launcher-0.0.6-1.x86_64.rpm           # Paquete RPM de Linux
-└── luminakraft-launcher                              # Binario de Linux
+Releases/
+├── LuminaKraft Launcher_x.x.x_x64-setup.exe          # Instalador NSIS de Windows (RECOMENDADO)
+├── LuminaKraft Launcher_x.x.x_x64_es-ES.msi          # Instalador MSI de Windows
+├── LuminaKraft Launcher_x.x.x_x64.dmg                # DMG de macOS Intel
+├── LuminaKraft Launcher_x.x.x_aarch64.dmg            # DMG de macOS ARM64
+├── LuminaKraft Launcher_x.x.x_amd64.AppImage         # AppImage de Linux
+├── LuminaKraft Launcher_x.x.x_amd64.deb              # Paquete Debian de Linux
+└── LuminaKraft Launcher-x.x.x-1.x86_64.rpm           # Paquete RPM de Linux
 ```
 
 ## 🚀 Instalación
@@ -60,9 +59,11 @@ dist/
 
 #### 🪟 **Windows** (Plataforma Recomendada)
 
-1. **Descargar**: Ve a [Versiones](https://github.com/LuminaKraft/LuminakraftLauncher/releases/latest) → Descarga `LuminaKraft Launcher_x.x.x_x64-setup.exe`
+1. **Descargar**: Ve a [Versiones](https://github.com/LuminaKraft/LuminakraftLauncher/releases/latest)
+   - **🔥 RECOMENDADO**: `LuminaKraft Launcher_x.x.x_x64-setup.exe` (instalador NSIS - permite limpiar datos al desinstalar)
+   - **Alternativo**: `LuminaKraft Launcher_x.x.x_x64_es-ES.msi` (instalador MSI - para entornos corporativos)
 
-2. **Ejecutar Instalador**: Haz doble clic en el archivo `.exe` descargado
+2. **Ejecutar Instalador**: Haz doble clic en el archivo descargado
 
 3. **⚠️ Advertencia de Windows Defender SmartScreen**:
    - Si ves "**Windows protegió tu PC**":
@@ -71,6 +72,8 @@ dist/
    - Esto ocurre porque la aplicación aún no está firmada con un certificado costoso
 
 4. **Instalar**: Sigue las instrucciones del instalador → ¡Lanzar!
+
+> **¿Por qué .exe sobre .msi?** El instalador NSIS `.exe` te da la opción de eliminar datos de usuario al desinstalar, mientras que el `.msi` sigue el comportamiento estándar de Windows de preservar datos de usuario.
 
 #### 🍎 **macOS**
 
@@ -161,14 +164,26 @@ dist/
 - **Dependencias faltantes**: Instala GTK 3.24+ y WebKit2GTK
 - **Conflictos de paquetes**: Usa AppImage para compatibilidad universal
 
-## 🛠 Compilación desde el Código Fuente
+## 🛠 Compilación y Releases
 
-### Requisitos Previos
-- **Node.js** 20+ y npm
-- **Rust** 1.82.0+
-- **Docker** (para compilación cruzada de Windows/Linux en macOS)
+### Compilaciones Automatizadas via GitHub Actions
 
-### Comandos de Compilación Rápida
+¡Todas las compilaciones ahora se manejan automáticamente a través de GitHub Actions. No se necesita compilación local!
+
+### Crear un Release
+
+1. **Actualizar Versión**: Actualiza la versión en `package.json` y `src-tauri/tauri.conf.json`
+2. **Crear Git Tag**: 
+   ```bash
+   git tag v0.0.7
+   git push origin v0.0.7
+   ```
+3. **Compilación Automática**: GitHub Actions compilará automáticamente todas las plataformas y creará un release
+4. **Trigger Manual**: También puedes disparar compilaciones manualmente desde la pestaña GitHub Actions
+
+### Compilación Local de Desarrollo (Opcional)
+
+Solo para propósitos de desarrollo:
 
 ```bash
 # Clonar el repositorio
@@ -178,27 +193,11 @@ cd LuminakraftLauncher
 # Instalar dependencias
 npm install
 
-# Compilar solo para la plataforma actual
+# Compilar solo para la plataforma actual (desarrollo)
 npm run tauri build
-
-# Compilar todas las plataformas (modo rápido - recomendado para desarrollo)
-bash scripts/build-all.sh all
-
-# Compilar todas las plataformas (con limpieza de Docker - para primera compilación o CI)
-bash scripts/build-all.sh all --clean-docker
-
-# Compilar plataformas específicas
-bash scripts/build-macos.sh    # macOS (Intel + ARM64)
-bash scripts/build-windows.sh  # Windows (vía Docker)
-bash scripts/build-linux.sh    # Linux AppImage (vía Docker)
 ```
 
-### 🚀 Rendimiento de Compilación
-
-- **Modo Rápido**: Omite la limpieza de Docker para compilaciones subsecuentes 2-3x más rápidas
-- **Modo Confiable**: Limpieza completa de Docker para máxima compatibilidad
-- **Optimizado en Memoria**: Usa 6GB máx de memoria con límites de 2 núcleos
-- **Compilaciones Secuenciales**: Previene conflictos de memoria entre plataformas
+> **Nota**: Los releases de producción siempre deben usar GitHub Actions para consistencia y firma apropiada.
 
 ## 📋 Desarrollo
 
@@ -245,8 +244,8 @@ LuminakraftLauncher/
 ### Arquitectura
 - **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS
 - **Backend**: Rust + Tauri 2.5.1
-- **Compilación cruzada**: Docker + cadenas de herramientas MinGW/GNU
-- **Empaquetado**: Instaladores nativos + AppImage para Linux
+- **Sistema de Compilación**: GitHub Actions con compilación multiplataforma
+- **Empaquetado**: Instaladores nativos (NSIS + MSI) + AppImage para Linux
 - **Librería de Minecraft**: Lyceris para autenticación y gestión del juego
 - **Iconos de UI**: Lucide React para iconografía moderna
 - **Cliente HTTP**: Axios (frontend) + Reqwest (backend)
@@ -259,10 +258,10 @@ LuminakraftLauncher/
 - **i18next**: Internacionalización
 - **Lucide React**: Librería de iconos
 
-### Optimización de Memoria
-- Contenedores Docker limitados a 6GB RAM, 2 núcleos de CPU
-- Compilación de Rust optimizada para eficiencia de memoria
-- Compilaciones incrementales para iteración más rápida
+### Optimización de Compilación
+- Compilaciones automatizadas via GitHub Actions
+- Compilación multiplataforma sin configuración local de Docker
+- Pipeline CI/CD optimizado para releases más rápidos
 
 ## 🌍 Internacionalización
 
@@ -278,10 +277,9 @@ Para contribuir con traducciones:
 
 ## 📚 Documentación
 
-- [Guía Completa de Compilación](docs/BUILD_SUCCESS_SUMMARY.md) - Documentación completa de compilación
-- [Optimización de Memoria](docs/MEMORY_OPTIMIZATION_GUIDE.md) - Detalles de ajuste de rendimiento
-- [Éxito de Compilación en Windows](docs/WINDOWS_BUILD_SUCCESS.md) - Soluciones específicas para Windows
-- [Guía de Compilación Cruzada](docs/CROSS_COMPILATION_GUIDE.md) - Compilación multiplataforma
+- [Resumen de Documentación](docs/README.md) - Guía completa de documentación
+- [Guía de Testing](docs/TESTING_GUIDE.md) - Procedimientos de testing y control de calidad
+- [Integración Lyceris](docs/LYCERIS_INTEGRATION_SUMMARY.md) - Detalles de la librería central del launcher
 - [Pautas de Contribución](CONTRIBUTING.md) - Cómo contribuir al proyecto
 - [Código de Conducta](CODE_OF_CONDUCT.md) - Pautas de la comunidad
 
@@ -332,7 +330,7 @@ Revisa [COPYING.md](COPYING.md) para información detallada sobre dependencias d
 
 ---
 
-**🎉 ¡Listo para distribución multiplataforma!** LuminaKraft Launcher se compila exitosamente para Windows, macOS y Linux con rendimiento optimizado y procesos de compilación automatizados.
+**🎉 ¡Listo para distribución multiplataforma automatizada!** LuminaKraft Launcher se compila automáticamente para Windows, macOS y Linux via GitHub Actions con pipelines CI/CD optimizados.
 
 <div align="center">
   <sub>Construido con ❤️ por el equipo de LuminaKraft Studios</sub>

@@ -1,34 +1,181 @@
-# Scripts de LuminaKraft Launcher 🔧
+# Scripts Directory
 
-Este directorio contiene scripts de utilidad para trabajadores y desarrolladores de LuminaKraft.
+This directory contains utility scripts for development and release management of the LuminaKraft Launcher.
+
+> **⚠️ Note**: Build scripts have been removed in favor of GitHub Actions for automated, reliable cross-platform compilation.
+
+## 🚀 Release Management
+
+### Release Script
+- **`release.js`** - Automated release management script
+  - Version bumping (patch, minor, major)
+  - Git tagging and pushing
+  - Automated GitHub release creation via Actions
+
+### Release Usage
+```bash
+# Create patch release (updates version and creates tag)
+npm run release:patch
+
+# Create minor release
+npm run release:minor
+
+# Create major release
+npm run release:major
+
+# Push release to trigger GitHub Actions build
+npm run release:push
+```
+
+## 🛠 Development Utilities
+
+### Development Tools
+- **`kill-port.js`** - Kill processes on specific ports (useful for dev server)
+- **`check-modpack-urls.sh`** - Validate modpack URLs and metadata
+- **`clean-duplicates.sh`** - Remove duplicate files in target directories
+- **`generate-release-description.cjs`** - Generate comprehensive release descriptions
+
+### Release Description Generator
+- **Purpose**: Creates detailed GitHub release descriptions
+- **Features**: 
+  - Extracts key changes from CHANGELOG.md
+  - Supports stable releases and prereleases
+  - Includes download instructions for all platforms
+  - Adds technical details and useful links
+- **Usage**: Automatically used by GitHub Actions workflow
+
+### Development Usage
+```bash
+# Kill port 1420 (default Vite dev server)
+npm run kill-port 1420
+
+# Start dev server with stable port (kills port first)
+npm run tauri:dev-stable
+
+# Check modpack URLs
+bash scripts/check-modpack-urls.sh
+
+# Generate release description (manual testing)
+node scripts/generate-release-description.cjs 0.0.6
+node scripts/generate-release-description.cjs 0.0.6-beta.1 --prerelease
+```
+
+## 📋 Build Process (GitHub Actions)
+
+All builds are now handled automatically via GitHub Actions:
+
+### Automatic Builds
+1. **Tag Push**: Push a version tag to trigger builds
+2. **GitHub Actions**: Automatically builds for all platforms
+3. **Release Creation**: Creates GitHub release with all artifacts
+4. **Multi-Platform**: Windows (NSIS + MSI), macOS (Intel + ARM64), Linux (AppImage + packages)
+
+### Creating a Release
+```bash
+# Update version in package.json and src-tauri/tauri.conf.json
+# Then create and push tag
+git tag v0.0.7
+git push origin v0.0.7
+
+# GitHub Actions will automatically:
+# - Build for all platforms
+# - Create installers and packages
+# - Upload to GitHub Releases
+```
+
+### Manual Trigger
+You can also manually trigger builds from the GitHub Actions tab in your repository.
+
+## 🔍 Available Platforms
+
+### Automated Build Outputs
+```
+GitHub Releases/
+├── LuminaKraft Launcher_x.x.x_x64-setup.exe          # Windows NSIS (RECOMMENDED)
+├── LuminaKraft Launcher_x.x.x_x64_en-US.msi          # Windows MSI
+├── LuminaKraft Launcher_x.x.x_x64.dmg                # macOS Intel
+├── LuminaKraft Launcher_x.x.x_aarch64.dmg            # macOS ARM64
+├── LuminaKraft Launcher_x.x.x_amd64.AppImage         # Linux AppImage
+├── LuminaKraft Launcher_x.x.x_amd64.deb              # Linux Debian
+└── LuminaKraft Launcher-x.x.x-1.x86_64.rpm           # Linux RPM
+```
+
+## 🌟 Benefits of GitHub Actions
+
+### Advantages Over Local Builds
+- ✅ **Consistent Environment**: Same build environment every time
+- ✅ **No Local Dependencies**: No need for Docker, cross-compilation tools
+- ✅ **Automated Process**: No manual intervention required
+- ✅ **Multi-Platform**: All platforms built simultaneously
+- ✅ **Reliable Artifacts**: Guaranteed working builds
+- ✅ **Easy Releases**: Automatic release creation and upload
+
+### Removed Complexity
+- ❌ Docker setup and maintenance
+- ❌ Cross-compilation toolchain management
+- ❌ Platform-specific build scripts
+- ❌ Manual artifact organization
+- ❌ Build environment inconsistencies
+
+## 📝 Migration Notes
+
+### What Was Removed
+- `build-all.sh` - Master build script
+- `build-macos.sh` - macOS build script
+- `build-windows.sh` - Windows Docker build
+- `build-linux.sh` - Linux Docker build
+- `clean-artifacts.sh` - Build cleanup script
+- `clean-docker.sh` - Docker cleanup script
+- `download-nsis-deps.js` - NSIS dependencies
+
+### What Remains
+- Release management scripts
+- Development utilities
+- URL validation tools
+- Port management utilities
+
+## 🔗 GitHub Actions Workflow
+
+The build process is now handled by `.github/workflows/build-and-release.yml`:
+- Triggered on tag push (`v*`) or manual dispatch
+- Builds on native runners (no Docker needed)
+- Creates draft release automatically
+- Uploads all build artifacts
+- Publishes release when builds complete
+
+This provides a much more reliable and maintainable build process compared to local scripts.
+
+---
+
+# Modpack URL Checker 🔍
 
 ## check-modpack-urls.sh
 
-Script para verificar qué mods de un modpack de CurseForge tienen URLs vacías y necesitan ser incluidos en `overrides/mods/`.
+Script to verify which mods in a CurseForge modpack have empty URLs and need to be included in `overrides/mods/`.
 
-### 🎯 **¿Para qué sirve?**
+### 🎯 **Purpose**
 
-Este script ayuda a los trabajadores a verificar modpacks **antes** de subirlos al servidor, identificando qué mods no pueden descargarse automáticamente y necesitan ser incluidos manualmente en la carpeta `overrides/mods/`.
+This script helps workers verify modpacks **before** uploading them to the server, identifying which mods cannot be downloaded automatically and need to be included manually in the `overrides/mods/` folder.
 
-### 📋 **Requisitos del Sistema**
+### 📋 **System Requirements**
 
-El script requiere herramientas estándar que están preinstaladas en la mayoría de sistemas:
+The script requires standard tools that are pre-installed on most systems:
 
-- **unzip** - Para extraer archivos ZIP
-- **curl** - Para hacer peticiones HTTP
-- **jq** - Para procesar JSON
+- **unzip** - To extract ZIP files
+- **curl** - To make HTTP requests
+- **jq** - To process JSON
 
-#### Instalación de dependencias:
+#### Installing dependencies:
 
 **Ubuntu/Debian:**
 ```bash
 sudo apt update && sudo apt install unzip curl jq
 ```
 
-**macOS (con Homebrew):**
+**macOS (with Homebrew):**
 ```bash
 brew install jq
-# unzip y curl ya están preinstalados
+# unzip and curl are already pre-installed
 ```
 
 **CentOS/RHEL/Fedora:**
@@ -36,161 +183,26 @@ brew install jq
 sudo yum install unzip curl jq
 ```
 
-### 🚀 **Uso**
+### 🚀 **Usage**
 
 ```bash
-# Hacer ejecutable (solo la primera vez)
+# Make executable (first time only)
 chmod +x check-modpack-urls.sh
 
-# Verificar un modpack
-./check-modpack-urls.sh mi-modpack-1.0.0.zip
+# Check a modpack
+./check-modpack-urls.sh my-modpack-1.0.0.zip
 ```
 
-### 📊 **Ejemplo de Salida**
+### 🔄 **Recommended Workflow**
 
-```
-🔍 LuminaKraft Modpack URL Checker v1.0
-=====================================
+1. **Export modpack** from CurseForge App
+2. **Run script** to verify URLs
+3. **If there are mods with empty URLs:**
+   - Download manually using provided links
+   - Create `overrides/mods/` folder in modpack
+   - Place downloaded `.jar` files in `overrides/mods/`
+   - Repackage the modpack ZIP
+   - **Optional:** Run script again to confirm
+4. **Upload modpack** to server
 
-📁 Procesando modpack: mi-modpack-1.0.0.zip
-⏳ Extrayendo manifest.json...
-✅ Manifest extraído correctamente
-
-📦 Modpack: Mi Modpack v1.0.0
-🎮 Minecraft: 1.20.1
-🔧 ModLoader: forge-47.2.0
-📊 Total de mods: 95
-
-🌐 Consultando API de LuminaKraft...
-📡 Consultando 95 mods en batches de 50...
-   📦 Batch 1/2 (50 mods)
-   📦 Batch 2/2 (45 mods)
-✅ Obtenida información de 95/95 mods
-
-🔍 Analizando URLs de descarga...
-✅ Análisis completado
-
-📊 RESULTADO DEL ANÁLISIS
-=========================
-
-📈 Estadísticas:
-   • Total de mods: 95
-   • Con URL válida: 92 (97%)
-   • URL vacía: 3 (3%)
-   • No encontrados: 0
-
-⚠️  MODS CON URL VACÍA - REQUIEREN DESCARGA MANUAL
-====================================================
-
-Los siguientes mods necesitan ser descargados manualmente y agregados a overrides/mods/:
-
-• 📄 JEI Integration
-  Archivo: jeiintegration_1.20.1-10.0.0.jar
-  Project ID: 265917
-  File ID: 4556776
-  Estado: Approved (4)
-  Disponible: Sí
-  🔗 Descargar desde: https://www.curseforge.com/minecraft/mc-mods/project-265917/files/4556776
-
-• 📄 AppleSkin
-  Archivo: appleskin-forge-mc1.20.1-2.5.1.jar
-  Project ID: 248787
-  File ID: 4564227
-  Estado: Approved (4)
-  Disponible: Sí
-  🔗 Descargar desde: https://www.curseforge.com/minecraft/mc-mods/project-248787/files/4564227
-
-📝 INSTRUCCIONES:
-==================
-1. Visita cada enlace de arriba
-2. Descarga el archivo del mod
-3. Crea la carpeta overrides/mods/ en tu modpack si no existe
-4. Coloca los archivos .jar descargados en overrides/mods/
-5. Reempaqueta tu modpack con los overrides incluidos
-
-📋 RESUMEN DE ACCIONES NECESARIAS:
-==================================
-• Descargar manualmente 3 mod(s) y agregarlos a overrides/mods/
-
-🔧 Script completado.
-```
-
-### ✅ **Caso Ideal (Sin Mods Problemáticos)**
-
-```
-📊 RESULTADO DEL ANÁLISIS
-=========================
-
-📈 Estadísticas:
-   • Total de mods: 95
-   • Con URL válida: 95 (100%)
-   • URL vacía: 0 (0%)
-   • No encontrados: 0
-
-✅ ¡EXCELENTE! Todos los mods tienen URLs válidas
-==============================================
-No necesitas descargar ningún mod manualmente.
-
-🎉 TU MODPACK ESTÁ LISTO PARA SUBIR!
-====================================
-Todos los mods pueden descargarse automáticamente.
-
-🔧 Script completado.
-```
-
-### 🔄 **Flujo de Trabajo Recomendado**
-
-1. **Exportar modpack** desde CurseForge App
-2. **Ejecutar script** para verificar URLs
-3. **Si hay mods con URL vacía:**
-   - Descargar manualmente usando los enlaces proporcionados
-   - Crear carpeta `overrides/mods/` en el modpack
-   - Colocar los archivos `.jar` descargados en `overrides/mods/`
-   - Reempaquetar el modpack ZIP
-   - **Opcional:** Ejecutar el script nuevamente para confirmar
-4. **Subir modpack** al servidor
-
-### 🐛 **Solución de Problemas**
-
-**Error: "command not found: jq"**
-```bash
-# Instalar jq según tu sistema operativo (ver sección de requisitos)
-```
-
-**Error: "No se encontró manifest.json"**
-- Verifica que el archivo sea un modpack válido exportado desde CurseForge App
-- El archivo debe ser un ZIP que contenga `manifest.json` en la raíz
-
-**Warning: "Error de red en batch X"**
-- Problema temporal de conectividad
-- El script continúa y reporta los errores al final
-- Reintenta si hay muchos errores de red
-
-**Warning: "Respuesta inválida en batch X"**
-- Problema temporal con la API de LuminaKraft
-- El script continúa con los demás batches
-- Los mods no procesados aparecerán como "No encontrados"
-
-### 📚 **Información Técnica**
-
-- **API utilizada:** `https://api.luminakraft.com/v1/curseforge`
-- **Batch size:** 50 mods por petición (límite de la API)
-- **Rate limiting:** 500ms de delay entre batches
-- **User-Agent:** `LuminaKraft-ModpackChecker/1.0`
-
-### 🔍 **Estados de Archivo CurseForge**
-
-| Código | Estado | Descripción |
-|--------|--------|-------------|
-| 4 | Approved | **Más común con URL vacía** - Archivo aprobado pero sin descarga directa |
-| 10 | Released | Archivo liberado y disponible |
-| 1 | Processing | En proceso de aprobación |
-| 5 | Rejected | Rechazado por moderadores |
-| 7 | Deleted | Eliminado del sistema |
-
-### 📝 **Notas para Trabajadores**
-
-- **File Status 4 (Approved)** es el más común para mods con URL vacía
-- Estos mods suelen tener distribución restringida por decisión del autor
-- **SIEMPRE** incluir estos mods en `overrides/mods/` para que funcionen
-- El launcher ahora detecta automáticamente si un mod ya está en overrides y no lo marcará como fallido 
+This script ensures all mods in your modpack can be properly downloaded by the launcher.
