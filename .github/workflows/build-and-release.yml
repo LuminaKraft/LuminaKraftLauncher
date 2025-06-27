@@ -94,7 +94,7 @@ jobs:
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf libjavascriptcoregtk-4.1-dev
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf libjavascriptcoregtk-4.1-dev libsoup-3.0-dev
 
       - name: Install frontend dependencies
         run: npm ci
@@ -102,20 +102,20 @@ jobs:
       - name: Fix MSI version format (Windows only)
         if: matrix.platform == 'windows-latest'
         run: |
-          # Convert alpha.X to numeric format for MSI compatibility
-          # alpha.1 -> 1, alpha.2 -> 2, beta.1 -> 100, etc.
+          # Convert alpha.X to numeric format for MSI compatibility only in tauri.conf.json
+          # Keep Cargo.toml with proper semver format
           $version = (Get-Content package.json | ConvertFrom-Json).version
           if ($version -match '(\d+\.\d+\.\d+)-alpha\.(\d+)') {
-            $newVersion = "$($matches[1])-$($matches[2])"
-            Write-Host "Converting version from $version to $newVersion for MSI compatibility"
-            (Get-Content src-tauri/tauri.conf.json) -replace '"version": "[^"]*"', "`"version`": `"$newVersion`"" | Set-Content src-tauri/tauri.conf.json
-            (Get-Content src-tauri/Cargo.toml) -replace 'version = "[^"]*"', "version = `"$newVersion`"" | Set-Content src-tauri/Cargo.toml
+            $msiVersion = "$($matches[1]).$($matches[2])"
+            Write-Host "Converting version from $version to $msiVersion for MSI compatibility"
+            # Only modify tauri.conf.json for MSI, keep Cargo.toml with original version
+            (Get-Content src-tauri/tauri.conf.json) -replace '"version": "[^"]*"', "`"version`": `"$msiVersion`"" | Set-Content src-tauri/tauri.conf.json
           } elseif ($version -match '(\d+\.\d+\.\d+)-beta\.(\d+)') {
             $betaNum = [int]$matches[2] + 100
-            $newVersion = "$($matches[1])-$betaNum"
-            Write-Host "Converting version from $version to $newVersion for MSI compatibility"
-            (Get-Content src-tauri/tauri.conf.json) -replace '"version": "[^"]*"', "`"version`": `"$newVersion`"" | Set-Content src-tauri/tauri.conf.json
-            (Get-Content src-tauri/Cargo.toml) -replace 'version = "[^"]*"', "version = `"$newVersion`"" | Set-Content src-tauri/Cargo.toml
+            $msiVersion = "$($matches[1]).$betaNum"
+            Write-Host "Converting version from $version to $msiVersion for MSI compatibility"
+            # Only modify tauri.conf.json for MSI, keep Cargo.toml with original version
+            (Get-Content src-tauri/tauri.conf.json) -replace '"version": "[^"]*"', "`"version`": `"$msiVersion`"" | Set-Content src-tauri/tauri.conf.json
           }
         shell: pwsh
 
