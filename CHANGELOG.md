@@ -5,6 +5,77 @@ All notable changes to the LuminaKraft Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## ⚠️ **Alpha Development Status**
+
+**All current versions (0.0.1 through 0.0.6) are alpha releases.** These versions are intended for testing and development purposes. Alpha releases may contain bugs, incomplete features, and are subject to significant changes.
+
+**What this means:**
+- 🧪 **Testing Phase**: Features are experimental and may change
+- 🐛 **Bug Reports Welcome**: Please report any issues you encounter
+- ⚡ **Rapid Development**: Frequent updates with new features and fixes
+- 🔄 **Breaking Changes Possible**: Updates may require fresh installations
+
+**Stable Release Timeline:** We plan to release the first stable version (1.0.0) after comprehensive testing and feature completion.
+
+## [0.0.6-alpha.1] - 2025-01-07
+
+### 🔧 **Release System & Update Detection Overhaul**
+
+#### **Enhanced Version Comparison System**
+- **Semantic Version Support**: Complete rewrite of version comparison logic with proper semver support
+- **Prerelease Detection**: Now correctly handles alpha, beta, and RC version comparisons
+- **Alpha Progression**: Properly detects updates between `0.0.6-alpha.1` → `0.0.6-alpha.2`
+- **Version Precedence**: Follows semantic versioning rules: `alpha < beta < rc < stable`
+- **Mixed Format Support**: Handles both `alpha` and `alpha.1` version formats
+
+#### **GitHub Actions & Release Automation**
+- **Clean Release Titles**: Removed "(Pre-release)" suffix from release titles for cleaner appearance
+- **Professional Descriptions**: Updated all release descriptions to match modern GitHub Actions format
+- **Repository Migration**: Migrated update system from old repository to main `LuminaKraft/LuminaKraftLauncher`
+- **Automated Descriptions**: Release descriptions now generated automatically with comprehensive download instructions
+
+#### **Update System Improvements**
+- **Repository Update**: App now checks for updates from the correct `LuminaKraft/LuminaKraftLauncher` repository
+- **Smart Prerelease Detection**: Update dialog shows specific prerelease types (Alpha/Beta/RC)
+- **Enhanced UI**: Update notifications now display appropriate warnings and descriptions for each prerelease type
+- **Multilingual Support**: Updated English and Spanish translations for prerelease terminology
+
+### 🎯 **Version Standardization**
+
+#### **Alpha Versioning Consistency**
+- **Standardized Format**: All releases now follow consistent `X.Y.Z-alpha.N` format
+- **Retroactive Updates**: Updated all existing releases (0.0.1 through 0.0.6) to use `-alpha.1` format
+- **Tag Consistency**: All Git tags updated to reflect proper alpha versioning
+- **Documentation**: Clear guidelines for alpha, beta, and stable release progression
+
+#### **Release Description Modernization**
+- **Unified Format**: All releases now use identical professional description format
+- **Platform Instructions**: Comprehensive download and installation instructions for all platforms
+- **Clean Presentation**: Removed duplicate titles from descriptions (title is already shown by GitHub)
+- **Consistent Branding**: Professional appearance across all releases
+
+### 🔄 **Technical Improvements**
+
+#### **Version Parsing & Comparison**
+- **Robust Parsing**: New version parser handles complex prerelease identifiers
+- **Numeric Comparison**: Properly compares numeric prerelease versions (`alpha.1` vs `alpha.2`)
+- **Type Precedence**: Implements correct precedence ordering for prerelease types
+- **Edge Case Handling**: Handles mixed formats, version prefixes, and malformed versions
+
+#### **Update Service Enhancements**
+- **Comprehensive Testing**: Extensive test suite covering all version comparison scenarios
+- **Performance Optimization**: Efficient parsing and comparison algorithms
+- **Error Handling**: Graceful handling of malformed versions and network issues
+- **Backward Compatibility**: Maintains compatibility with existing version formats
+
+### 📋 **Breaking Changes**
+- **None**: All changes are backward compatible with existing installations
+
+### 🔧 **Migration Notes**
+- **Automatic**: Version comparison improvements activate automatically
+- **No User Action**: Existing installations will benefit from improved update detection
+- **Settings Preserved**: All user settings and authentication maintained
+
 ## [0.0.6] - 2025-06-23
 
 ### 🚀 Major Features Added

@@ -27,7 +27,7 @@ class UpdateService {
   private lastCheckTime: number = 0;
   private readonly CHECK_INTERVAL = 60 * 60 * 1000; // 1 hour
   // Only use public repository and get all releases (including prereleases)
-  private readonly GITHUB_API_URL = 'https://api.github.com/repos/kristiangarcia/luminakraft-launcher-releases/releases';
+  private readonly GITHUB_API_URL = 'https://api.github.com/repos/LuminaKraft/LuminaKraftLauncher/releases';
 
   private constructor() {}
 
@@ -39,22 +39,119 @@ class UpdateService {
   }
 
   /**
-   * Compare version strings (e.g., "0.3.0" vs "0.2.1")
+   * Compare version strings with proper prerelease support (e.g., "0.0.6-alpha.1" vs "0.0.6-alpha.2")
    */
   private compareVersions(current: string, latest: string): number {
-    const currentParts = current.replace('v', '').split('.').map(Number);
-    const latestParts = latest.replace('v', '').split('.').map(Number);
+    // Remove 'v' prefix if present
+    const currentClean = current.replace(/^v/, '');
+    const latestClean = latest.replace(/^v/, '');
     
-    const maxLength = Math.max(currentParts.length, latestParts.length);
+    // Split version and prerelease parts
+    const currentParts = this.parseVersion(currentClean);
+    const latestParts = this.parseVersion(latestClean);
     
-    for (let i = 0; i < maxLength; i++) {
-      const currentPart = currentParts[i] || 0;
-      const latestPart = latestParts[i] || 0;
+    // Compare main version numbers (major.minor.patch)
+    for (let i = 0; i < 3; i++) {
+      const currentPart = currentParts.version[i] || 0;
+      const latestPart = latestParts.version[i] || 0;
       
       if (currentPart < latestPart) return -1;
       if (currentPart > latestPart) return 1;
     }
     
+    // If main versions are equal, compare prerelease
+    return this.comparePrereleaseVersions(currentParts.prerelease, latestParts.prerelease);
+  }
+
+  /**
+   * Parse a version string into version numbers and prerelease parts
+   */
+  private parseVersion(version: string): { version: number[], prerelease: string | null } {
+    const parts = version.split('-');
+    const versionNumbers = parts[0].split('.').map(Number);
+    const prerelease = parts.length > 1 ? parts.slice(1).join('-') : null;
+    
+    return {
+      version: versionNumbers,
+      prerelease: prerelease
+    };
+  }
+
+  /**
+   * Compare prerelease versions (alpha.1, beta.2, rc.1, etc.)
+   */
+  private comparePrereleaseVersions(current: string | null, latest: string | null): number {
+    // If neither has prerelease, they're equal
+    if (!current && !latest) return 0;
+    
+    // Stable version (no prerelease) is always greater than prerelease
+    if (!current && latest) return 1;   // 1.0.0 > 1.0.0-alpha.1
+    if (current && !latest) return -1;  // 1.0.0-alpha.1 < 1.0.0
+    
+    // Both have prereleases, compare them
+    if (current && latest) {
+      // Parse prerelease identifiers (alpha.1 -> ["alpha", "1"])
+      const currentParts = this.parsePrereleaseIdentifiers(current);
+      const latestParts = this.parsePrereleaseIdentifiers(latest);
+      
+      const maxLength = Math.max(currentParts.length, latestParts.length);
+      
+      for (let i = 0; i < maxLength; i++) {
+        const currentPart = currentParts[i];
+        const latestPart = latestParts[i];
+        
+        // If one is undefined, the other is greater
+        if (currentPart === undefined) return -1;
+        if (latestPart === undefined) return 1;
+        
+        // Compare numeric vs non-numeric
+        const currentIsNum = /^\d+$/.test(currentPart);
+        const latestIsNum = /^\d+$/.test(latestPart);
+        
+        if (currentIsNum && latestIsNum) {
+          // Both numeric: compare as numbers
+          const diff = parseInt(currentPart) - parseInt(latestPart);
+          if (diff !== 0) return diff < 0 ? -1 : 1;
+        } else if (currentIsNum && !latestIsNum) {
+          // Numeric comes after non-numeric
+          return 1;
+        } else if (!currentIsNum && latestIsNum) {
+          // Non-numeric comes before numeric
+          return -1;
+        } else {
+          // Both non-numeric: compare lexically with precedence rules
+          const comparison = this.comparePrereleaseTypes(currentPart, latestPart);
+          if (comparison !== 0) return comparison;
+        }
+      }
+    }
+    
+    return 0;
+  }
+
+  /**
+   * Parse prerelease identifiers (e.g., "alpha.1" -> ["alpha", "1"])
+   */
+  private parsePrereleaseIdentifiers(prerelease: string): string[] {
+    return prerelease.split(/[.\-]/);
+  }
+
+  /**
+   * Compare prerelease type identifiers with proper precedence
+   */
+  private comparePrereleaseTypes(current: string, latest: string): number {
+    const precedence = ['alpha', 'beta', 'rc'];
+    const currentIndex = precedence.indexOf(current.toLowerCase());
+    const latestIndex = precedence.indexOf(latest.toLowerCase());
+    
+    // If both are known types, compare by precedence
+    if (currentIndex !== -1 && latestIndex !== -1) {
+      return currentIndex - latestIndex;
+    }
+    
+    // If one is unknown, fall back to lexical comparison
+    if (current < latest) return -1;
+    if (current > latest) return 1;
     return 0;
   }
 

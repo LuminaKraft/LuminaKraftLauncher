@@ -33,7 +33,38 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
   };
 
   const getTitle = () => {
-    return updateInfo.isPrerelease ? t('about.prereleaseUpdate') : 'Update Available';
+    if (updateInfo.isPrerelease) {
+      const version = updateInfo.latestVersion;
+      if (version.includes('-alpha')) {
+        return 'Alpha Update Available';
+      } else if (version.includes('-beta')) {
+        return 'Beta Update Available';
+      } else if (version.includes('-rc')) {
+        return 'Release Candidate Available';
+      }
+      return t('about.prereleaseUpdate');
+    }
+    return 'Update Available';
+  };
+
+  const getPrereleaseType = () => {
+    const version = updateInfo.latestVersion;
+    if (version.includes('-alpha')) return 'alpha';
+    if (version.includes('-beta')) return 'beta';
+    if (version.includes('-rc')) return 'release candidate';
+    return 'pre-release';
+  };
+
+  const getPrereleaseDescription = () => {
+    const type = getPrereleaseType();
+    if (type === 'alpha') {
+      return `A new alpha version is available. Alpha versions are early development builds that may contain bugs and incomplete features.`;
+    } else if (type === 'beta') {
+      return `A new beta version is available. Beta versions are feature-complete but may contain bugs.`;
+    } else if (type === 'release candidate') {
+      return `A new release candidate is available. Release candidates are near-final versions ready for testing.`;
+    }
+    return t('about.prereleaseUpdateDesc');
   };
 
   const getIcon = () => {
@@ -65,12 +96,14 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
           {updateInfo.isPrerelease && (
             <div className="mb-4 p-3 bg-yellow-900/30 border border-yellow-600 text-yellow-200 rounded-lg flex items-center">
               <AlertTriangle className="w-4 h-4 mr-2 flex-shrink-0" />
-              <span className="text-sm">{t('about.prereleaseWarning')}</span>
+              <span className="text-sm">
+                This is an {getPrereleaseType()} version intended for testing and development. Please report any issues you encounter.
+              </span>
             </div>
           )}
           
           <p className="text-dark-300 mb-4">
-            {updateInfo.isPrerelease ? t('about.prereleaseUpdateDesc') : 'A new version of LuminaKraft Launcher is available!'}
+            {updateInfo.isPrerelease ? getPrereleaseDescription() : 'A new version of LuminaKraft Launcher is available!'}
           </p>
           
           <div className="bg-dark-700 rounded-lg p-4 mb-4">
@@ -148,7 +181,7 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
             Platform: {updateInfo.platform}
           </p>
           <a 
-            href="https://github.com/kristiangarcia/luminakraft-launcher/releases/latest"
+            href="https://github.com/LuminaKraft/LuminaKraftLauncher/releases/latest"
             target="_blank"
             rel="noopener noreferrer"
             className="text-dark-500 hover:text-lumina-400 text-xs inline-flex items-center mt-1 transition-colors"

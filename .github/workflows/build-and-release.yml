@@ -52,7 +52,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               tag_name: `v${version}`,
-              name: `LuminaKraft Launcher v${version}${isPrerelease ? ' (Pre-release)' : ''}`,
+              name: `LuminaKraft Launcher v${version}`,
               body: process.env.RELEASE_DESCRIPTION,
               draft: true,
               prerelease: isPrerelease

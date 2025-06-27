@@ -88,8 +88,6 @@ function generateReleaseDescription(version, isPrerelease = false) {
   const changelogSection = extractChangelogSection(version);
   
   const description = [
-    `💎 **LuminaKraft Launcher v${version}${isPrerelease ? ' (Pre-release)' : ''}**`,
-    '',
     isPrerelease ? '🧪 **Pre-release version for testing** - This version contains experimental features and may have bugs.' : '',
     isPrerelease ? '' : null,
     '## 📋 What\'s New',
@@ -116,11 +114,6 @@ function generateReleaseDescription(version, isPrerelease = false) {
     '- 💬 **Discord**: Join our community',
     '- 🐛 **Report Bugs**: [GitHub Issues](https://github.com/LuminaKraft/LuminaKraftLauncher/issues)',
     '- 📖 **Documentation**: [Project README](https://github.com/LuminaKraft/LuminaKraftLauncher/blob/main/README.md)',
-    '',
-    '## 🛠️ Technical Details',
-    '- **Built with**: Tauri 2.5.1 + React 18 + TypeScript',
-    '- **Platforms**: Windows, macOS (Intel + ARM64), Linux',
-    '- **Minecraft Library**: Lyceris for robust game management',
     '',
     isPrerelease ? '⚠️ **Warning**: This pre-release version may contain bugs. Use at your own risk and provide feedback if you encounter issues.' : null,
     isPrerelease ? '' : null,
