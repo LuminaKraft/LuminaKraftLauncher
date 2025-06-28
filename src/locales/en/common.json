@@ -111,7 +111,6 @@
     "downloadingMinecraft": "Downloading Minecraft files...",
     "installingMinecraft": "Installing Minecraft...",
     "downloadingModpackFiles": "Downloading modpack...",
-    "processingCurseforge": "Processing CurseForge modpack...",
     "extractingModpack": "Extracting modpack...",
     "finalizing": "Finalizing installation...",
     "completed": "Installation completed successfully",
@@ -128,7 +127,19 @@
     "modpackExtracted": "Modpack downloaded and extracted successfully",
     "noModpackFiles": "No modpack files to download",
     "validatingFiles": "Validating downloaded files...",
-    "creatingDirectories": "Creating directories..."
+    "creatingDirectories": "Creating directories...",
+    "downloadingMods": "Downloading mods...",
+    "downloadingModsProgress": "Downloading mods... ({{current}}/{{total}})",
+    "downloadingMod": "Downloading: {{modName}}",
+    "modDownloadComplete": "Downloaded: {{modName}}",
+    "modAlreadyExists": "Already exists: {{modName}}",
+    "modUnavailable": "Unavailable: {{modName}}",
+    "modHashMismatch": "Hash mismatch: {{modName}}",
+    "modDownloadError": "Error downloading: {{modName}}",
+    "preparingModDownloads": "Preparing mod downloads...",
+    "processingCurseforge": "Processing CurseForge modpack...",
+    "readingManifest": "Reading modpack information...",
+    "curseforgeCompleted": "CurseForge modpack processed successfully"
   },
   "settings": {
     "title": "Settings",
@@ -269,22 +280,6 @@
     "copyright": "© 2025 LuminaKraft Studios. All rights reserved.",
     "license": "This software is licensed under the terms of the MIT license.",
     "minecraftTrademark": "Minecraft is a registered trademark of Mojang Studios"
-  },
-  "errors": {
-    "generic": "An unexpected error occurred",
-    "network": "Network connection error",
-    "fileNotFound": "File not found",
-    "invalidConfig": "Invalid configuration",
-    "javaNotFound": "Java not found on system",
-    "diskSpace": "Insufficient disk space",
-    "permissions": "Insufficient permissions",
-    "modpackNotFound": "Modpack not found",
-    "downloadFailed": "Download failed",
-    "extractionFailed": "File extraction failed",
-    "launchFailed": "Failed to launch Minecraft",
-          "invalidUrl": "Invalid URL",
-      "tryAgain": "Try again",
-      "reportBug": "Report bug"
   },
   "notifications": {
     "updateAvailable": "Update available",

@@ -170,6 +170,12 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
       'downloading_modpack': 'Descargando modpack...',
       'processing_modpack': 'Procesando modpack...',
       'processing_curseforge': 'Procesando modpack de CurseForge...',
+      'preparing_mod_downloads': 'Descargando mods...',
+      'downloading_modpack_file': 'Descargando mods...',
+      'downloading_mod_file': 'Descargando mods...',
+      'mod_already_exists': 'Descargando mods...',
+      'mod_downloaded_verified': 'Descargando mods...',
+      'mod_unavailable': 'Descargando mods...',
       'extracting_modpack': 'Extrayendo modpack...',
       'downloading': 'Descargando archivos...',
       'downloading_update': 'Descargando actualización...',
@@ -305,22 +311,23 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
                       const message = state.progress.detailMessage;
                       let displayText = message;
                       let bulletClass = "w-2 h-2 bg-lumina-600 rounded-full animate-pulse";
-                      
-                      // Si el mensaje tiene prefijo de estado, extraer el texto y cambiar el bullet
-                      if (message.startsWith("✅ ")) {
-                        displayText = message.substring(2); // Remover "✅ "
-                        bulletClass = "w-2 h-2 bg-green-500 rounded-full"; // Verde para completado/existe
-                      } else if (message.startsWith("❌ ")) {
-                        displayText = message.substring(2); // Remover "❌ "  
-                        bulletClass = "w-2 h-2 bg-red-500 rounded-full"; // Rojo para error
+
+                      // Procesar los prefijos de estado
+                      if (message.startsWith("mod_exists:") || message.startsWith("mod_completed:")) {
+                        displayText = message.substring(message.indexOf(":") + 1);
+                        bulletClass = "w-2 h-2 bg-green-500 rounded-full";
+                      } else if (message.startsWith("mod_error:") || message.startsWith("mod_unavailable:")) {
+                        displayText = message.substring(message.indexOf(":") + 1);
+                        bulletClass = "w-2 h-2 bg-red-500 rounded-full";
+                      } else if (message.startsWith("mod_name:")) {
+                        displayText = message.substring(message.indexOf(":") + 1);
+                        bulletClass = "w-2 h-2 bg-lumina-600 rounded-full animate-pulse";
                       }
-                      
+
                       return (
                         <>
                           <div className={bulletClass}></div>
-                          <span className="truncate text-dark-400">
-                            {displayText}
-                          </span>
+                          <span className="truncate">{displayText}</span>
                         </>
                       );
                     })()}

@@ -103,10 +103,13 @@ pub fn verify_file_hash(file_path: &PathBuf, expected_hashes: &[FileHash]) -> bo
 }
 
 /// Download mods with progress tracking and failed mod detection
+/// Progress ranges from start_percentage to end_percentage proportionally
 pub async fn download_mods_with_failed_tracking<F>(
     manifest: &CurseForgeManifest, 
     instance_dir: &PathBuf,
-    emit_progress: F
+    emit_progress: F,
+    start_percentage: f32,
+    end_percentage: f32,
 ) -> Result<Vec<serde_json::Value>>
 where
     F: Fn(String, f32, String) + Send + Sync + 'static,
@@ -126,26 +129,30 @@ where
         file_id_to_project.insert(manifest_file.file_id, manifest_file.project_id);
     }
     
+    let total_mods = all_file_infos.len();
+    let progress_range = end_percentage - start_percentage;
+    
     for (index, file_info) in all_file_infos.iter().enumerate() {
-        let progress_percentage = 60.0 + (index as f32 / all_file_infos.len() as f32) * 30.0;
+        // Calculate proportional progress from start_percentage to end_percentage
+        let mod_progress = start_percentage + (index as f32 / total_mods as f32) * progress_range;
         
         emit_progress(
-            format!("downloading_modpack:{}:{}", index + 1, all_file_infos.len()),
-            progress_percentage,
+            format!("downloading_modpack:{}:{}", index + 1, total_mods),
+            mod_progress,
             "downloading_modpack_file".to_string()
         );
         
         let download_url = match &file_info.download_url {
             Some(url) if !url.is_empty() => url,
             _ => {
-                let file_name = file_info.file_name.as_deref().unwrap_or("archivo desconocido");
+                let file_name = file_info.file_name.as_deref().unwrap_or("unknown_file");
                 let mod_path = mods_dir.join(file_name);
                 
                 if verify_file_hash(&mod_path, &file_info.hashes) {
                     emit_progress(
                         format!("mod_exists:{}", file_name),
-                        progress_percentage + 5.0,
-                        "mod_found_locally".to_string()
+                        mod_progress,
+                        "mod_already_exists".to_string()
                     );
                     continue;
                 } else {
@@ -158,8 +165,8 @@ where
                     failed_mods.push(failed_mod);
                     
                     emit_progress(
-                        format!("⚠️ Mod no disponible: {}", file_name),
-                        progress_percentage,
+                        format!("mod_unavailable:{}", file_name),
+                        mod_progress,
                         "mod_unavailable".to_string()
                     );
                     continue;
@@ -178,7 +185,7 @@ where
         if verify_file_hash(&mod_path, &file_info.hashes) {
             emit_progress(
                 format!("mod_exists:{}", file_name),
-                progress_percentage + 5.0,
+                mod_progress,
                 "mod_already_exists".to_string()
             );
             continue;
@@ -186,7 +193,7 @@ where
         
         emit_progress(
             format!("mod_name:{}", file_name),
-            progress_percentage + 3.0,
+            mod_progress,
             "downloading_mod_file".to_string()
         );
         
@@ -194,15 +201,16 @@ where
         match download_file(download_url, &mod_path).await {
             Ok(_) => {
                 if verify_file_hash(&mod_path, &file_info.hashes) {
+                    let completed_progress = start_percentage + ((index + 1) as f32 / total_mods as f32) * progress_range;
                     emit_progress(
                         format!("mod_completed:{}", file_name),
-                        progress_percentage + 5.0,
+                        completed_progress,
                         "mod_downloaded_verified".to_string()
                     );
                 } else {
                     emit_progress(
                         format!("mod_error:{}", file_name),
-                        progress_percentage + 5.0,
+                        mod_progress,
                         "mod_hash_mismatch".to_string()
                     );
                     if mod_path.exists() {
@@ -212,9 +220,9 @@ where
             },
             Err(e) => {
                 emit_progress(
-                    format!("❌ Error al descargar {}: {}", file_name, e),
-                    progress_percentage,
-                    "error_downloading_mod".to_string()
+                    format!("mod_download_error:{}:{}", file_name, e),
+                    mod_progress,
+                    "mod_download_error".to_string()
                 );
             }
         }

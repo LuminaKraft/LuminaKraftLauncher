@@ -111,7 +111,6 @@
     "downloadingMinecraft": "Descargando archivos de Minecraft...",
     "installingMinecraft": "Instalando Minecraft...",
     "downloadingModpackFiles": "Descargando modpack...",
-    "processingCurseforge": "Procesando modpack de CurseForge...",
     "extractingModpack": "Extrayendo modpack...",
     "finalizing": "Finalizando instalación...",
     "completed": "Instalación completada exitosamente",
@@ -128,7 +127,19 @@
     "modpackExtracted": "Modpack descargado y extraído exitosamente",
     "noModpackFiles": "No hay archivos del modpack para descargar",
     "validatingFiles": "Validando archivos descargados...",
-    "creatingDirectories": "Creando directorios..."
+    "creatingDirectories": "Creando directorios...",
+    "downloadingMods": "Descargando mods...",
+    "downloadingModsProgress": "Descargando mods... ({{current}}/{{total}})",
+    "downloadingMod": "Descargando: {{modName}}",
+    "modDownloadComplete": "Descargado: {{modName}}",
+    "modAlreadyExists": "Ya existe: {{modName}}",
+    "modUnavailable": "No disponible: {{modName}}",
+    "modHashMismatch": "Error de hash: {{modName}}",
+    "modDownloadError": "Error descargando: {{modName}}",
+    "preparingModDownloads": "Preparando descarga de mods...",
+    "processingCurseforge": "Procesando modpack de CurseForge...",
+    "readingManifest": "Leyendo información del modpack...",
+    "curseforgeCompleted": "Modpack de CurseForge procesado exitosamente"
   },
   "settings": {
     "title": "Configuración",
@@ -269,22 +280,6 @@
     "copyright": "© 2025 LuminaKraft Studios. Todos los derechos reservados.",
     "license": "Este software está licenciado bajo los términos de la licencia MIT.",
     "minecraftTrademark": "Minecraft es una marca registrada de Mojang Studios"
-  },
-  "errors": {
-    "generic": "Ha ocurrido un error inesperado",
-    "network": "Error de conexión de red",
-    "fileNotFound": "Archivo no encontrado",
-    "invalidConfig": "Configuración inválida",
-    "javaNotFound": "Java no encontrado en el sistema",
-    "diskSpace": "Espacio insuficiente en disco",
-    "permissions": "Permisos insuficientes",
-    "modpackNotFound": "Modpack no encontrado",
-    "downloadFailed": "Error al descargar",
-    "extractionFailed": "Error al extraer archivos",
-    "launchFailed": "Error al iniciar Minecraft",
-    "invalidUrl": "URL inválida",
-    "tryAgain": "Intentar de nuevo",
-    "reportBug": "Reportar error"
   },
   "notifications": {
     "updateAvailable": "Actualización disponible",

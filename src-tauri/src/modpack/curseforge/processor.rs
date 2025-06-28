@@ -17,7 +17,7 @@ where
     F: Fn(String, f32, String) + Send + Sync + 'static + Clone,
 {
     emit_progress(
-        "Procesando modpack de CurseForge".to_string(),
+        "processing_curseforge".to_string(),
         0.0,
         "processing_curseforge".to_string()
     );
@@ -60,30 +60,35 @@ where
     
     // Process overrides first
     emit_progress(
-        "Procesando archivos adicionales del modpack".to_string(),
+        "processing_overrides".to_string(),
         20.0,
         "processing_overrides".to_string()
     );
     
     process_overrides(&manifest, &temp_dir, instance_dir, emit_progress.clone())?;
     
-    // Download mods
+    // Download mods - internal progress will be 30% to 95% (maps to 70%-100% externally)
     emit_progress(
-        format!("Preparando descarga de {} mods", manifest.files.len()),
-        25.0,
-        "preparing_mods_download".to_string()
+        "".to_string(),
+        30.0,
+        "preparing_mod_downloads".to_string()
     );
     
-    let failed_mods = download_mods_with_failed_tracking(&manifest, instance_dir, emit_progress.clone()).await?;
+    let failed_mods = download_mods_with_failed_tracking(&manifest, instance_dir, emit_progress.clone(), 30.0, 95.0).await?;
     
     // Clean up temp directory
+    emit_progress(
+        "finalizing".to_string(),
+        97.0,
+        "finalizing".to_string()
+    );
     fs::remove_dir_all(&temp_dir)?;
     
     // Get modloader info
     let (modloader, modloader_version) = get_modloader_info(&manifest)?;
     
     emit_progress(
-        "Modpack de CurseForge procesado exitosamente".to_string(),
+        "curseforge_completed".to_string(),
         100.0,
         "curseforge_completed".to_string()
     );
@@ -122,7 +127,7 @@ where
     fs::create_dir_all(&temp_dir)?;
     
     emit_progress(
-        "Extrayendo archivos del modpack".to_string(),
+        "extracting_modpack".to_string(),
         5.0,
         "extracting_modpack".to_string()
     );
@@ -131,7 +136,7 @@ where
     extract_zip(modpack_zip_path, &temp_dir)?;
     
     emit_progress(
-        "Leyendo información del modpack".to_string(),
+        "reading_manifest".to_string(),
         10.0,
         "reading_manifest".to_string()
     );
@@ -191,7 +196,7 @@ where
     let (modloader, modloader_version) = get_modloader_info(&manifest)?;
     
     emit_progress(
-        "Modpack de CurseForge procesado exitosamente".to_string(),
+        "curseforge_completed".to_string(),
         100.0,
         "curseforge_completed".to_string()
     );
@@ -222,11 +227,14 @@ where
     let mut new_mod_filenames = std::collections::HashSet::new();
     let api_errors_count = 0; // Simplified for now
     
+    let total_mods = all_file_infos.len();
+    
     for (index, file_info) in all_file_infos.iter().enumerate() {
-        let progress_percentage = 40.0 + (index as f32 / all_file_infos.len() as f32) * 50.0;
+        // Progress from 40% to 90% proportionally for mod updates
+        let progress_percentage = 40.0 + (index as f32 / total_mods as f32) * 50.0;
         
         emit_progress(
-            format!("downloading_modpack:{}:{}", index + 1, all_file_infos.len()),
+            format!("downloading_modpack:{}:{}", index + 1, total_mods),
             progress_percentage,
             "downloading_modpack_file".to_string()
         );
@@ -234,9 +242,9 @@ where
         let download_url = match &file_info.download_url {
             Some(url) if !url.is_empty() => url,
             _ => {
-                let file_name = file_info.file_name.as_deref().unwrap_or("archivo desconocido");
+                let file_name = file_info.file_name.as_deref().unwrap_or("unknown_file");
                 emit_progress(
-                    format!("⚠️ Mod no disponible: {}", file_name),
+                    format!("mod_unavailable:{}", file_name),
                     progress_percentage,
                     "mod_unavailable".to_string()
                 );

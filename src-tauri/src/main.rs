@@ -229,61 +229,116 @@ async fn install_modpack_with_minecraft(app: tauri::AppHandle, modpack: Modpack,
                     ("Descargando mods...".to_string(), "".to_string())
                 }
             } else if message.starts_with("mod_name:") {
-                // Formato: "mod_name:filename.jar" - mostrar solo el nombre del mod (abajo)
-                let mod_name = message.strip_prefix("mod_name:").unwrap_or("");
-                let detail_msg = mod_name.to_string();
+                // Para archivos individuales de mods: "mod_name:filename"
+                let file_name = message.strip_prefix("mod_name:").unwrap_or(&message);
+                let detail_msg = format!("mod_name:Descargando: {}", file_name);
                 
-                // Actualizar el último mensaje válido
+                // Actualizar el último detailMessage válido
                 if let Ok(mut last) = last_detail_message.lock() {
                     *last = detail_msg.clone();
                 }
                 
-                ("".to_string(), detail_msg)
-            } else if message.starts_with("mod_exists:") {
-                // Formato: "mod_exists:filename.jar" - mod ya existe
-                let mod_name = message.strip_prefix("mod_exists:").unwrap_or("");
-                let detail_msg = format!("✅ {}", mod_name);
+                // Mantener el último mensaje general válido
+                let preserved_general = if let Ok(last) = last_general_message.lock() {
+                    last.clone()
+                } else {
+                    "Descargando mods...".to_string()
+                };
                 
-                // Actualizar el último mensaje válido
-                if let Ok(mut last) = last_detail_message.lock() {
-                    *last = detail_msg.clone();
-                }
-                
-                ("".to_string(), detail_msg)
+                (preserved_general, detail_msg)
             } else if message.starts_with("mod_completed:") {
-                // Formato: "mod_completed:filename.jar" - mod descargado correctamente
-                let mod_name = message.strip_prefix("mod_completed:").unwrap_or("");
-                let detail_msg = format!("✅ {}", mod_name);
+                // Para mods completados: "mod_completed:filename"
+                let file_name = message.strip_prefix("mod_completed:").unwrap_or(&message);
+                let detail_msg = format!("mod_completed:Descargado: {}", file_name);
                 
-                // Actualizar el último mensaje válido
+                // Actualizar el último detailMessage válido
                 if let Ok(mut last) = last_detail_message.lock() {
                     *last = detail_msg.clone();
                 }
                 
-                ("".to_string(), detail_msg)
-            } else if message.starts_with("mod_error:") {
-                // Formato: "mod_error:filename.jar" - error en el mod
-                let mod_name = message.strip_prefix("mod_error:").unwrap_or("");
-                let detail_msg = format!("❌ {}", mod_name);
+                // Mantener el último mensaje general válido
+                let preserved_general = if let Ok(last) = last_general_message.lock() {
+                    last.clone()
+                } else {
+                    "Descargando mods...".to_string()
+                };
                 
-                // Actualizar el último mensaje válido
+                (preserved_general, detail_msg)
+            } else if message.starts_with("mod_exists:") {
+                // Para mods que ya existen: "mod_exists:filename"
+                let file_name = message.strip_prefix("mod_exists:").unwrap_or(&message);
+                let detail_msg = format!("mod_exists:Ya existe: {}", file_name);
+                
+                // Actualizar el último detailMessage válido
                 if let Ok(mut last) = last_detail_message.lock() {
                     *last = detail_msg.clone();
                 }
                 
-                ("".to_string(), detail_msg)
+                // Mantener el último mensaje general válido
+                let preserved_general = if let Ok(last) = last_general_message.lock() {
+                    last.clone()
+                } else {
+                    "Descargando mods...".to_string()
+                };
+                
+                (preserved_general, detail_msg)
+            } else if message.starts_with("mod_unavailable:") {
+                // Para mods no disponibles: "mod_unavailable:filename"
+                let file_name = message.strip_prefix("mod_unavailable:").unwrap_or(&message);
+                let detail_msg = format!("mod_unavailable:No disponible: {}", file_name);
+                
+                // Actualizar el último detailMessage válido
+                if let Ok(mut last) = last_detail_message.lock() {
+                    *last = detail_msg.clone();
+                }
+                
+                // Mantener el último mensaje general válido
+                let preserved_general = if let Ok(last) = last_general_message.lock() {
+                    last.clone()
+                } else {
+                    "Descargando mods...".to_string()
+                };
+                
+                (preserved_general, detail_msg)
+            } else if message.starts_with("mod_error:") || message.starts_with("mod_download_error:") {
+                // Para errores de mods: "mod_error:filename" o "mod_download_error:filename:error"
+                let error_parts: Vec<&str> = message.split(':').collect();
+                let file_name = if error_parts.len() >= 2 {
+                    error_parts[1]
+                } else {
+                    "archivo desconocido"
+                };
+                let detail_msg = format!("mod_error:Error: {}", file_name);
+                
+                // Actualizar el último detailMessage válido
+                if let Ok(mut last) = last_detail_message.lock() {
+                    *last = detail_msg.clone();
+                }
+                
+                // Mantener el último mensaje general válido
+                let preserved_general = if let Ok(last) = last_general_message.lock() {
+                    last.clone()
+                } else {
+                    "Descargando mods...".to_string()
+                };
+                
+                (preserved_general, detail_msg)
+            } else if message == "preparing_mod_downloads" || step == "preparing_mod_downloads" {
+                // Let the frontend handle translation via step
+                ("".to_string(), "".to_string())
             } else {
                 // Para otros mensajes, determinar basado en el step
                 let general = match step.as_str() {
                     "preparing_installation" | "verifying_modpack_config" | "configuring_minecraft" => "Preparando Minecraft...",
                     "downloading_minecraft" | "installing_minecraft" => "Instalando Minecraft...",
-                    "downloading_modpack" | "processing_modpack" | "processing_curseforge" | "extracting_modpack" => "Procesando modpack...",
+                    "downloading_modpack" | "processing_modpack" | "processing_curseforge" | "extracting_modpack" | "reading_manifest" | "processing_overrides" => "Procesando modpack...",
                     "updating" | "downloading_update" | "processing_update" | "updating_curseforge_mods" | 
                     "replacing_mods" | "updating_configs" | "removing_old_mods" | "copying_new_mods" |
                     "backing_up_minecraft" | "extracting_new_version" | "restoring_minecraft" |
                     "finalizing_update" => "Actualizando modpack...",
-                    "downloading_mods" | "downloading_modpack_file" | "downloading_mod_file" => "Descargando mods...",
-                    "finalizing" | "completed" => "Finalizando...",
+                    "downloading_mods" | "downloading_modpack_file" | "downloading_mod_file" | "preparing_mod_downloads" | 
+                    "mod_already_exists" | "mod_unavailable" | "mod_downloaded_verified" | "mod_hash_mismatch" | "mod_download_error" => "Descargando mods...",
+                    "finalizing" | "completed" | "curseforge_completed" | "saving_instance_config" | "finalizing_installation" => "Finalizando...",
                     _ => "Instalando...",
                 };
                 (general.to_string(), "".to_string())
@@ -452,7 +507,7 @@ async fn install_modpack_with_failed_tracking(app: tauri::AppHandle, modpack: Mo
             } else if message.starts_with("mod_name:") {
                 // Para archivos individuales de mods: "mod_name:filename"
                 let file_name = message.strip_prefix("mod_name:").unwrap_or(&message);
-                let detail_msg = file_name.to_string();
+                let detail_msg = format!("mod_name:Descargando: {}", file_name);
                 
                 // Actualizar el último detailMessage válido
                 if let Ok(mut last) = last_detail_message.lock() {
@@ -463,32 +518,14 @@ async fn install_modpack_with_failed_tracking(app: tauri::AppHandle, modpack: Mo
                 let preserved_general = if let Ok(last) = last_general_message.lock() {
                     last.clone()
                 } else {
-                    "Descargando modpack...".to_string()
-                };
-                
-                (preserved_general, detail_msg)
-            } else if message.starts_with("mod_exists:") {
-                // Para mods que ya existen: "mod_exists:filename"
-                let file_name = message.strip_prefix("mod_exists:").unwrap_or(&message);
-                let detail_msg = format!("✅ {}", file_name);
-                
-                // Actualizar el último detailMessage válido
-                if let Ok(mut last) = last_detail_message.lock() {
-                    *last = detail_msg.clone();
-                }
-                
-                // Mantener el último mensaje general válido
-                let preserved_general = if let Ok(last) = last_general_message.lock() {
-                    last.clone()
-                } else {
-                    "Verificando modpack...".to_string()
+                    "Descargando mods...".to_string()
                 };
                 
                 (preserved_general, detail_msg)
             } else if message.starts_with("mod_completed:") {
                 // Para mods completados: "mod_completed:filename"
                 let file_name = message.strip_prefix("mod_completed:").unwrap_or(&message);
-                let detail_msg = format!("✅ {}", file_name);
+                let detail_msg = format!("mod_completed:Descargado: {}", file_name);
                 
                 // Actualizar el último detailMessage válido
                 if let Ok(mut last) = last_detail_message.lock() {
@@ -499,14 +536,14 @@ async fn install_modpack_with_failed_tracking(app: tauri::AppHandle, modpack: Mo
                 let preserved_general = if let Ok(last) = last_general_message.lock() {
                     last.clone()
                 } else {
-                    "Descargando modpack...".to_string()
+                    "Descargando mods...".to_string()
                 };
                 
                 (preserved_general, detail_msg)
-            } else if message.starts_with("mod_error:") {
-                // Para mods con error: "mod_error:filename"
-                let file_name = message.strip_prefix("mod_error:").unwrap_or(&message);
-                let detail_msg = format!("❌ {}", file_name);
+            } else if message.starts_with("mod_exists:") {
+                // Para mods que ya existen: "mod_exists:filename"
+                let file_name = message.strip_prefix("mod_exists:").unwrap_or(&message);
+                let detail_msg = format!("mod_exists:Ya existe: {}", file_name);
                 
                 // Actualizar el último detailMessage válido
                 if let Ok(mut last) = last_detail_message.lock() {
@@ -517,7 +554,48 @@ async fn install_modpack_with_failed_tracking(app: tauri::AppHandle, modpack: Mo
                 let preserved_general = if let Ok(last) = last_general_message.lock() {
                     last.clone()
                 } else {
-                    "Descargando modpack...".to_string()
+                    "Descargando mods...".to_string()
+                };
+                
+                (preserved_general, detail_msg)
+            } else if message.starts_with("mod_unavailable:") {
+                // Para mods no disponibles: "mod_unavailable:filename"
+                let file_name = message.strip_prefix("mod_unavailable:").unwrap_or(&message);
+                let detail_msg = format!("mod_unavailable:No disponible: {}", file_name);
+                
+                // Actualizar el último detailMessage válido
+                if let Ok(mut last) = last_detail_message.lock() {
+                    *last = detail_msg.clone();
+                }
+                
+                // Mantener el último mensaje general válido
+                let preserved_general = if let Ok(last) = last_general_message.lock() {
+                    last.clone()
+                } else {
+                    "Descargando mods...".to_string()
+                };
+                
+                (preserved_general, detail_msg)
+            } else if message.starts_with("mod_error:") || message.starts_with("mod_download_error:") {
+                // Para errores de mods: "mod_error:filename" o "mod_download_error:filename:error"
+                let error_parts: Vec<&str> = message.split(':').collect();
+                let file_name = if error_parts.len() >= 2 {
+                    error_parts[1]
+                } else {
+                    "archivo desconocido"
+                };
+                let detail_msg = format!("mod_error:Error: {}", file_name);
+                
+                // Actualizar el último detailMessage válido
+                if let Ok(mut last) = last_detail_message.lock() {
+                    *last = detail_msg.clone();
+                }
+                
+                // Mantener el último mensaje general válido
+                let preserved_general = if let Ok(last) = last_general_message.lock() {
+                    last.clone()
+                } else {
+                    "Descargando mods...".to_string()
                 };
                 
                 (preserved_general, detail_msg)

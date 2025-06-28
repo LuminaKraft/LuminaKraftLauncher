@@ -5,6 +5,41 @@ All notable changes to the LuminaKraft Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.7-alpha.2] - 2025-06-28
+
+### 🎨 **UI/UX Improvements**
+
+#### **Enhanced Mod Download Status**
+- **Status Indicators**: Added color-coded status indicators for mod downloads:
+  - Green bullet for completed or existing mods
+  - Red bullet for errors or unavailable mods
+  - Blue pulsing bullet for active downloads
+- **Cleaner Interface**: Removed emojis from status messages for a more professional look
+- **Clear Status Messages**: Improved status text clarity:
+  - "Descargando: {nombre_mod}" for active downloads
+  - "Ya existe: {nombre_mod}" for existing mods
+  - "Error: {nombre_mod}" for failed downloads
+  - "No disponible: {nombre_mod}" for unavailable mods
+
+#### **Progress System Refinements**
+- **Progress Distribution**: Adjusted progress ranges for smoother feedback:
+  - CurseForge processing: 70%-100%
+  - Mod downloads: Proportional distribution within the range
+  - Final steps properly reaching 100%
+- **Message Handling**: Fixed "preparing_mod_downloads" translation display
+
+### 🐛 **Bug Fixes**
+- Fixed progress bar getting stuck at 90% during mod downloads
+- Resolved missing translations for mod download status messages
+- Fixed inconsistent status indicator colors during mod installation
+
+### 📋 **Breaking Changes**
+- None - all changes maintain backward compatibility
+
+### 🔧 **Migration Notes**
+- Automatic improvements upon update
+- All user settings and installed modpacks preserved
+
 ## [0.0.7-alpha.1] - 2025-06-28
 
 ### 🔄 **Meta Storage System Migration** 

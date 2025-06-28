@@ -143,10 +143,20 @@ function launcherReducer(state: LauncherState, action: LauncherAction): Launcher
         }
       }
       
-      // Prevenir que el porcentaje baje (excepto cuando se reinicia al 0-5%)
+      // Prevenir que el porcentaje baje (excepto cuando se reinicia al 0-5% o durante mod downloads)
       let finalPercentage = newProgress.percentage;
       if (currentProgress && newProgress.percentage > 5) {
-        finalPercentage = Math.max(currentProgress.percentage, newProgress.percentage);
+        // Allow backwards progress if we're in mod download phase (75-95% range)
+        const isModDownloadPhase = newProgress.step?.includes('downloading_mod') || 
+                                  newProgress.step?.includes('preparing_mod_downloads') ||
+                                  newProgress.generalMessage?.includes('downloadingMods') ||
+                                  (newProgress.percentage >= 75 && newProgress.percentage <= 95);
+        
+        if (!isModDownloadPhase) {
+          finalPercentage = Math.max(currentProgress.percentage, newProgress.percentage);
+        } else {
+          finalPercentage = newProgress.percentage; // Allow backwards progress during mod downloads
+        }
       }
       
       // Mantener el último mensaje general y ETA si el nuevo no tiene uno (evitar saltos visuales)
