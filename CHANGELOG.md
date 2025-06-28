@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.7-alpha.1] - 2025-06-28
 
-### 🔄 **Meta Storage System Migration**
+### 🔄 **Meta Storage System Migration** 
 
 #### **Professional Terminology Update**
 - **Renamed "Shared Storage" to "Meta"**: Aligned with industry standards (Modrinth, CurseForge)
