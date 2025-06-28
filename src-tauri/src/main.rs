@@ -8,8 +8,8 @@ use anyhow::Result;
 mod launcher;
 mod filesystem;
 mod minecraft;
-mod downloader;
-mod curseforge;
+mod modpack;
+mod utils;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Modpack {
@@ -612,7 +612,7 @@ async fn check_curseforge_modpack(modpack_url: String) -> Result<bool, String> {
     let temp_file = temp_dir.join("temp_check_curseforge.zip");
     
     // Descargar el archivo
-    match downloader::download_file(&modpack_url, &temp_file).await {
+            match utils::downloader::download_file(&modpack_url, &temp_file).await {
         Ok(_) => {
             // Verificar si contiene manifest.json usando lyceris
             let is_curseforge = match lyceris::util::extract::read_file_from_jar(&temp_file, "manifest.json") {

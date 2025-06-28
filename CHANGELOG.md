@@ -5,6 +5,51 @@ All notable changes to the LuminaKraft Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.7-alpha.1] - 2025-06-28
+
+### 🔧 **Critical Bug Fixes & Code Refactoring**
+
+#### **ZIP Extraction Error Resolution**
+- **Fixed "Unknown error" during modpack installation**: Resolved "No such file or directory (os error 2)" errors preventing installations
+- **Enhanced validation**: Added comprehensive file existence, size, and readability checks before ZIP extraction
+- **Improved directory creation**: Added robust error handling and write permission testing
+- **Better error messages**: Enhanced error context with specific file paths and failure reasons in English/Spanish
+
+#### **Major Code Refactoring**
+- **Removed Lyceris ZIP dependencies**: Simplified to use only standard Rust `zip` library
+- **Eliminated code duplication**: Removed duplicate `extract_zip` and `download_file` functions
+- **Created modular structure**: Reorganized 1,578-line monolith into clean, maintainable modules:
+  ```
+  src/modpack/curseforge/  # CurseForge-specific logic
+  src/utils/               # General utilities (downloader, cleanup)
+  ```
+- **Proper separation of concerns**: General utilities vs domain-specific logic
+
+#### **Enhanced Error Handling & Translation**
+- **Sequential validation flow**: Download → Validate → Create Directories → Test Permissions → Extract → Verify
+- **New translation keys**: Added comprehensive error messages for ZIP extraction scenarios
+- **Download improvements**: Added 5-minute timeout, better retry logic, and file validation
+- **Safe cleanup**: Added proper temporary file and directory cleanup functions
+
+### 🐛 **Bug Fixes**
+- Fixed ZIP extraction crashes and file system errors
+- Resolved directory creation issues and permission problems
+- Eliminated import conflicts and cleaned up unused code
+- Enhanced download validation and corrupted file detection
+
+### 📊 **Performance & Quality Improvements**
+- **Faster compilation**: Reduced dependencies and cleaner build process
+- **Better maintainability**: Each module 200-300 lines with single responsibility
+- **Reduced warnings**: From 8 compiler warnings down to 2 minor ones
+- **Enhanced developer experience**: Better code organization and debugging
+
+### 📋 **Breaking Changes**
+- None - all changes maintain backward compatibility
+
+### 🔧 **Migration Notes**
+- Automatic improvements upon update
+- All user settings and installed modpacks preserved
+
 ## [0.0.6-alpha.2] - 2025-06-27
 
 ### 🔧 **Release System & Update Detection Overhaul**

@@ -181,7 +181,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
   const [failedMods, setFailedMods] = useState<FailedMod[]>([]);
   const [showFailedModsDialog, setShowFailedModsDialog] = useState(false);
   const launcherService = LauncherService.getInstance();
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
 
   // Cargar configuración del usuario al inicializar
   useEffect(() => {
@@ -446,6 +446,32 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
       });
     } catch (error) {
       console.error(`Error ${action}ing modpack:`, error);
+      
+      // Parse specific error messages for better user experience
+      let userFriendlyError = 'Error desconocido';
+      
+      if (error instanceof Error) {
+        const errorMessage = error.message.toLowerCase();
+        
+        if (errorMessage.includes('failed to extract zip file') || errorMessage.includes('no such file or directory')) {
+          userFriendlyError = t('errors.zipExtractionFailed');
+        } else if (errorMessage.includes('zip file not found') || errorMessage.includes('file not found')) {
+          userFriendlyError = t('errors.zipFileNotFound');
+        } else if (errorMessage.includes('permission denied')) {
+          userFriendlyError = t('errors.permissionDenied');
+        } else if (errorMessage.includes('no space left') || errorMessage.includes('disk space')) {
+          userFriendlyError = t('errors.diskSpaceFull');
+        } else if (errorMessage.includes('corrupted') || errorMessage.includes('invalid zip')) {
+          userFriendlyError = t('errors.corruptedFile');
+        } else if (errorMessage.includes('network') || errorMessage.includes('connection')) {
+          userFriendlyError = t('errors.networkError');
+        } else if (errorMessage.includes('failed to download')) {
+          userFriendlyError = t('errors.downloadFailed');
+        } else {
+          userFriendlyError = error.message;
+        }
+      }
+      
       dispatch({
         type: 'SET_MODPACK_STATE',
         payload: {
@@ -453,7 +479,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
           state: { 
             ...state.modpackStates[modpackId],
             status: 'error', 
-            error: error instanceof Error ? error.message : 'Error desconocido'
+            error: userFriendlyError
           },
         },
       });

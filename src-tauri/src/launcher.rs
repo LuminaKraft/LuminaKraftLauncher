@@ -1,9 +1,14 @@
-use crate::{Modpack, InstanceMetadata, UserSettings, downloader, filesystem, minecraft, curseforge};
+use crate::{Modpack, InstanceMetadata, UserSettings, filesystem, minecraft};
+use crate::modpack::{extract_zip, curseforge};
+use crate::utils::{cleanup_temp_file, cleanup_temp_dir, download_file};
 use anyhow::{Result, anyhow};
 use std::path::PathBuf;
 use dirs::data_dir;
 use std::fs;
+
 use serde_json;
+
+
 
 /// Install a modpack to the instances directory
 pub async fn install_modpack(modpack: Modpack) -> Result<()> {
@@ -24,7 +29,7 @@ pub async fn install_modpack(modpack: Modpack) -> Result<()> {
     std::fs::create_dir_all(temp_zip_path.parent().unwrap())?;
     
     println!("Downloading modpack from: {}", modpack.url_modpack_zip);
-    downloader::download_file(&modpack.url_modpack_zip, &temp_zip_path).await?;
+    download_file(&modpack.url_modpack_zip, &temp_zip_path).await?;
     
     // Extract modpack
     println!("Extracting modpack to: {}", instance_dir.display());
@@ -111,7 +116,19 @@ where
         let temp_zip_path = app_data_dir.join("temp").join(format!("{}_check.zip", modpack.id));
         std::fs::create_dir_all(temp_zip_path.parent().unwrap())?;
         
-        downloader::download_file(&modpack.url_modpack_zip, &temp_zip_path).await?;
+        download_file(&modpack.url_modpack_zip, &temp_zip_path).await?;
+        
+        // Validate the temporary download
+        if !temp_zip_path.exists() {
+            return Err(anyhow!("Failed to download modpack for type checking: file not found"));
+        }
+        
+        let file_size = std::fs::metadata(&temp_zip_path)?.len();
+        if file_size == 0 {
+            return Err(anyhow!("Downloaded modpack check file is empty"));
+        }
+        
+        println!("✅ Type check file validated: {} bytes", file_size);
         
         // Check if it's CurseForge using lyceris
         let is_curseforge_modpack = match lyceris::util::extract::read_file_from_jar(&temp_zip_path, "manifest.json") {
@@ -130,22 +147,18 @@ where
             fs::create_dir_all(&temp_extract_dir)?;
             
             // Read manifest.json to get correct modloader info
-            if let Ok((cf_modloader, cf_version)) = get_curseforge_modloader_info(&temp_zip_path).await {
+            if let Ok((cf_modloader, cf_version)) = curseforge::manifest::get_curseforge_modloader_info(&temp_zip_path).await {
                 modloader = cf_modloader;
                 modloader_version = cf_version;
                 println!("✅ Información de modloader obtenida: {} {}", modloader, modloader_version);
             }
             
             // Clean up temp files
-            if temp_extract_dir.exists() {
-                fs::remove_dir_all(&temp_extract_dir)?;
-            }
+            cleanup_temp_dir(&temp_extract_dir);
         }
         
         // Clean up temp file
-        if temp_zip_path.exists() {
-            std::fs::remove_file(&temp_zip_path)?;
-        }
+        cleanup_temp_file(&temp_zip_path);
     }
     
     emit_progress("Configurando Minecraft y modloader...".to_string(), 25.0, "configuring_minecraft".to_string());
@@ -205,7 +218,20 @@ where
         std::fs::create_dir_all(temp_zip_path.parent().unwrap())?;
         
         println!("Downloading modpack from: {}", modpack.url_modpack_zip);
-        downloader::download_file(&modpack.url_modpack_zip, &temp_zip_path).await?;
+        download_file(&modpack.url_modpack_zip, &temp_zip_path).await?;
+        
+        // Validate downloaded file before processing
+        emit_progress("Validando archivos descargados...".to_string(), 82.0, "validating_files".to_string());
+        if !temp_zip_path.exists() {
+            return Err(anyhow!("Download completed but file not found: {}", temp_zip_path.display()));
+        }
+        
+        let file_size = std::fs::metadata(&temp_zip_path)?.len();
+        if file_size == 0 {
+            return Err(anyhow!("Downloaded file is empty - download may have failed"));
+        }
+        
+        println!("✅ Downloaded file validated: {} bytes", file_size);
         
         emit_progress("Procesando archivos del modpack...".to_string(), 85.0, "processing_modpack".to_string());
         
@@ -316,7 +342,19 @@ where
     let temp_zip_path = app_data_dir.join("temp").join(format!("{}_update.zip", modpack.id));
     std::fs::create_dir_all(temp_zip_path.parent().unwrap())?;
     
-    downloader::download_file(&modpack.url_modpack_zip, &temp_zip_path).await?;
+    download_file(&modpack.url_modpack_zip, &temp_zip_path).await?;
+    
+    // Validate downloaded file before processing
+    if !temp_zip_path.exists() {
+        return Err(anyhow!("Download completed but file not found: {}", temp_zip_path.display()));
+    }
+    
+    let file_size = std::fs::metadata(&temp_zip_path)?.len();
+    if file_size == 0 {
+        return Err(anyhow!("Downloaded file is empty - download may have failed"));
+    }
+    
+    println!("✅ Update file validated: {} bytes", file_size);
     
     // Phase 2: Process modpack files
     emit_progress("Procesando nuevos archivos...".to_string(), 30.0, "processing_update".to_string());
@@ -404,7 +442,7 @@ where
         }
         
         // Limpiar directorio temporal
-        fs::remove_dir_all(&temp_extract_dir)?;
+        cleanup_temp_dir(&temp_extract_dir);
         
         Vec::new() // TODO: Obtener failed mods desde process_curseforge_modpack_for_update
         
@@ -454,15 +492,13 @@ where
         }
         
         // Limpiar backup
-        fs::remove_dir_all(&temp_backup_dir)?;
+        cleanup_temp_dir(&temp_backup_dir);
         
         Vec::new() // No failed mods for regular ZIP files
     };
     
     // Clean up temporary file
-    if temp_zip_path.exists() {
-        std::fs::remove_file(&temp_zip_path)?;
-    }
+    cleanup_temp_file(&temp_zip_path);
     
     // Phase 3: Update metadata
     emit_progress("Finalizando actualización...".to_string(), 90.0, "finalizing_update".to_string());
@@ -555,46 +591,9 @@ pub fn validate_modpack(modpack: &Modpack) -> Result<()> {
     Ok(())
 }
 
-fn extract_zip(zip_path: &PathBuf, extract_to: &PathBuf) -> Result<()> {
-    lyceris::util::extract::extract_file(zip_path, extract_to)
-        .map_err(|e| anyhow!("Failed to extract ZIP file: {}", e))
-}
 
-/// Get modloader information from CurseForge manifest without full processing
-async fn get_curseforge_modloader_info(zip_path: &PathBuf) -> Result<(String, String)> {
-    // Read manifest.json using lyceris
-    let contents = lyceris::util::extract::read_file_from_jar(zip_path, "manifest.json")
-        .map_err(|e| anyhow!("Could not read manifest.json: {}", e))?;
-    
-    // Parse JSON
-    let manifest: serde_json::Value = serde_json::from_str(&contents)?;
-    
-    // Extract modloader info
-    if let Some(loaders) = manifest.get("minecraft").and_then(|mc| mc.get("modLoaders")) {
-        if let Some(loader_array) = loaders.as_array() {
-            if let Some(first_loader) = loader_array.first() {
-                if let Some(id) = first_loader.get("id").and_then(|id| id.as_str()) {
-                    // Parse the loader ID (e.g., "forge-47.3.0" -> ("forge", "47.3.0"))
-                    if let Some(dash_pos) = id.find('-') {
-                        let loader_name = &id[..dash_pos];
-                        let loader_version = &id[dash_pos + 1..];
-                        return Ok((loader_name.to_string(), loader_version.to_string()));
-                    }
-                }
-            }
-        }
-    }
-    
-    // Fallback: try to get from manifestType
-    if let Some(manifest_type) = manifest.get("manifestType").and_then(|mt| mt.as_str()) {
-        if manifest_type == "minecraftModpack" {
-            // Default to forge if we can't determine
-            return Ok(("forge".to_string(), "latest".to_string()));
-        }
-    }
-    
-    Err(anyhow!("Could not extract modloader info from CurseForge manifest"))
-}
+
+
 
 /// Parsea mensajes de "Progress:" para crear mensajes generales útiles
 /// Ejemplo: "Progress: 3835/3855 - Java (99.48119%)" -> "Descargando Java... (3835/3855)"

@@ -87,6 +87,21 @@
     "removeTooltip": "Remove modpack",
     "openFolderTooltip": "Open instance folder"
   },
+  "errors": {
+    "unknown": "Unknown error occurred",
+    "downloadFailed": "Failed to download modpack files",
+    "extractionFailed": "Failed to extract modpack files",
+    "fileNotFound": "Required file not found: {{file}}",
+    "zipFileNotFound": "Modpack file not found or corrupted",
+    "zipExtractionFailed": "Failed to extract ZIP file",
+    "directoryCreationFailed": "Failed to create installation directory",
+    "permissionDenied": "Permission denied - check file permissions",
+    "diskSpaceFull": "Insufficient disk space for installation",
+    "corruptedFile": "Downloaded file appears to be corrupted",
+    "networkError": "Network connection error",
+    "retryInstallation": "Please try the installation again",
+    "contactSupport": "If the problem persists, contact support"
+  },
   "progress": {
     "prefix": "Progress:",
     "downloadingModpack": "Downloading modpack... ({{current}}/{{total}})",
@@ -110,7 +125,9 @@
     "restoringMinecraft": "Restoring Minecraft files...",
     "finalizingUpdate": "Finalizing update...",
     "modpackExtracted": "Modpack downloaded and extracted successfully",
-    "noModpackFiles": "No modpack files to download"
+    "noModpackFiles": "No modpack files to download",
+    "validatingFiles": "Validating downloaded files...",
+    "creatingDirectories": "Creating directories..."
   },
   "settings": {
     "title": "Settings",
@@ -264,9 +281,9 @@
     "downloadFailed": "Download failed",
     "extractionFailed": "File extraction failed",
     "launchFailed": "Failed to launch Minecraft",
-    "invalidUrl": "Invalid URL",
-    "tryAgain": "Try again",
-    "reportBug": "Report bug"
+          "invalidUrl": "Invalid URL",
+      "tryAgain": "Try again",
+      "reportBug": "Report bug"
   },
   "notifications": {
     "updateAvailable": "Update available",

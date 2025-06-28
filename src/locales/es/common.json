@@ -87,6 +87,21 @@
     "removeTooltip": "Remover modpack",
     "openFolderTooltip": "Abrir carpeta de la instancia"
   },
+  "errors": {
+    "unknown": "Error desconocido",
+    "downloadFailed": "Error al descargar archivos del modpack",
+    "extractionFailed": "Error al extraer archivos del modpack",
+    "fileNotFound": "Archivo requerido no encontrado: {{file}}",
+    "zipFileNotFound": "Archivo del modpack no encontrado o corrupto",
+    "zipExtractionFailed": "Error al extraer archivo ZIP",
+    "directoryCreationFailed": "Error al crear directorio de instalación",
+    "permissionDenied": "Permisos denegados - verificar permisos de archivo",
+    "diskSpaceFull": "Espacio en disco insuficiente para la instalación",
+    "corruptedFile": "El archivo descargado parece estar corrupto",
+    "networkError": "Error de conexión de red",
+    "retryInstallation": "Por favor intenta la instalación de nuevo",
+    "contactSupport": "Si el problema persiste, contacta soporte"
+  },
   "progress": {
     "prefix": "Progreso:",
     "downloadingModpack": "Descargando modpack... ({{current}}/{{total}})",
@@ -110,7 +125,9 @@
     "restoringMinecraft": "Restaurando archivos de Minecraft...",
     "finalizingUpdate": "Finalizando actualización...",
     "modpackExtracted": "Modpack descargado y extraído exitosamente",
-    "noModpackFiles": "No hay archivos del modpack para descargar"
+    "noModpackFiles": "No hay archivos del modpack para descargar",
+    "validatingFiles": "Validando archivos descargados...",
+    "creatingDirectories": "Creando directorios..."
   },
   "settings": {
     "title": "Configuración",
