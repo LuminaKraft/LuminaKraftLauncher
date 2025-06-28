@@ -54,6 +54,12 @@ function updateVersion(newVersion, isPrerelease = false) {
       update: (content) => {
         return content.replace(/version\s*=\s*".*?"/, `version = "${newVersion}"`);
       }
+    },
+    {
+      path: 'src/components/Layout/Sidebar.tsx',
+      update: (content) => {
+        return content.replace(/const currentVersion = ".*?"/, `const currentVersion = "${newVersion}"`);
+      }
     }
   ];
 
