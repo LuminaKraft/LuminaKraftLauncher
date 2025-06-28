@@ -4,6 +4,5 @@ pub mod downloader;
 pub mod processor;
 
 pub use processor::{
-    process_curseforge_modpack_with_failed_tracking,
-    process_curseforge_modpack_for_update
+    process_curseforge_modpack_with_failed_tracking
 }; 

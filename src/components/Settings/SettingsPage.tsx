@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { User, HardDrive, Coffee, Globe, Save, FolderOpen, CheckCircle, Wifi, WifiOff, RefreshCw, Trash2, Server, Languages, Shield, XCircle } from 'lucide-react';
+import { FaHdd } from 'react-icons/fa';
 import { useLauncher } from '../../contexts/LauncherContext';
 import LauncherService from '../../services/launcherService';
 import MicrosoftAuth from './MicrosoftAuth';
+import MetaStorageSettings from './MetaStorageSettings.tsx';
 import type { MicrosoftAccount } from '../../types/launcher';
 
 const SettingsPage: React.FC = () => {
@@ -484,6 +486,18 @@ const SettingsPage: React.FC = () => {
                   {t('settings.dataUrlDescription')}
                 </p>
               </div>
+            </div>
+          </div>
+
+          {/* Meta Storage Settings */}
+          <div className="card">
+            <div className="flex items-center space-x-3 mb-6">
+              <HardDrive className="w-6 h-6 text-lumina-500" />
+              <h2 className="text-white text-xl font-semibold">{t('metaStorage.title')}</h2>
+            </div>
+            
+            <div className="bg-dark-700 rounded-lg p-4">
+              <MetaStorageSettings />
             </div>
           </div>
 

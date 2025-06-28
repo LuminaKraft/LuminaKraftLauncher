@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.7-alpha.1] - 2025-06-28
 
+### 🔄 **Meta Storage System Migration**
+
+#### **Professional Terminology Update**
+- **Renamed "Shared Storage" to "Meta"**: Aligned with industry standards (Modrinth, CurseForge)
+- **Directory Structure**: Reorganized to use `meta/`, `caches/`, `profiles/` for better clarity
+- **Code Refactoring**: Updated all references from `shared` to `meta` across the codebase
+- **Documentation**: Removed outdated shared storage docs, updated all references
+
+#### **UI/UX Improvements**
+- **Professional Interface**: Removed emojis in favor of proper icons
+- **Storage Info Display**: Added Minecraft versions and Java installations count
+- **Toast Notifications**: Replaced alerts with modern toast notifications
+- **Loading States**: Enhanced loading indicators and error states
+
+#### **Technical Enhancements**
+- **Code Organization**: Consolidated shared/meta functionality into unified modules
+- **Error Handling**: Improved error messages and recovery procedures
+- **Type Safety**: Enhanced TypeScript interfaces for better development
+- **Performance**: Optimized storage info retrieval and cleanup operations
+
 ### 🔧 **Critical Bug Fixes & Code Refactoring**
 
 #### **ZIP Extraction Error Resolution**

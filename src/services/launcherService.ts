@@ -164,6 +164,13 @@ class LauncherService {
         timestamp: Date.now()
       });
 
+      // Cache modpack images automatically in background
+      if (response.data.modpacks && response.data.modpacks.length > 0) {
+        this.cacheModpackImages(response.data.modpacks).catch((error: any) => {
+          console.warn('Failed to cache modpack images:', error);
+        });
+      }
+
       console.log('Launcher data loaded successfully');
       return response.data;
     } catch (error) {
@@ -636,6 +643,20 @@ class LauncherService {
       if (unlistenProgress) {
         unlistenProgress();
       }
+    }
+  }
+
+  private async cacheModpackImages(modpacks: any[]): Promise<void> {
+    if (!isTauriContext()) {
+      return; // Skip caching in browser environment
+    }
+
+    try {
+      await safeInvoke('cache_modpack_images_command', { modpacks });
+      console.log('Modpack images cached successfully');
+    } catch (error) {
+      console.error('Failed to cache modpack images:', error);
+      throw error;
     }
   }
 }

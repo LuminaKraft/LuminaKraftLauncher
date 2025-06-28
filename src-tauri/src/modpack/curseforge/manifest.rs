@@ -3,41 +3,7 @@ use std::path::{Path, PathBuf};
 use std::fs;
 use super::types::CurseForgeManifest;
 
-/// Get modloader information from CurseForge manifest without full processing
-pub async fn get_curseforge_modloader_info(zip_path: &PathBuf) -> Result<(String, String)> {
-    // Read manifest.json using lyceris
-    let contents = lyceris::util::extract::read_file_from_jar(zip_path, "manifest.json")
-        .map_err(|e| anyhow!("Could not read manifest.json: {}", e))?;
-    
-    // Parse JSON
-    let manifest: serde_json::Value = serde_json::from_str(&contents)?;
-    
-    // Extract modloader info
-    if let Some(loaders) = manifest.get("minecraft").and_then(|mc| mc.get("modLoaders")) {
-        if let Some(loader_array) = loaders.as_array() {
-            if let Some(first_loader) = loader_array.first() {
-                if let Some(id) = first_loader.get("id").and_then(|id| id.as_str()) {
-                    // Parse the loader ID (e.g., "forge-47.3.0" -> ("forge", "47.3.0"))
-                    if let Some(dash_pos) = id.find('-') {
-                        let loader_name = &id[..dash_pos];
-                        let loader_version = &id[dash_pos + 1..];
-                        return Ok((loader_name.to_string(), loader_version.to_string()));
-                    }
-                }
-            }
-        }
-    }
-    
-    // Fallback: try to get from manifestType
-    if let Some(manifest_type) = manifest.get("manifestType").and_then(|mt| mt.as_str()) {
-        if manifest_type == "minecraftModpack" {
-            // Default to forge if we can't determine
-            return Ok(("forge".to_string(), "latest".to_string()));
-        }
-    }
-    
-    Err(anyhow!("Could not extract modloader info from CurseForge manifest"))
-}
+
 
 /// Read manifest from extracted directory
 pub fn read_manifest(temp_dir: &PathBuf) -> Result<CurseForgeManifest> {

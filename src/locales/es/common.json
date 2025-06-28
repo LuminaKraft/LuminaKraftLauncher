@@ -70,6 +70,7 @@
     "serverIP": "IP:",
     "serverIPLabel": "IP del Servidor:",
     "refresh": "Actualizar lista de modpacks",
+    "refreshDisabledDuringInstall": "No se puede actualizar mientras se instala un modpack",
     "availableCount": "{{count}} modpack disponible",
     "availableCount_plural": "{{count}} modpacks disponibles",
     "descriptionNotAvailable": "Descripción no disponible",
@@ -302,5 +303,15 @@
     "error": "No se pudo obtener la información de los mods",
     "fileName": "Archivo:",
     "close": "Cerrar"
+  },
+  "metaStorage": {
+    "title": "Almacenamiento Meta",
+    "totalSize": "Espacio Total",
+    "resourceCounts": "Recursos Instalados",
+    "minecraftVersions": "Versiones de Minecraft",
+    "javaInstallations": "Instalaciones de Java",
+    "cleanup": "Limpiar Caché",
+    "cleanupSuccess": "Se limpiaron {{count}} elementos",
+    "cleanupDescription": "Eliminar archivos en caché que ya no se utilizan"
   }
 } 

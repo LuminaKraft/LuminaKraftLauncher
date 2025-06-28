@@ -19,6 +19,11 @@ const ModpacksPage: React.FC = () => {
   const [selectedModpack, setSelectedModpack] = useState<Modpack | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Check if any modpack is currently installing/updating
+  const hasActiveInstallation = Object.values(modpackStates).some(state => 
+    ['installing', 'updating', 'launching'].includes(state.status)
+  );
+
   const filteredModpacks = launcherData?.modpacks.filter(modpack =>
     modpack.name.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
@@ -91,9 +96,9 @@ const ModpacksPage: React.FC = () => {
             
             <button
               onClick={refreshData}
-              disabled={isLoading}
+              disabled={isLoading || hasActiveInstallation}
               className="btn-secondary"
-              title={t('modpacks.refresh')}
+              title={hasActiveInstallation ? t('modpacks.refreshDisabledDuringInstall') : t('modpacks.refresh')}
             >
               <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
             </button>

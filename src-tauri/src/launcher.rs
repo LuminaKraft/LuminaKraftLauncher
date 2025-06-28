@@ -1,14 +1,10 @@
-use crate::{Modpack, InstanceMetadata, UserSettings, filesystem, minecraft};
+use crate::{Modpack, InstanceMetadata, UserSettings, filesystem, minecraft, shared::{MetaDirectories, InstanceDirectories}};
 use crate::modpack::{extract_zip, curseforge};
-use crate::utils::{cleanup_temp_file, cleanup_temp_dir, download_file};
+use crate::utils::{cleanup_temp_file, download_file};
 use anyhow::{Result, anyhow};
-use std::path::PathBuf;
 use dirs::data_dir;
-use std::fs;
 
 use serde_json;
-
-
 
 /// Install a modpack to the instances directory
 pub async fn install_modpack(modpack: Modpack) -> Result<()> {
@@ -56,506 +52,6 @@ pub async fn install_modpack(modpack: Modpack) -> Result<()> {
     Ok(())
 }
 
-/// Install a modpack with full Minecraft setup using Lyceris with progress callbacks and failed mods tracking
-pub async fn install_modpack_with_minecraft_and_failed_tracking<F>(
-    modpack: Modpack, 
-    settings: UserSettings,
-    emit_progress: F
-) -> Result<Vec<serde_json::Value>> 
-where
-    F: Fn(String, f32, String) + Send + Sync + 'static + Clone,
-{
-    let app_data_dir = data_dir()
-        .ok_or_else(|| anyhow!("Failed to get app data directory"))?
-        .join("LKLauncher");
-    
-    let instance_dir = app_data_dir.join("instances").join(&modpack.id);
-    
-    // Check if instance already exists (update vs new installation)
-    let is_update = instance_dir.exists();
-    
-    if is_update {
-        emit_progress("Verificando si se necesita actualización...".to_string(), 5.0, "checking".to_string());
-        
-        // Para actualizaciones, verificar si realmente necesita actualización
-        if let Ok(Some(existing_metadata)) = filesystem::get_instance_metadata(&modpack.id).await {
-            if !minecraft::check_instance_needs_update(&modpack, &existing_metadata).await {
-                emit_progress("La instancia ya está actualizada".to_string(), 100.0, "completed".to_string());
-                println!("Instance is up to date, skipping installation");
-                return Ok(Vec::new()); // No failed mods for up-to-date instances
-            }
-            println!("🔄 Actualizando modpack existente...");
-            // Solo actualizar el modpack, no eliminar todo
-            return update_modpack_only_with_failed_tracking(modpack, instance_dir, emit_progress).await;
-        }
-    }
-    
-    emit_progress("Iniciando instalación completa...".to_string(), 5.0, "initializing".to_string());
-    
-    // Nueva instalación - eliminar directorio si existe
-    if instance_dir.exists() {
-        std::fs::remove_dir_all(&instance_dir)?;
-    }
-    std::fs::create_dir_all(&instance_dir)?;
-    
-    println!("🚀 Instalación inicial completa del modpack...");
-    
-    // Phase 1: Install Minecraft and mod loader using Lyceris (70% of total progress)
-    emit_progress("Instalando Minecraft y modloader...".to_string(), 10.0, "installing_minecraft".to_string());
-    println!("⚙️ Phase 1/2: Installing Minecraft and mod loader...");
-    
-    // Para instalaciones iniciales necesitamos obtener la información del modloader del modpack
-    let mut modloader = modpack.modloader.clone();
-    let mut modloader_version = modpack.modloader_version.clone();
-    
-    // Si es un modpack de CurseForge, necesitamos procesar primero para obtener la info correcta
-    if !modpack.url_modpack_zip.is_empty() {
-        emit_progress("Preparando instalación...".to_string(), 15.0, "preparing_installation".to_string());
-        
-        // Download modpack temporarily to check type
-        let temp_zip_path = app_data_dir.join("temp").join(format!("{}_check.zip", modpack.id));
-        std::fs::create_dir_all(temp_zip_path.parent().unwrap())?;
-        
-        download_file(&modpack.url_modpack_zip, &temp_zip_path).await?;
-        
-        // Validate the temporary download
-        if !temp_zip_path.exists() {
-            return Err(anyhow!("Failed to download modpack for type checking: file not found"));
-        }
-        
-        let file_size = std::fs::metadata(&temp_zip_path)?.len();
-        if file_size == 0 {
-            return Err(anyhow!("Downloaded modpack check file is empty"));
-        }
-        
-        println!("✅ Type check file validated: {} bytes", file_size);
-        
-        // Check if it's CurseForge using lyceris
-        let is_curseforge_modpack = match lyceris::util::extract::read_file_from_jar(&temp_zip_path, "manifest.json") {
-            Ok(_) => true,  // Si se puede leer manifest.json, es un modpack de CurseForge
-            Err(_) => false, // Si no se encuentra, no es un modpack de CurseForge
-        };
-        
-        if is_curseforge_modpack {
-            emit_progress("Verificando configuración del modpack...".to_string(), 20.0, "verifying_modpack_config".to_string());
-            
-            // Extract just the manifest to get loader info
-            let temp_extract_dir = app_data_dir.join("temp").join(format!("check_{}", modpack.id));
-            if temp_extract_dir.exists() {
-                fs::remove_dir_all(&temp_extract_dir)?;
-            }
-            fs::create_dir_all(&temp_extract_dir)?;
-            
-            // Read manifest.json to get correct modloader info
-            if let Ok((cf_modloader, cf_version)) = curseforge::manifest::get_curseforge_modloader_info(&temp_zip_path).await {
-                modloader = cf_modloader;
-                modloader_version = cf_version;
-                println!("✅ Información de modloader obtenida: {} {}", modloader, modloader_version);
-            }
-            
-            // Clean up temp files
-            cleanup_temp_dir(&temp_extract_dir);
-        }
-        
-        // Clean up temp file
-        cleanup_temp_file(&temp_zip_path);
-    }
-    
-    emit_progress("Configurando Minecraft y modloader...".to_string(), 25.0, "configuring_minecraft".to_string());
-    println!("Installing Minecraft {} with {} {}", 
-             modpack.minecraft_version, modloader, modloader_version);
-    
-    // Crear copia del modpack con información actualizada para la instalación
-    let updated_modpack = Modpack {
-        modloader: modloader,
-        modloader_version: modloader_version,
-        ..modpack.clone()
-    };
-    
-    // Usar la función con progreso para mostrar detalles de Lyceris
-    minecraft::install_minecraft_with_lyceris_progress(&updated_modpack, &settings, instance_dir.clone(), {
-        let emit_progress = emit_progress.clone();
-        let last_general_percentage = std::sync::Arc::new(std::sync::Mutex::new(30.0f32));
-        let last_general_message = std::sync::Arc::new(std::sync::Mutex::new("Instalando Minecraft...".to_string()));
-        
-        move |message: String, percentage: f32, step: String| {
-            let mut final_percentage = 30.0;
-            
-            // Solo actualizar porcentaje para progreso general (líneas "Progress:")
-            if step == "downloading_minecraft_general" || message.starts_with("Progress:") {
-                if percentage >= 0.0 {
-                    final_percentage = 30.0 + (percentage * 0.4); // 40% del total dedicado a Lyceris (30% a 70%)
-                    if let Ok(mut last) = last_general_percentage.lock() {
-                        *last = final_percentage;
-                    }
-                    
-                    // Parsear mensaje Progress para crear mensaje general más útil
-                    if let Ok(mut last_msg) = last_general_message.lock() {
-                        if let Some(parsed) = parse_progress_message(&message) {
-                            *last_msg = parsed;
-                        }
-                    }
-                }
-            } else {
-                // Para archivos individuales, mantener el último porcentaje general
-                if let Ok(last) = last_general_percentage.lock() {
-                    final_percentage = *last;
-                }
-            }
-            
-            emit_progress(message, final_percentage, step);
-        }
-    }).await?;
-    
-    emit_progress("Minecraft y modloader instalados".to_string(), 75.0, "minecraft_ready".to_string());
-    println!("✅ Phase 1/2: Minecraft and mod loader installed successfully!");
-    
-    // Phase 2: Download and extract modpack (25% of total progress)
-    let failed_mods = if !modpack.url_modpack_zip.is_empty() {
-        emit_progress("Descargando archivos del modpack...".to_string(), 80.0, "downloading_modpack".to_string());
-        println!("📦 Phase 2/2: Downloading and processing modpack...");
-        let temp_zip_path = app_data_dir.join("temp").join(format!("{}.zip", modpack.id));
-        std::fs::create_dir_all(temp_zip_path.parent().unwrap())?;
-        
-        println!("Downloading modpack from: {}", modpack.url_modpack_zip);
-        download_file(&modpack.url_modpack_zip, &temp_zip_path).await?;
-        
-        // Validate downloaded file before processing
-        emit_progress("Validando archivos descargados...".to_string(), 82.0, "validating_files".to_string());
-        if !temp_zip_path.exists() {
-            return Err(anyhow!("Download completed but file not found: {}", temp_zip_path.display()));
-        }
-        
-        let file_size = std::fs::metadata(&temp_zip_path)?.len();
-        if file_size == 0 {
-            return Err(anyhow!("Downloaded file is empty - download may have failed"));
-        }
-        
-        println!("✅ Downloaded file validated: {} bytes", file_size);
-        
-        emit_progress("Procesando archivos del modpack...".to_string(), 85.0, "processing_modpack".to_string());
-        
-        // Extraer el ZIP en una carpeta temporal para verificar si tiene manifest.json (indicando que es un modpack de CurseForge)
-        let temp_extract_dir = app_data_dir.join("temp").join(format!("check_{}", modpack.id));
-        if temp_extract_dir.exists() {
-            fs::remove_dir_all(&temp_extract_dir)?;
-        }
-        fs::create_dir_all(&temp_extract_dir)?;
-        
-        // Verificar si es un modpack de CurseForge usando lyceris
-        let is_curseforge_modpack = match lyceris::util::extract::read_file_from_jar(&temp_zip_path, "manifest.json") {
-            Ok(_) => true,  // Si se puede leer manifest.json, es un modpack de CurseForge
-            Err(_) => false, // Si no se encuentra, no es un modpack de CurseForge
-        };
-        
-        println!("🔄 Procesando modpack para: {}", instance_dir.display());
-        
-        // Si es un modpack de CurseForge, usar el procesador de CurseForge con rastreo de failed mods
-        if is_curseforge_modpack {
-            let (_cf_modloader, _cf_version, failed_mods) = curseforge::process_curseforge_modpack_with_failed_tracking(&temp_zip_path, &instance_dir, {
-                let emit_progress = emit_progress.clone();
-                move |message: String, percentage: f32, step: String| {
-                    let scaled_percentage = 85.0 + (percentage / 100.0) * 15.0;
-                    emit_progress(message, scaled_percentage, step);
-                }
-            }).await?;
-            
-            failed_mods
-        } else {
-            // Es un modpack ZIP regular, extraer todo
-            extract_zip(&temp_zip_path, &instance_dir)?;
-            Vec::new() // No failed mods for regular ZIP files
-        }
-    } else {
-        Vec::new() // No failed mods if no modpack URL
-    };
-    
-    // Save instance metadata
-    let metadata = InstanceMetadata {
-        id: modpack.id.clone(),
-        version: modpack.version.clone(),
-        installed_at: chrono::Utc::now().to_rfc3339(),
-        modloader: modpack.modloader.clone(),
-        modloader_version: modpack.modloader_version.clone(),
-        minecraft_version: modpack.minecraft_version.clone(),
-    };
-    
-    filesystem::save_instance_metadata(&metadata).await?;
-    
-    emit_progress("Instalación completada".to_string(), 100.0, "completed".to_string());
-    println!("Modpack installation completed successfully!");
-    Ok(failed_mods)
-}
-
-/// Install a modpack with full Minecraft setup using Lyceris with progress callbacks
-pub async fn install_modpack_with_minecraft_progress<F>(
-    modpack: Modpack, 
-    settings: UserSettings,
-    emit_progress: F
-) -> Result<()> 
-where
-    F: Fn(String, f32, String) + Send + Sync + 'static + Clone,
-{
-    let _failed_mods = install_modpack_with_minecraft_and_failed_tracking(modpack, settings, emit_progress).await?;
-    Ok(())
-}
-
-/// Update only the modpack files without reinstalling Minecraft/Lyceris with progress and failed mods tracking
-async fn update_modpack_only_with_failed_tracking<F>(
-    modpack: Modpack, 
-    instance_dir: PathBuf,
-    emit_progress: F
-) -> Result<Vec<serde_json::Value>>
-where
-    F: Fn(String, f32, String) + Send + Sync + 'static + Clone,
-{
-    // Verificar primera si realmente se necesita actualización
-    if let Ok(Some(existing_metadata)) = filesystem::get_instance_metadata(&modpack.id).await {
-        if !minecraft::check_instance_needs_update(&modpack, &existing_metadata).await {
-            emit_progress("La instancia ya está actualizada".to_string(), 100.0, "completed".to_string());
-            
-            // Actualizar metadata con fecha actual para marcar verificación
-            let metadata = InstanceMetadata {
-                id: modpack.id.clone(),
-                version: modpack.version.clone(),
-                installed_at: chrono::Utc::now().to_rfc3339(),
-                modloader: modpack.modloader.clone(),
-                modloader_version: modpack.modloader_version.clone(),
-                minecraft_version: modpack.minecraft_version.clone(),
-            };
-            
-            filesystem::save_instance_metadata(&metadata).await?;
-            emit_progress("Actualización completada".to_string(), 100.0, "completed".to_string());
-            return Ok(Vec::new()); // No failed mods for up-to-date instances
-        }
-    }
-    
-    let app_data_dir = data_dir()
-        .ok_or_else(|| anyhow!("Failed to get app data directory"))?
-        .join("LKLauncher");
-    
-    // Iniciar con progreso inicial para mostrar que la actualización ha comenzado
-    emit_progress("Iniciando actualización...".to_string(), 5.0, "updating".to_string());
-    
-    // Phase 1: Download modpack
-    emit_progress("Descargando nueva versión...".to_string(), 15.0, "downloading_update".to_string());
-    let temp_zip_path = app_data_dir.join("temp").join(format!("{}_update.zip", modpack.id));
-    std::fs::create_dir_all(temp_zip_path.parent().unwrap())?;
-    
-    download_file(&modpack.url_modpack_zip, &temp_zip_path).await?;
-    
-    // Validate downloaded file before processing
-    if !temp_zip_path.exists() {
-        return Err(anyhow!("Download completed but file not found: {}", temp_zip_path.display()));
-    }
-    
-    let file_size = std::fs::metadata(&temp_zip_path)?.len();
-    if file_size == 0 {
-        return Err(anyhow!("Downloaded file is empty - download may have failed"));
-    }
-    
-    println!("✅ Update file validated: {} bytes", file_size);
-    
-    // Phase 2: Process modpack files
-    emit_progress("Procesando nuevos archivos...".to_string(), 30.0, "processing_update".to_string());
-    
-    // Verificar si es un modpack de CurseForge usando lyceris
-    let is_curseforge_modpack = match lyceris::util::extract::read_file_from_jar(&temp_zip_path, "manifest.json") {
-        Ok(_) => true,  // Si se puede leer manifest.json, es un modpack de CurseForge
-        Err(_) => false, // Si no se encuentra, no es un modpack de CurseForge
-    };
-    
-    let failed_mods = if is_curseforge_modpack {
-        emit_progress("Actualizando mods de CurseForge...".to_string(), 40.0, "updating_curseforge_mods".to_string());
-        
-        // Crear directorio temporal para la nueva versión
-        let temp_extract_dir = app_data_dir.join("temp").join(format!("update_{}", modpack.id));
-        if temp_extract_dir.exists() {
-            fs::remove_dir_all(&temp_extract_dir)?;
-        }
-        fs::create_dir_all(&temp_extract_dir)?;
-        
-        // Procesar la nueva versión del modpack CurseForge con progreso y verificación de existentes
-        let (_modloader, _modloader_version) = curseforge::process_curseforge_modpack_for_update(&temp_zip_path, &temp_extract_dir, &instance_dir, {
-            let emit_progress = emit_progress.clone();
-            move |message: String, percentage: f32, step: String| {
-                // Re-mapear el progreso de CurseForge (0-100%) al rango 40-60%
-                let adjusted_percentage = 40.0 + (percentage * 0.2); // 20% del total para CurseForge en actualización
-                emit_progress(message, adjusted_percentage, step);
-            }
-        }).await?;
-        
-        emit_progress("Reemplazando mods actualizados...".to_string(), 60.0, "replacing_mods".to_string());
-        
-        // La nueva función ya verificó hashes y solo descargó/copió los mods necesarios
-        // Ahora solo necesitamos mover los mods del directorio temporal al final
-        let old_mods_dir = instance_dir.join("mods");
-        let new_mods_dir = temp_extract_dir.join("mods");
-        
-        // Crear directorio mods si no existe
-        if !old_mods_dir.exists() {
-            fs::create_dir_all(&old_mods_dir)?;
-        }
-        
-        if new_mods_dir.exists() {
-            emit_progress("Finalizando actualización de mods...".to_string(), 65.0, "finalizing_mods".to_string());
-            
-            // Eliminar la carpeta de mods antigua solo ahora que tenemos la nueva lista completa
-            if old_mods_dir.exists() {
-                fs::remove_dir_all(&old_mods_dir)?;
-            }
-            
-            // Mover la nueva carpeta de mods (que ya contiene solo los mods necesarios)
-            copy_dir_recursively(&new_mods_dir, &old_mods_dir)?;
-            println!("✅ Mods actualizados exitosamente");
-        }
-        
-        emit_progress("Actualizando configuraciones...".to_string(), 75.0, "updating_configs".to_string());
-        
-        // También actualizar overrides si existen
-        for entry in fs::read_dir(&temp_extract_dir)? {
-            let entry = entry?;
-            let path = entry.path();
-            let file_name = entry.file_name();
-            
-            // Ignorar la carpeta mods (ya la copiamos) y archivos de sistema
-            if file_name == "mods" || file_name == "manifest.json" {
-                continue;
-            }
-            
-            let dest_path = instance_dir.join(&file_name);
-            
-            // Reemplazar archivos/carpetas de configuración
-            if dest_path.exists() {
-                if path.is_dir() {
-                    fs::remove_dir_all(&dest_path)?;
-                } else {
-                    fs::remove_file(&dest_path)?;
-                }
-            }
-            
-            if path.is_dir() {
-                copy_dir_recursively(&path, &dest_path)?;
-            } else {
-                fs::copy(&path, &dest_path)?;
-            }
-        }
-        
-        // Limpiar directorio temporal
-        cleanup_temp_dir(&temp_extract_dir);
-        
-        Vec::new() // TODO: Obtener failed mods desde process_curseforge_modpack_for_update
-        
-    } else {
-        emit_progress("Actualizando archivos del modpack estándar...".to_string(), 40.0, "updating_standard_modpack".to_string());
-        
-        // Para modpacks estándar, extraer nuevamente pero preservar archivos de Minecraft
-        // Crear backup temporal de archivos importantes
-        let backup_dirs = ["libraries", ".minecraft", "versions"];
-        let temp_backup_dir = app_data_dir.join("temp").join(format!("backup_{}", modpack.id));
-        
-        if temp_backup_dir.exists() {
-            fs::remove_dir_all(&temp_backup_dir)?;
-        }
-        fs::create_dir_all(&temp_backup_dir)?;
-        
-        emit_progress("Respaldando archivos de Minecraft...".to_string(), 50.0, "backing_up_minecraft".to_string());
-        
-        // Hacer backup de directorios importantes
-        for dir_name in &backup_dirs {
-            let src_dir = instance_dir.join(dir_name);
-            let dest_dir = temp_backup_dir.join(dir_name);
-            
-            if src_dir.exists() {
-                copy_dir_recursively(&src_dir, &dest_dir)?;
-            }
-        }
-        
-        emit_progress("Extrayendo nueva versión...".to_string(), 65.0, "extracting_new_version".to_string());
-        
-        // Extraer nueva versión
-        extract_zip(&temp_zip_path, &instance_dir)?;
-        
-        emit_progress("Restaurando archivos de Minecraft...".to_string(), 80.0, "restoring_minecraft".to_string());
-        
-        // Restaurar archivos de Minecraft
-        for dir_name in &backup_dirs {
-            let src_dir = temp_backup_dir.join(dir_name);
-            let dest_dir = instance_dir.join(dir_name);
-            
-            if src_dir.exists() {
-                if dest_dir.exists() {
-                    fs::remove_dir_all(&dest_dir)?;
-                }
-                copy_dir_recursively(&src_dir, &dest_dir)?;
-            }
-        }
-        
-        // Limpiar backup
-        cleanup_temp_dir(&temp_backup_dir);
-        
-        Vec::new() // No failed mods for regular ZIP files
-    };
-    
-    // Clean up temporary file
-    cleanup_temp_file(&temp_zip_path);
-    
-    // Phase 3: Update metadata
-    emit_progress("Finalizando actualización...".to_string(), 90.0, "finalizing_update".to_string());
-    let metadata = InstanceMetadata {
-        id: modpack.id.clone(),
-        version: modpack.version.clone(),
-        installed_at: chrono::Utc::now().to_rfc3339(),
-        modloader: modpack.modloader.clone(),
-        modloader_version: modpack.modloader_version.clone(),
-        minecraft_version: modpack.minecraft_version.clone(),
-    };
-    
-    filesystem::save_instance_metadata(&metadata).await?;
-    
-    emit_progress("Actualización completada exitosamente".to_string(), 100.0, "completed".to_string());
-    Ok(failed_mods)
-}
-
-/// Update only the modpack files without reinstalling Minecraft/Lyceris with progress
-#[allow(dead_code)]
-async fn update_modpack_only_with_progress<F>(
-    modpack: Modpack, 
-    instance_dir: PathBuf,
-    emit_progress: F
-) -> Result<()>
-where
-    F: Fn(String, f32, String) + Send + Sync + 'static + Clone,
-{
-    let _failed_mods = update_modpack_only_with_failed_tracking(modpack, instance_dir, emit_progress).await?;
-    Ok(())
-}
-
-/// Copy a directory and its contents recursively
-fn copy_dir_recursively(src: &PathBuf, dst: &PathBuf) -> Result<()> {
-    if !src.is_dir() {
-        return Err(anyhow!("{} no es un directorio", src.display()));
-    }
-    
-    if !dst.exists() {
-        fs::create_dir_all(dst)?;
-    }
-    
-    for entry in fs::read_dir(src)? {
-        let entry = entry?;
-        let src_path = entry.path();
-        let dst_path = dst.join(entry.file_name());
-        
-        if src_path.is_dir() {
-            copy_dir_recursively(&src_path, &dst_path)?;
-        } else {
-            fs::copy(&src_path, &dst_path)?;
-        }
-    }
-    
-    Ok(())
-}
-
 /// Validate modpack configuration before installation
 pub fn validate_modpack(modpack: &Modpack) -> Result<()> {
     // Check if mod loader is supported
@@ -591,41 +87,247 @@ pub fn validate_modpack(modpack: &Modpack) -> Result<()> {
     Ok(())
 }
 
+/// Install a modpack (always uses meta storage like Modrinth)
+pub async fn install_modpack_with_shared_storage<F>(
+    modpack: Modpack, 
+    settings: UserSettings,
+    emit_progress: F
+) -> Result<Vec<serde_json::Value>> 
+where
+    F: Fn(String, f32, String) + Send + Sync + 'static + Clone,
+{
+    let app_data_dir = data_dir()
+        .ok_or_else(|| anyhow!("Failed to get app data directory"))?
+        .join("LKLauncher");
 
+    // Initialize meta and instance directories
+    let meta_dirs = MetaDirectories::init().await?;
+    let instance_dirs = InstanceDirectories::new(&modpack.id)?;
 
+    emit_progress("Inicializando...".to_string(), 5.0, "initializing".to_string());
 
+    // Check if instance already exists
+    let is_update = instance_dirs.instance_dir.exists();
+    
+    if is_update {
+        emit_progress("Verificando actualización...".to_string(), 10.0, "checking".to_string());
+        
+        if let Ok(Some(existing_metadata)) = filesystem::get_instance_metadata(&modpack.id).await {
+            if !minecraft::check_instance_needs_update(&modpack, &existing_metadata).await {
+                emit_progress("Instancia actualizada".to_string(), 100.0, "completed".to_string());
+                return Ok(Vec::new());
+            }
+        }
+    } else {
+        // Create instance directories
+        instance_dirs.ensure_directories().await?;
+    }
 
-/// Parsea mensajes de "Progress:" para crear mensajes generales útiles
-/// Ejemplo: "Progress: 3835/3855 - Java (99.48119%)" -> "Descargando Java... (3835/3855)"
-/// Devuelve None si debe mantener el mensaje anterior (evita parpadeo)
-fn parse_progress_message(message: &str) -> Option<String> {
-    if !message.starts_with("Progress:") {
-        return None;
+    emit_progress("Instalando Minecraft...".to_string(), 15.0, "installing_minecraft".to_string());
+
+    // Install Minecraft to meta storage if not already installed
+    if !meta_dirs.is_version_installed(&modpack.minecraft_version).await {
+        emit_progress("Descargando Minecraft...".to_string(), 20.0, "downloading_minecraft".to_string());
+        
+        minecraft::install_minecraft_with_lyceris_progress(&modpack, &settings, meta_dirs.meta_dir.clone(), {
+            let emit_progress = emit_progress.clone();
+            move |message: String, percentage: f32, step: String| {
+                let final_percentage = 20.0 + (percentage * 0.4); // 40% del total para Minecraft
+                emit_progress(message, final_percentage, step);
+            }
+        }).await?;
+
+        // Mark version as installed
+        meta_dirs.mark_libraries_installed(&modpack.minecraft_version).await?;
+    } else {
+        emit_progress("Minecraft ya instalado".to_string(), 60.0, "minecraft_already_installed".to_string());
+    }
+
+    // Link meta resources to instance
+    emit_progress("Vinculando recursos...".to_string(), 65.0, "linking_resources".to_string());
+    crate::shared::link_meta_resources_to_instance(&meta_dirs, &instance_dirs, &modpack.minecraft_version).await?;
+
+    // Install modpack files
+    emit_progress("Instalando archivos del modpack...".to_string(), 70.0, "installing_modpack_files".to_string());
+    
+    let failed_mods = if !modpack.url_modpack_zip.is_empty() {
+        // Download and extract modpack
+        let temp_zip_path = app_data_dir.join("temp").join(format!("{}.zip", modpack.id));
+        std::fs::create_dir_all(temp_zip_path.parent().unwrap())?;
+        
+        emit_progress("Descargando modpack...".to_string(), 75.0, "downloading_modpack".to_string());
+        download_file(&modpack.url_modpack_zip, &temp_zip_path).await?;
+        
+        // Check if it's a CurseForge modpack
+        let is_curseforge_modpack = match lyceris::util::extract::read_file_from_jar(&temp_zip_path, "manifest.json") {
+            Ok(_) => true,
+            Err(_) => false,
+        };
+        
+        if is_curseforge_modpack {
+            emit_progress("Procesando modpack de CurseForge...".to_string(), 80.0, "processing_curseforge".to_string());
+            let (_cf_modloader, _cf_version, failed_mods) = curseforge::process_curseforge_modpack_with_failed_tracking(
+                &temp_zip_path, 
+                &instance_dirs.instance_dir,
+                {
+                    let emit_progress = emit_progress.clone();
+                    move |message: String, percentage: f32, step: String| {
+                        let final_percentage = 80.0 + (percentage * 0.15); // 15% del total para CurseForge
+                        emit_progress(message, final_percentage, step);
+                    }
+                }
+            ).await?;
+    
+            // Clean up temp file
+            cleanup_temp_file(&temp_zip_path);
+            failed_mods
+        } else {
+            // Regular ZIP modpack
+            emit_progress("Extrayendo modpack...".to_string(), 85.0, "extracting_modpack".to_string());
+            extract_zip(&temp_zip_path, &instance_dirs.instance_dir)?;
+            cleanup_temp_file(&temp_zip_path);
+            Vec::new()
+        }
+    } else {
+        Vec::new()
+    };
+
+    // Save instance metadata
+    let metadata = InstanceMetadata {
+        id: modpack.id.clone(),
+        version: modpack.version.clone(),
+        installed_at: chrono::Utc::now().to_rfc3339(),
+        modloader: modpack.modloader.clone(),
+        modloader_version: modpack.modloader_version.clone(),
+        minecraft_version: modpack.minecraft_version.clone(),
+    };
+    
+    filesystem::save_instance_metadata(&metadata).await?;
+    
+    emit_progress("Instalación completada".to_string(), 100.0, "completed".to_string());
+    println!("✅ Modpack installation completed successfully!");
+    
+    Ok(failed_mods)
+}
+
+/// Launch a modpack (always uses meta storage like Modrinth)
+pub async fn launch_modpack_with_shared_storage(
+    modpack: Modpack,
+    settings: UserSettings,
+) -> Result<()> {
+    let meta_dirs = MetaDirectories::init().await?;
+    let instance_dirs = InstanceDirectories::new(&modpack.id)?;
+    
+    // Ensure meta resources are linked to instance
+    crate::shared::link_meta_resources_to_instance(&meta_dirs, &instance_dirs, &modpack.minecraft_version).await?;
+    
+    // Launch using regular function (instance directory now has symlinks to meta resources)
+    minecraft::launch_minecraft(modpack, settings).await
+}
+
+/// Get meta storage information for the UI
+pub async fn get_meta_storage_info() -> Result<serde_json::Value> {
+    let meta_dirs = MetaDirectories::init().await?;
+    
+    let total_size = meta_dirs.get_meta_size().await?;
+    let (cache_size, icons_cache_size, screenshots_cache_size) = meta_dirs.get_cache_size_breakdown().await?;
+    let minecraft_versions_count = meta_dirs.get_minecraft_versions_count().await?;
+    let java_installations_count = meta_dirs.get_java_installations_count().await?;
+    
+    Ok(serde_json::json!({
+        "total_size": total_size,
+        "cache_size": cache_size,
+        "icons_size": icons_cache_size,
+        "screenshots_size": screenshots_cache_size,
+        "meta_path": meta_dirs.meta_dir.display().to_string(),
+        "minecraft_versions_count": minecraft_versions_count,
+        "java_installations_count": java_installations_count
+    }))
+}
+
+/// Clean up meta storage by removing unused resources
+pub async fn cleanup_meta_storage() -> Result<Vec<String>> {
+    let meta_dirs = MetaDirectories::init().await?;
+    
+    let mut cleaned_items = Vec::new();
+    
+    // Clean up unused libraries, assets, versions, etc.
+    // This would require analyzing what's currently in use by active instances
+    
+    // For now, just clean up cache
+    if let Ok(_) = meta_dirs.clear_all_cache().await {
+        cleaned_items.push("Cache cleared".to_string());
     }
     
-    // Cambiar "Progress:" por "Progreso:"
-    let message = message.replacen("Progress:", "Progreso:", 1);
+    Ok(cleaned_items)
+}
+
+/// Cache modpack images automatically when loading from API
+pub async fn cache_modpack_images(modpacks: Vec<serde_json::Value>) -> Result<()> {
+    let meta_dirs = MetaDirectories::init().await?;
     
-    // Ejemplo: "Progreso: 3835/3855 - Java (99.48119%)"
-    if let Some(dash_pos) = message.find(" - ") {
-        let progress_part = &message[9..dash_pos].trim(); // Quitar "Progreso: "
-        let after_dash = &message[dash_pos + 3..];
+    for modpack in modpacks {
+        let modpack_id = modpack.get("id")
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown");
         
-        if let Some(paren_pos) = after_dash.find(" (") {
-            let component_name = &after_dash[..paren_pos];
-            
-            // Traducir nombres de componentes
-            let translated_name = match component_name {
-                "Java" | "java" => "Java",
-                "Asset" | "Assets" | "asset" | "assets" => "Assets",
-                "Library" | "Libraries" | "library" | "libraries" => "Librerías", 
-                "Native" | "Natives" | "native" | "natives" => "Nativos",
-                _ => "Archivos"
-            };
-            
-            return Some(format!("Descargando {}... ({})", translated_name, progress_part));
+        // Cache icon if available
+        if let Some(icon_url) = modpack.get("icon").and_then(|v| v.as_str()) {
+            if !icon_url.is_empty() {
+                match meta_dirs.cache_image(icon_url, "icon", modpack_id).await {
+                    Ok(_) => {},
+                    Err(e) => eprintln!("Failed to cache icon for {}: {}", modpack_id, e),
+                }
+            }
+        }
+        
+        // Cache screenshots if available
+        if let Some(screenshots) = modpack.get("screenshots").and_then(|v| v.as_array()) {
+            for (i, screenshot) in screenshots.iter().enumerate() {
+                if let Some(screenshot_url) = screenshot.as_str() {
+                    if !screenshot_url.is_empty() {
+                        let screenshot_id = format!("{}_screenshot_{}", modpack_id, i);
+                        match meta_dirs.cache_image(screenshot_url, "screenshot", &screenshot_id).await {
+                            Ok(_) => {},
+                            Err(e) => eprintln!("Failed to cache screenshot {} for {}: {}", i, modpack_id, e),
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Cache gallery images if available
+        if let Some(gallery) = modpack.get("gallery").and_then(|v| v.as_array()) {
+            for (i, gallery_item) in gallery.iter().enumerate() {
+                if let Some(gallery_url) = gallery_item.get("url").and_then(|v| v.as_str()) {
+                    if !gallery_url.is_empty() {
+                        let gallery_id = format!("{}_gallery_{}", modpack_id, i);
+                        match meta_dirs.cache_image(gallery_url, "screenshot", &gallery_id).await {
+                            Ok(_) => {},
+                            Err(e) => eprintln!("Failed to cache gallery image {} for {}: {}", i, modpack_id, e),
+                        }
+                    }
+                }
+            }
         }
     }
     
-    Some("Instalando Minecraft...".to_string())
+    Ok(())
+}
+
+fn format_bytes(bytes: u64) -> String {
+    const UNITS: &[&str] = &["B", "KB", "MB", "GB", "TB"];
+    let mut size = bytes as f64;
+    let mut unit_index = 0;
+    
+    while size >= 1024.0 && unit_index < UNITS.len() - 1 {
+        size /= 1024.0;
+        unit_index += 1;
+    }
+    
+    if unit_index == 0 {
+        format!("{} {}", bytes, UNITS[unit_index])
+    } else {
+        format!("{:.1} {}", size, UNITS[unit_index])
+    }
 } 

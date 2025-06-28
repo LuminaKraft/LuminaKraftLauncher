@@ -70,6 +70,7 @@
     "serverIP": "IP:",
     "serverIPLabel": "Server IP:",
     "refresh": "Refresh modpack list",
+    "refreshDisabledDuringInstall": "Cannot refresh while a modpack is installing",
     "availableCount": "{{count}} modpack available",
     "availableCount_plural": "{{count}} modpacks available",
     "descriptionNotAvailable": "Description not available",
@@ -302,5 +303,20 @@
     "error": "Could not get mod information",
     "fileName": "File:",
     "close": "Close"
+  },
+  "metaStorage": {
+    "title": "Storage",
+    "totalSize": "Total storage size",
+    "minecraftVersions": "Minecraft versions installed",
+    "javaInstallations": "Java installations",
+    "cacheSize": "Cache Size",
+    "iconsCache": "Icons Cache",
+    "screenshotsCache": "Screenshots Cache",
+    "path": "Storage Path",
+    "cleanup": "Cleanup Cache",
+    "cleanupDescription": "Remove unused cached files to free up disk space.",
+    "cleanupConfirm": "Are you sure you want to cleanup the cache? This will remove cached files.",
+    "cleanupSuccess": "Cache cleanup completed successfully.",
+    "cleaningProgress": "Cleaning..."
   }
 } 

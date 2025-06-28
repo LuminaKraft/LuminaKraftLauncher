@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use anyhow::Result;
 
 mod launcher;
+mod shared;
 mod filesystem;
 mod minecraft;
 mod modpack;
@@ -65,7 +66,7 @@ pub struct Collaborator {
     pub logo: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct MicrosoftAccount {
     pub xuid: String,
     pub exp: u64,
@@ -79,7 +80,7 @@ pub struct MicrosoftAccount {
     pub client_id: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct UserSettings {
     pub username: String,
     #[serde(rename = "allocatedRam")]
@@ -301,9 +302,36 @@ async fn install_modpack_with_minecraft(app: tauri::AppHandle, modpack: Modpack,
         }
     };
     
-    match launcher::install_modpack_with_minecraft_progress(modpack, settings, emit_progress).await {
+    match launcher::install_modpack_with_shared_storage(modpack, settings, emit_progress).await {
         Ok(_) => Ok(()),
-        Err(e) => Err(format!("Failed to install modpack with Minecraft: {}", e)),
+        Err(e) => Err(format!("Failed to install modpack: {}", e)),
+    }
+}
+
+#[tauri::command]
+async fn install_modpack_with_shared_storage(app: tauri::AppHandle, modpack: Modpack, settings: UserSettings) -> Result<Vec<serde_json::Value>, String> {
+    // Validate modpack before installation
+    if let Err(e) = launcher::validate_modpack(&modpack) {
+        return Err(format!("Invalid modpack configuration: {}", e));
+    }
+    
+    let emit_progress = {
+        let app = app.clone();
+        let modpack_id = modpack.id.clone();
+        
+        move |message: String, percentage: f32, step: String| {
+            let _ = app.emit("install-progress", serde_json::json!({
+                "modpackId": modpack_id,
+                "message": message,
+                "percentage": percentage,
+                "step": step
+            }));
+        }
+    };
+    
+    match launcher::install_modpack_with_shared_storage(modpack, settings, emit_progress).await {
+        Ok(failed_mods) => Ok(failed_mods),
+        Err(e) => Err(format!("Failed to install modpack: {}", e)),
     }
 }
 
@@ -516,7 +544,7 @@ async fn install_modpack_with_failed_tracking(app: tauri::AppHandle, modpack: Mo
         }
     };
     
-    match launcher::install_modpack_with_minecraft_and_failed_tracking(modpack, settings, emit_progress).await {
+    match launcher::install_modpack_with_shared_storage(modpack, settings, emit_progress).await {
         Ok(failed_mods) => Ok(failed_mods),
         Err(e) => Err(format!("Failed to install modpack: {}", e)),
     }
@@ -529,7 +557,7 @@ async fn launch_modpack(modpack: Modpack, settings: UserSettings) -> Result<(), 
         return Err(format!("Invalid modpack configuration: {}", e));
     }
     
-    match minecraft::launch_minecraft(modpack, settings).await {
+    match launcher::launch_modpack_with_shared_storage(modpack, settings).await {
         Ok(_) => Ok(()),
         Err(e) => Err(format!("Failed to launch modpack: {}", e)),
     }
@@ -874,6 +902,30 @@ async fn open_instance_folder(modpack_id: String) -> Result<(), String> {
     }
 }
 
+#[tauri::command]
+async fn get_meta_storage_info() -> Result<String, String> {
+    match launcher::get_meta_storage_info().await {
+        Ok(info) => Ok(serde_json::to_string(&info).unwrap()),
+        Err(e) => Err(format!("Failed to get meta storage info: {}", e)),
+    }
+}
+
+#[tauri::command]
+async fn cleanup_meta_storage() -> Result<Vec<String>, String> {
+    match launcher::cleanup_meta_storage().await {
+        Ok(items) => Ok(items),
+        Err(e) => Err(format!("Failed to cleanup meta storage: {}", e)),
+    }
+}
+
+#[tauri::command]
+async fn cache_modpack_images_command(modpacks: Vec<serde_json::Value>) -> Result<(), String> {
+    match launcher::cache_modpack_images(modpacks).await {
+        Ok(_) => Ok(()),
+        Err(e) => Err(format!("Failed to cache modpack images: {}", e)),
+    }
+}
+
 /// Parsea mensajes de "Progress:" para crear mensajes generales útiles
 /// Ejemplo: "Progress: 3835/3855 - Java (99.48119%)" -> "Progreso: Descargando Java... (3835/3855)"
 /// Devuelve None si debe mantener el mensaje anterior (evita parpadeo)
@@ -923,6 +975,7 @@ fn main() {
             install_modpack,
             install_modpack_with_minecraft,
             install_modpack_with_failed_tracking,
+            install_modpack_with_shared_storage,
             launch_modpack,
             delete_instance,
             get_launcher_version,
@@ -941,7 +994,10 @@ fn main() {
             extract_code_from_redirect_url,
             open_microsoft_auth_modal,
             remove_modpack,
-            open_instance_folder
+            open_instance_folder,
+            get_meta_storage_info,
+            cleanup_meta_storage,
+            cache_modpack_images_command
         ])
         .setup(|app| {
             // Initialize app data directory
