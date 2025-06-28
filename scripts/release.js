@@ -110,8 +110,10 @@ function commitAndTag(version, isPrerelease = false) {
     });
     
     // Check if any version files were actually staged
-    const stagedStatus = execSync('git status --porcelain --cached', { encoding: 'utf8' });
-    if (!stagedStatus.trim()) {
+    const stagedStatus = execSync('git status --porcelain', { encoding: 'utf8' })
+      .split('\n')
+      .filter(line => line.startsWith('A ') || line.startsWith('M ')); // Only look for added or modified files
+    if (!stagedStatus.length) {
       log('  ℹ️ No version files to commit', 'yellow');
       return;
     }
