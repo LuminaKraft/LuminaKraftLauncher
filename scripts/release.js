@@ -93,7 +93,12 @@ function commitAndTag(version, isPrerelease = false) {
     }
 
     // Check for unstaged changes beyond version files
-    const versionFiles = ['package.json', 'src-tauri/tauri.conf.json', 'src-tauri/Cargo.toml'];
+    const versionFiles = [
+      'package.json', 
+      'src-tauri/tauri.conf.json', 
+      'src-tauri/Cargo.toml',
+      'src/components/Layout/Sidebar.tsx'
+    ];
     const statusLines = status.trim().split('\n');
     const unstagedChanges = statusLines.filter(line => {
       const file = line.slice(3).trim();
