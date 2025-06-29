@@ -42,7 +42,7 @@
   }
   
   .sidebar-item {
-    @apply flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors duration-200 hover:bg-dark-700;
+    @apply flex items-center p-3 rounded-lg cursor-pointer transition-colors duration-200 hover:bg-dark-700;
 }
   
   .sidebar-item.active {

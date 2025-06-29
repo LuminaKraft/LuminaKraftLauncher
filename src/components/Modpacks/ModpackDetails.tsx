@@ -87,23 +87,25 @@ const ModpackDetails: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack 
   const isVanillaServer = modpack.modloader === 'vanilla' || modpack.modloader === 'paper';
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="p-6 border-b border-dark-700">
+    <div className="h-full overflow-auto">
+      <div className="p-6">
+        {/* Back button */}
         <button
           onClick={onBack}
-          className="flex items-center space-x-2 text-dark-400 hover:text-white transition-colors mb-4"
+          className="flex items-center space-x-2 text-dark-400 hover:text-white transition-colors mb-6"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>{t('navigation.backToList')}</span>
         </button>
         
-        <div className="flex items-start space-x-6">
-          <div className="w-24 h-24 rounded-lg overflow-hidden bg-dark-700 flex-shrink-0">
+        {/* Header with logo and info side by side */}
+        <div className="flex items-start space-x-8 mb-6">
+          {/* Logo on the left */}
+          <div className="w-48 h-48 rounded-lg overflow-hidden bg-transparent flex items-center justify-center p-6 flex-shrink-0">
             <img
               src={modpack.logo || modpack.urlIcono}
               alt={displayName}
-              className="w-full h-full object-cover"
+              className="max-w-full max-h-full object-contain"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iOTYiIGhlaWdodD0iOTYiIHZpZXdCb3g9IjAgMCA5NiA5NiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9Ijk2IiBoZWlnaHQ9Ijk2IiBmaWxsPSIjMzc0MTUxIi8+CjxwYXRoIGQ9Ik0zNiAzNkg2MFY2MEgzNlYzNloiIGZpbGw9IiM2Mzc1ODMiLz4KPC9zdmc+';
@@ -111,8 +113,9 @@ const ModpackDetails: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack 
             />
           </div>
           
-          <div className="flex-1">
-            <div className="flex items-start justify-between mb-2">
+          {/* Info on the right */}
+          <div className="flex-1 space-y-4">
+            <div className="flex items-start justify-between">
               <h1 className="text-white text-3xl font-bold">{displayName}</h1>
               <span className={`flex items-center space-x-1 ${statusInfo.color} font-medium`}>
                 <span>{statusInfo.emoji}</span>
@@ -120,7 +123,7 @@ const ModpackDetails: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack 
               </span>
             </div>
             
-            <p className="text-dark-300 text-lg mb-4">{displayDescription}</p>
+            <p className="text-dark-300 text-lg">{displayDescription}</p>
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="flex items-center space-x-2 text-dark-400">
@@ -145,7 +148,7 @@ const ModpackDetails: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack 
 
             {/* IP del servidor para vanilla/paper */}
             {isVanillaServer && modpack.ip && (
-              <div className="mt-4 p-3 bg-dark-700 rounded-lg">
+              <div className="p-3 bg-dark-700 rounded-lg">
                 <div className="flex items-center space-x-2">
                   <Globe className="w-4 h-4 text-lumina-400" />
                   <span className="text-white font-medium">{t('modpacks.serverIPLabel')}</span>
@@ -155,11 +158,9 @@ const ModpackDetails: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack 
             )}
           </div>
         </div>
-      </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 p-6">
+        {/* Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column */}
           <div className="lg:col-span-1 space-y-6">
             {/* Action Card */}

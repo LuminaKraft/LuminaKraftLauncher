@@ -228,15 +228,15 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
   };
 
   return (
-    <div className="card hover:bg-dark-700 transition-colors duration-200 cursor-pointer group">
-      <div onClick={onSelect} className="flex-1">
-        <div className="flex items-start space-x-4">
+    <div className="card hover:bg-dark-700 transition-colors duration-200 cursor-pointer group flex flex-col h-full">
+      <div onClick={onSelect} className="flex-1 flex flex-col">
+        <div className="space-y-4 flex-1">
           {/* Modpack Icon */}
-          <div className="w-16 h-16 rounded-lg overflow-hidden bg-dark-700 flex-shrink-0">
+          <div className="w-full h-32 rounded-lg overflow-hidden bg-dark-700 flex items-center justify-center p-4">
             <img
               src={modpack.logo || modpack.urlIcono}
               alt={displayName}
-              className="w-full h-full object-cover"
+              className="max-w-full max-h-full object-contain"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSIjMzc0MTUxIi8+CjxwYXRoIGQ9Ik0yNCAyNEg0MFY0MEgyNFYyNFoiIGZpbGw9IiM2Mzc1ODMiLz4KPC9zdmc+';
@@ -245,7 +245,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
           </div>
 
           {/* Modpack Info */}
-          <div className="flex-1 min-w-0">
+          <div className="space-y-3 flex-1">
             <div className="flex items-start justify-between">
               <h3 className="text-white font-semibold text-lg truncate group-hover:text-lumina-400 transition-colors pr-2">
                 {displayName}
@@ -253,11 +253,11 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
               {getServerStatusBadge()}
             </div>
             
-            <p className="text-dark-300 text-sm mt-1 line-clamp-2">
+            <p className="text-dark-300 text-sm line-clamp-2">
               {displayDescription}
             </p>
             
-            <div className="flex items-center space-x-4 mt-3 text-xs text-dark-400">
+            <div className="flex items-center space-x-4 text-xs text-dark-400">
               <span>v{modpack.version}</span>
               <span>Minecraft {modpack.minecraftVersion}</span>
               <span className="capitalize">{modpack.modloader}</span>
@@ -266,23 +266,27 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
               )}
             </div>
 
-            {/* IP del servidor para vanilla/paper */}
-            {isVanillaServer && modpack.ip && (
-              <div className="mt-2 flex items-center space-x-2">
-                <span className="text-xs text-dark-400">{t('modpacks.serverIP')}</span>
-                <code className="text-xs bg-dark-700 px-2 py-1 rounded text-lumina-400">{modpack.ip}</code>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    copyToClipboard(modpack.ip!);
-                  }}
-                  className="text-dark-400 hover:text-lumina-400 transition-colors"
-                  title={t('modpacks.copyIP')}
-                >
-                  <Copy className="w-3 h-3" />
-                </button>
-              </div>
-            )}
+            {/* Server IP section - consistent height for all cards */}
+            <div className="min-h-[24px] flex items-center">
+              {isVanillaServer && modpack.ip ? (
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs text-dark-400">{t('modpacks.serverIP')}</span>
+                  <code className="text-xs bg-dark-700 px-2 py-1 rounded text-lumina-400">{modpack.ip}</code>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      copyToClipboard(modpack.ip!);
+                    }}
+                    className="text-dark-400 hover:text-lumina-400 transition-colors"
+                    title={t('modpacks.copyIP')}
+                  >
+                    <Copy className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : (
+                <div className="h-6"></div>
+              )}
+            </div>
           </div>
         </div>
 

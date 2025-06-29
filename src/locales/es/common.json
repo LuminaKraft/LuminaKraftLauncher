@@ -24,6 +24,10 @@
     "about": "Acerca de",
     "backToList": "Volver a la lista"
   },
+  "sidebar": {
+    "expand": "Expandir barra lateral",
+    "collapse": "Contraer barra lateral"
+  },
   "modpacks": {
     "title": "Modpacks Disponibles",
     "searchPlaceholder": "Buscar modpacks...",

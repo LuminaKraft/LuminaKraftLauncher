@@ -24,6 +24,10 @@
     "about": "About",
     "backToList": "Back to list"
   },
+  "sidebar": {
+    "expand": "Expand sidebar",
+    "collapse": "Collapse sidebar"
+  },
   "modpacks": {
     "title": "Available Modpacks",
     "searchPlaceholder": "Search modpacks...",
