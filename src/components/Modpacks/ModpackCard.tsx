@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Download, Play, RefreshCw, Wrench, AlertTriangle, Loader2, Globe, Copy, Trash2, FolderOpen } from 'lucide-react';
-import type { Modpack, ModpackState } from '../../types/launcher';
+import type { Modpack, ModpackState, ProgressInfo } from '../../types/launcher';
 import { useLauncher } from '../../contexts/LauncherContext';
 import ConfirmDialog from '../ConfirmDialog';
 import LauncherService from '../../services/launcherService';
 
 interface ModpackCardProps {
   modpack: Modpack;
-  state: ModpackState;
+  state: ModpackState & {
+    progress?: ProgressInfo;
+  };
   onSelect: () => void;
 }
 
@@ -22,27 +24,27 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
     if (modpack.isNew) {
       return (
         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-600/20 text-green-400 border border-green-600/30">
-          ✨ {translations?.ui.status.new || 'Nuevo'}
+          {translations?.ui.status.new || 'Nuevo'}
         </span>
       );
     }
     if (modpack.isActive) {
       return (
         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-600/20 text-green-400 border border-green-600/30">
-          🟢 {translations?.ui.status.active || 'Activo'}
+          {translations?.ui.status.active || 'Activo'}
         </span>
       );
     }
     if (modpack.isComingSoon) {
       return (
         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-600/20 text-yellow-400 border border-yellow-600/30">
-          🔜 {translations?.ui.status.coming_soon || 'Próximamente'}
+          {translations?.ui.status.coming_soon || 'Próximamente'}
         </span>
       );
     }
     return (
       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-600/20 text-gray-400 border border-gray-600/30">
-        💤 {translations?.ui.status.inactive || 'Inactivo'}
+        {translations?.ui.status.inactive || 'Inactivo'}
       </span>
     );
   };
@@ -59,7 +61,6 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
   };
 
   const getButtonConfig = () => {
-    // Si es un servidor vanilla/paper con IP, mostrar botón de conectar
     if (isVanillaServer && modpack.ip) {
       return {
         text: `${t('modpacks.connect')} (${modpack.ip})`,
@@ -70,7 +71,6 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
       };
     }
 
-    // Si no tiene modpack para descargar y no es servidor vanilla, deshabilitar
     if (!requiresModpack && !modpack.ip) {
       return {
         text: t('modpacks.notAvailable'),
@@ -81,7 +81,6 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
       };
     }
 
-    // Lógica normal para modpacks que requieren instalación
     switch (state.status) {
       case 'not_installed':
         return {
@@ -147,7 +146,6 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
   const ButtonIcon = buttonConfig.icon;
   const isLoading = ['installing', 'updating', 'launching'].includes(state.status);
 
-  // Obtener traducciones del modpack
   const modpackTranslations = state.translations;
   const displayName = modpackTranslations?.name || modpack.name;
   const displayDescription = modpackTranslations?.shortDescription || modpackTranslations?.description || t('modpacks.description');
@@ -211,7 +209,6 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
       setShowRemoveDialog(false);
     } catch (error) {
       console.error('❌ Error removing modpack:', error);
-      // El error se manejará en el contexto, aquí solo cerramos el diálogo
     } finally {
       setIsRemoving(false);
     }
@@ -223,12 +220,16 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
       await LauncherService.getInstance().openInstanceFolder(modpack.id);
     } catch (error) {
       console.error('❌ Error opening instance folder:', error);
-      // Aquí podrías mostrar un toast o mensaje de error si tienes uno configurado
     }
   };
 
   return (
-    <div className="card hover:bg-dark-700 transition-colors duration-200 cursor-pointer group flex flex-col h-full">
+    <div className="card hover:bg-dark-700 transition-colors duration-200 cursor-pointer group flex flex-col h-full relative">
+      {/* Status Badge - Moved to top right corner */}
+      <div className="absolute top-2 right-2 z-10">
+        {getServerStatusBadge()}
+      </div>
+
       <div onClick={onSelect} className="flex-1 flex flex-col">
         <div className="space-y-4 flex-1">
           {/* Modpack Icon */}
@@ -246,12 +247,9 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
 
           {/* Modpack Info */}
           <div className="space-y-3 flex-1">
-            <div className="flex items-start justify-between">
-              <h3 className="text-white font-semibold text-lg truncate group-hover:text-lumina-400 transition-colors pr-2">
-                {displayName}
-              </h3>
-              {getServerStatusBadge()}
-            </div>
+            <h3 className="text-white font-semibold text-lg truncate group-hover:text-lumina-400 transition-colors pr-2">
+              {displayName}
+            </h3>
             
             <p className="text-dark-300 text-sm line-clamp-2">
               {displayDescription}
@@ -266,7 +264,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
               )}
             </div>
 
-            {/* Server IP section - consistent height for all cards */}
+            {/* Server IP section */}
             <div className="min-h-[24px] flex items-center">
               {isVanillaServer && modpack.ip ? (
                 <div className="flex items-center space-x-2">
@@ -305,27 +303,27 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
                 style={{ width: `${state.progress.percentage}%` }}
               />
             </div>
-            {/* Progress details - mostrar detalles de archivos individuales y ETA */}
+            {/* Progress details */}
             {(state.progress.detailMessage && state.progress.detailMessage.trim() !== '') || state.progress.eta || state.progress.downloadSpeed ? (
               <div className="mt-2 text-xs">
                 <div className="flex justify-between items-start">
-                  {/* Lado izquierdo: detalles del archivo actual */}
+                  {/* Left side: current file details */}
                   <div className="flex items-center space-x-2 flex-1 min-w-0">
                     {state.progress.detailMessage && state.progress.detailMessage.trim() !== '' && (() => {
                       const message = state.progress.detailMessage;
                       let displayText = message;
                       let bulletClass = "w-2 h-2 bg-lumina-600 rounded-full animate-pulse";
 
-                      // Procesar los prefijos de estado
+                      // Extract only the filename from the message
+                      if (message.includes(":")) {
+                        displayText = message.substring(message.indexOf(":") + 1).trim();
+                      }
+
+                      // Set bullet color based on message type without changing text
                       if (message.startsWith("mod_exists:") || message.startsWith("mod_completed:")) {
-                        displayText = message.substring(message.indexOf(":") + 1);
                         bulletClass = "w-2 h-2 bg-green-500 rounded-full";
                       } else if (message.startsWith("mod_error:") || message.startsWith("mod_unavailable:")) {
-                        displayText = message.substring(message.indexOf(":") + 1);
                         bulletClass = "w-2 h-2 bg-red-500 rounded-full";
-                      } else if (message.startsWith("mod_name:")) {
-                        displayText = message.substring(message.indexOf(":") + 1);
-                        bulletClass = "w-2 h-2 bg-lumina-600 rounded-full animate-pulse";
                       }
 
                       return (
@@ -335,15 +333,14 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
                         </>
                       );
                     })()}
-                    {/* Velocidad de descarga */}
+                    {/* Download speed */}
                     {state.progress.downloadSpeed && (
                       <span className="text-dark-500 ml-3">⚡ {state.progress.downloadSpeed}</span>
                     )}
                   </div>
                   
-                  {/* Lado derecho: ETA alineado con el porcentaje */}
+                  {/* Right side: ETA aligned with percentage */}
                   <div className="flex-shrink-0 font-mono">
-                    {/* Placeholder para mantener el espacio */}
                     <div className="relative">
                       <span className="opacity-0 pointer-events-none select-none">00m 00s</span>
                       {state.progress.eta && (
@@ -368,24 +365,24 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
         )}
       </div>
 
-      {/* Action Button */}
+      {/* Action Buttons */}
       <div className="mt-4 pt-4 border-t border-dark-700">
         <div className="flex gap-2">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            buttonConfig.onClick();
-          }}
-          disabled={buttonConfig.disabled}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              buttonConfig.onClick();
+            }}
+            disabled={buttonConfig.disabled}
             className={`${buttonConfig.className} flex-1 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed`}
-        >
-          <ButtonIcon 
-            className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`}
-          />
-          <span>{buttonConfig.text}</span>
-        </button>
+          >
+            <ButtonIcon 
+              className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`}
+            />
+            <span>{buttonConfig.text}</span>
+          </button>
           
-          {/* Botón de abrir carpeta solo para modpacks instalados o con errores */}
+          {/* Open folder button */}
           {['installed', 'outdated', 'error'].includes(state.status) && (
             <button
               onClick={(e) => {
@@ -400,7 +397,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
             </button>
           )}
           
-          {/* Botón de remover solo para modpacks instalados o con errores */}
+          {/* Remove button */}
           {['installed', 'outdated', 'error'].includes(state.status) && (
             <button
               onClick={(e) => {
@@ -418,7 +415,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
         </div>
       </div>
 
-      {/* Diálogo de confirmación para remover */}
+      {/* Remove Confirmation Dialog */}
       {showRemoveDialog && (
         <ConfirmDialog
           title={t('modpacks.removeConfirmTitle')}

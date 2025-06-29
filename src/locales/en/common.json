@@ -22,14 +22,15 @@
     "modpacks": "Modpacks",
     "settings": "Settings",
     "about": "About",
-    "backToList": "Back to list"
+    "backToList": "Back to List",
+    "home": "Home"
   },
   "sidebar": {
     "expand": "Expand sidebar",
     "collapse": "Collapse sidebar"
   },
   "modpacks": {
-    "title": "Available Modpacks",
+    "title": "Modpacks",
     "searchPlaceholder": "Search modpacks...",
     "noResults": "No modpacks found",
     "noModpacks": "No modpacks available",
@@ -52,17 +53,18 @@
     "downloading": "Downloading...",
     "extracting": "Extracting...",
     "progress": "Progress: {{percent}}%",
-    "version": "Version {{version}}",
+    "version": "Version",
     "minecraftVersion": "Minecraft {{version}}",
-    "modloader": "{{loader}} {{version}}",
+    "modloader": "Modloader",
     "description": "Description",
     "systemRequirements": "System Requirements",
     "javaVersion": "Java {{version}}",
     "ramRequired": "Required RAM: {{ram}}GB",
     "details": "View details",
     "actions": "Actions",
-    "requirements": "Requirements",
+    "requirements": "System Requirements",
     "contributors": "Contributors",
+    "contributor": "Contributor",
     "gallery": "Gallery",
     "features": "Features",
     "multimedia": "Multimedia Content",
@@ -72,25 +74,37 @@
     "repair": "Repair",
     "copyIP": "Copy IP",
     "serverIP": "IP:",
-    "serverIPLabel": "Server IP:",
+    "serverIPLabel": "Server IP",
     "refresh": "Refresh modpack list",
     "refreshDisabledDuringInstall": "Cannot refresh while a modpack is installing",
     "availableCount": "{{count}} modpack available",
     "availableCount_plural": "{{count}} modpacks available",
     "descriptionNotAvailable": "Description not available",
-    "recommendedRAM": "Recommended RAM:",
-    "ramMinRecommended": "{{min}} GB minimum, {{recommended}} GB recommended",
-    "recommendedJVMArgs": "Recommended JVM Args:",
+    "recommendedRAM": "Recommended RAM",
+    "ramMinRecommended": "Minimum: {{min}}GB / Recommended: {{recommended}}GB",
+    "recommendedJVMArgs": "Recommended JVM Arguments",
     "noChangelogAvailable": "No changelog information available.",
     "viewOnTikTok": "View on TikTok",
     "imageGallery": "Image {{index}} of {{total}}",
     "remove": "Remove",
-    "removeConfirmTitle": "Confirm removal",
-    "removeConfirmMessage": "Are you sure you want to remove \"{{name}}\"?\n\nThis action will delete all modpack files and cannot be undone.",
-    "removeButton": "Yes, remove",
+    "removeConfirmTitle": "Remove Modpack",
+    "removeConfirmMessage": "Are you sure you want to remove {{name}}? This will delete all files associated with this modpack.",
+    "removeButton": "Remove",
     "removing": "Removing...",
     "removeTooltip": "Remove modpack",
-    "openFolderTooltip": "Open instance folder"
+    "openFolder": "Instance",
+    "downloads": "Downloads",
+    "playTime": "Play Time",
+    "activePlayers": "Active Players",
+    "installation": "Installation",
+    "serverInfo": "Server Information",
+    "gamemode": "Game Mode",
+    "status": {
+      "new": "New",
+      "active": "Active",
+      "coming_soon": "Coming Soon",
+      "inactive": "Inactive"
+    }
   },
   "errors": {
     "unknown": "Unknown error occurred",
@@ -149,7 +163,7 @@
     "title": "Settings",
     "general": "General",
     "minecraft": "Minecraft",
-    "advanced": "Advanced",
+    "advanced": "Advanced Settings",
     "performance": "Performance",
     "java": "Java",
     "api": "API Status",
@@ -194,7 +208,9 @@
     "settingsDescription": "Customize your experience with LuminaKraft Launcher",
     "dataUrlDescription": "URL where modpack data is obtained from",
     "unsavedChanges": "You have unsaved changes",
-    "saveChanges": "Save changes"
+    "saveChanges": "Save changes",
+    "theme": "Theme",
+    "notifications": "Notifications"
   },
   "auth": {
     "title": "Authentication",
@@ -234,10 +250,10 @@
     "authCanceled": "Authentication was canceled."
   },
   "about": {
-    "title": "About LuminaKraft Launcher",
+    "title": "About",
     "description": "Official LuminaKraft Studios modpack launcher",
     "descriptionLong": "A custom modpack launcher for the LuminaKraft Studios community. Designed to make modpack installation and management simple and efficient.",
-    "version": "Version {{version}} (Alpha)",
+    "version": "Version",
     "versionLabel": "Version:",
     "technologies": "Technologies:",
     "technologiesValue": "Tauri + React + TypeScript",
@@ -282,8 +298,9 @@
     "developedBy": "Developed by LuminaKraft Studios",
     "poweredBy": "Powered by Tauri and React",
     "copyright": "© 2025 LuminaKraft Studios. All rights reserved.",
-    "license": "This software is licensed under the terms of the MIT license.",
-    "minecraftTrademark": "Minecraft is a registered trademark of Mojang Studios"
+    "license": "License",
+    "minecraftTrademark": "Minecraft is a registered trademark of Mojang Studios",
+    "contributors": "Contributors"
   },
   "notifications": {
     "updateAvailable": "Update available",
@@ -317,5 +334,18 @@
     "cleanupConfirm": "Are you sure you want to cleanup the cache? This will remove cached files.",
     "cleanupSuccess": "Cache cleanup completed successfully.",
     "cleaningProgress": "Cleaning..."
+  },
+  "common": {
+    "showMore": "Show More",
+    "showLess": "Show Less",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close"
   }
 } 

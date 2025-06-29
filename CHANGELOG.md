@@ -18,6 +18,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Immediate footer text hiding when collapsing
 - **Professional Polish**: Improved overall transition smoothness and visual consistency
 
+#### **Enhanced ModpackCard Layout & Status System**
+- **Repositioned Status Badges**: Moved modpack status badges (Nuevo, Activo, Próximamente, Inactivo) to top-right corner of cards for better visibility
+- **Cleaner Status Design**: Removed emojis from status badges for a more professional appearance
+- **Improved Card Layout**: Restored proper two-column layout in ModpackDetails with main info on left and technical details on right
+- **Better Visual Hierarchy**: Enhanced card positioning and spacing for improved readability
+
+#### **Enhanced Progress Indicators**
+- **Fixed Bullet Point Consistency**: Standardized bullet point size to `w-2 h-2` (8x8px) across all mod download states
+- **Removed Animations**: Eliminated `animate-pulse` effect to prevent visual size changes during downloads
+- **Color-Coded Status**: Maintained intuitive color system:
+  - Blue bullet for active downloads
+  - Green bullet for completed/existing mods
+  - Red bullet for errors/unavailable mods
+- **Cleaner Mod Names**: Removed status prefixes ("Descargando:", "Ya existe:", etc.) showing only clean mod filenames
+
 #### **Enhanced Mod Download Status**
 - **Status Indicators**: Added color-coded status indicators for mod downloads:
   - Green bullet for completed or existing mods
@@ -30,6 +45,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - "Error: {nombre_mod}" for failed downloads
   - "No disponible: {nombre_mod}" for unavailable mods
 
+#### **Improved Translations & Terminology**
+- **Updated Button Labels**: Changed "Open Folder" to "Instance" in English and "Abrir Carpeta" to "Instancia" in Spanish
+- **Consistent Terminology**: Aligned UI terminology with launcher functionality
+
 #### **Progress System Refinements**
 - **Progress Distribution**: Adjusted progress ranges for smoother feedback:
   - CurseForge processing: 70%-100%
@@ -37,10 +56,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Final steps properly reaching 100%
 - **Message Handling**: Fixed "preparing_mod_downloads" translation display
 
+### 🔧 **Technical Improvements**
+
+#### **Code Organization & Type Safety**
+- **Created Utility Functions**: Added `formatNumber.ts` and `formatPlayTime.ts` for consistent data formatting
+- **Enhanced Type Definitions**: Improved `ModpackProgress` interface and type handling
+- **Fixed Import Structure**: Created proper index.ts exports for utility functions
+- **Better Error Handling**: Enhanced error handling for instance folder operations
+
+#### **Backend Message Processing**
+- **Simplified Mod Status Messages**: Removed redundant text prefixes from mod download status messages
+- **Cleaner Progress Data**: Modified Rust backend to send clean mod filenames without status prefixes
+- **Maintained Status Logic**: Preserved color-coded status system while simplifying message content
+
 ### 🐛 **Bug Fixes**
 - Fixed progress bar getting stuck at 90% during mod downloads
 - Resolved missing translations for mod download status messages
 - Fixed inconsistent status indicator colors during mod installation
+- Fixed ModpackCard layout issues with duplicate content sections
+- Resolved type errors in progress handling and state management
+- Fixed status badge positioning and visual consistency
+- Corrected import paths for utility functions
+- Eliminated bullet point size inconsistencies during mod downloads
 
 ### 📋 **Breaking Changes**
 - None - all changes maintain backward compatibility
@@ -48,6 +85,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🔧 **Migration Notes**
 - Automatic improvements upon update
 - All user settings and installed modpacks preserved
+- Enhanced UI elements will be visible immediately after update
 
 ## [0.0.7-alpha.2] - 2025-06-28
 

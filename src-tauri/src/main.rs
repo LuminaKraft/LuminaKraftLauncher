@@ -231,7 +231,7 @@ async fn install_modpack_with_minecraft(app: tauri::AppHandle, modpack: Modpack,
             } else if message.starts_with("mod_name:") {
                 // Para archivos individuales de mods: "mod_name:filename"
                 let file_name = message.strip_prefix("mod_name:").unwrap_or(&message);
-                let detail_msg = format!("mod_name:Descargando: {}", file_name);
+                let detail_msg = format!("mod_name:{}", file_name);
                 
                 // Actualizar el último detailMessage válido
                 if let Ok(mut last) = last_detail_message.lock() {
@@ -249,7 +249,7 @@ async fn install_modpack_with_minecraft(app: tauri::AppHandle, modpack: Modpack,
             } else if message.starts_with("mod_completed:") {
                 // Para mods completados: "mod_completed:filename"
                 let file_name = message.strip_prefix("mod_completed:").unwrap_or(&message);
-                let detail_msg = format!("mod_completed:Descargado: {}", file_name);
+                let detail_msg = format!("mod_completed:{}", file_name);
                 
                 // Actualizar el último detailMessage válido
                 if let Ok(mut last) = last_detail_message.lock() {
@@ -267,7 +267,7 @@ async fn install_modpack_with_minecraft(app: tauri::AppHandle, modpack: Modpack,
             } else if message.starts_with("mod_exists:") {
                 // Para mods que ya existen: "mod_exists:filename"
                 let file_name = message.strip_prefix("mod_exists:").unwrap_or(&message);
-                let detail_msg = format!("mod_exists:Ya existe: {}", file_name);
+                let detail_msg = format!("mod_exists:{}", file_name);
                 
                 // Actualizar el último detailMessage válido
                 if let Ok(mut last) = last_detail_message.lock() {
@@ -285,7 +285,7 @@ async fn install_modpack_with_minecraft(app: tauri::AppHandle, modpack: Modpack,
             } else if message.starts_with("mod_unavailable:") {
                 // Para mods no disponibles: "mod_unavailable:filename"
                 let file_name = message.strip_prefix("mod_unavailable:").unwrap_or(&message);
-                let detail_msg = format!("mod_unavailable:No disponible: {}", file_name);
+                let detail_msg = format!("mod_unavailable:{}", file_name);
                 
                 // Actualizar el último detailMessage válido
                 if let Ok(mut last) = last_detail_message.lock() {
@@ -308,7 +308,7 @@ async fn install_modpack_with_minecraft(app: tauri::AppHandle, modpack: Modpack,
                 } else {
                     "archivo desconocido"
                 };
-                let detail_msg = format!("mod_error:Error: {}", file_name);
+                let detail_msg = format!("mod_error:{}", file_name);
                 
                 // Actualizar el último detailMessage válido
                 if let Ok(mut last) = last_detail_message.lock() {
@@ -507,7 +507,7 @@ async fn install_modpack_with_failed_tracking(app: tauri::AppHandle, modpack: Mo
             } else if message.starts_with("mod_name:") {
                 // Para archivos individuales de mods: "mod_name:filename"
                 let file_name = message.strip_prefix("mod_name:").unwrap_or(&message);
-                let detail_msg = format!("mod_name:Descargando: {}", file_name);
+                let detail_msg = format!("mod_name:{}", file_name);
                 
                 // Actualizar el último detailMessage válido
                 if let Ok(mut last) = last_detail_message.lock() {
@@ -525,7 +525,7 @@ async fn install_modpack_with_failed_tracking(app: tauri::AppHandle, modpack: Mo
             } else if message.starts_with("mod_completed:") {
                 // Para mods completados: "mod_completed:filename"
                 let file_name = message.strip_prefix("mod_completed:").unwrap_or(&message);
-                let detail_msg = format!("mod_completed:Descargado: {}", file_name);
+                let detail_msg = format!("mod_completed:{}", file_name);
                 
                 // Actualizar el último detailMessage válido
                 if let Ok(mut last) = last_detail_message.lock() {
@@ -543,7 +543,7 @@ async fn install_modpack_with_failed_tracking(app: tauri::AppHandle, modpack: Mo
             } else if message.starts_with("mod_exists:") {
                 // Para mods que ya existen: "mod_exists:filename"
                 let file_name = message.strip_prefix("mod_exists:").unwrap_or(&message);
-                let detail_msg = format!("mod_exists:Ya existe: {}", file_name);
+                let detail_msg = format!("mod_exists:{}", file_name);
                 
                 // Actualizar el último detailMessage válido
                 if let Ok(mut last) = last_detail_message.lock() {
@@ -561,7 +561,7 @@ async fn install_modpack_with_failed_tracking(app: tauri::AppHandle, modpack: Mo
             } else if message.starts_with("mod_unavailable:") {
                 // Para mods no disponibles: "mod_unavailable:filename"
                 let file_name = message.strip_prefix("mod_unavailable:").unwrap_or(&message);
-                let detail_msg = format!("mod_unavailable:No disponible: {}", file_name);
+                let detail_msg = format!("mod_unavailable:{}", file_name);
                 
                 // Actualizar el último detailMessage válido
                 if let Ok(mut last) = last_detail_message.lock() {
@@ -584,7 +584,7 @@ async fn install_modpack_with_failed_tracking(app: tauri::AppHandle, modpack: Mo
                 } else {
                     "archivo desconocido"
                 };
-                let detail_msg = format!("mod_error:Error: {}", file_name);
+                let detail_msg = format!("mod_error:{}", file_name);
                 
                 // Actualizar el último detailMessage válido
                 if let Ok(mut last) = last_detail_message.lock() {

@@ -20,16 +20,17 @@
   },
   "navigation": {
     "modpacks": "Modpacks",
-    "settings": "Configuración",
+    "settings": "Ajustes",
     "about": "Acerca de",
-    "backToList": "Volver a la lista"
+    "backToList": "Volver a la Lista",
+    "home": "Inicio"
   },
   "sidebar": {
     "expand": "Expandir barra lateral",
     "collapse": "Contraer barra lateral"
   },
   "modpacks": {
-    "title": "Modpacks Disponibles",
+    "title": "Modpacks",
     "searchPlaceholder": "Buscar modpacks...",
     "noResults": "No se encontraron modpacks",
     "noModpacks": "No hay modpacks disponibles",
@@ -52,45 +53,57 @@
     "downloading": "Descargando...",
     "extracting": "Extrayendo...",
     "progress": "Progreso: {{percent}}%",
-    "version": "Versión {{version}}",
+    "version": "Versión",
     "minecraftVersion": "Minecraft {{version}}",
-    "modloader": "{{loader}} {{version}}",
+    "modloader": "Modloader",
     "description": "Descripción",
     "systemRequirements": "Requisitos del sistema",
     "javaVersion": "Java {{version}}",
     "ramRequired": "RAM Requerida: {{ram}}GB",
     "details": "Ver detalles",
     "actions": "Acciones",
-    "requirements": "Requerimientos",
+    "requirements": "Requisitos del Sistema",
     "contributors": "Colaboradores",
     "gallery": "Galería",
     "features": "Características",
     "multimedia": "Contenido Multimedia",
-    "changelog": "Historial de Cambios",
+    "changelog": "Registro de Cambios",
     "connect": "Conectar",
     "notAvailable": "No disponible",
     "repair": "Reparar",
     "copyIP": "Copiar IP",
     "serverIP": "IP:",
-    "serverIPLabel": "IP del Servidor:",
+    "serverIPLabel": "IP del Servidor",
     "refresh": "Actualizar lista de modpacks",
     "refreshDisabledDuringInstall": "No se puede actualizar mientras se instala un modpack",
     "availableCount": "{{count}} modpack disponible",
     "availableCount_plural": "{{count}} modpacks disponibles",
     "descriptionNotAvailable": "Descripción no disponible",
-    "recommendedRAM": "RAM Recomendada:",
-    "ramMinRecommended": "{{min}} GB mínimo, {{recommended}} GB recomendado",
-    "recommendedJVMArgs": "JVM Args Recomendados:",
+    "recommendedRAM": "RAM Recomendada",
+    "ramMinRecommended": "Mínimo: {{min}}GB / Recomendado: {{recommended}}GB",
+    "recommendedJVMArgs": "Argumentos JVM Recomendados",
     "noChangelogAvailable": "No hay información de cambios disponible.",
     "viewOnTikTok": "Ver en TikTok",
     "imageGallery": "Imagen {{index}} de {{total}}",
-    "remove": "Remover",
+    "remove": "Eliminar",
     "removeConfirmTitle": "Confirmar eliminación",
     "removeConfirmMessage": "¿Estás seguro de que quieres remover \"{{name}}\"?\n\nEsta acción eliminará todos los archivos del modpack y no se puede deshacer.",
     "removeButton": "Sí, remover",
     "removing": "Removiendo...",
     "removeTooltip": "Remover modpack",
-    "openFolderTooltip": "Abrir carpeta de la instancia"
+    "openFolder": "Instancia",
+    "downloads": "Descargas",
+    "playTime": "Tiempo de Juego",
+    "activePlayers": "Jugadores Activos",
+    "installation": "Instalación",
+    "serverInfo": "Información del Servidor",
+    "gamemode": "Modo de Juego",
+    "status": {
+      "new": "Nuevo",
+      "active": "Activo",
+      "coming_soon": "Próximamente",
+      "inactive": "Inactivo"
+    }
   },
   "errors": {
     "unknown": "Error desconocido",
@@ -146,10 +159,10 @@
     "curseforgeCompleted": "Modpack de CurseForge procesado exitosamente"
   },
   "settings": {
-    "title": "Configuración",
+    "title": "Ajustes",
     "general": "General",
     "minecraft": "Minecraft",
-    "advanced": "Avanzado",
+    "advanced": "Ajustes Avanzados",
     "performance": "Rendimiento",
     "java": "Java",
     "api": "Estado de la API",
@@ -194,7 +207,9 @@
     "settingsDescription": "Personaliza tu experiencia con el LuminaKraft Launcher",
     "dataUrlDescription": "URL donde se obtienen los datos de modpacks disponibles",
     "unsavedChanges": "Tienes cambios sin guardar",
-    "saveChanges": "Guardar cambios"
+    "saveChanges": "Guardar cambios",
+    "theme": "Tema",
+    "notifications": "Notificaciones"
   },
   "auth": {
     "title": "Autenticación",
@@ -234,10 +249,10 @@
     "authCanceled": "La autenticación fue cancelada."
   },
   "about": {
-    "title": "Acerca de LuminaKraft Launcher",
+    "title": "Acerca de",
     "description": "Launcher oficial de modpacks de LuminaKraft Studios",
     "descriptionLong": "Un lanzador de modpacks personalizado para la comunidad de LuminaKraft Studios. Diseñado para hacer que la instalación y gestión de modpacks sea simple y eficiente.",
-    "version": "Versión {{version}} (Alpha)",
+    "version": "Versión",
     "versionLabel": "Versión:",
     "technologies": "Tecnologías:",
     "technologiesValue": "Tauri + React + TypeScript",
@@ -282,8 +297,9 @@
     "developedBy": "Desarrollado por LuminaKraft Studios",
     "poweredBy": "Impulsado por Tauri y React",
     "copyright": "© 2025 LuminaKraft Studios. Todos los derechos reservados.",
-    "license": "Este software está licenciado bajo los términos de la licencia MIT.",
-    "minecraftTrademark": "Minecraft es una marca registrada de Mojang Studios"
+    "license": "Licencia",
+    "minecraftTrademark": "Minecraft es una marca registrada de Mojang Studios",
+    "contributors": "Colaboradores"
   },
   "notifications": {
     "updateAvailable": "Actualización disponible",
@@ -312,5 +328,18 @@
     "cleanup": "Limpiar Caché",
     "cleanupSuccess": "Se limpiaron {{count}} elementos",
     "cleanupDescription": "Eliminar archivos en caché que ya no se utilizan"
+  },
+  "common": {
+    "showMore": "Mostrar Más",
+    "showLess": "Mostrar Menos",
+    "loading": "Cargando...",
+    "error": "Error",
+    "success": "Éxito",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "save": "Guardar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "close": "Cerrar"
   }
 } 

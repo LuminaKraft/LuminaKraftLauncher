@@ -11,31 +11,31 @@ export interface LauncherData {
 export interface Modpack {
   id: string;
   name: string;
+  description: string;
   version: string;
   minecraftVersion: string;
-  modloader: 'forge' | 'fabric' | 'neoforge' | 'paper' | 'vanilla';
-  modloaderVersion: string;
-  gamemode: string;
-  isNew: boolean;
-  isActive: boolean;
-  isComingSoon: boolean;
-  images: string[];
+  modloader: string;
   logo: string;
-  urlIcono: string;
-  featureIcons: string[];
-  collaborators: Collaborator[];
-  urlModpackZip: string | null;
-  changelog: string;
-  jvmArgsRecomendados: string;
-  youtubeEmbed?: string;
-  tiktokEmbed?: string;
+  banner?: string;
+  changelog?: string;
+  gamemode?: string;
   ip?: string;
-  leaderboardPath?: string;
+  jvmArgsRecomendados?: string;
+  isNew?: boolean;
+  isActive?: boolean;
+  isComingSoon?: boolean;
+  downloads?: number;
+  playTime?: number;
+  players?: number;
+  collaborators?: Collaborator[];
+  urlModpackZip?: string;
+  urlIcono?: string;
 }
 
 export interface Collaborator {
   name: string;
-  logo: string;
+  role?: string;
+  avatar?: string;
 }
 
 export interface Translations {
@@ -70,7 +70,7 @@ export interface ModpackFeatures {
 
 export interface Feature {
   title: string;
-  description: string;
+  description?: string;
 }
 
 export interface AvailableLanguages {
@@ -123,7 +123,14 @@ export interface ProgressInfo {
 // Mantener DownloadProgress por compatibilidad
 export type DownloadProgress = ProgressInfo;
 
-export type ModpackStatus = 'not_installed' | 'installed' | 'outdated' | 'installing' | 'updating' | 'launching' | 'error';
+export type ModpackStatus = 
+  | 'not_installed'
+  | 'installed'
+  | 'outdated'
+  | 'installing'
+  | 'updating'
+  | 'launching'
+  | 'error';
 
 export interface ProgressHistoryEntry {
   percentage: number;
@@ -131,17 +138,36 @@ export interface ProgressHistoryEntry {
 }
 
 export interface ModpackState {
-  status: ModpackStatus;
-  progress?: DownloadProgress;
-  error?: string;
+  installed: boolean;
+  downloading: boolean;
+  progress: number;
   translations?: {
-    name: string;
-    description: string;
-    shortDescription: string;
+    name?: string;
+    description?: string;
+    shortDescription?: string;
   };
   features?: Feature[];
-  progressHistory?: ProgressHistoryEntry[];
-  lastEtaSeconds?: number; // Para suavizado del cálculo de ETA
+  status: ModpackStatus;
+  error?: string;
+}
+
+export interface ModpackTranslations {
+  name?: string;
+  description?: string;
+}
+
+export interface LauncherTranslations {
+  ui: {
+    modloader: {
+      [key: string]: string;
+    };
+    status: {
+      new: string;
+      active: string;
+      coming_soon: string;
+      inactive: string;
+    };
+  };
 }
 
 export interface FailedMod {
