@@ -278,6 +278,7 @@ To contribute translations:
 ## 📚 Documentation
 
 - [Documentation Overview](docs/README.md) - Complete documentation guide
+- [Release Workflow](docs/RELEASE_WORKFLOW.md) - Automated release process and workflow diagram
 - [Testing Guide](docs/TESTING_GUIDE.md) - Testing procedures and quality assurance
 - [Lyceris Integration](docs/LYCERIS_INTEGRATION_SUMMARY.md) - Core launcher library details
 - [Contributing Guidelines](CONTRIBUTING.md) - How to contribute to the project

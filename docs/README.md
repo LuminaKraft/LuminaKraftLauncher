@@ -7,6 +7,7 @@ This directory contains essential documentation for the LuminaKraft Launcher pro
 ### Development & Testing
 - **[Testing Guide](TESTING_GUIDE.md)** - Comprehensive testing procedures and quality assurance
 - **[Lyceris Integration Summary](LYCERIS_INTEGRATION_SUMMARY.md)** - Core Minecraft launcher library integration details
+- **[Release Workflow](RELEASE_WORKFLOW.md)** - Complete automated release process and workflow diagram
 
 ## 🚀 Quick Start for Developers
 
