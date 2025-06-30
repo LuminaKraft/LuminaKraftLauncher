@@ -140,7 +140,9 @@ export interface ProgressHistoryEntry {
 export interface ModpackState {
   installed: boolean;
   downloading: boolean;
-  progress: number;
+  progress: ProgressInfo;
+  progressHistory?: ProgressHistoryEntry[];
+  lastEtaSeconds?: number;
   translations?: {
     name?: string;
     description?: string;

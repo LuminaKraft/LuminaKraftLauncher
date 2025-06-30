@@ -7,7 +7,8 @@ import type {
   Translations, 
   ModpackFeatures,
   ProgressInfo,
-  FailedMod
+  FailedMod,
+  ModpackStatus
 } from '../types/launcher';
 import LauncherService from '../services/launcherService';
 import { FailedModsDialog } from '../components/FailedModsDialog';
@@ -186,6 +187,33 @@ function launcherReducer(state: LauncherState, action: LauncherAction): Launcher
 
 const LauncherContext = createContext<LauncherContextType | undefined>(undefined);
 
+// Helper function to create a complete ModpackState object
+const createModpackState = (
+  status: ModpackStatus,
+  overrides: Partial<ModpackState> = {}
+): ModpackState => {
+  const defaultProgress: ProgressInfo = {
+    percentage: 0,
+    downloaded: 0,
+    total: 0,
+    speed: 0,
+    currentFile: '',
+    downloadSpeed: '',
+    eta: '',
+    step: '',
+    generalMessage: '',
+    detailMessage: ''
+  };
+
+  return {
+    installed: ['installed', 'outdated'].includes(status),
+    downloading: ['installing', 'updating', 'launching'].includes(status),
+    progress: defaultProgress,
+    status,
+    ...overrides
+  };
+};
+
 export function LauncherProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(launcherReducer, initialState);
   const [failedMods, setFailedMods] = useState<FailedMod[]>([]);
@@ -265,11 +293,10 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
           type: 'SET_MODPACK_STATE',
           payload: {
             id: modpack.id,
-            state: {
-              status,
+            state: createModpackState(status, {
               translations: translations || undefined,
               features: features?.features || []
-            },
+            }),
           },
         });
       } catch (error) {
@@ -278,7 +305,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
           type: 'SET_MODPACK_STATE',
           payload: {
             id: modpack.id,
-            state: { status: 'error', error: 'Error al cargar el estado' },
+            state: createModpackState('error', { error: 'Error al cargar el estado' }),
           },
         });
       }
@@ -331,11 +358,10 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
                 type: 'SET_MODPACK_STATE',
                 payload: {
                   id: modpack.id,
-                  state: {
-                    status,
+                  state: createModpackState(status, {
                     translations: modpackTranslations || undefined,
                     features: features?.features || []
-                  },
+                  }),
                 },
               });
             } catch (modpackError) {
@@ -345,7 +371,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
                 type: 'SET_MODPACK_STATE',
                 payload: {
                   id: modpack.id,
-                  state: { status: 'error', error: 'Error al cargar datos del modpack' },
+                  state: createModpackState('error', { error: 'Error al cargar datos del modpack' }),
                 },
               });
             }
@@ -398,7 +424,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
       payload: {
         id: modpackId,
         state: { 
-          ...state.modpackStates[modpackId],
+          ...(state.modpackStates[modpackId] || createModpackState('not_installed')),
           status: actionStatus
         },
       },
@@ -449,7 +475,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
         payload: {
           id: modpackId,
           state: { 
-            ...state.modpackStates[modpackId],
+            ...(state.modpackStates[modpackId] || createModpackState('not_installed')),
             status: newStatus
           },
         },
@@ -487,7 +513,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
         payload: {
           id: modpackId,
           state: { 
-            ...state.modpackStates[modpackId],
+            ...(state.modpackStates[modpackId] || createModpackState('not_installed')),
             status: 'error', 
             error: userFriendlyError
           },
@@ -511,7 +537,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
         payload: {
           id,
           state: { 
-            ...state.modpackStates[id],
+            ...(state.modpackStates[id] || createModpackState('not_installed')),
             status: 'installing' // Usar installing como estado temporal mientras se elimina
           },
         },
@@ -526,11 +552,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
         type: 'SET_MODPACK_STATE',
         payload: {
           id,
-          state: { 
-            status: 'not_installed',
-            progress: undefined,
-            error: undefined
-          },
+          state: createModpackState('not_installed'),
         },
       });
     } catch (error) {
@@ -540,7 +562,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
         payload: {
           id,
           state: { 
-            ...state.modpackStates[id],
+            ...(state.modpackStates[id] || createModpackState('not_installed')),
             status: 'error', 
             error: error instanceof Error ? error.message : 'Error al remover el modpack'
           },

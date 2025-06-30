@@ -60,7 +60,23 @@ const ModpacksPage: React.FC = () => {
   }
 
   if (selectedModpack) {
-    const modpackState = modpackStates[selectedModpack.id] || { status: 'not_installed' };
+    const modpackState = modpackStates[selectedModpack.id] || {
+      status: 'not_installed' as const,
+      installed: false,
+      downloading: false,
+      progress: {
+        percentage: 0,
+        downloaded: 0,
+        total: 0,
+        speed: 0,
+        currentFile: '',
+        downloadSpeed: '',
+        eta: '',
+        step: '',
+        generalMessage: '',
+        detailMessage: ''
+      }
+    };
     return (
       <ModpackDetails
         modpack={selectedModpack}
@@ -137,7 +153,23 @@ const ModpacksPage: React.FC = () => {
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredModpacks.map((modpack) => {
-                const modpackState = modpackStates[modpack.id] || { status: 'not_installed' };
+                const modpackState = modpackStates[modpack.id] || {
+                  status: 'not_installed' as const,
+                  installed: false,
+                  downloading: false,
+                  progress: {
+                    percentage: 0,
+                    downloaded: 0,
+                    total: 0,
+                    speed: 0,
+                    currentFile: '',
+                    downloadSpeed: '',
+                    eta: '',
+                    step: '',
+                    generalMessage: '',
+                    detailMessage: ''
+                  }
+                };
                 
                 return (
                   <ModpackCard

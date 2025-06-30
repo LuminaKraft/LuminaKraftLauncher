@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { 
-  ArrowLeft, Calendar, Package, Cpu, HardDrive, Users, Globe, Star, 
-  Image as ImageIcon, Download, Clock, Server, Shield, ChevronDown,
+  ArrowLeft, Calendar, Package, Cpu, HardDrive, Users, 
+  Download, Clock, Server, Shield, ChevronDown,
   AlertCircle, CheckCircle2, Clock3, CircleDot, Play, RefreshCw, Wrench, FolderOpen, Trash2,
   Loader2
 } from 'lucide-react';
@@ -20,7 +20,6 @@ interface ModpackDetailsProps {
 const ModpackDetails: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack }) => {
   const { t } = useTranslation();
   const { translations, installModpack, updateModpack, launchModpack, repairModpack, removeModpack } = useLauncher();
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [showFullChangelog, setShowFullChangelog] = useState(false);
   const [expandedFeatures, setExpandedFeatures] = useState<string[]>([]);
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
@@ -313,12 +312,12 @@ const ModpackDetails: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack 
                 {['installing', 'updating', 'launching'].includes(state.status) && state.progress && (
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm text-dark-300">
-                      <span>{Math.round(state.progress)}%</span>
+                      <span>{Math.round(state.progress.percentage)}%</span>
                     </div>
                     <div className="w-full bg-dark-700 rounded-full h-2 overflow-hidden">
                       <div
                         className="bg-gradient-to-r from-lumina-600 to-lumina-500 h-2 rounded-full transition-all duration-500 ease-out"
-                        style={{ width: `${state.progress}%` }}
+                        style={{ width: `${state.progress.percentage}%` }}
                       />
                     </div>
                   </div>
