@@ -458,7 +458,11 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
           }
           break;
         case 'update':
-          await launcherService.updateModpack(modpackId, onProgress);
+          const updateFailedModsResult = await launcherService.updateModpack(modpackId, onProgress);
+          if (updateFailedModsResult && updateFailedModsResult.length > 0) {
+            setFailedMods(updateFailedModsResult);
+            setShowFailedModsDialog(true);
+          }
           break;
         case 'launch':
           await launcherService.launchModpack(modpackId);

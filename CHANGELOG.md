@@ -5,6 +5,65 @@ All notable changes to the LuminaKraft Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.8-alpha.2] - 2025-06-30
+
+### 🔧 **Code Quality & Architecture Improvements**
+
+#### **Dead Code Elimination & Warning Resolution**
+- **Removed 244 lines of duplicate code**: Eliminated unused `process_curseforge_modpack_for_update()` and related functions
+- **Fixed all compilation warnings**: Resolved 7 dead code warnings for cleaner builds
+- **Proper function integration**: Integrated `format_bytes()` into `get_meta_storage_info()` for better UX
+- **Enhanced cache management**: Exposed granular cache clearing functions as Tauri commands
+
+#### **Module Renaming & Organization**
+- **Renamed `shared.rs` to `meta.rs`**: More accurate naming reflecting meta directory management
+- **Updated all imports**: Changed `crate::shared::` → `crate::meta::` across codebase
+- **Better code organization**: Eliminated confusion between general shared utilities and meta storage
+
+#### **Enhanced Failed Mods Support**
+- **FailedModsDialog for Updates**: Now shows failed mod dialog during modpack updates (previously only installs)
+- **Consistent error handling**: Both install and update operations use `installModpackWithFailedTracking()`
+- **Better user experience**: Users can see and manually download failed mods during updates
+
+### 🎨 **UI/UX Enhancements**
+
+#### **Enhanced Meta Storage Information**
+- **Formatted file sizes**: Added human-readable size formatting (e.g., "2.4 GB" instead of raw bytes)
+- **Better storage display**: Meta storage info now shows both raw and formatted sizes
+- **Improved readability**: Users see "149.2 MB" instead of "156437504" bytes
+
+#### **New Cache Management Commands**
+- **Granular cache control**: Added `clear_icons_cache()` and `clear_screenshots_cache()` Tauri commands
+- **Selective cleanup**: Users can now clear specific cache types instead of all cache
+- **Better storage management**: More control over launcher storage usage
+
+### 🔧 **Technical Improvements**
+
+#### **Smart Update System**
+- **Unified install/update logic**: Single function handles both operations with automatic detection
+- **Version comparison**: Compares modpack version, Minecraft version, modloader, and modloader version
+- **Efficient updates**: Skips unnecessary processing when versions match
+- **Complete reinstall approach**: Updates work by replacing all files in existing instance directory
+
+#### **Code Documentation**
+- **API field documentation**: Added clear comments for CurseForge API fields reserved for future use
+- **Function documentation**: Documented planned features with `#[allow(dead_code)]` and explanatory comments
+- **Better maintainability**: Clear intent preserved for future development
+
+### 🐛 **Bug Fixes**
+- Fixed missing FailedModsDialog during modpack updates
+- Resolved all compilation warnings for cleaner builds
+- Fixed unused import warnings after dead code removal
+- Eliminated duplicate update functionality that was causing confusion
+
+### 📋 **Breaking Changes**
+- None - all changes maintain backward compatibility
+
+### 🔧 **Migration Notes**
+- Automatic improvements upon update
+- All user settings and installed modpacks preserved
+- Enhanced error tracking and cache management available immediately
+
 ## [0.0.8-alpha.1] - 2025-06-29
 
 ### 🎨 **UI/UX Improvements**

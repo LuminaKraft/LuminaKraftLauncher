@@ -13,13 +13,19 @@ pub const CACHES_FOLDER_NAME: &str = "caches";
 /// Directory structure for meta resources (following Modrinth's structure)
 #[derive(Debug, Clone)]
 pub struct MetaDirectories {
+    /// Base app data directory - Reserved for future use
+    #[allow(dead_code)]
     pub base_dir: PathBuf,
     pub meta_dir: PathBuf,
     pub libraries_dir: PathBuf,
     pub assets_dir: PathBuf,
     pub versions_dir: PathBuf,
     pub java_dir: PathBuf,
+    /// Assets index directory - Reserved for direct asset management
+    #[allow(dead_code)]
     pub assets_index_dir: PathBuf,
+    /// Assets objects directory - Reserved for direct asset management  
+    #[allow(dead_code)]
     pub objects_dir: PathBuf,
     pub natives_dir: PathBuf,
     pub caches_dir: PathBuf,

@@ -1,4 +1,4 @@
-use crate::{Modpack, InstanceMetadata, UserSettings, filesystem, minecraft, shared::{MetaDirectories, InstanceDirectories}};
+use crate::{Modpack, InstanceMetadata, UserSettings, filesystem, minecraft, meta::{MetaDirectories, InstanceDirectories}};
 use crate::modpack::{extract_zip, curseforge};
 use crate::utils::{cleanup_temp_file, download_file};
 use anyhow::{Result, anyhow};
@@ -145,7 +145,7 @@ where
 
     // Link meta resources to instance
     emit_progress("Vinculando recursos...".to_string(), 65.0, "linking_resources".to_string());
-    crate::shared::link_meta_resources_to_instance(&meta_dirs, &instance_dirs, &modpack.minecraft_version).await?;
+    crate::meta::link_meta_resources_to_instance(&meta_dirs, &instance_dirs, &modpack.minecraft_version).await?;
 
     // Install modpack files
     emit_progress("Instalando archivos del modpack...".to_string(), 70.0, "installing_modpack_files".to_string());
@@ -224,7 +224,7 @@ pub async fn launch_modpack_with_shared_storage(
     let instance_dirs = InstanceDirectories::new(&modpack.id)?;
     
     // Ensure meta resources are linked to instance
-    crate::shared::link_meta_resources_to_instance(&meta_dirs, &instance_dirs, &modpack.minecraft_version).await?;
+    crate::meta::link_meta_resources_to_instance(&meta_dirs, &instance_dirs, &modpack.minecraft_version).await?;
     
     // Launch using regular function (instance directory now has symlinks to meta resources)
     minecraft::launch_minecraft(modpack, settings).await
@@ -241,9 +241,13 @@ pub async fn get_meta_storage_info() -> Result<serde_json::Value> {
     
     Ok(serde_json::json!({
         "total_size": total_size,
+        "total_size_formatted": format_bytes(total_size),
         "cache_size": cache_size,
+        "cache_size_formatted": format_bytes(cache_size),
         "icons_size": icons_cache_size,
+        "icons_size_formatted": format_bytes(icons_cache_size),
         "screenshots_size": screenshots_cache_size,
+        "screenshots_size_formatted": format_bytes(screenshots_cache_size),
         "meta_path": meta_dirs.meta_dir.display().to_string(),
         "minecraft_versions_count": minecraft_versions_count,
         "java_installations_count": java_installations_count
@@ -318,6 +322,26 @@ pub async fn cache_modpack_images(modpacks: Vec<serde_json::Value>) -> Result<()
     }
     
     Ok(())
+}
+
+/// Clear only modpack icons cache
+pub async fn clear_icons_cache() -> Result<Vec<String>> {
+    let meta_dirs = MetaDirectories::init().await?;
+    
+    match meta_dirs.clear_icons_cache().await {
+        Ok(_) => Ok(vec!["Icons cache cleared".to_string()]),
+        Err(e) => Err(anyhow::anyhow!("Failed to clear icons cache: {}", e)),
+    }
+}
+
+/// Clear only modpack screenshots cache
+pub async fn clear_screenshots_cache() -> Result<Vec<String>> {
+    let meta_dirs = MetaDirectories::init().await?;
+    
+    match meta_dirs.clear_screenshots_cache().await {
+        Ok(_) => Ok(vec!["Screenshots cache cleared".to_string()]),
+        Err(e) => Err(anyhow::anyhow!("Failed to clear screenshots cache: {}", e)),
+    }
 }
 
 fn format_bytes(bytes: u64) -> String {

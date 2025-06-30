@@ -439,10 +439,10 @@ class LauncherService {
     }
   }
 
-  async updateModpack(modpackId: string, onProgress?: (progress: ProgressInfo) => void): Promise<void> {
-    // Las actualizaciones usan la misma función que instalación
+  async updateModpack(modpackId: string, onProgress?: (progress: ProgressInfo) => void): Promise<any[]> {
+    // Las actualizaciones usan la misma función que instalación con tracking de fallos
     // pero el backend detecta automáticamente si es instalación inicial o actualización
-    return this.installModpack(modpackId, onProgress);
+    return this.installModpackWithFailedTracking(modpackId, onProgress);
   }
 
   async launchModpack(modpackId: string): Promise<void> {

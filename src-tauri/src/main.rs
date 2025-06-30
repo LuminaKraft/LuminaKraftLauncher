@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use anyhow::Result;
 
 mod launcher;
-mod shared;
+mod meta;
 mod filesystem;
 mod minecraft;
 mod modpack;
@@ -1004,6 +1004,22 @@ async fn cache_modpack_images_command(modpacks: Vec<serde_json::Value>) -> Resul
     }
 }
 
+#[tauri::command]
+async fn clear_icons_cache() -> Result<Vec<String>, String> {
+    match launcher::clear_icons_cache().await {
+        Ok(result) => Ok(result),
+        Err(e) => Err(format!("Failed to clear icons cache: {}", e)),
+    }
+}
+
+#[tauri::command]
+async fn clear_screenshots_cache() -> Result<Vec<String>, String> {
+    match launcher::clear_screenshots_cache().await {
+        Ok(result) => Ok(result),
+        Err(e) => Err(format!("Failed to clear screenshots cache: {}", e)),
+    }
+}
+
 /// Parsea mensajes de "Progress:" para crear mensajes generales útiles
 /// Ejemplo: "Progress: 3835/3855 - Java (99.48119%)" -> "Progreso: Descargando Java... (3835/3855)"
 /// Devuelve None si debe mantener el mensaje anterior (evita parpadeo)
@@ -1075,7 +1091,9 @@ fn main() {
             open_instance_folder,
             get_meta_storage_info,
             cleanup_meta_storage,
-            cache_modpack_images_command
+            cache_modpack_images_command,
+            clear_icons_cache,
+            clear_screenshots_cache
         ])
         .setup(|app| {
             // Initialize app data directory

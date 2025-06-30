@@ -48,13 +48,19 @@ pub struct ModFileInfo {
     pub file_name: Option<String>,
     #[serde(default)]
     pub hashes: Vec<FileHash>,
+    /// File availability status from CurseForge API - Reserved for future use
     #[serde(rename = "isAvailable", default)]
+    #[allow(dead_code)]
     pub is_available: Option<bool>,
+    /// File status code from CurseForge API - Reserved for future use
     #[serde(rename = "fileStatus", default)]
+    #[allow(dead_code)]
     pub file_status: Option<i32>,
     #[serde(rename = "modId", default)]
     pub mod_id: Option<i64>,
+    /// Display name from CurseForge API - Reserved for future use
     #[serde(rename = "displayName", default)]
+    #[allow(dead_code)]
     pub display_name: Option<String>,
 }
 
