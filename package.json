@@ -24,12 +24,16 @@
     "release:major-push": "node scripts/release.js major --push",
     "release:alpha": "node scripts/release.js",
     "release:alpha-push": "node scripts/release.js --push",
+    "sign-update": "node scripts/sign-update.js",
+    "update-manifest": "node scripts/update-manifest.cjs",
     "clean": "rm -rf node_modules/.vite && rm -rf dist && rm -rf src-tauri/target"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.6.0",
-    "@tauri-apps/plugin-opener": "^2",
     "@tauri-apps/plugin-dialog": "^2",
+    "@tauri-apps/plugin-opener": "^2",
+    "@tauri-apps/plugin-process": "^2.3.0",
+    "@tauri-apps/plugin-updater": "^2.9.0",
     "axios": "^1.6.2",
     "i18next": "^25.2.1",
     "i18next-browser-languagedetector": "^8.2.0",

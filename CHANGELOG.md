@@ -5,6 +5,127 @@ All notable changes to the LuminaKraft Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.8-alpha.3] - 2025-06-30
+
+### 🚀 **Automatic Update System Implementation**
+
+#### **Complete Automatic Update Infrastructure**
+- **Tauri Updater Integration**: Implemented native Tauri updater plugin for seamless automatic updates
+- **Cryptographic Signing**: Added secure update signing with password-protected private keys
+- **Cross-Platform Support**: Automatic updates work on Windows, macOS (Intel/ARM), and Linux
+- **Progress Tracking**: Real-time download and installation progress with percentage indicators
+- **Automatic Restart**: App automatically restarts after successful update installation
+
+#### **Prerelease Update Support**
+- **Experimental Updates Toggle**: Added settings option to enable/disable prerelease updates (alpha, beta, rc)
+- **Dual Update System**: 
+  - Stable releases: Automatic installation via Tauri updater
+  - Prereleases: Manual download page opening for GitHub releases
+- **Smart Version Detection**: Automatically detects prerelease vs stable versions
+- **User Choice**: Users can opt-in to experimental updates with clear warnings
+
+#### **Enhanced Update User Experience**
+- **Elegant Update Dialog**: Beautiful update notification with version info and release notes
+- **Progress Visualization**: Real-time progress bars showing download and installation status
+- **Automatic Background Checks**: App checks for updates on startup and periodically
+- **Fallback Handling**: Graceful fallback to manual restart if automatic restart fails
+
+### 🔧 **Release Workflow Automation**
+
+#### **Automated Release Process**
+- **Integrated Update Manifest**: `release.js` now automatically updates `updater.json` with correct URLs
+- **Smart URL Generation**: Automatically generates correct URLs for stable vs prerelease versions
+- **Version Management**: Single command updates all version files across the project
+- **Git Integration**: Automatic commit and tag creation for releases
+
+#### **New Scripts and Tools**
+- **`update-manifest.cjs`**: Automatically configures updater endpoints for different release types
+- **`sign-update.js`**: Manual signing tool with password support for development releases
+- **Enhanced `release.js`**: Now includes automatic manifest updates in the release workflow
+
+#### **GitHub Actions Enhancement**
+- **Automatic Signing**: GitHub Actions now automatically signs all release artifacts
+- **Secret Management**: Secure handling of signing keys via GitHub Secrets
+- **Cross-Platform Builds**: Automated builds for all platforms with proper signing
+
+### 🎨 **Settings and Configuration**
+
+#### **New Prerelease Settings**
+- **Experimental Updates Toggle**: New checkbox in Settings to enable prerelease updates
+- **Clear Warnings**: Descriptive text explaining risks of experimental versions
+- **Default Disabled**: Prereleases disabled by default for stability
+- **Bilingual Support**: Full English and Spanish translations for new settings
+
+#### **Enhanced Settings UI**
+- **Shield Icon**: Added visual indicator for experimental features section
+- **Improved Layout**: Better organization of settings with clear sections
+- **User Feedback**: Toast notifications for settings changes
+
+### 🔐 **Security and Infrastructure**
+
+#### **Cryptographic Security**
+- **Password-Protected Keys**: Private signing keys now support password protection
+- **GitHub Secrets Integration**: Secure storage of signing keys and passwords
+- **Signature Verification**: All updates verified with cryptographic signatures
+- **HTTPS-Only**: All update endpoints use secure HTTPS connections
+
+#### **Update Endpoint Configuration**
+- **Corrected URLs**: Fixed all references to use current repository structure
+- **Dynamic Endpoints**: Different endpoints for stable vs prerelease versions
+- **Raw GitHub Integration**: Uses raw.githubusercontent.com for reliable manifest access
+
+### 📚 **Documentation and Workflow**
+
+#### **Comprehensive Documentation**
+- **Release Workflow Guide**: Complete documentation with Mermaid diagram showing automated process
+- **Auto-Update Setup Guide**: Detailed setup instructions for automatic updates
+- **Troubleshooting**: Common issues and solutions for update system
+- **Visual Diagrams**: Mermaid diagrams showing complete workflow automation
+
+#### **Developer Experience**
+- **Automated Commands**: Single commands for complete release process
+- **Visual Feedback**: Clear progress indicators and status messages
+- **Error Handling**: Comprehensive error handling with helpful messages
+- **Workflow Integration**: Seamless integration with existing development workflow
+
+### 🐛 **Bug Fixes and Improvements**
+- Fixed incorrect API endpoints pointing to non-existent repositories
+- Resolved module import issues with CommonJS/ES modules
+- Corrected updater.json URL patterns for different release types
+- Fixed version comparison logic for prerelease detection
+- Improved error handling in update service
+
+### 📋 **Breaking Changes**
+- **Update System**: New automatic update system replaces manual download links
+- **Settings Schema**: Added `enablePrereleases` field to user settings
+- **Backend API**: New Tauri commands for update checking and platform detection
+
+### 🔧 **Migration Notes**
+- **Automatic Migration**: Existing users will automatically receive the new update system
+- **Settings Reset**: New prerelease setting defaults to disabled for stability
+- **Backward Compatibility**: All existing functionality preserved
+- **Update Experience**: Users will see new update dialogs and progress indicators
+
+### 🎯 **Technical Implementation Details**
+
+#### **Frontend Changes**
+- **UpdateService Rewrite**: Complete rewrite using Tauri's native updater APIs
+- **UpdateDialog Enhancement**: New progress tracking and automatic installation
+- **Settings Integration**: New prerelease toggle with proper state management
+- **Internationalization**: Full i18n support for all new update-related features
+
+#### **Backend Changes**
+- **Tauri Configuration**: Added updater plugin and cryptographic key configuration
+- **Platform Detection**: New commands for version and platform detection
+- **URL Management**: Dynamic URL generation for different release types
+- **Security Integration**: Password-protected key support in build process
+
+#### **Infrastructure Changes**
+- **GitHub Actions**: Enhanced workflow with automatic signing
+- **Script Automation**: New scripts for manifest management and signing
+- **Documentation**: Comprehensive guides and visual workflow diagrams
+- **Security**: Cryptographic signing with password protection
+
 ## [0.0.8-alpha.2] - 2025-06-30
 
 ### 🔧 **Code Quality & Architecture Improvements** 

@@ -94,6 +94,8 @@ pub struct UserSettings {
     pub auth_method: String, // "offline" or "microsoft"
     #[serde(rename = "microsoftAccount")]
     pub microsoft_account: Option<MicrosoftAccount>,
+    #[serde(rename = "enablePrereleases", default)]
+    pub enable_prereleases: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -1149,8 +1151,10 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_fs::init())
-
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![
             get_instance_metadata,
             install_modpack,
@@ -1186,7 +1190,6 @@ fn main() {
             list_minecraft_versions,
             list_java_installations
         ])
-        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             // Initialize app data directory
             if let Err(e) = std::fs::create_dir_all(

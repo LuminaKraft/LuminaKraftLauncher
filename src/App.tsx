@@ -17,6 +17,7 @@ function AppContent() {
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
   const [isInstallingUpdate, setIsInstallingUpdate] = useState(false);
+  const [updateProgress, setUpdateProgress] = useState<{ current: number; total: number }>({ current: 0, total: 0 });
   const { isLoading, error, launcherData } = useLauncher();
   const launcherService = LauncherService.getInstance();
 
@@ -53,13 +54,15 @@ function AppContent() {
   }, [updateService, launcherService]);
 
   const handleDownloadUpdate = async () => {
-    if (!updateInfo || !updateInfo.downloadUrl) return;
+    if (!updateInfo || !updateInfo.hasUpdate) return;
     
     try {
       setIsInstallingUpdate(true);
-      await updateService.downloadUpdate(updateInfo.downloadUrl);
+      await updateService.downloadAndInstallUpdate((progress, total) => {
+        setUpdateProgress({ current: progress, total });
+      });
     } catch (error) {
-      console.error('Failed to download update:', error);
+      console.error('Failed to download and install update:', error);
     } finally {
       setIsInstallingUpdate(false);
     }
@@ -138,6 +141,7 @@ function AppContent() {
           onClose={handleCloseUpdateDialog}
           onDownload={handleDownloadUpdate}
           isDownloading={isInstallingUpdate}
+          downloadProgress={updateProgress}
         />
       )}
       <Toaster

@@ -213,7 +213,11 @@
     "useDetectedJava": "Usar Java detectado",
     "invalidJava": "Java seleccionado no válido o no compatible",
     "discardChanges": "Descartar cambios",
-    "changesDiscarded": "Cambios descartados exitosamente"
+    "changesDiscarded": "Cambios descartados exitosamente",
+    "prereleases": "Actualizaciones Experimentales",
+    "enablePrereleases": "Recibir actualizaciones experimentales",
+    "enablePrereleasesDesc": "Permite recibir versiones alpha, beta y release candidates. Estas versiones pueden contener errores y están destinadas para pruebas.",
+    "prereleaseWarning": "Las versiones experimentales pueden ser inestables"
   },
   "auth": {
     "title": "Autenticación",
@@ -288,6 +292,14 @@
     "checkingUpdates": "Verificando actualizaciones...",
     "checkUpdates": "Verificar actualizaciones",
     "downloadUpdate": "Descargar actualización",
+    "installUpdate": "Instalar actualización automáticamente",
+    "installingUpdate": "Instalando actualización...",
+    "updateInstalling": "Instalando...",
+    "updatePreparing": "Preparando...",
+    "updateDownloading": "Descargando actualización...",
+    "updateInstalled": "Actualización instalada exitosamente",
+    "updateFailed": "Error al instalar la actualización",
+    "restartRequired": "Reinicio requerido para aplicar la actualización",
     "prereleaseWarning": "Esta es una versión de pre-lanzamiento que puede contener errores y está destinada para pruebas",
     "prereleaseUpdate": "Actualización de Pre-lanzamiento Disponible",
     "prereleaseUpdateDesc": "Hay una nueva versión de pre-lanzamiento disponible. Las versiones de pre-lanzamiento pueden contener errores y están destinadas para pruebas.",

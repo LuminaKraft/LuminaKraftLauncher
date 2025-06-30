@@ -54,16 +54,19 @@ interface LauncherState {
   error: string | null;
 }
 
+const defaultSettings: UserSettings = {
+  username: 'Player',
+  allocatedRam: 4096,
+  launcherDataUrl: 'https://api.luminakraft.com/v1/launcher_data.json',
+  language: 'es',
+  authMethod: 'offline',
+  enablePrereleases: false,
+};
+
 const initialState: LauncherState = {
   launcherData: null,
   modpackStates: {},
-  userSettings: {
-    username: 'Player',
-    allocatedRam: 4,
-    launcherDataUrl: 'https://api.luminakraft.com/v1/launcher_data.json',
-    language: 'es',
-    authMethod: 'offline'
-  },
+  userSettings: defaultSettings,
   translations: null,
   currentLanguage: 'es',
   isLoading: false,

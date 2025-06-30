@@ -16,6 +16,8 @@ tauri-plugin-opener = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-shell = "2"
 tauri-plugin-dialog = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
 
 # Using the same versions as lyceris to avoid conflicts
 serde = { version = "1.0.215", features = ["derive"] }

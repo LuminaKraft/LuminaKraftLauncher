@@ -214,7 +214,11 @@
     "useDetectedJava": "Use detected Java",
     "invalidJava": "Invalid or unsupported Java executable selected",
     "discardChanges": "Discard changes",
-    "changesDiscarded": "Changes discarded successfully"
+    "changesDiscarded": "Changes discarded successfully",
+    "prereleases": "Experimental Updates",
+    "enablePrereleases": "Receive experimental updates",
+    "enablePrereleasesDesc": "Allow receiving alpha, beta, and release candidate versions. These versions may contain bugs and are intended for testing.",
+    "prereleaseWarning": "Experimental versions may be unstable"
   },
   "auth": {
     "title": "Authentication",
@@ -289,6 +293,14 @@
     "checkingUpdates": "Checking for updates...",
     "checkUpdates": "Check for updates",
     "downloadUpdate": "Download update",
+    "installUpdate": "Install update automatically",
+    "installingUpdate": "Installing update...",
+    "updateInstalling": "Installing...",
+    "updatePreparing": "Preparing...",
+    "updateDownloading": "Downloading update...",
+    "updateInstalled": "Update installed successfully",
+    "updateFailed": "Failed to install update",
+    "restartRequired": "Restart required to apply the update",
     "prereleaseWarning": "This is a pre-release version that may contain bugs and is intended for testing",
     "prereleaseUpdate": "Pre-release Update Available",
     "prereleaseUpdateDesc": "A new pre-release version is available. Pre-release versions may contain bugs and are intended for testing purposes.",

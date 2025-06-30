@@ -98,6 +98,19 @@ function updateVersion(newVersion, isPrerelease = false) {
   });
 }
 
+function updateManifest(version, isPrerelease = false) {
+  log(`📋 Updating updater.json manifest for ${isPrerelease ? 'prerelease' : 'stable'} version ${version}...`, 'cyan');
+  
+  try {
+    const args = isPrerelease ? `v${version} --prerelease` : `v${version}`;
+    execSync(`npm run update-manifest -- ${args}`, { stdio: 'inherit' });
+    log('✅ Updater manifest updated successfully', 'green');
+  } catch (error) {
+    log(`❌ Error updating manifest: ${error.message}`, 'red');
+    process.exit(1);
+  }
+}
+
 async function commitAndTag(version, isPrerelease = false) {
   log('📝 Creating Git commit and tag...', 'cyan');
   const tagName = `v${version}`;
@@ -144,7 +157,8 @@ async function commitAndTag(version, isPrerelease = false) {
       'package.json', 
       'src-tauri/tauri.conf.json', 
       'src-tauri/Cargo.toml',
-      'src/components/Layout/Sidebar.tsx'
+      'src/components/Layout/Sidebar.tsx',
+      'updater.json'
     ];
     const statusLines = status.trim().split('\n');
     const unstagedChanges = statusLines.filter(line => {
@@ -250,6 +264,9 @@ async function main() {
     // Update version in files
     updateVersion(newVersion, isPrerelease);
 
+    // Update updater.json manifest
+    updateManifest(newVersion, isPrerelease);
+
     // Commit and tag
     await commitAndTag(newVersion, isPrerelease);
 
@@ -303,6 +320,9 @@ async function main() {
 
     // Update version in files
     updateVersion(newVersion, false);
+
+    // Update updater.json manifest
+    updateManifest(newVersion, false);
 
     // Commit and tag
     await commitAndTag(newVersion, false);

@@ -58,6 +58,14 @@
     },
     "shell": {
       "open": true
+    },
+    "updater": {
+      "active": true,
+      "endpoints": [
+        "https://raw.githubusercontent.com/LuminaKraft/LuminakraftLauncher/main/updater.json"
+      ],
+      "dialog": false,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEEzMTdCQTVFODYzQ0Y2RTcKUldUbjlqeUdYcm9YbzBYNU1FN3pRZ1NOSk1zVVZoQTdCZkU1S0ZhR2RyaVk0Tm9qdEFDVDFtU3AK"
     }
   }
 }

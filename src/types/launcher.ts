@@ -105,6 +105,7 @@ export interface UserSettings {
   language: string; // 'es' | 'en'
   authMethod: 'offline' | 'microsoft';
   microsoftAccount?: MicrosoftAccount;
+  enablePrereleases?: boolean;
 }
 
 export interface ProgressInfo {

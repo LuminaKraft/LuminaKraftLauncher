@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Download, X, RefreshCw, AlertCircle, CheckCircle, ExternalLink, AlertTriangle } from 'lucide-react';
+import { Download, X, AlertCircle, ExternalLink, AlertTriangle } from 'lucide-react';
 import { UpdateInfo } from '../services/updateService';
 
 interface UpdateDialogProps {
@@ -8,38 +8,26 @@ interface UpdateDialogProps {
   onClose: () => void;
   onDownload: () => void;
   isDownloading?: boolean;
+  downloadProgress?: { current: number; total: number };
 }
 
 const UpdateDialog: React.FC<UpdateDialogProps> = ({
   updateInfo,
   onClose,
   onDownload,
-  isDownloading = false
+  isDownloading = false,
+  downloadProgress = { current: 0, total: 0 }
 }) => {
   const { t } = useTranslation();
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  const handleDownload = async () => {
-    setMessage(null);
-    try {
-      await onDownload();
-      setMessage({ type: 'success', text: 'Download started! Check your browser downloads.' });
-    } catch (error) {
-      setMessage({ 
-        type: 'error', 
-        text: 'Failed to open download. Please try again or download manually from GitHub.' 
-      });
-    }
-  };
-
-  const getTitle = () => {
+  const getPrereleaseTitle = () => {
     if (updateInfo.isPrerelease) {
       const version = updateInfo.latestVersion;
-      if (version.includes('-alpha')) {
+      if (version.includes('alpha')) {
         return 'Alpha Update Available';
-      } else if (version.includes('-beta')) {
+      } else if (version.includes('beta')) {
         return 'Beta Update Available';
-      } else if (version.includes('-rc')) {
+      } else if (version.includes('rc')) {
         return 'Release Candidate Available';
       }
       return t('about.prereleaseUpdate');
@@ -47,31 +35,26 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
     return 'Update Available';
   };
 
-  const getPrereleaseType = () => {
-    const version = updateInfo.latestVersion;
-    if (version.includes('-alpha')) return 'alpha';
-    if (version.includes('-beta')) return 'beta';
-    if (version.includes('-rc')) return 'release candidate';
-    return 'pre-release';
-  };
-
   const getPrereleaseDescription = () => {
-    const type = getPrereleaseType();
-    if (type === 'alpha') {
-      return `A new alpha version is available. Alpha versions are early development builds that may contain bugs and incomplete features.`;
-    } else if (type === 'beta') {
-      return `A new beta version is available. Beta versions are feature-complete but may contain bugs.`;
-    } else if (type === 'release candidate') {
-      return `A new release candidate is available. Release candidates are near-final versions ready for testing.`;
+    if (!updateInfo.isPrerelease) return '';
+    
+    const version = updateInfo.latestVersion;
+    if (version.includes('alpha')) {
+      return 'This alpha version may contain bugs and is intended for early testing. Use with caution.';
+    } else if (version.includes('beta')) {
+      return 'This beta version is more stable than alpha but may still contain issues.';
+    } else if (version.includes('rc')) {
+      return 'This release candidate is near final quality but should still be tested before production use.';
     }
+    
     return t('about.prereleaseUpdateDesc');
   };
 
   const getIcon = () => {
     return updateInfo.isPrerelease ? (
-      <AlertTriangle className="w-6 h-6 text-yellow-500 mr-2" />
+      <AlertCircle className="w-6 h-6 text-yellow-400 mr-3" />
     ) : (
-      <RefreshCw className="w-6 h-6 text-lumina-500 mr-2" />
+      <Download className="w-6 h-6 text-lumina-400 mr-3" />
     );
   };
 
@@ -81,7 +64,7 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
             {getIcon()}
-            <h2 className="text-xl font-semibold text-white">{getTitle()}</h2>
+            <h2 className="text-xl font-semibold text-white">{getPrereleaseTitle()}</h2>
           </div>
           <button
             onClick={onClose}
@@ -97,7 +80,7 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
             <div className="mb-4 p-3 bg-yellow-900/30 border border-yellow-600 text-yellow-200 rounded-lg flex items-center">
               <AlertTriangle className="w-4 h-4 mr-2 flex-shrink-0" />
               <span className="text-sm">
-                This is an {getPrereleaseType()} version intended for testing and development. Please report any issues you encounter.
+                This is a pre-release version intended for testing and development. Please report any issues you encounter.
               </span>
             </div>
           )}
@@ -133,22 +116,6 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
           </p>
         </div>
 
-        {/* Message display */}
-        {message && (
-          <div className={`p-3 rounded-lg mb-4 flex items-center ${
-            message.type === 'success' 
-              ? 'bg-green-900/30 border border-green-600 text-green-200' 
-              : 'bg-red-900/30 border border-red-600 text-red-200'
-          }`}>
-            {message.type === 'success' ? (
-              <CheckCircle className="w-4 h-4 mr-2 flex-shrink-0" />
-            ) : (
-              <AlertCircle className="w-4 h-4 mr-2 flex-shrink-0" />
-            )}
-            <span className="text-sm">{message.text}</span>
-          </div>
-        )}
-
         <div className="flex space-x-3">
           <button
             onClick={onClose}
@@ -158,19 +125,28 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
             Later
           </button>
           <button
-            onClick={handleDownload}
-            disabled={isDownloading || !updateInfo.downloadUrl}
-            className="flex-1 px-4 py-2 bg-lumina-600 text-white rounded-lg hover:bg-lumina-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+            onClick={onDownload}
+            disabled={isDownloading}
+            className="bg-lumina-600 hover:bg-lumina-700 disabled:bg-gray-600 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center"
           >
             {isDownloading ? (
               <>
-                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                Opening...
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                {downloadProgress.total > 0 ? (
+                  <>
+                    <span className="text-sm mr-2">
+                      {Math.round((downloadProgress.current / downloadProgress.total) * 100)}%
+                    </span>
+                    <span>Instalando...</span>
+                  </>
+                ) : (
+                  <span>Preparando...</span>
+                )}
               </>
             ) : (
               <>
                 <Download className="w-4 h-4 mr-2" />
-                Download Update
+                {updateInfo.isPrerelease ? 'Abrir página de descarga' : 'Instalar Actualización'}
               </>
             )}
           </button>

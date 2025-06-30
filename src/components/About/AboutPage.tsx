@@ -12,8 +12,8 @@ const AboutPage: React.FC = () => {
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState<boolean>(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
-
-
+  const [isDownloadingUpdate, setIsDownloadingUpdate] = useState<boolean>(false);
+  const [downloadProgress, setDownloadProgress] = useState<{ current: number; total: number }>({ current: 0, total: 0 });
 
   useEffect(() => {
     // Load current version and cached update info on component mount
@@ -51,12 +51,20 @@ const AboutPage: React.FC = () => {
   };
 
   const handleDownloadUpdate = async () => {
-    if (updateInfo && updateInfo.downloadUrl) {
-      try {
-        await updateService.downloadUpdate(updateInfo.downloadUrl);
-      } catch (error) {
-        console.error('Failed to download update:', error);
-      }
+    if (!updateInfo?.hasUpdate) return;
+    
+    setIsDownloadingUpdate(true);
+    setUpdateError(null);
+    
+    try {
+      await updateService.downloadAndInstallUpdate((progress, total) => {
+        setDownloadProgress({ current: progress, total });
+      });
+    } catch (error) {
+      console.error('Failed to download and install update:', error);
+      setUpdateError('Failed to download and install update automatically');
+    } finally {
+      setIsDownloadingUpdate(false);
     }
   };
 
@@ -162,11 +170,26 @@ const AboutPage: React.FC = () => {
                 {updateInfo?.hasUpdate && (
                 <button
                   onClick={handleDownloadUpdate}
-                  className="btn-warning inline-flex items-center space-x-2"
+                  disabled={isDownloadingUpdate}
+                  className="inline-flex items-center px-4 py-2 bg-lumina-600 hover:bg-lumina-700 disabled:bg-gray-600 text-white rounded-lg transition-colors"
                 >
-                  <Download className="w-4 h-4 mr-2" />
-                    {t('about.installUpdate')}
-                  </button>
+                  {isDownloadingUpdate ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      {downloadProgress.total > 0 && (
+                        <span className="text-sm">
+                          {Math.round((downloadProgress.current / downloadProgress.total) * 100)}%
+                        </span>
+                      )}
+                      <span className="ml-2">Instalando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4 mr-2" />
+                      {t('about.installUpdate')}
+                    </>
+                  )}
+                </button>
                 )}
                 <button
                   onClick={handleCheckForUpdates}

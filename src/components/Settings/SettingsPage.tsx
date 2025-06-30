@@ -529,6 +529,29 @@ const SettingsPage: React.FC = () => {
             <MetaStorageSettings />
           </div>
 
+          {/* Prereleases Settings */}
+          <div className="card">
+            <div className="flex items-center space-x-3 mb-6">
+              <Shield className="w-6 h-6 text-lumina-500" />
+              <h2 className="text-white text-xl font-semibold">{t('settings.prereleases')}</h2>
+            </div>
+            
+            <div className="space-y-4">
+              <label className="flex items-center space-x-3 p-3 rounded-lg border border-dark-600 hover:border-dark-500 transition-colors cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.enablePrereleases || false}
+                  onChange={(e) => setFormData(prev => ({ ...prev, enablePrereleases: e.target.checked }))}
+                  className="w-5 h-5 text-lumina-600 bg-dark-700 border-dark-600 rounded focus:ring-lumina-500 focus:ring-2"
+                />
+                <div className="flex-1">
+                  <div className="text-white font-medium">{t('settings.enablePrereleases')}</div>
+                  <div className="text-dark-300 text-sm">{t('settings.enablePrereleasesDesc')}</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
           {/* Save Button */}
           {hasChanges && (
             <div className="sticky bottom-0 bg-dark-900 border-t border-dark-700 p-4 -mx-6">
