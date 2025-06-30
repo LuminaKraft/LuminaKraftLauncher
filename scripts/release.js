@@ -2,6 +2,7 @@
 
 import { execSync } from 'child_process';
 import fs from 'fs';
+import readline from 'readline';
 
 // ANSI color codes for terminal output
 const colors = {
@@ -15,6 +16,21 @@ const colors = {
 
 function log(message, color = 'reset') {
   console.log(`${colors[color]}${message}${colors.reset}`);
+}
+
+// Helper function to prompt user for input
+function promptUser(question) {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  return new Promise((resolve) => {
+    rl.question(question, (answer) => {
+      rl.close();
+      resolve(answer.toLowerCase().trim());
+    });
+  });
 }
 
 // Repository configuration
@@ -82,9 +98,40 @@ function updateVersion(newVersion, isPrerelease = false) {
   });
 }
 
-function commitAndTag(version, isPrerelease = false) {
+async function commitAndTag(version, isPrerelease = false) {
   log('📝 Creating Git commit and tag...', 'cyan');
+  const tagName = `v${version}`;
+  
   try {
+    // Check if tag already exists
+    try {
+      execSync(`git rev-parse ${tagName}`, { stdio: 'pipe' });
+      // If we get here, the tag exists
+      log(`⚠️ Tag '${tagName}' already exists`, 'yellow');
+      
+      const answer = await promptUser(`Do you want to replace the existing tag '${tagName}'? (y/N): `);
+      
+      if (answer !== 'y' && answer !== 'yes') {
+        log('❌ Aborted: Tag replacement cancelled by user', 'red');
+        process.exit(1);
+      }
+      
+      log(`🗑️ Deleting existing tag '${tagName}'...`, 'cyan');
+      // Delete the tag locally
+      execSync(`git tag -d ${tagName}`, { stdio: 'pipe' });
+      
+      // Try to delete the tag remotely (might fail if it doesn't exist remotely)
+      try {
+        execSync(`git push origin :refs/tags/${tagName}`, { stdio: 'pipe' });
+        log(`  ✅ Deleted remote tag '${tagName}'`, 'green');
+      } catch (error) {
+        log(`  ℹ️ Remote tag '${tagName}' didn't exist or couldn't be deleted`, 'yellow');
+      }
+      
+    } catch (error) {
+      // Tag doesn't exist, which is good
+    }
+
     // Check if there are changes to commit
     const status = execSync('git status --porcelain', { encoding: 'utf8' });
     if (!status.trim()) {
@@ -134,7 +181,6 @@ function commitAndTag(version, isPrerelease = false) {
     execSync(`git commit -m "${commitMessage}"`, { stdio: 'inherit' });
     
     // Create tag
-    const tagName = `v${version}`;
     const tagMessage = `Version ${version}${isPrerelease ? ' (pre-release)' : ''}`;
     execSync(`git tag -a ${tagName} -m "${tagMessage}"`, { stdio: 'inherit' });
     
@@ -163,7 +209,7 @@ function pushChanges() {
   }
 }
 
-function main() {
+async function main() {
   // Parse command line arguments
   const args = process.argv.slice(2);
   
@@ -205,7 +251,7 @@ function main() {
     updateVersion(newVersion, isPrerelease);
 
     // Commit and tag
-    commitAndTag(newVersion, isPrerelease);
+    await commitAndTag(newVersion, isPrerelease);
 
     // Push if --push flag is provided
     if (process.argv.includes('--push')) {
@@ -259,7 +305,7 @@ function main() {
     updateVersion(newVersion, false);
 
     // Commit and tag
-    commitAndTag(newVersion, false);
+    await commitAndTag(newVersion, false);
 
     // Push if --push flag is provided
     if (process.argv.includes('--push')) {
@@ -279,4 +325,7 @@ function main() {
 }
 
 // Execute main function
-main(); 
+main().catch(error => {
+  log(`❌ Unexpected error: ${error.message}`, 'red');
+  process.exit(1);
+}); 
