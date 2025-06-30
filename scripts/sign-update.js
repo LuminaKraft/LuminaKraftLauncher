@@ -16,10 +16,10 @@ const PRIVATE_KEY_PASSWORD = process.env.TAURI_SIGNING_PRIVATE_KEY_PASSWORD;
 
 // URLs de los archivos de actualización (se generan automáticamente en GitHub Actions)
 const UPDATE_URLS = {
-  'darwin-x86_64': 'https://github.com/LuminaKraft/LuminakraftLauncher/releases/latest/download/LuminaKraft_Launcher_x86_64.app.tar.gz',
-  'darwin-aarch64': 'https://github.com/LuminaKraft/LuminakraftLauncher/releases/latest/download/LuminaKraft_Launcher_aarch64.app.tar.gz',
-  'linux-x86_64': 'https://github.com/LuminaKraft/LuminakraftLauncher/releases/latest/download/luminakraft-launcher_amd64.AppImage.tar.gz',
-  'windows-x86_64': 'https://github.com/LuminaKraft/LuminakraftLauncher/releases/latest/download/LuminaKraft_Launcher_x64-setup.nsis.zip'
+  'darwin-x86_64': 'https://github.com/LuminaKraft/LuminakraftLauncher/releases/latest/download/LuminaKraft.Launcher_x64.app.tar.gz',
+  'darwin-aarch64': 'https://github.com/LuminaKraft/LuminakraftLauncher/releases/latest/download/LuminaKraft.Launcher_aarch64.app.tar.gz',
+  'linux-x86_64': 'https://github.com/LuminaKraft/LuminakraftLauncher/releases/latest/download/LuminaKraft.Launcher_amd64.AppImage.tar.gz',
+  'windows-x86_64': 'https://github.com/LuminaKraft/LuminakraftLauncher/releases/latest/download/LuminaKraft.Launcher_x64-setup.nsis.zip'
 };
 
 function getCurrentVersion() {

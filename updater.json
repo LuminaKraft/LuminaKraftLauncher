@@ -1,23 +1,23 @@
 {
   "version": "0.0.8-alpha.2",
   "notes": "Nueva versión experimental v0.0.8-alpha.2 disponible",
-  "pub_date": "2025-06-30T22:06:11.850Z",
+  "pub_date": "2025-06-30T22:25:28.731Z",
   "platforms": {
     "darwin-x86_64": {
       "signature": "",
-      "url": "https://github.com/LuminaKraft/LuminakraftLauncher/releases/download/v0.0.8-alpha.2/LuminaKraft_Launcher_x86_64.app.tar.gz"
+      "url": "https://github.com/LuminaKraft/LuminakraftLauncher/releases/download/v0.0.8-alpha.2/LuminaKraft.Launcher_x64.app.tar.gz"
     },
     "darwin-aarch64": {
       "signature": "",
-      "url": "https://github.com/LuminaKraft/LuminakraftLauncher/releases/download/v0.0.8-alpha.2/LuminaKraft_Launcher_aarch64.app.tar.gz"
+      "url": "https://github.com/LuminaKraft/LuminakraftLauncher/releases/download/v0.0.8-alpha.2/LuminaKraft.Launcher_aarch64.app.tar.gz"
     },
     "linux-x86_64": {
       "signature": "",
-      "url": "https://github.com/LuminaKraft/LuminakraftLauncher/releases/download/v0.0.8-alpha.2/LuminaKraft_Launcher_amd64.AppImage.tar.gz"
+      "url": "https://github.com/LuminaKraft/LuminakraftLauncher/releases/download/v0.0.8-alpha.2/LuminaKraft.Launcher_amd64.AppImage.tar.gz"
     },
     "windows-x86_64": {
       "signature": "",
-      "url": "https://github.com/LuminaKraft/LuminakraftLauncher/releases/download/v0.0.8-alpha.2/LuminaKraft_Launcher_x64-setup.nsis.zip"
+      "url": "https://github.com/LuminaKraft/LuminakraftLauncher/releases/download/v0.0.8-alpha.2/LuminaKraft.Launcher_x64-setup.nsis.zip"
     }
   }
 }
