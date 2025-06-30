@@ -1,6 +1,6 @@
 [package]
 name = "luminakraft-launcher"
-version = "0.0.8-alpha.1"
+version = "0.0.8-alpha.2"
 description = "LuminaKraft Studios Official Modpack Launcher"
 authors = ["LuminaKraft Studios"]
 edition = "2021"
