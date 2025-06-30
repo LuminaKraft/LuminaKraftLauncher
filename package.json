@@ -24,7 +24,7 @@
     "release:major-push": "node scripts/release.js major --push",
     "release:alpha": "node scripts/release.js",
     "release:alpha-push": "node scripts/release.js --push",
-    "sign-update": "node scripts/sign-update.js",
+    "sign-update": "node scripts/sign-update.cjs",
     "update-manifest": "node scripts/update-manifest.cjs",
     "clean": "rm -rf node_modules/.vite && rm -rf dist && rm -rf src-tauri/target"
   },

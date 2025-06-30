@@ -5,7 +5,7 @@ All notable changes to the LuminaKraft Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.0.8-alpha.3] - 2025-06-30
+## [0.0.8-alpha.3] - 2025-07-01
 
 ### 🚀 **Automatic Update System Implementation**
 
@@ -94,6 +94,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Corrected updater.json URL patterns for different release types
 - Fixed version comparison logic for prerelease detection
 - Improved error handling in update service
+- Replaced `scripts/sign-update.js` with CommonJS `scripts/sign-update.cjs` to fix `require` errors under ESM configuration
+- `sign-update` now generates concise *What's New* notes and writes only the latest version to `updater.json`
+- Updated `package.json` script `sign-update` to reference the new `.cjs` script
 
 ### 📋 **Breaking Changes**
 - **Update System**: New automatic update system replaces manual download links

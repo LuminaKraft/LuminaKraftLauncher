@@ -8,6 +8,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const { generateReleaseDescription } = require('./generate-release-description.cjs');
 
 // Configuración
 const UPDATER_JSON_PATH = path.join(__dirname, '..', 'updater.json');
@@ -54,9 +55,17 @@ function signFile(filePath) {
 
 function updateUpdaterJson(version, signatures) {
   try {
+    const isPrerelease = version.includes('-');
+    // Mantener solo la parte entre "## 📋 What's New" y "## 📥"  
+    const fullDescription = generateReleaseDescription(version, isPrerelease);
+    const afterWhatsNew = fullDescription.split('## 📋 What\'s New')[1] || fullDescription;
+    let releaseNotes = afterWhatsNew.split('\n## 📥')[0].trim();
+    // Eliminar cabeceras residuales (## ..., **🏷 ...**) y líneas en blanco iniciales
+    releaseNotes = releaseNotes.replace(/^#+[^\n]*\n+/g, '').trim();
+
     const updaterData = {
       version: version,
-      notes: `Actualización automática a la versión ${version}`,
+      notes: releaseNotes,
       pub_date: new Date().toISOString(),
       platforms: {}
     };
