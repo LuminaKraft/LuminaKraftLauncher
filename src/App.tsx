@@ -10,6 +10,7 @@ import { Loader2, AlertTriangle } from 'lucide-react';
 import LauncherService from './services/launcherService';
 import { updateService, UpdateInfo } from './services/updateService';
 import './App.css';
+import { Toaster } from 'react-hot-toast';
 
 function AppContent() {
   const [activeSection, setActiveSection] = useState('home');
@@ -139,6 +140,28 @@ function AppContent() {
           isDownloading={isInstallingUpdate}
         />
       )}
+      <Toaster
+        position="top-right"
+        reverseOrder={false}
+        toastOptions={{
+          style: {
+            background: '#1f2937', // dark-800
+            color: '#ffffff',
+          },
+          success: {
+            iconTheme: {
+              primary: '#22c55e', // green-500
+              secondary: '#1f2937',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: '#ef4444', // red-500
+              secondary: '#1f2937',
+            },
+          },
+        }}
+      />
     </div>
   );
 }

@@ -82,7 +82,7 @@ const AboutPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="max-w-4xl space-y-8">
+        <div className="space-y-8">
           {/* Launcher Info */}
           <div className="card">
             <div className="flex items-start space-x-6">
@@ -162,7 +162,7 @@ const AboutPage: React.FC = () => {
                 {updateInfo?.hasUpdate && (
                 <button
                   onClick={handleDownloadUpdate}
-                  className="btn-warning"
+                  className="btn-warning inline-flex items-center space-x-2"
                 >
                   <Download className="w-4 h-4 mr-2" />
                     {t('about.installUpdate')}
@@ -171,10 +171,10 @@ const AboutPage: React.FC = () => {
                 <button
                   onClick={handleCheckForUpdates}
                   disabled={isCheckingUpdate}
-                  className="btn-secondary"
+                  className="btn-secondary inline-flex items-center space-x-2"
                 >
                   <RefreshCw className={`w-4 h-4 mr-2 ${isCheckingUpdate ? 'animate-spin' : ''}`} />
-                  {t('about.checkingUpdates')}
+                  {isCheckingUpdate ? t('about.checkingUpdates') : t('about.checkUpdates')}
                 </button>
               </div>
             </div>

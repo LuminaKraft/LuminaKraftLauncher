@@ -465,6 +465,9 @@ class LauncherService {
         throw new Error('Esta función requiere ejecutar la aplicación con Tauri. Por favor, usa "npm run tauri:dev" en lugar de "npm run dev".');
       }
       console.error('Error launching modpack:', error);
+      if (error instanceof Error) {
+        throw error; // Propagate original error message
+      }
       throw new Error('Error al lanzar el modpack');
     }
   }

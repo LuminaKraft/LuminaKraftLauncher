@@ -344,6 +344,18 @@ pub async fn clear_screenshots_cache() -> Result<Vec<String>> {
     }
 }
 
+/// Return list of Minecraft versions stored in meta
+pub async fn list_minecraft_versions() -> Result<Vec<String>> {
+    let meta_dirs = MetaDirectories::init().await?;
+    meta_dirs.get_minecraft_versions_list().await
+}
+
+/// Return list of Java installations stored in meta
+pub async fn list_java_installations() -> Result<Vec<String>> {
+    let meta_dirs = MetaDirectories::init().await?;
+    meta_dirs.get_java_installations_list().await
+}
+
 fn format_bytes(bytes: u64) -> String {
     const UNITS: &[&str] = &["B", "KB", "MB", "GB", "TB"];
     let mut size = bytes as f64;

@@ -210,7 +210,11 @@
     "unsavedChanges": "You have unsaved changes",
     "saveChanges": "Save changes",
     "theme": "Theme",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "useDetectedJava": "Use detected Java",
+    "invalidJava": "Invalid or unsupported Java executable selected",
+    "discardChanges": "Discard changes",
+    "changesDiscarded": "Changes discarded successfully"
   },
   "auth": {
     "title": "Authentication",
@@ -253,7 +257,7 @@
     "title": "About",
     "description": "Official LuminaKraft Studios modpack launcher",
     "descriptionLong": "A custom modpack launcher for the LuminaKraft Studios community. Designed to make modpack installation and management simple and efficient.",
-    "version": "Version",
+    "version": "{{version}}",
     "versionLabel": "Version:",
     "technologies": "Technologies:",
     "technologiesValue": "Tauri + React + TypeScript",
@@ -283,6 +287,7 @@
     "updateAvailable": "New version available: {{version}}",
     "upToDate": "You are using the latest version",
     "checkingUpdates": "Checking for updates...",
+    "checkUpdates": "Check for updates",
     "downloadUpdate": "Download update",
     "prereleaseWarning": "This is a pre-release version that may contain bugs and is intended for testing",
     "prereleaseUpdate": "Pre-release Update Available",

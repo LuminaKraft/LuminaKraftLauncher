@@ -12,6 +12,7 @@ import type {
 } from '../types/launcher';
 import LauncherService from '../services/launcherService';
 import { FailedModsDialog } from '../components/FailedModsDialog';
+import AuthService from '../services/authService';
 
 interface LauncherContextType {
   launcherData: LauncherData | null;
@@ -251,6 +252,58 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
       });
     }
   }, [state.launcherData]);
+
+  // ---------------------------------------------------------------------------
+  // Automatic Microsoft token refresh
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    const { authMethod, microsoftAccount } = state.userSettings;
+
+    // Only handle automatic refresh for Microsoft accounts
+    if (authMethod !== 'microsoft' || !microsoftAccount) {
+      return;
+    }
+
+    const authService = AuthService.getInstance();
+
+    // Helper that performs the refresh call and updates settings
+    const doRefresh = async () => {
+      try {
+        const refreshedAccount = await authService.refreshMicrosoftToken(microsoftAccount.refreshToken);
+        if (refreshedAccount) {
+          // Persist the new tokens and expiration
+          updateUserSettings({
+            authMethod: 'microsoft',
+            microsoftAccount: refreshedAccount,
+            username: refreshedAccount.username,
+          });
+        }
+      } catch (error) {
+        console.error('Automatic Microsoft token refresh failed:', error);
+      }
+    };
+
+    // Determine when to refresh (2 minutes before expiration)
+    const nowSec = Math.floor(Date.now() / 1000);
+    const bufferSec = 120;
+    const secsUntilExpiry = microsoftAccount.exp - nowSec;
+    const secsUntilRefresh = Math.max(0, secsUntilExpiry - bufferSec);
+
+    // If already expired (or about to), refresh immediately; else schedule
+    if (secsUntilRefresh === 0) {
+      void doRefresh();
+      return; // Effect cleanup will be handled on re-render after state update
+    }
+
+    const timeoutId = setTimeout(() => {
+      void doRefresh();
+    }, secsUntilRefresh * 1000);
+
+    // Cleanup when component unmounts or dependencies change
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [state.userSettings.authMethod, state.userSettings.microsoftAccount?.exp]);
 
   const refreshData = async () => {
     dispatch({ type: 'SET_LOADING', payload: true });
@@ -495,6 +548,8 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
         
         if (errorMessage.includes('failed to extract zip file') || errorMessage.includes('no such file or directory')) {
           userFriendlyError = t('errors.zipExtractionFailed');
+        } else if (errorMessage.includes('java') || errorMessage.includes('No such file or directory') || errorMessage.includes('exec format error')) {
+          userFriendlyError = t('settings.invalidJava');
         } else if (errorMessage.includes('zip file not found') || errorMessage.includes('file not found')) {
           userFriendlyError = t('errors.zipFileNotFound');
         } else if (errorMessage.includes('permission denied')) {

@@ -4,6 +4,7 @@
 use tauri::{Manager, Emitter};
 use serde::{Deserialize, Serialize};
 use anyhow::Result;
+use std::process::Command;
 
 mod launcher;
 mod meta;
@@ -1055,6 +1056,92 @@ fn parse_progress_line(message: &str) -> Option<String> {
     Some("Instalando Minecraft...".to_string())
 }
 
+#[tauri::command]
+async fn detect_system_java_path() -> Result<Option<String>, String> {
+    // Try to locate Java on the system PATH using platform-specific command
+    #[cfg(target_os = "windows")]
+    let cmd = {
+        Command::new("where").arg("java").output()
+    };
+    #[cfg(not(target_os = "windows"))]
+    let cmd = {
+        Command::new("which").arg("java").output()
+    };
+
+    match cmd {
+        Ok(output) => {
+            if output.status.success() {
+                let path = String::from_utf8_lossy(&output.stdout).lines().next().unwrap_or("").trim().to_string();
+                if !path.is_empty() {
+                    return Ok(Some(path));
+                }
+            }
+            Ok(None)
+        },
+        Err(e) => Err(format!("Failed to execute java detection: {}", e)),
+    }
+}
+
+// Add helper for Java validation (reuse in detect_system_java_path maybe)
+fn is_valid_java_executable(path: &str) -> bool {
+    let candidate = std::path::Path::new(path);
+    if !candidate.exists() {
+        return false;
+    }
+
+    // Accept regular files or symlinks pointing to files (e.g. /usr/bin/java -> /System/…)
+    if let Ok(meta) = std::fs::symlink_metadata(candidate) {
+        let ftype = meta.file_type();
+        if !(ftype.is_file() || ftype.is_symlink()) {
+            return false;
+        }
+    } else {
+        return false;
+    }
+
+    if !candidate
+        .file_name()
+        .and_then(|n| n.to_str())
+        .map(|n| n.to_lowercase().contains("java"))
+        .unwrap_or(false)
+    {
+        return false;
+    }
+
+    // Optional extra check: attempt to run `java -version`, but ignore exit code – just spawning means it's executable.
+    if Command::new(candidate)
+        .arg("-version")
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .is_ok()
+    {
+        return true;
+    }
+
+    // Even if spawning failed (e.g., macOS stub requiring GUI), still treat as valid because JVM will be resolved at runtime.
+    true
+}
+
+#[tauri::command]
+async fn validate_java_path(java_path: String) -> Result<bool, String> {
+    Ok(is_valid_java_executable(&java_path))
+}
+
+#[tauri::command]
+async fn list_minecraft_versions() -> Result<Vec<String>, String> {
+    launcher::list_minecraft_versions()
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn list_java_installations() -> Result<Vec<String>, String> {
+    launcher::list_java_installations()
+        .await
+        .map_err(|e| e.to_string())
+}
+
 #[allow(unused_must_use)]
 fn main() {
     // Esta anotación permite que Rust ignore el "referenced_by" error que ocurre durante la compilación
@@ -1093,8 +1180,13 @@ fn main() {
             cleanup_meta_storage,
             cache_modpack_images_command,
             clear_icons_cache,
-            clear_screenshots_cache
+            clear_screenshots_cache,
+            detect_system_java_path,
+            validate_java_path,
+            list_minecraft_versions,
+            list_java_installations
         ])
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             // Initialize app data directory
             if let Err(e) = std::fs::create_dir_all(

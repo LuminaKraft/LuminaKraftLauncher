@@ -209,7 +209,11 @@
     "unsavedChanges": "Tienes cambios sin guardar",
     "saveChanges": "Guardar cambios",
     "theme": "Tema",
-    "notifications": "Notificaciones"
+    "notifications": "Notificaciones",
+    "useDetectedJava": "Usar Java detectado",
+    "invalidJava": "Java seleccionado no válido o no compatible",
+    "discardChanges": "Descartar cambios",
+    "changesDiscarded": "Cambios descartados exitosamente"
   },
   "auth": {
     "title": "Autenticación",
@@ -252,7 +256,7 @@
     "title": "Acerca de",
     "description": "Launcher oficial de modpacks de LuminaKraft Studios",
     "descriptionLong": "Un lanzador de modpacks personalizado para la comunidad de LuminaKraft Studios. Diseñado para hacer que la instalación y gestión de modpacks sea simple y eficiente.",
-    "version": "Versión",
+    "version": "{{version}}",
     "versionLabel": "Versión:",
     "technologies": "Tecnologías:",
     "technologiesValue": "Tauri + React + TypeScript",
@@ -282,6 +286,7 @@
     "updateAvailable": "Nueva versión disponible: {{version}}",
     "upToDate": "Estás usando la versión más reciente",
     "checkingUpdates": "Verificando actualizaciones...",
+    "checkUpdates": "Verificar actualizaciones",
     "downloadUpdate": "Descargar actualización",
     "prereleaseWarning": "Esta es una versión de pre-lanzamiento que puede contener errores y está destinada para pruebas",
     "prereleaseUpdate": "Actualización de Pre-lanzamiento Disponible",
@@ -327,7 +332,8 @@
     "javaInstallations": "Instalaciones de Java",
     "cleanup": "Limpiar Caché",
     "cleanupSuccess": "Se limpiaron {{count}} elementos",
-    "cleanupDescription": "Eliminar archivos en caché que ya no se utilizan"
+    "cleanupDescription": "Eliminar archivos en caché que ya no se utilizan",
+    "cacheSize": "Tamaño de la caché"
   },
   "common": {
     "showMore": "Mostrar Más",

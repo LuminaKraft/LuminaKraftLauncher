@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, HardDrive, Coffee, Globe, Save, FolderOpen, CheckCircle, Wifi, WifiOff, RefreshCw, Trash2, Server, Languages, Shield, XCircle } from 'lucide-react';
+import { User, HardDrive, Coffee, FolderOpen, Save, Wifi, WifiOff, RefreshCw, Trash2, Server, Languages, Shield, XCircle, CheckCircle } from 'lucide-react';
 import { useLauncher } from '../../contexts/LauncherContext';
 import LauncherService from '../../services/launcherService';
 import MicrosoftAuth from './MicrosoftAuth';
 import MetaStorageSettings from './MetaStorageSettings.tsx';
 import type { MicrosoftAccount } from '../../types/launcher';
+import { invoke } from '@tauri-apps/api/core';
+import { open as openDialog } from '@tauri-apps/plugin-dialog';
+import toast from 'react-hot-toast';
 
 const SettingsPage: React.FC = () => {
   const { t } = useTranslation();
@@ -13,14 +16,24 @@ const SettingsPage: React.FC = () => {
   
   const [formData, setFormData] = useState(userSettings);
   const [hasChanges, setHasChanges] = useState(false);
-  const [savedNotification, setSavedNotification] = useState(false);
   const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const [apiInfo, setApiInfo] = useState<any>(null);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
-
+  const [detectedJavaPath, setDetectedJavaPath] = useState<string | null>(null);
+  const [javaPathValid, setJavaPathValid] = useState<boolean | null>(null);
 
   useEffect(() => {
+    // Detect system Java path on mount
+    const fetchJavaPath = async () => {
+      try {
+        const path = await LauncherService.getInstance().isTauriAvailable() ? await invoke<string | null>('detect_system_java_path') : null;
+        setDetectedJavaPath(path ?? null);
+      } catch (e) {
+        console.warn('Failed to detect system Java:', e);
+      }
+    };
+    fetchJavaPath();
     setFormData(userSettings);
   }, [userSettings]);
 
@@ -34,6 +47,33 @@ const SettingsPage: React.FC = () => {
     fetchAPIInfo();
     fetchAvailableLanguages();
   }, []);
+
+  useEffect(() => {
+    const effectivePath = (formData.javaPath && formData.javaPath.trim() !== '') ? formData.javaPath.trim() : detectedJavaPath ?? '';
+
+    const validatePath = async () => {
+      if (effectivePath === '') {
+        // No path provided (auto-detect mode) – treat as valid
+        setJavaPathValid(true);
+        return;
+      }
+      try {
+        if (LauncherService.getInstance().isTauriAvailable()) {
+          const valid = await invoke<boolean>('validate_java_path', { javaPath: effectivePath });
+          setJavaPathValid(valid);
+        } else {
+          // Browser preview: naive check file name includes java
+          const naive = effectivePath.toLowerCase().includes('java');
+          setJavaPathValid(naive);
+        }
+      } catch (e) {
+        console.error('Java path validation failed:', e);
+        setJavaPathValid(false);
+      }
+    };
+
+    validatePath();
+  }, [formData.javaPath, detectedJavaPath]);
 
   const checkAPIStatus = async () => {
     setApiStatus('checking');
@@ -74,8 +114,7 @@ const SettingsPage: React.FC = () => {
   const handleLanguageChange = async (language: string) => {
     try {
       await changeLanguage(language);
-      setSavedNotification(true);
-      setTimeout(() => setSavedNotification(false), 3000);
+      toast.success(t('settings.saved'));
     } catch (error) {
       console.error('Error changing language:', error);
     }
@@ -84,17 +123,45 @@ const SettingsPage: React.FC = () => {
   const handleSave = () => {
     updateUserSettings(formData);
     setHasChanges(false);
-    setSavedNotification(true);
-    setTimeout(() => setSavedNotification(false), 3000);
+    toast.success(t('settings.saved'));
+  };
+
+  const handleDiscard = () => {
+    setFormData(userSettings);
+    setHasChanges(false);
+    toast(t('settings.changesDiscarded'));
   };
 
   const handleSelectJavaPath = async () => {
     try {
-      // In a real implementation, this would open a file dialog
-      // For now, we'll show a placeholder
-      console.log('Open file dialog for Java path');
+      const defaultPath = formData.javaPath || detectedJavaPath || undefined;
+      console.log('Opening Java file picker with defaultPath:', defaultPath);
+      const isWindows = navigator.userAgent.toLowerCase().includes('win');
+      const dialogOpts: any = {
+        multiple: false,
+        directory: false,
+        title: t('settings.javaPath'),
+        defaultPath,
+      };
+      if (isWindows) {
+        dialogOpts.filters = [{ name: 'Java Executable', extensions: ['exe'] }];
+      }
+
+      const selected = await openDialog(dialogOpts);
+      console.log('Dialog result:', selected);
+
+      if (selected && typeof selected === 'string') {
+        handleInputChange('javaPath', selected);
+        setDetectedJavaPath(selected);
+      }
     } catch (error) {
       console.error('Error selecting Java path:', error);
+    }
+  };
+
+  const handleResetJavaPath = () => {
+    if (detectedJavaPath) {
+      handleInputChange('javaPath', detectedJavaPath);
     }
   };
 
@@ -107,8 +174,7 @@ const SettingsPage: React.FC = () => {
 
   const handleClearCache = () => {
     LauncherService.getInstance().clearCache();
-    setSavedNotification(true);
-    setTimeout(() => setSavedNotification(false), 3000);
+    toast.success(t('settings.saved'));
   };
 
   const handleMicrosoftAuthSuccess = (account: MicrosoftAccount) => {
@@ -121,8 +187,7 @@ const SettingsPage: React.FC = () => {
     };
     setFormData(newSettings);
     updateUserSettings(newSettings);
-    setSavedNotification(true);
-    setTimeout(() => setSavedNotification(false), 3000);
+    toast.success(t('settings.saved'));
   };
 
   const handleMicrosoftAuthClear = () => {
@@ -135,8 +200,7 @@ const SettingsPage: React.FC = () => {
     };
     setFormData(newSettings);
     updateUserSettings(newSettings);
-    setSavedNotification(true);
-    setTimeout(() => setSavedNotification(false), 3000);
+    toast.success(t('settings.saved'));
   };
 
   const handleAuthError = (error: string) => {
@@ -192,6 +256,14 @@ const SettingsPage: React.FC = () => {
     }
   };
 
+  const isSaveDisabled = (javaPathValid === false);
+
+  const getDisplayedJavaPath = () => {
+    return (formData.javaPath && formData.javaPath.trim() !== '') ? formData.javaPath.trim() : (detectedJavaPath ?? '');
+  };
+
+  const useDetectedDisabled = !detectedJavaPath || getDisplayedJavaPath() === detectedJavaPath;
+
   return (
     <div className="h-full overflow-auto">
       <div className="p-6">
@@ -202,18 +274,6 @@ const SettingsPage: React.FC = () => {
             {t('settings.settingsDescription')}
           </p>
         </div>
-
-        {/* Success notification */}
-        {savedNotification && (
-          <div className="mb-6 p-4 bg-green-600/20 border border-green-600/30 rounded-lg">
-            <div className="flex items-center space-x-2">
-              <CheckCircle className="w-5 h-5 text-green-500" />
-              <span className="text-green-400 font-medium">
-                {t('settings.saved')}
-              </span>
-            </div>
-          </div>
-        )}
 
         {/* Error notification */}
         {authError && (
@@ -227,7 +287,7 @@ const SettingsPage: React.FC = () => {
           </div>
         )}
 
-        <div className="max-w-4xl space-y-8">
+        <div className="space-y-8">
           {/* Language Settings */}
           <div className="card">
             <div className="flex items-center space-x-3 mb-6">
@@ -316,46 +376,30 @@ const SettingsPage: React.FC = () => {
                       {getStatusText()}
                     </p>
                     <p className="text-dark-400 text-sm">
-                      {apiInfo?.name || 'LuminaKraft Launcher API'}
+                      {(apiInfo?.name || 'LuminaKraft Launcher API')}{apiInfo?.version ? `/${apiInfo.version}` : ''}
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={handleTestConnection}
                   disabled={isTestingConnection}
-                  className="btn-secondary"
+                  className="btn-secondary inline-flex items-center space-x-2"
                 >
                   <RefreshCw className={`w-4 h-4 mr-2 ${isTestingConnection ? 'animate-spin' : ''}`} />
                   {t('settings.testConnection')}
                 </button>
               </div>
 
-              {apiInfo && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-4 bg-dark-700 rounded-lg">
-                    <p className="text-dark-300 text-sm font-medium mb-1">{t('settings.apiVersion')}</p>
-                    <p className="text-white">{apiInfo.version}</p>
-                  </div>
-                  <div className="p-4 bg-dark-700 rounded-lg">
-                    <p className="text-dark-300 text-sm font-medium mb-1">{t('settings.description')}</p>
-                    <p className="text-white text-sm">{apiInfo.description}</p>
-                  </div>
-                </div>
-              )}
-
-
+              {/* Description & separate version box removed per design update */}
 
               <div className="flex items-center space-x-4">
                 <button
                   onClick={handleClearCache}
-                  className="btn-secondary"
+                  className="btn-secondary inline-flex items-center space-x-2"
                 >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  {t('settings.clearCache')}
+                  <Trash2 className="w-4 h-4" />
+                  <span>{t('settings.clearCache')}</span>
                 </button>
-                <p className="text-dark-400 text-sm">
-                  {t('settings.clearCacheDesc')}
-                </p>
               </div>
             </div>
           </div>
@@ -377,7 +421,7 @@ const SettingsPage: React.FC = () => {
                   value={formData.username}
                   onChange={(e) => handleInputChange('username', e.target.value)}
                   placeholder={t('settings.usernamePlaceholder')}
-                  className="input-field w-full max-w-md"
+                  className="input-field w-full"
                   disabled={formData.authMethod === 'microsoft'}
                 />
                 <p className="text-dark-400 text-xs mt-1">
@@ -442,48 +486,35 @@ const SettingsPage: React.FC = () => {
                 <div className="flex items-center space-x-2">
                   <input
                     type="text"
-                    value={formData.javaPath || ''}
+                    value={getDisplayedJavaPath()}
                     onChange={(e) => handleInputChange('javaPath', e.target.value)}
                     placeholder={t('settings.javaPathAuto')}
                     className="input-field flex-1"
                   />
-                  <button
-                    onClick={handleSelectJavaPath}
-                    className="btn-secondary"
-                    title={t('settings.selectFolder')}
-                  >
-                    <FolderOpen className="w-4 h-4" />
-                  </button>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={handleSelectJavaPath}
+                      className="btn-secondary inline-flex items-center"
+                      title={t('settings.selectFolder')}
+                    >
+                      <FolderOpen className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={handleResetJavaPath}
+                      className={`btn-secondary inline-flex items-center ${useDetectedDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      title={t('settings.useDetectedJava')}
+                      disabled={useDetectedDisabled}
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
                 <p className="text-dark-400 text-xs mt-1">
                   {t('settings.javaPathDescription')}
                 </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Advanced Settings */}
-          <div className="card">
-            <div className="flex items-center space-x-3 mb-6">
-              <Globe className="w-6 h-6 text-lumina-500" />
-              <h2 className="text-white text-xl font-semibold">{t('settings.advanced')}</h2>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-dark-300 text-sm font-medium mb-2">
-                  {t('settings.dataUrl')}
-                </label>
-                <input
-                  type="url"
-                  value={formData.launcherDataUrl}
-                  onChange={(e) => handleInputChange('launcherDataUrl', e.target.value)}
-                  placeholder="https://api.luminakraft.com/v1/launcher_data.json"
-                  className="input-field w-full"
-                />
-                <p className="text-dark-400 text-xs mt-1">
-                  {t('settings.dataUrlDescription')}
-                </p>
+                {javaPathValid === false && (
+                  <p className="text-red-500 text-xs mt-1 flex items-center"><XCircle className="w-4 h-4 mr-1" /> {t('settings.invalidJava')}</p>
+                )}
               </div>
             </div>
           </div>
@@ -495,9 +526,7 @@ const SettingsPage: React.FC = () => {
               <h2 className="text-white text-xl font-semibold">{t('metaStorage.title')}</h2>
             </div>
             
-            <div className="bg-dark-700 rounded-lg p-4">
-              <MetaStorageSettings />
-            </div>
+            <MetaStorageSettings />
           </div>
 
           {/* Save Button */}
@@ -507,13 +536,22 @@ const SettingsPage: React.FC = () => {
                 <p className="text-dark-400 text-sm">
                   {t('settings.unsavedChanges')}
                 </p>
-                <button
-                  onClick={handleSave}
-                  className="btn-primary"
-                >
-                  <Save className="w-4 h-4 mr-2" />
-                  {t('settings.saveChanges')}
-                </button>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={handleDiscard}
+                    className="btn-secondary inline-flex items-center space-x-2"
+                  >
+                    {t('settings.discardChanges')}
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    className={`btn-primary inline-flex items-center space-x-2 ${isSaveDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    disabled={isSaveDisabled}
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>{t('settings.saveChanges')}</span>
+                  </button>
+                </div>
               </div>
             </div>
           )}

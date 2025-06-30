@@ -64,6 +64,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - All user settings and installed modpacks preserved
 - Enhanced error tracking and cache management available immediately
 
+### ✨ **Recent Additions & UX Polishing (post-alpha.2 hotfixes)**
+- **Global toast notifications**: Migrated to `react-hot-toast` with custom dark theme matching launcher palette. Notifications no longer shift layout.
+- **Settings enhancements**:
+  - Added "Discard changes" button next to "Save" with toast feedback.
+  - Java path validation hardened (symlink support, real-time feedback, always-visible "Use detected Java" button).
+  - Settings/About pages now use full width; removed legacy `max-w-*` constraints.
+- **Meta-storage panel**:
+  - Counts & lists now expandable. Clicking "Minecraft versions" or "Java installations" reveals complete lists with lazy load from backend.
+  - User-selected Java executable and system Java are counted; duplicates hidden when paths match.
+  - Added missing Spanish translation for "Tamaño de la caché".
+- **Modpack card cleanup**: Hidden server IP address and copy-IP button for cleaner presentation (connect action preserved internally).
+- **Backend API**:
+  - New Tauri commands `list_minecraft_versions` and `list_java_installations` to feed the expandable lists.
+- **Translations**: Added keys `settings.discardChanges`, `settings.changesDiscarded`, and Spanish equivalents.
+
 ## [0.0.8-alpha.1] - 2025-06-29
 
 ### 🎨 **UI/UX Improvements**

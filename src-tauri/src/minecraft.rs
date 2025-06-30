@@ -308,7 +308,69 @@ pub async fn launch_minecraft(modpack: Modpack, settings: UserSettings) -> Resul
     // Configure memory using Lyceris' built-in system
     let memory_gb = settings.allocated_ram.max(1);
     println!("Configuring memory: {}GB", memory_gb);
-    
+
+    // ------------------------------------------------------------
+    // Attempt to use a user-selected Java executable if provided.
+    // We expose it to Lyceris via the `LYCERIS_JAVA_PATH` env var and
+    // also prepend its parent directory to the current PATH so that
+    // any internal `which java` look-ups can find it first.
+    // Lyceris will fall back to its own bundled/runtime Java download
+    // logic automatically if the binary is not valid.
+    if let Some(ref java_path) = settings.java_path {
+        let java_path_trimmed = java_path.trim();
+        if !java_path_trimmed.is_empty() {
+            let candidate = std::path::Path::new(java_path_trimmed);
+            if candidate.exists() {
+                // Further validation: ensure it's a regular file and appears executable
+                let metadata_ok = candidate.is_file();
+                // Quick sanity: filename should contain "java" (handles java/javaw/java.exe)
+                let name_ok = candidate
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .map(|n| n.to_lowercase().contains("java"))
+                    .unwrap_or(false);
+
+                // Last resort: try invoking `java -version` to ensure it starts.
+                let mut exec_ok = false;
+                if metadata_ok {
+                    if let Ok(output) = std::process::Command::new(candidate)
+                        .arg("-version")
+                        .stdout(std::process::Stdio::null())
+                        .stderr(std::process::Stdio::null())
+                        .status()
+                    {
+                        exec_ok = output.success();
+                    }
+                }
+
+                if metadata_ok && name_ok && exec_ok {
+                    // 1) Explicit env var for Lyceris (future-proof if upstream adds support).
+                    std::env::set_var("LYCERIS_JAVA_PATH", java_path_trimmed);
+                    // 2) Prepend parent dir to PATH for good measure.
+                    if let Some(parent_dir) = candidate.parent() {
+                        let parent_str = parent_dir.to_string_lossy();
+                        let mut current_path = std::env::var("PATH").unwrap_or_default();
+                        let sep = if cfg!(windows) { ";" } else { ":" };
+                        if !current_path.split(if cfg!(windows) { ';' } else { ':' }).any(|p| p == parent_str) {
+                            current_path = format!("{}{}{}", parent_str, sep, current_path);
+                            std::env::set_var("PATH", current_path);
+                        }
+                    }
+                    println!("Using user-provided Java executable at {}", java_path_trimmed);
+                } else {
+                    eprintln!("Warning: provided Java path '{}' is not a valid Java executable. Falling back to default Lyceris detection.", java_path_trimmed);
+                    std::env::remove_var("LYCERIS_JAVA_PATH");
+                }
+            } else {
+                eprintln!("Warning: provided Java path '{}' does not exist. Falling back to default Lyceris detection.", java_path_trimmed);
+                std::env::remove_var("LYCERIS_JAVA_PATH");
+            }
+        }
+    } else {
+        // No custom Java path – make sure we don't keep a stale value around.
+        std::env::remove_var("LYCERIS_JAVA_PATH");
+    }
+
     let auth_method = get_auth_method(&settings);
     
     let mut config_builder = ConfigBuilder::new(

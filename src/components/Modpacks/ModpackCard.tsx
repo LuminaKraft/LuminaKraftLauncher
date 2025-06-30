@@ -63,7 +63,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
   const getButtonConfig = () => {
     if (isVanillaServer && modpack.ip) {
       return {
-        text: `${t('modpacks.connect')} (${modpack.ip})`,
+        text: `${t('modpacks.connect')} ${modpack.ip}`,
         icon: Globe,
         onClick: () => copyToClipboard(modpack.ip!),
         className: 'btn-secondary',
@@ -261,28 +261,6 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
               <span className="capitalize">{modpack.modloader}</span>
               {modpack.gamemode && (
                 <span className="text-lumina-400">{modpack.gamemode}</span>
-              )}
-            </div>
-
-            {/* Server IP section */}
-            <div className="min-h-[24px] flex items-center">
-              {isVanillaServer && modpack.ip ? (
-                <div className="flex items-center space-x-2">
-                  <span className="text-xs text-dark-400">{t('modpacks.serverIP')}</span>
-                  <code className="text-xs bg-dark-700 px-2 py-1 rounded text-lumina-400">{modpack.ip}</code>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      copyToClipboard(modpack.ip!);
-                    }}
-                    className="text-dark-400 hover:text-lumina-400 transition-colors"
-                    title={t('modpacks.copyIP')}
-                  >
-                    <Copy className="w-3 h-3" />
-                  </button>
-                </div>
-              ) : (
-                <div className="h-6"></div>
               )}
             </div>
           </div>
