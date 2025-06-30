@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.8-alpha.2] - 2025-06-30
 
-### 🔧 **Code Quality & Architecture Improvements**
+### 🔧 **Code Quality & Architecture Improvements** 
 
 #### **Dead Code Elimination & Warning Resolution**
 - **Removed 244 lines of duplicate code**: Eliminated unused `process_curseforge_modpack_for_update()` and related functions
