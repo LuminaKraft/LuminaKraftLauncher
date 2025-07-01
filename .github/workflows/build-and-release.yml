@@ -188,17 +188,9 @@ jobs:
             # Generate prerelease manifest
             node scripts/generate-prerelease-manifest.cjs "$VERSION"
             
-            # Download the actual latest.json from this prerelease (with signatures)
-            sleep 10  # Wait for GitHub to process the release
-            wget -O temp-latest.json "https://github.com/${{ github.repository }}/releases/download/v${VERSION}/latest.json" || echo "⚠️ Failed to download signed manifest"
-            
-            # If we got the signed manifest, use it; otherwise keep our generated one
-            if [ -f temp-latest.json ] && [ -s temp-latest.json ]; then
-              echo "✅ Using signed manifest from release"
-              mv temp-latest.json latest.json
-            else
-              echo "ℹ️ Using generated manifest (signatures will be empty)"
-            fi
+            # For prereleases, ALWAYS use our generated manifest 
+            # because tauri-action generates incorrect version (strips prerelease suffix)
+            echo "ℹ️ Using our generated manifest for prerelease (tauri-action generates incorrect version for prereleases)"
             
           else
             echo "📝 Handling stable release: $VERSION"

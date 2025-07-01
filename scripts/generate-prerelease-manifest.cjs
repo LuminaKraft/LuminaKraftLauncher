@@ -7,6 +7,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const https = require('https');
 
 // Parse command line arguments
 const args = process.argv.slice(2);
@@ -52,27 +53,94 @@ const PLATFORMS = [
   'windows-x86_64'
 ];
 
-function generatePrereleaseManifest() {
+// Function to download signed manifest from tauri-action
+function downloadSignedManifest(version) {
+  return new Promise((resolve, reject) => {
+    const url = `https://github.com/LuminaKraft/LuminakraftLauncher/releases/download/v${version}/latest.json`;
+    
+    https.get(url, (res) => {
+      if (res.statusCode === 302 || res.statusCode === 301) {
+        // Follow redirect
+        https.get(res.headers.location, (redirectRes) => {
+          let data = '';
+          redirectRes.on('data', chunk => data += chunk);
+          redirectRes.on('end', () => {
+            try {
+              resolve(JSON.parse(data));
+            } catch (error) {
+              reject(new Error(`Failed to parse signed manifest: ${error.message}`));
+            }
+          });
+        }).on('error', reject);
+      } else if (res.statusCode === 200) {
+        let data = '';
+        res.on('data', chunk => data += chunk);
+        res.on('end', () => {
+          try {
+            resolve(JSON.parse(data));
+          } catch (error) {
+            reject(new Error(`Failed to parse signed manifest: ${error.message}`));
+          }
+        });
+      } else {
+        reject(new Error(`HTTP ${res.statusCode}: ${res.statusMessage}`));
+      }
+    }).on('error', reject);
+  });
+}
+
+async function generatePrereleaseManifest() {
   try {
     console.log(`📝 Generating prerelease manifest for version ${version}...`);
 
-    const manifest = {
-      version: version,
-      notes: `Prerelease ${version} - Experimental version with latest features`,
-      pub_date: new Date().toISOString(),
-      platforms: {}
-    };
-
-    // Generate platform URLs
-    for (const platform of PLATFORMS) {
-      const fileName = fileNameForPlatform(platform, version);
-      manifest.platforms[platform] = {
-        signature: '', // Will be populated by Tauri during build
-        url: `https://github.com/LuminaKraft/LuminakraftLauncher/releases/download/v${version}/${encodeURIComponent(fileName)}`
+    let manifest;
+    
+    try {
+      // Try to download the signed manifest from tauri-action
+      console.log(`🔍 Attempting to download signed manifest from tauri-action...`);
+      const signedManifest = await downloadSignedManifest(version);
+      
+      // Fix the version and URLs while keeping signatures
+      manifest = {
+        version: version, // Fix: Use correct prerelease version
+        notes: `Prerelease ${version} - Experimental version with latest features`,
+        pub_date: signedManifest.pub_date || new Date().toISOString(),
+        platforms: {}
       };
+
+      // Fix URLs and keep signatures
+      for (const platform of PLATFORMS) {
+        const fileName = fileNameForPlatform(platform, version);
+        manifest.platforms[platform] = {
+          signature: signedManifest.platforms[platform]?.signature || '', // Keep original signature
+          url: `https://github.com/LuminaKraft/LuminakraftLauncher/releases/download/v${version}/${encodeURIComponent(fileName)}`
+        };
+      }
+      
+      console.log(`✅ Successfully downloaded and fixed signed manifest`);
+      
+    } catch (error) {
+      console.log(`⚠️ Failed to download signed manifest (${error.message}), generating fallback`);
+      
+      // Fallback: Generate manifest without signatures
+      manifest = {
+        version: version,
+        notes: `Prerelease ${version} - Experimental version with latest features`,
+        pub_date: new Date().toISOString(),
+        platforms: {}
+      };
+
+      // Generate platform URLs without signatures
+      for (const platform of PLATFORMS) {
+        const fileName = fileNameForPlatform(platform, version);
+        manifest.platforms[platform] = {
+          signature: '', // No signature available
+          url: `https://github.com/LuminaKraft/LuminakraftLauncher/releases/download/v${version}/${encodeURIComponent(fileName)}`
+        };
+      }
     }
 
-    // Write prerelease manifest
+    // Write prerelease manifest only
     const outputPath = path.join(__dirname, '..', 'prerelease-latest.json');
     fs.writeFileSync(outputPath, JSON.stringify(manifest, null, 2));
     
@@ -80,7 +148,7 @@ function generatePrereleaseManifest() {
     console.log(`  📄 prerelease-latest.json (version: ${version})`);
     console.log(`  🔗 URLs point to release tag: v${version}`);
     
-    // Also update the main latest.json to point to this prerelease
+    // Copy to latest.json for prereleases (since we need it for our updater system)
     const mainLatestPath = path.join(__dirname, '..', 'latest.json');
     fs.writeFileSync(mainLatestPath, JSON.stringify(manifest, null, 2));
     console.log(`  📄 Updated latest.json to point to prerelease ${version}`);
