@@ -191,12 +191,6 @@ class UpdateService {
    */
   private async checkPrereleaseWithTauri(release: any, currentVersion: string, platform: string): Promise<UpdateInfo> {
     try {
-      // Create a temporary manifest for this prerelease
-      const prereleaseManifest = this.createManifestForRelease(release);
-      
-      // Store it temporarily (this is a bit hacky, but works)
-      const tempManifestUrl = `https://github.com/LuminaKraft/LuminakraftLauncher/releases/download/${release.tag_name}/latest.json`;
-      
       // Try to use Tauri updater with the prerelease
       const update = await check();
       
@@ -249,37 +243,7 @@ class UpdateService {
     }
   }
 
-  /**
-   * Create a manifest structure for a specific release
-   */
-  private createManifestForRelease(release: any): any {
-    const version = release.tag_name.replace(/^v/, '');
-    const baseVersion = version.split('-')[0];
-    
-    return {
-      version,
-      notes: release.body || `Release ${version}`,
-      pub_date: release.published_at,
-      platforms: {
-        'darwin-x86_64': {
-          signature: '',
-          url: `https://github.com/LuminaKraft/LuminakraftLauncher/releases/download/${release.tag_name}/LuminaKraft.Launcher_x64.app.tar.gz`
-        },
-        'darwin-aarch64': {
-          signature: '',
-          url: `https://github.com/LuminaKraft/LuminakraftLauncher/releases/download/${release.tag_name}/LuminaKraft.Launcher_aarch64.app.tar.gz`
-        },
-        'linux-x86_64': {
-          signature: '',
-          url: `https://github.com/LuminaKraft/LuminakraftLauncher/releases/download/${release.tag_name}/LuminaKraft.Launcher_${version}_amd64.AppImage.tar.gz`
-        },
-        'windows-x86_64': {
-          signature: '',
-          url: `https://github.com/LuminaKraft/LuminakraftLauncher/releases/download/${release.tag_name}/LuminaKraft.Launcher_${baseVersion}_x64-setup.nsis.zip`
-        }
-      }
-    };
-  }
+
 
   /**
    * Compare two version strings to determine if the second is newer
