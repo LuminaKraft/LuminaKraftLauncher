@@ -29,10 +29,10 @@ console.log(`📝 Updating updater.json for ${isPrerelease ? 'prerelease' : 'sta
 
 // Platform-specific file mappings
 const platforms = {
-  'darwin-x86_64': `LuminaKraft.Launcher_x64.app.tar.gz`,
-  'darwin-aarch64': `LuminaKraft.Launcher_aarch64.app.tar.gz`,
-  'linux-x86_64': `LuminaKraft.Launcher_amd64.AppImage.tar.gz`,
-  'windows-x86_64': `LuminaKraft.Launcher_x64-setup.nsis.zip`
+  'darwin-x86_64': `LuminaKraft Launcher_x64.app.tar.gz`,
+  'darwin-aarch64': `LuminaKraft Launcher_aarch64.app.tar.gz`,
+  'linux-x86_64': `LuminaKraft Launcher_amd64.AppImage.tar.gz`,
+  'windows-x86_64': `LuminaKraft Launcher_x64-setup.exe`
 };
 
 function updateManifest() {
