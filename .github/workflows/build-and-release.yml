@@ -166,4 +166,41 @@ jobs:
               release_id: process.env.release_id,
               draft: false,
               prerelease: isPrerelease
-            }) 
+            })
+
+  sign-update:
+    permissions:
+      contents: write
+    runs-on: ubuntu-22.04
+    needs: publish-release
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Sign update and update manifest
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: node scripts/sign-update.cjs
+
+      - name: Commit and push updater.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add updater.json src-tauri/tauri.conf.json || true
+          if git diff --cached --quiet; then
+            echo "No changes to commit.";
+          else
+            git commit -m "chore(ci): add update signatures"
+            git push origin HEAD:main 
