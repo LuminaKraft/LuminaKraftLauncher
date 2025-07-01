@@ -110,6 +110,11 @@ function ensureValidKeyFile(originalPath) {
 // Ensure the key file is usable by minisign
 PRIVATE_KEY_PATH = ensureValidKeyFile(PRIVATE_KEY_PATH);
 
+// Helper to strip prerelease suffix (e.g. 0.0.8-alpha.3 -> 0.0.8)
+function baseVersionOf(v) {
+  return v.split('-')[0];
+}
+
 // Función que devuelve el nombre de archivo correcto según la plataforma y versión
 function fileNameForPlatform(platform, version) {
   // `productName` contiene un espacio, los artefactos generados por Tauri conservan ese espacio;
@@ -122,7 +127,7 @@ function fileNameForPlatform(platform, version) {
     case 'linux-x86_64':
       return `LuminaKraft Launcher_amd64.AppImage.tar.gz`;
     case 'windows-x86_64':
-      return `LuminaKraft Launcher_x64-setup.exe`;
+      return `LuminaKraft Launcher_${baseVersionOf(version)}_x64-setup.exe`;
     default:
       throw new Error(`Unknown platform: ${platform}`);
   }

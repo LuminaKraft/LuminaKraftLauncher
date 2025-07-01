@@ -27,12 +27,15 @@ const isPrerelease = args.includes('--prerelease') || version.includes('alpha') 
 
 console.log(`📝 Updating updater.json for ${isPrerelease ? 'prerelease' : 'stable'} version ${version}...`);
 
-// Platform-specific file mappings
+function baseVersionOf(v) {
+  return v.replace(/^v/, '').split('-')[0];
+}
+
 const platforms = {
   'darwin-x86_64': `LuminaKraft Launcher_x64.app.tar.gz`,
   'darwin-aarch64': `LuminaKraft Launcher_aarch64.app.tar.gz`,
   'linux-x86_64': `LuminaKraft Launcher_amd64.AppImage.tar.gz`,
-  'windows-x86_64': `LuminaKraft Launcher_x64-setup.exe`
+  'windows-x86_64': (version) => `LuminaKraft Launcher_${baseVersionOf(version)}_x64-setup.exe`
 };
 
 function updateManifest() {
@@ -60,7 +63,8 @@ function updateManifest() {
     updaterConfig.pub_date = new Date().toISOString();
 
     // Update platform URLs
-    for (const [platform, fileName] of Object.entries(platforms)) {
+    for (const [platform, fileEntry] of Object.entries(platforms)) {
+      const fileName = typeof fileEntry === 'function' ? fileEntry(version) : fileEntry;
       if (!updaterConfig.platforms[platform]) {
         updaterConfig.platforms[platform] = {
           signature: '',
@@ -72,11 +76,11 @@ function updateManifest() {
       if (isPrerelease) {
         // Point to specific tag for prereleases
         updaterConfig.platforms[platform].url = 
-          `https://github.com/${REPO}/releases/download/${version}/${fileName}`;
+          `https://github.com/${REPO}/releases/download/${version}/${encodeURIComponent(fileName)}`;
       } else {
         // Point to 'latest' for stable releases
         updaterConfig.platforms[platform].url = 
-          `https://github.com/${REPO}/releases/latest/download/${fileName}`;
+          `https://github.com/${REPO}/releases/latest/download/${encodeURIComponent(fileName)}`;
       }
 
       console.log(`✅ Updated ${platform} URL`);
