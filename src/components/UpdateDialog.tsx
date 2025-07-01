@@ -24,30 +24,28 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
     if (updateInfo.isPrerelease) {
       const version = updateInfo.latestVersion;
       if (version.includes('alpha')) {
-        return 'Alpha Update Available';
+        return t('update.alphaTitle');
       } else if (version.includes('beta')) {
-        return 'Beta Update Available';
+        return t('update.betaTitle');
       } else if (version.includes('rc')) {
-        return 'Release Candidate Available';
+        return t('update.rcTitle');
       }
-      return t('about.prereleaseUpdate');
+      return t('update.updateAvailable');
     }
-    return 'Update Available';
+    return t('update.updateAvailable');
   };
 
   const getPrereleaseDescription = () => {
     if (!updateInfo.isPrerelease) return '';
-    
     const version = updateInfo.latestVersion;
     if (version.includes('alpha')) {
-      return 'This alpha version may contain bugs and is intended for early testing. Use with caution.';
+      return t('update.alphaDesc');
     } else if (version.includes('beta')) {
-      return 'This beta version is more stable than alpha but may still contain issues.';
+      return t('update.betaDesc');
     } else if (version.includes('rc')) {
-      return 'This release candidate is near final quality but should still be tested before production use.';
+      return t('update.rcDesc');
     }
-    
-    return t('about.prereleaseUpdateDesc');
+    return t('update.prereleaseBanner');
   };
 
   const getIcon = () => {
@@ -80,29 +78,29 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
             <div className="mb-4 p-3 bg-yellow-900/30 border border-yellow-600 text-yellow-200 rounded-lg flex items-center">
               <AlertTriangle className="w-4 h-4 mr-2 flex-shrink-0" />
               <span className="text-sm">
-                This is a pre-release version intended for testing and development. Please report any issues you encounter.
+                {t('update.prereleaseBanner')}
               </span>
             </div>
           )}
           
           <p className="text-dark-300 mb-4">
-            {updateInfo.isPrerelease ? getPrereleaseDescription() : 'A new version of LuminaKraft Launcher is available!'}
+            {updateInfo.isPrerelease ? getPrereleaseDescription() : t('update.newVersionDesc')}
           </p>
           
           <div className="bg-dark-700 rounded-lg p-4 mb-4">
             <div className="flex justify-between items-center mb-2">
-              <span className="text-dark-400">Current Version:</span>
+              <span className="text-dark-400">{t('update.currentVersion')}</span>
               <span className="text-white font-mono">{updateInfo.currentVersion}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-dark-400">Latest Version:</span>
+              <span className="text-dark-400">{t('update.latestVersion')}</span>
               <span className="text-lumina-400 font-mono font-semibold">{updateInfo.latestVersion}</span>
             </div>
           </div>
 
           {updateInfo.releaseNotes && (
             <div className="bg-dark-700 rounded-lg p-4 mb-4">
-              <h4 className="text-white font-semibold mb-2">What's New:</h4>
+              <h4 className="text-white font-semibold mb-2">{t('update.whatsNew')}</h4>
               <div className="text-dark-300 text-sm max-h-32 overflow-y-auto">
                 {updateInfo.releaseNotes.split('\n').slice(0, 5).map((line, index) => (
                   <p key={index} className="mb-1">{line}</p>
@@ -112,7 +110,7 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
           )}
 
           <p className="text-dark-400 text-sm">
-            Click "Download Update" to open the download page in your browser.
+            {t('update.downloadNote')}
           </p>
         </div>
 
@@ -122,7 +120,7 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
             className="flex-1 px-4 py-2 bg-dark-700 text-white rounded-lg hover:bg-dark-600 transition-colors"
             disabled={isDownloading}
           >
-            Later
+            {t('update.later')}
           </button>
           <button
             onClick={onDownload}
@@ -146,7 +144,7 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
             ) : (
               <>
                 <Download className="w-4 h-4 mr-2" />
-                {updateInfo.isPrerelease ? 'Abrir página de descarga' : 'Instalar Actualización'}
+                {t('update.installUpdate')}
               </>
             )}
           </button>
@@ -154,7 +152,7 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
 
         <div className="mt-4 text-center">
           <p className="text-dark-500 text-xs">
-            Platform: {updateInfo.platform}
+            {t('update.platform', { platform: updateInfo.platform })}
           </p>
           <a 
             href="https://github.com/LuminaKraft/LuminaKraftLauncher/releases/latest"
@@ -163,7 +161,7 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
             className="text-dark-500 hover:text-lumina-400 text-xs inline-flex items-center mt-1 transition-colors"
           >
             <ExternalLink className="w-3 h-3 mr-1" />
-            View on GitHub
+            {t('update.viewOnGithub')}
           </a>
         </div>
       </div>

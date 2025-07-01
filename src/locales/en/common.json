@@ -364,5 +364,25 @@
     "delete": "Delete",
     "edit": "Edit",
     "close": "Close"
+  },
+  "update": {
+    "alphaTitle": "Alpha Update Available",
+    "betaTitle": "Beta Update Available",
+    "rcTitle": "Release Candidate Available",
+    "updateAvailable": "Update Available",
+    "prereleaseBanner": "This is a pre-release version intended for testing and development. Please report any issues you encounter.",
+    "alphaDesc": "This alpha version may contain bugs and is intended for early testing. Use with caution.",
+    "betaDesc": "This beta version is more stable than alpha but may still contain issues.",
+    "rcDesc": "This release candidate is near final quality but should still be tested before production use.",
+    "newVersionDesc": "A new version of LuminaKraft Launcher is available!",
+    "currentVersion": "Current Version:",
+    "latestVersion": "Latest Version:",
+    "whatsNew": "What's New:",
+    "downloadNote": "Click \"Download Update\" to open the download page in your browser.",
+    "later": "Later",
+    "downloadPage": "Open download page",
+    "installUpdate": "Install Update",
+    "platform": "Platform: {{platform}}",
+    "viewOnGithub": "View on GitHub"
   }
 } 
