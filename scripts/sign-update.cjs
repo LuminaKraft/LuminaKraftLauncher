@@ -261,13 +261,15 @@ function updateTauriConfigPubKey() {
       return;
     }
 
-    const pubLines = fs.readFileSync(pubPath, 'utf8').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-    if (pubLines.length < 2 || !pubLines[1]) {
+    const rawLines = fs.readFileSync(pubPath, 'utf8').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+
+    if (rawLines.length < 2) {
       console.warn(`⚠️  Unexpected public key file format at ${pubPath}`);
       return;
     }
 
-    const pubKey = pubLines[1];
+    // Remove the first line (comment) and concatenate the rest – minisign may split the base64 in multiple lines
+    const pubKey = rawLines.slice(1).join('');
 
     const configPath = path.join(__dirname, '..', 'src-tauri', 'tauri.conf.json');
     if (!fs.existsSync(configPath)) {
