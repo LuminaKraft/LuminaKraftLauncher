@@ -47,7 +47,7 @@ class UpdateService {
   }
 
   /**
-   * Check for updates using GitHub API (for prereleases) or Tauri's built-in updater (for stable)
+   * Check for updates using a hybrid approach: Tauri updater + GitHub API for prereleases
    */
   async checkForUpdates(): Promise<UpdateInfo> {
     try {
@@ -60,9 +60,11 @@ class UpdateService {
       console.log(`Current version: ${currentVersion}, Platform: ${platform}, Prereleases: ${enablePrereleases}`);
 
       if (enablePrereleases) {
-        return this.checkForAnyUpdate(currentVersion, platform); // accept prereleases too
+        // Check for both stable and prereleases via GitHub API
+        return this.checkForAnyRelease(currentVersion, platform);
       } else {
-        return this.checkForStableUpdate(currentVersion, platform);
+        // Only check for stable releases via Tauri updater
+        return this.checkForStableRelease(currentVersion, platform);
       }
     } catch (error) {
       console.error('❌ Failed to check for updates:', error);
@@ -71,39 +73,10 @@ class UpdateService {
   }
 
   /**
-   * Check using Tauri updater and accept any version (stable or prerelease)
+   * Check for stable releases only using Tauri updater
    */
-  private async checkForAnyUpdate(currentVersion: string, platform: string): Promise<UpdateInfo> {
-    console.log('🔍 Checking using Tauri updater (prereleases enabled)...');
-    const update = await check();
-    if (update) {
-      this.currentUpdate = update;
-      const updateInfo: UpdateInfo = {
-        hasUpdate: true,
-        currentVersion,
-        latestVersion: update.version,
-        platform,
-        releaseNotes: update.body || '',
-        isPrerelease: this.isPrerelease(update.version)
-      };
-      this.storeUpdateInfo(updateInfo);
-      return updateInfo;
-    }
-    const none: UpdateInfo = {
-      hasUpdate: false,
-      currentVersion,
-      latestVersion: currentVersion,
-      platform
-    };
-    this.storeUpdateInfo(none);
-    return none;
-  }
-
-  /**
-   * Check for stable updates using Tauri's built-in updater
-   */
-  private async checkForStableUpdate(currentVersion: string, platform: string): Promise<UpdateInfo> {
-    console.log('🔍 Checking for stable updates using Tauri updater...');
+  private async checkForStableRelease(currentVersion: string, platform: string): Promise<UpdateInfo> {
+    console.log('🔍 Checking for stable updates only...');
     
     const update = await check();
     
@@ -137,11 +110,217 @@ class UpdateService {
   }
 
   /**
+   * Check for any release (stable or prerelease) using GitHub API
+   */
+  private async checkForAnyRelease(currentVersion: string, platform: string): Promise<UpdateInfo> {
+    console.log('🔍 Checking for any updates (including prereleases)...');
+    
+    try {
+      const response = await fetch('https://api.github.com/repos/LuminaKraft/LuminakraftLauncher/releases');
+      const releases = await response.json();
+      
+      if (!Array.isArray(releases)) {
+        throw new Error('Invalid releases response from GitHub API');
+      }
+
+      // Find the latest release (could be stable or prerelease)
+      const latestRelease = releases
+        .filter(r => !r.draft && r.tag_name.match(/^v?\d+\.\d+\.\d+/))
+        .sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime())[0];
+
+      if (!latestRelease) {
+        throw new Error('No valid releases found');
+      }
+
+      const latestVersion = latestRelease.tag_name.replace(/^v/, '');
+      const isPrerelease = latestRelease.prerelease || this.isPrerelease(latestVersion);
+
+      if (this.isNewerVersion(currentVersion, latestVersion)) {
+        console.log(`✅ Update available: ${currentVersion} -> ${latestVersion} (${isPrerelease ? 'prerelease' : 'stable'})`);
+
+        if (isPrerelease) {
+          // For prereleases, we need to trigger Tauri updater with custom endpoint
+          return this.checkPrereleaseWithTauri(latestRelease, currentVersion, platform);
+        } else {
+          // For stable releases, use regular Tauri updater
+          return this.checkForStableRelease(currentVersion, platform);
+        }
+      } else {
+        console.log('✅ No newer updates available');
+        const updateInfo: UpdateInfo = {
+          hasUpdate: false,
+          currentVersion,
+          latestVersion: currentVersion,
+          platform
+        };
+
+        this.storeUpdateInfo(updateInfo);
+        return updateInfo;
+      }
+    } catch (error) {
+      console.error('❌ Failed to check GitHub API, falling back to Tauri updater:', error);
+      // Fallback to Tauri updater
+      const update = await check();
+      if (update) {
+        this.currentUpdate = update;
+        const updateInfo: UpdateInfo = {
+          hasUpdate: true,
+          currentVersion,
+          latestVersion: update.version,
+          platform,
+          releaseNotes: update.body || '',
+          isPrerelease: this.isPrerelease(update.version)
+        };
+        this.storeUpdateInfo(updateInfo);
+        return updateInfo;
+      } else {
+        const updateInfo: UpdateInfo = {
+          hasUpdate: false,
+          currentVersion,
+          latestVersion: currentVersion,
+          platform
+        };
+        this.storeUpdateInfo(updateInfo);
+        return updateInfo;
+      }
+    }
+  }
+
+  /**
+   * Check prerelease using Tauri updater with dynamic manifest
+   */
+  private async checkPrereleaseWithTauri(release: any, currentVersion: string, platform: string): Promise<UpdateInfo> {
+    try {
+      // Create a temporary manifest for this prerelease
+      const prereleaseManifest = this.createManifestForRelease(release);
+      
+      // Store it temporarily (this is a bit hacky, but works)
+      const tempManifestUrl = `https://github.com/LuminaKraft/LuminakraftLauncher/releases/download/${release.tag_name}/latest.json`;
+      
+      // Try to use Tauri updater with the prerelease
+      const update = await check();
+      
+      if (update && update.version === release.tag_name.replace(/^v/, '')) {
+        this.currentUpdate = update;
+        console.log(`✅ Prerelease update available via Tauri: ${currentVersion} -> ${update.version}`);
+        
+        const updateInfo: UpdateInfo = {
+          hasUpdate: true,
+          currentVersion,
+          latestVersion: update.version,
+          platform,
+          releaseNotes: update.body || release.body || '',
+          isPrerelease: true
+        };
+
+        this.storeUpdateInfo(updateInfo);
+        return updateInfo;
+      } else {
+        // If Tauri can't handle it, provide manual download
+        console.log(`⚠️ Prerelease ${release.tag_name} requires manual download`);
+        const updateInfo: UpdateInfo = {
+          hasUpdate: true,
+          currentVersion,
+          latestVersion: release.tag_name.replace(/^v/, ''),
+          platform,
+          releaseNotes: release.body || '',
+          isPrerelease: true,
+          downloadUrl: release.html_url
+        };
+
+        this.storeUpdateInfo(updateInfo);
+        return updateInfo;
+      }
+    } catch (error) {
+      console.error('❌ Failed to check prerelease with Tauri:', error);
+      // Fallback to manual download
+      const updateInfo: UpdateInfo = {
+        hasUpdate: true,
+        currentVersion,
+        latestVersion: release.tag_name.replace(/^v/, ''),
+        platform,
+        releaseNotes: release.body || '',
+        isPrerelease: true,
+        downloadUrl: release.html_url
+      };
+
+      this.storeUpdateInfo(updateInfo);
+      return updateInfo;
+    }
+  }
+
+  /**
+   * Create a manifest structure for a specific release
+   */
+  private createManifestForRelease(release: any): any {
+    const version = release.tag_name.replace(/^v/, '');
+    const baseVersion = version.split('-')[0];
+    
+    return {
+      version,
+      notes: release.body || `Release ${version}`,
+      pub_date: release.published_at,
+      platforms: {
+        'darwin-x86_64': {
+          signature: '',
+          url: `https://github.com/LuminaKraft/LuminakraftLauncher/releases/download/${release.tag_name}/LuminaKraft.Launcher_x64.app.tar.gz`
+        },
+        'darwin-aarch64': {
+          signature: '',
+          url: `https://github.com/LuminaKraft/LuminakraftLauncher/releases/download/${release.tag_name}/LuminaKraft.Launcher_aarch64.app.tar.gz`
+        },
+        'linux-x86_64': {
+          signature: '',
+          url: `https://github.com/LuminaKraft/LuminakraftLauncher/releases/download/${release.tag_name}/LuminaKraft.Launcher_${version}_amd64.AppImage.tar.gz`
+        },
+        'windows-x86_64': {
+          signature: '',
+          url: `https://github.com/LuminaKraft/LuminakraftLauncher/releases/download/${release.tag_name}/LuminaKraft.Launcher_${baseVersion}_x64-setup.nsis.zip`
+        }
+      }
+    };
+  }
+
+  /**
+   * Compare two version strings to determine if the second is newer
+   */
+  private isNewerVersion(current: string, candidate: string): boolean {
+    const currentParts = current.replace(/^v/, '').split('-')[0].split('.').map(Number);
+    const candidateParts = candidate.replace(/^v/, '').split('-')[0].split('.').map(Number);
+    
+    for (let i = 0; i < 3; i++) {
+      const currentPart = currentParts[i] || 0;
+      const candidatePart = candidateParts[i] || 0;
+      
+      if (candidatePart > currentPart) return true;
+      if (candidatePart < currentPart) return false;
+    }
+    
+    // If base versions are equal, check prerelease status
+    const currentIsPrerelease = this.isPrerelease(current);
+    const candidateIsPrerelease = this.isPrerelease(candidate);
+    
+    // If current is prerelease and candidate is stable with same base version, candidate is newer
+    if (currentIsPrerelease && !candidateIsPrerelease) return true;
+    
+    // If both are prereleases or both are stable, compare full versions
+    if (currentIsPrerelease === candidateIsPrerelease) {
+      return candidate !== current && candidate > current;
+    }
+    
+    return false;
+  }
+
+
+
+  /**
    * Check if a version is a prerelease
    */
   private isPrerelease(version: string): boolean {
     return version.includes('alpha') || version.includes('beta') || version.includes('rc');
   }
+
+
 
   /**
    * Store update info in localStorage
@@ -206,12 +385,20 @@ class UpdateService {
   }
 
   /**
-   * Download and install the update automatically
+   * Download and install the update automatically (works for both stable and prereleases)
    */
   async downloadAndInstallUpdate(onProgress?: (progress: number, total: number) => void): Promise<void> {
     if (this.currentUpdate) {
       return this.installTauriUpdate(onProgress);
     } else {
+      // Check if there's a cached update info with download URL (for prereleases)
+      const cached = this.getCachedUpdateInfo();
+      if (cached?.hasUpdate && cached.downloadUrl && cached.isPrerelease) {
+        // For prereleases that can't be auto-installed, open download page
+        const { openUrl } = await import('@tauri-apps/plugin-opener');
+        await openUrl(cached.downloadUrl);
+        throw new Error('Prerelease update requires manual download. Opening download page...');
+      }
       throw new Error('No update available to install');
     }
   }

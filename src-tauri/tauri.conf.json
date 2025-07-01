@@ -63,7 +63,8 @@
     "updater": {
       "active": true,
       "endpoints": [
-        "https://raw.githubusercontent.com/LuminaKraft/LuminakraftLauncher/main/updater.json"
+        "https://raw.githubusercontent.com/LuminaKraft/LuminakraftLauncher/main/latest.json",
+        "https://github.com/LuminaKraft/LuminakraftLauncher/releases/latest/download/latest.json"
       ],
       "dialog": false,
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDNBNkE3RDVBN0NBMjYwQjkKUldTNVlLSjhXbjFxT3BxTFNpN1UxZHE4Z3JUdEhFb3MyMktlQUlQdkRyRmUrSnJ5U3VTNFZONkEK"

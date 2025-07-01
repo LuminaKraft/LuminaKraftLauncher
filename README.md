@@ -333,6 +333,25 @@ See [COPYING.md](COPYING.md) for detailed information about third-party dependen
 
 **🎉 Ready for automated multi-platform distribution!** LuminaKraft Launcher builds automatically for Windows, macOS, and Linux via GitHub Actions with optimized CI/CD pipelines.
 
+### 🔄 Automatic Updates System
+
+LuminaKraft Launcher uses a **smart hybrid update system** that provides the best experience for both stable and experimental users:
+
+- **📡 Intelligent Update Detection**: 
+  - **Stable users**: Get only stable releases via Tauri's built-in updater
+  - **Beta testers**: Get latest prereleases via GitHub API + automatic installation
+- **🔐 Security**: All updates are cryptographically signed and verified by Tauri
+- **🎯 Universal Installation**: Both stable and prereleases install automatically when possible
+- **🧪 Beta Testing**: Users can opt-in to receive experimental prereleases (alpha/beta/rc)
+- **⚡ Zero Maintenance**: GitHub Actions automatically updates manifests
+
+**Update Flow:**
+1. **Smart Detection**: Checks user settings to determine update channel
+2. **Stable Channel**: Uses GitHub's `latest.json` for stable releases only
+3. **Prerelease Channel**: Uses GitHub API to find latest prerelease, then Tauri for installation
+4. **Automatic Installation**: Downloads, verifies signatures, installs, and restarts automatically
+5. **Fallback Support**: Manual download for prereleases that can't auto-install
+
 <div align="center">
   <sub>Built with ❤️ by the LuminaKraft Studios team</sub>
 </div>

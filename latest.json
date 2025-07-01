@@ -1,0 +1,23 @@
+{
+  "version": "0.0.8-alpha.3",
+  "notes": "This manifest will be automatically updated by GitHub Actions when new releases are published",
+  "pub_date": "2024-12-19T00:00:00.000Z",
+  "platforms": {
+    "darwin-x86_64": {
+      "signature": "",
+      "url": "https://github.com/LuminaKraft/LuminakraftLauncher/releases/latest/download/LuminaKraft.Launcher_x64.app.tar.gz"
+    },
+    "darwin-aarch64": {
+      "signature": "",
+      "url": "https://github.com/LuminaKraft/LuminakraftLauncher/releases/latest/download/LuminaKraft.Launcher_aarch64.app.tar.gz"
+    },
+    "linux-x86_64": {
+      "signature": "",
+      "url": "https://github.com/LuminaKraft/LuminakraftLauncher/releases/latest/download/LuminaKraft.Launcher_0.0.8-alpha.3_amd64.AppImage.tar.gz"
+    },
+    "windows-x86_64": {
+      "signature": "",
+      "url": "https://github.com/LuminaKraft/LuminakraftLauncher/releases/latest/download/LuminaKraft.Launcher_0.0.8_x64-setup.nsis.zip"
+    }
+  }
+} 
