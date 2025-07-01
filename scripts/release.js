@@ -98,8 +98,6 @@ function updateVersion(newVersion, isPrerelease = false) {
   });
 }
 
-
-
 async function commitAndTag(version, isPrerelease = false) {
   log('📝 Creating Git commit and tag...', 'cyan');
   const tagName = `v${version}`;
@@ -199,11 +197,9 @@ function pushChanges() {
     // Push commits
     execSync('git push origin main', { stdio: 'inherit' });
     
-    // Push tags (this will trigger GitHub Actions)
-    execSync('git push origin --tags', { stdio: 'inherit' });
-    
+    // NOTE: Do NOT push tags; we let GitHub create & sign them in the workflow.
     log('✅ Changes pushed to remote successfully', 'green');
-    log(`🎯 GitHub Actions will now build and create the release automatically`, 'cyan');
+    log('🏷️ Tags will be created & signed by GitHub during release workflow', 'cyan');
     log(`📍 Check progress at: https://github.com/${REPO_OWNER}/${REPO_NAME}/actions`, 'cyan');
   } catch (error) {
     log(`❌ Error pushing to remote: ${error.message}`, 'red');
