@@ -30,6 +30,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -65,7 +66,7 @@
         "https://raw.githubusercontent.com/LuminaKraft/LuminakraftLauncher/main/updater.json"
       ],
       "dialog": false,
-      "pubkey": "RWRTY0IyBO/CYznoVSv5q1s8HT3KR2voE53mY/4Z++6gLXTxY8QAABAAAAAAAAAAAAIAAAAATi1wTzujOi0pdT9Q5PcquHhxu99b6TTEa6+ZNbghfLjw5l/4pD2jbGeDkHcdauB8wpsv2lhEdOTwXqsxhBO+rU/gFAraoYACkaVvI5r/GxmtKjpggSEWtOUTD49pK4ny0bfEdfxt1EU="
+      "pubkey": "RWRTY0Iy5hfa+pPnWmsluNVz7irA9YCxVNwCYHHnHlGFfXGIqO8AABAAAAAAAAAAAAIAAAAAJEIZJoTp9r4ou8gO0P7TFHuO41E9Wg8+xxCL28nXpm53soQMcaiyqx2h6l54GEuFPL/hGNp9V3+kn1YUEKl/4j7MNo1ip76oQQOcvQviLMx7J7jH6QhinCB6MOo+WR/9zSD7PRAaPH0="
     }
   }
 }

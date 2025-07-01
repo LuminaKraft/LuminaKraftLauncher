@@ -30,6 +30,12 @@ function findDefaultKey() {
 }
 
 let PRIVATE_KEY_PATH = process.env.TAURI_SIGNING_PRIVATE_KEY || findDefaultKey();
+
+// Expand '~' to the user home directory if present
+if (PRIVATE_KEY_PATH.startsWith('~/')) {
+  PRIVATE_KEY_PATH = path.join(os.homedir(), PRIVATE_KEY_PATH.slice(2));
+}
+
 const PRIVATE_KEY_PASSWORD = process.env.TAURI_SIGNING_PRIVATE_KEY_PASSWORD;
 
 // If the env var contains the key contents (starts with '-----' or length > 500) write to temp file
@@ -104,13 +110,31 @@ function ensureValidKeyFile(originalPath) {
 // Ensure the key file is usable by minisign
 PRIVATE_KEY_PATH = ensureValidKeyFile(PRIVATE_KEY_PATH);
 
-// Mapeo de nombres de archivo por plataforma
-const PLATFORM_FILES = {
-  'darwin-x86_64': 'LuminaKraft.Launcher_x64.app.tar.gz',
-  'darwin-aarch64': 'LuminaKraft.Launcher_aarch64.app.tar.gz',
-  'linux-x86_64': 'LuminaKraft.Launcher_amd64.AppImage.tar.gz',
-  'windows-x86_64': 'LuminaKraft.Launcher_x64-setup.nsis.zip'
-};
+// Función que devuelve el nombre de archivo correcto según la plataforma y versión
+function fileNameForPlatform(platform, version) {
+  // `productName` contiene un espacio, los artefactos generados por Tauri conservan ese espacio;
+  // GitHub los sirve escapados como `%20`.  No necesitamos escaparlos manualmente para la URL.
+  switch (platform) {
+    case 'darwin-x86_64':
+      return `LuminaKraft Launcher_${version}_x64.app.tar.gz`;
+    case 'darwin-aarch64':
+      return `LuminaKraft Launcher_${version}_aarch64.app.tar.gz`;
+    case 'linux-x86_64':
+      return `LuminaKraft Launcher_${version}_amd64.AppImage.tar.gz`;
+    case 'windows-x86_64':
+      return `LuminaKraft Launcher_${version}_x64-setup.exe`;
+    default:
+      throw new Error(`Unknown platform: ${platform}`);
+  }
+}
+
+// Lista de plataformas soportadas
+const PLATFORMS = [
+  'darwin-x86_64',
+  'darwin-aarch64',
+  'linux-x86_64',
+  'windows-x86_64'
+];
 
 function getCurrentVersion() {
   try {
@@ -189,7 +213,7 @@ function updateUpdaterJson(version, urls, signatures) {
     };
 
     // Agregar las plataformas con sus firmas
-    for (const platform of Object.keys(PLATFORM_FILES)) {
+    for (const platform of PLATFORMS) {
       updaterData.platforms[platform] = {
         signature: signatures[platform] || '',
         url: urls[platform]
@@ -207,13 +231,14 @@ function updateUpdaterJson(version, urls, signatures) {
 
 function buildUpdateUrls(version, isPrerelease) {
   const tag = `v${version}`;
-  const base = isPrerelease
-    ? (platformFile) => `https://github.com/LuminaKraft/LuminakraftLauncher/releases/download/${tag}/${platformFile}`
-    : (platformFile) => `https://github.com/LuminaKraft/LuminakraftLauncher/releases/latest/download/${platformFile}`;
+  const buildUrl = (file) =>
+    isPrerelease
+      ? `https://github.com/LuminaKraft/LuminakraftLauncher/releases/download/${tag}/${encodeURIComponent(file)}`
+      : `https://github.com/LuminaKraft/LuminakraftLauncher/releases/latest/download/${encodeURIComponent(file)}`;
 
   const urls = {};
-  for (const [platform, file] of Object.entries(PLATFORM_FILES)) {
-    urls[platform] = base(file);
+  for (const platform of PLATFORMS) {
+    urls[platform] = buildUrl(fileNameForPlatform(platform, version));
   }
   return urls;
 }
@@ -286,7 +311,8 @@ async function main() {
 
   const signatures = {};
   
-  for (const [platform, url] of Object.entries(UPDATE_URLS)) {
+  for (const platform of PLATFORMS) {
+    const url = UPDATE_URLS[platform];
     try {
       console.log(`\n⬇️  Downloading ${platform} artifact...`);
       const tmpPath = path.join(os.tmpdir(), path.basename(url));
