@@ -32,10 +32,10 @@ function baseVersionOf(v) {
 }
 
 const platforms = {
-  'darwin-x86_64': `LuminaKraft Launcher_x64.app.tar.gz`,
-  'darwin-aarch64': `LuminaKraft Launcher_aarch64.app.tar.gz`,
-  'linux-x86_64': `LuminaKraft Launcher_amd64.AppImage.tar.gz`,
-  'windows-x86_64': (version) => `LuminaKraft Launcher_${baseVersionOf(version)}_x64-setup.exe`
+  'darwin-x86_64': `LuminaKraft.Launcher_x64.app.tar.gz`,
+  'darwin-aarch64': `LuminaKraft.Launcher_aarch64.app.tar.gz`,
+  'linux-x86_64': (version) => `LuminaKraft.Launcher_${version.replace(/^v/, '')}_amd64.AppImage`,
+  'windows-x86_64': (version) => `LuminaKraft.Launcher_${baseVersionOf(version)}_x64-setup.exe`
 };
 
 function updateManifest() {

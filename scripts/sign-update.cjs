@@ -121,13 +121,13 @@ function fileNameForPlatform(platform, version) {
   // GitHub los sirve escapados como `%20`.  No necesitamos escaparlos manualmente para la URL.
   switch (platform) {
     case 'darwin-x86_64':
-      return `LuminaKraft Launcher_x64.app.tar.gz`;
+      return `LuminaKraft.Launcher_x64.app.tar.gz`;
     case 'darwin-aarch64':
-      return `LuminaKraft Launcher_aarch64.app.tar.gz`;
+      return `LuminaKraft.Launcher_aarch64.app.tar.gz`;
     case 'linux-x86_64':
-      return `LuminaKraft Launcher_amd64.AppImage.tar.gz`;
+      return `LuminaKraft.Launcher_${version}_amd64.AppImage`;
     case 'windows-x86_64':
-      return `LuminaKraft Launcher_${baseVersionOf(version)}_x64-setup.exe`;
+      return `LuminaKraft.Launcher_${baseVersionOf(version)}_x64-setup.exe`;
     default:
       throw new Error(`Unknown platform: ${platform}`);
   }
