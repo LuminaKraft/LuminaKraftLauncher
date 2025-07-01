@@ -1,7 +1,7 @@
 {
   "version": "0.0.8-alpha.3",
-  "notes": "Nueva versión experimental v0.0.8-alpha.3 disponible",
-  "pub_date": "2025-07-01T01:00:25.774Z",
+  "notes": "**🚀 New Features:**\n- Tauri Updater Integration - Implemented native Tauri updater plugin for seamless automatic updates\n- Cryptographic Signing - Added secure update signing with password-protected private keys\n- Cross-Platform Support - Automatic updates work on Windows, macOS (Intel/ARM), and Linux\n- ...and 10 more features\n\n**🔧 Improvements:**\n- Integrated Update Manifest - `release.js` now automatically updates `updater.json` with correct URLs\n- Smart URL Generation - Automatically generates correct URLs for stable vs prerelease versions\n- ...and 46 more improvements\n\n**🐛 Bug Fixes:**\n- Update System - New automatic update system replaces manual download links\n- Settings Schema - Added `enablePrereleases` field to user settings\n- ...and 1 more fixes",
+  "pub_date": "2025-07-01T01:00:51.274Z",
   "platforms": {
     "darwin-x86_64": {
       "signature": "",
