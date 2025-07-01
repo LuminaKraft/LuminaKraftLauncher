@@ -12,7 +12,7 @@ A modern, cross-platform Minecraft launcher built with **Tauri** and **React**, 
 
 ![LuminaKraft Launcher Screenshot](assets/images/launcher-main.png)
 
-## ✨ Features 
+## ✨ Features
 
 - 🔐 **Microsoft Authentication**: Secure login with your Microsoft account
 - 📦 **Modpack Management**: Browse and install modpacks from CurseForge

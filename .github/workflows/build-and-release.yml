@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - 'v*'
+    branches:
+      - main
+    paths:
+      - 'package.json'
+      - 'src-tauri/tauri.conf.json'
+      - 'CHANGELOG.md'
   workflow_dispatch:
     inputs:
       create_release:
