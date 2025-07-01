@@ -140,18 +140,13 @@ async function generatePrereleaseManifest() {
       }
     }
 
-    // Write prerelease manifest only
-    const outputPath = path.join(__dirname, '..', 'prerelease-latest.json');
-    fs.writeFileSync(outputPath, JSON.stringify(manifest, null, 2));
-    
-    console.log('✅ Generated prerelease manifest:');
-    console.log(`  📄 prerelease-latest.json (version: ${version})`);
-    console.log(`  🔗 URLs point to release tag: v${version}`);
-    
-    // Copy to latest.json for prereleases (since we need it for our updater system)
+    // Write latest.json (consumed by Tauri updater)
     const mainLatestPath = path.join(__dirname, '..', 'latest.json');
     fs.writeFileSync(mainLatestPath, JSON.stringify(manifest, null, 2));
-    console.log(`  📄 Updated latest.json to point to prerelease ${version}`);
+    
+    console.log('✅ Generated prerelease manifest:');
+    console.log(`  📄 latest.json (version: ${version})`);
+    console.log(`  🔗 URLs point to release tag: v${version}`);
 
   } catch (error) {
     console.error(`❌ Failed to generate prerelease manifest: ${error.message}`);

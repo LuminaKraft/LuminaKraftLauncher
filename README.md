@@ -347,10 +347,10 @@ LuminaKraft Launcher uses a **smart hybrid update system** that provides the bes
 
 **Update Flow:**
 1. **Smart Detection**: Checks user settings to determine update channel
-2. **Stable Channel**: Uses GitHub's `latest.json` for stable releases only
-3. **Prerelease Channel**: Uses GitHub API to find latest prerelease, then Tauri for installation
+2. **Stable Channel**: Uses GitHub's `latest.json` **from the latest release assets**
+3. **Prerelease Channel**: Uses repository `latest.json` (branch `main`) signed & updated automatically
 4. **Automatic Installation**: Downloads, verifies signatures, installs, and restarts automatically
-5. **Fallback Support**: Manual download for prereleases that can't auto-install
+5. **Fallback Support**: Manual download only if the updater reports no downloadable package
 
 <div align="center">
   <sub>Built with ❤️ by the LuminaKraft Studios team</sub>

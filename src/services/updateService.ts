@@ -191,7 +191,7 @@ class UpdateService {
    */
   private async checkPrereleaseWithTauri(release: any, currentVersion: string, platform: string): Promise<UpdateInfo> {
     try {
-      // Try to use Tauri updater with the prerelease
+      // Force Tauri updater to use our latest.json (which now points to the prerelease)
       const update = await check();
       
       if (update && update.version === release.tag_name.replace(/^v/, '')) {
@@ -209,22 +209,22 @@ class UpdateService {
 
         this.storeUpdateInfo(updateInfo);
         return updateInfo;
-      } else {
-        // If Tauri can't handle it, provide manual download
-        console.log(`⚠️ Prerelease ${release.tag_name} requires manual download`);
-        const updateInfo: UpdateInfo = {
-          hasUpdate: true,
-          currentVersion,
-          latestVersion: release.tag_name.replace(/^v/, ''),
-          platform,
-          releaseNotes: release.body || '',
-          isPrerelease: true,
-          downloadUrl: release.html_url
-        };
-
-        this.storeUpdateInfo(updateInfo);
-        return updateInfo;
       }
+
+      // Fallback to manual download if Tauri couldn't detect the update
+      console.log(`⚠️ Prerelease ${release.tag_name} requires manual download`);
+      const updateInfo: UpdateInfo = {
+        hasUpdate: true,
+        currentVersion,
+        latestVersion: release.tag_name.replace(/^v/, ''),
+        platform,
+        releaseNotes: release.body || '',
+        isPrerelease: true,
+        downloadUrl: release.html_url
+      };
+
+      this.storeUpdateInfo(updateInfo);
+      return updateInfo;
     } catch (error) {
       console.error('❌ Failed to check prerelease with Tauri:', error);
       // Fallback to manual download
@@ -242,8 +242,6 @@ class UpdateService {
       return updateInfo;
     }
   }
-
-
 
   /**
    * Compare two version strings to determine if the second is newer
@@ -275,16 +273,12 @@ class UpdateService {
     return false;
   }
 
-
-
   /**
    * Check if a version is a prerelease
    */
   private isPrerelease(version: string): boolean {
     return version.includes('alpha') || version.includes('beta') || version.includes('rc');
   }
-
-
 
   /**
    * Store update info in localStorage
