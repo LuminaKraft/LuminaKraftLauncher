@@ -5,6 +5,71 @@ All notable changes to the LuminaKraft Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.8-alpha.4] - 2025-01-07
+
+### 🚀 **Smart Hybrid Update System - Complete Rewrite**
+
+#### **Intelligent Update Detection**
+- **Smart Channel Detection**: System now intelligently detects user preferences and serves appropriate updates
+  - **Stable Users**: Only receive stable releases via Tauri's built-in updater
+  - **Beta Testers**: Get latest prereleases via GitHub API with automatic installation
+- **Hybrid Architecture**: Combines GitHub's automatic `latest.json` for stability with custom GitHub API for prerelease detection
+- **Zero False Positives**: Prerelease users no longer see outdated stable versions when newer prereleases exist
+
+#### **Universal Automatic Installation**
+- **Both Channels Automatic**: Prereleases now install automatically just like stable releases (no more manual downloads)
+- **Intelligent Fallback**: If automatic prerelease installation fails, gracefully falls back to manual download page
+- **Tauri-Native Installation**: Uses Tauri's cryptographically verified installation for all updates
+- **Seamless Experience**: Same one-click installation experience for stable and experimental users
+
+#### **Simplified Architecture & Maintenance**
+- **Eliminated Complex Scripts**: Removed unnecessary `sign-update.cjs`, `update-manifest.cjs`, and `generate-unified-manifest.cjs`
+- **Cleaned Codebase**: Deleted redundant files and simplified workflow to essential components only
+- **GitHub Actions Optimization**: Streamlined CI/CD pipeline with intelligent manifest generation
+- **Zero Manual Maintenance**: GitHub Actions automatically handles all manifest updates for both stable and prereleases
+
+#### **Enhanced GitHub Actions Workflow**
+- **Automatic Manifest Management**: Workflow intelligently downloads and commits appropriate `latest.json` based on release type
+- **Prerelease Manifest Generation**: Custom script generates prerelease manifests with correct URLs and metadata
+- **Smart Release Detection**: Automatically determines if release is stable or prerelease and handles accordingly
+- **Improved Error Handling**: Better fallback mechanisms and error reporting in CI/CD pipeline
+
+### 🔧 **Technical Architecture Improvements**
+
+#### **UpdateService Complete Rewrite**
+- **Hybrid Detection Logic**: Intelligently routes update checks based on user settings
+- **GitHub API Integration**: Direct integration with GitHub releases API for prerelease detection
+- **Version Comparison**: Smart version comparison logic handling both stable and prerelease versioning
+- **Tauri Integration**: Seamless integration with Tauri's native updater for actual installations
+
+#### **Endpoint Configuration**
+- **Dual Endpoint Strategy**: Primary endpoint points to repository-hosted manifest, fallback to GitHub's automatic latest.json
+- **Dynamic Manifest Updates**: Repository manifest automatically updated by GitHub Actions for all release types
+- **Correct URL Patterns**: Fixed all platform-specific file naming patterns to match actual Tauri build outputs
+
+#### **Script & Tooling Simplification**
+- **New `generate-prerelease-manifest.cjs`**: Focused script for generating prerelease manifests with correct metadata
+- **Removed Legacy Scripts**: Eliminated complex signing and manifest scripts that caused maintenance overhead
+- **Package.json Cleanup**: Removed unused script references and maintained only essential commands
+
+### 🐛 **Bug Fixes & Stability**
+- **Fixed Pubkey Management**: Eliminated scripts that were corrupting the cryptographic public key in `tauri.conf.json`
+- **Corrected Workflow Syntax**: Fixed bash syntax errors in GitHub Actions that were causing CI failures
+- **Proper File Naming**: Corrected platform-specific file name patterns to match Tauri's actual build outputs
+- **Endpoint Reliability**: Fixed unreliable update endpoints and eliminated 404 errors
+
+### 📚 **Documentation Updates**
+- **Updated README**: Comprehensive documentation of the new smart hybrid update system
+- **Architecture Explanation**: Clear explanation of how stable vs prerelease detection works
+- **User Experience Documentation**: Detailed explanation of what users experience in each update channel
+- **Developer Workflow**: Updated documentation for simplified release process
+
+### 🔄 **Migration & Compatibility**
+- **Seamless Migration**: Existing users automatically benefit from improved update system
+- **Preserved User Settings**: All existing prerelease preferences maintained
+- **Backward Compatibility**: No breaking changes to user experience or data
+- **Enhanced Performance**: Faster and more reliable update detection and installation
+
 ## [0.0.8-alpha.3] - 2025-07-01
 
 ### 🚀 **Automatic Update System Implementation**
