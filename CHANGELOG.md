@@ -7,32 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.9-alpha.1] - 2025-07-02
 
+### ✨ **New Features**
+- **Interactive Sidebar**
+  - Avatar now shows player head (or animated loader) and is clickable to start Microsoft authentication.
+  - Sidebar auto-expands when hovering over avatar or navigation buttons and auto-collapses on mouse leave.
+  - Added pin/unpin button with new icons; pin state (expanded or collapsed) is persisted across restarts.
+
+- **Settings Validation**
+  - Username field: required and max 16 chars with inline error & toast; ESLint configured to enforce rules.
+
+### 🛠 **Improvements**
+- PlayerHeadLoader animation centered & fixed artifacts.
+- Added validation to Minecraft usernames.
+
 ### 🐛 **Bug Fixes**
 - Fixed ModpackDetails not showing installation progress information like ModpackCard
 - Removed download speed checks that were not implemented in backend
-
-### ✨ **New Features**
-* **Interactive Sidebar**
-  * Avatar now shows player head (or animated loader) and is clickable to start Microsoft authentication.
-  * Sidebar auto-expands when hovering over avatar or navigation buttons and auto-collapses on mouse leave.
-  * Added pin/unpin button with new icons; pin state (expanded or collapsed) is persisted across restarts.
-
-* **Settings Validation**
-  * Username field: required and max 16 chars with inline error & toast; ESLint configured to enforce rules.
-
-### 🛠 **Improvements**
-* PlayerHeadLoader animation centered & fixed artifacts.
-* Added validation to Minecraft usernames.
-
-### 🐛 **Bug Fixes**
-* Fixed Microsoft authentication fallback: browser method now opens page & shows URL input only on genuine failures (not on user cancel).
-* Alignment: avatar now aligns with navigation buttons.
+- Fixed Microsoft authentication fallback: browser method now opens page & shows URL input only on genuine failures (not on user cancel).
+- Alignment: avatar now aligns with navigation buttons.
 
 ### 🧰 **Tooling**
-* Added project-level **ESLint** config with React + TypeScript presets and integrated `npm run lint` script.
+- Added project-level **ESLint** config with React + TypeScript presets and integrated `npm run lint` script.
 
 ### 🔍 **Misc**
-* Changelog entries consolidated; previous minor fixes retained.
+- Changelog entries consolidated; previous minor fixes retained.
 
 ## [0.0.8-alpha.5] - 2025-07-01
 
