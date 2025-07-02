@@ -4,12 +4,6 @@ on:
   push:
     tags:
       - 'v*'
-    branches:
-      - main
-    paths:
-      - 'package.json'
-      - 'src-tauri/tauri.conf.json'
-      - 'CHANGELOG.md'
   workflow_dispatch:
     inputs:
       create_release:
@@ -46,6 +40,22 @@ jobs:
           echo "RELEASE_DESCRIPTION<<EOF" >> $GITHUB_ENV
           echo "$DESCRIPTION" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
+      - name: Delete existing tag if pushed signed
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const version = process.env.PACKAGE_VERSION;
+            const tag = `v${version}`;
+            try {
+              await github.rest.git.deleteRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: `tags/${tag}`
+              });
+              console.log(`Deleted pre-existing tag ${tag}`);
+            } catch (e) {
+              console.log(`Tag ${tag} not present or could not be deleted – continuing`);
+            }
       - name: Create release
         id: create-release
         uses: actions/github-script@v7

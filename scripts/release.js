@@ -178,11 +178,13 @@ async function commitAndTag(version, isPrerelease = false) {
     
     // Create commit
     const commitMessage = `Release v${version}${isPrerelease ? ' (pre-release)' : ''}`;
-    execSync(`git commit -m "${commitMessage}"`, { stdio: 'inherit' });
+    // Commit signed (-S) so GitHub marks it as Verified (requires local GPG key configured)
+    execSync(`git commit -S -m "${commitMessage}"`, { stdio: 'inherit' });
     
     // Create tag
     const tagMessage = `Version ${version}${isPrerelease ? ' (pre-release)' : ''}`;
-    execSync(`git tag -a ${tagName} -m "${tagMessage}"`, { stdio: 'inherit' });
+    // Create a signed tag (-s) so it appears as Verified on GitHub
+    execSync(`git tag -s ${tagName} -m "${tagMessage}"`, { stdio: 'inherit' });
     
     log('✅ Git commit and tag created successfully', 'green');
   } catch (error) {
@@ -197,10 +199,11 @@ function pushChanges() {
     // Push commits
     execSync('git push origin main', { stdio: 'inherit' });
     
-    // NOTE: Do NOT push tags; we let GitHub create & sign them in the workflow.
-    log('✅ Changes pushed to remote successfully', 'green');
-    log('🏷️ Tags will be created & signed by GitHub during release workflow', 'cyan');
-    log(`📍 Check progress at: https://github.com/${REPO_OWNER}/${REPO_NAME}/actions`, 'cyan');
+    // Push signed tags so the workflow runs with ref = tag
+    execSync('git push origin --tags', { stdio: 'inherit' });
+
+    log('✅ Commits and signed tags pushed to remote', 'green');
+    log('🎯 GitHub Actions will now build using ref = tag', 'cyan');
   } catch (error) {
     log(`❌ Error pushing to remote: ${error.message}`, 'red');
     process.exit(1);

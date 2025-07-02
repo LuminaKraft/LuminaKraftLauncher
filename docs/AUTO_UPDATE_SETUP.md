@@ -41,7 +41,9 @@ tauri-plugin-process = "2"
 {
   "plugins": {
     "updater": {
-      "endpoints": ["https://raw.githubusercontent.com/LuminaKraft/LuminakraftLauncher/main/updater.json"],
+      "endpoints": [
+        "https://raw.githubusercontent.com/LuminaKraft/LuminakraftLauncher/main/latest.json"
+      ],
       "pubkey": "YOUR_PUBLIC_KEY_HERE"
     }
   }
@@ -88,16 +90,19 @@ tauri signer generate --write-keys ~/.tauri/luminakraft-signing-key
 {
   "plugins": {
     "updater": {
-      "endpoints": ["https://raw.githubusercontent.com/LuminaKraft/LuminakraftLauncher/main/updater.json"],
+      "endpoints": [
+        "https://api.luminakraft.com/v1/launcher_data.json",
+        "https://raw.githubusercontent.com/LuminaKraft/LuminakraftLauncher/main/latest.json"
+      ],
       "pubkey": "YOUR_PUBLIC_KEY_HERE"
     }
   }
 }
 ```
 
-## 📋 Archivo updater.json
+## 📋 Archivo latest.json
 
-El archivo `updater.json` en la raíz del repositorio define las actualizaciones disponibles:
+El archivo `latest.json` en la raíz del repositorio define la última actualización disponible:
 
 ```json
 {
@@ -107,7 +112,7 @@ El archivo `updater.json` en la raíz del repositorio define las actualizaciones
   "platforms": {
     "darwin-x86_64": {
       "signature": "SIGNATURE_HERE",
-      "url": "https://github.com/LuminaKraft/LuminakraftLauncher/releases/latest/download/LuminaKraft_Launcher_x86_64.app.tar.gz"
+      "url": "https://github.com/LuminaKraft/LuminakraftLauncher/releases/latest/download/LuminaKraft.Launcher_x64.app.tar.gz"
     },
     "darwin-aarch64": {
       "signature": "SIGNATURE_HERE", 
@@ -187,7 +192,7 @@ git push origin v0.0.8-alpha.2
 # - Compila para todas las plataformas
 # - Genera archivos de actualización
 # - Firma los archivos
-# - Actualiza updater.json
+# - Actualiza latest.json
 # - Crea release
 ```
 
@@ -238,7 +243,7 @@ Error: Invalid signature
 ```
 Error: Update file not found
 ```
-**Solución**: Verificar que las URLs en `updater.json` sean correctas y los archivos existan.
+**Solución**: Verificar que las URLs en `latest.json` sean correctas y los archivos existan.
 
 #### 3. Permisos Insuficientes
 ```
@@ -281,25 +286,12 @@ El sistema automáticamente registra:
 
 Para más información, consulta la [documentación oficial de Tauri Updater](https://tauri.app/plugin/updater/).
 
-## 🔧 Step 5: Manual Signing (Development)
+## 🔧 Desarrollo local
 
-For development releases or manual testing:
+El firmado manual ya no es necesario. Todas las firmas y la generación del manifest `latest.json` se realizan automáticamente en GitHub Actions.
+
+Para probar las actualizaciones en entorno de desarrollo puedes compilar e instalar localmente con:
 
 ```bash
-# Sign with explicit private key and password
-node scripts/sign-update.js v0.0.8-alpha.2 --private-key-path ~/.tauri/luminakraft-signing-key.key --password your-key-password
-
-# Sign using environment variables (more secure)
-export TAURI_SIGNING_PRIVATE_KEY_PATH=~/.tauri/luminakraft-signing-key.key
-export TAURI_SIGNING_PRIVATE_KEY_PASSWORD=your-key-password
-node scripts/sign-update.js v0.0.8-alpha.2
-
-# Update manifest URLs for prereleases
-npm run update-manifest v0.0.8-alpha.2 --prerelease
-```
-
-The script will:
-1. Download release files from GitHub
-2. Sign each platform-specific updater file (.tar.gz/.zip)
-3. Update `updater.json` with signatures
-4. Clean up temporary files 
+npm run tauri:build
+``` 

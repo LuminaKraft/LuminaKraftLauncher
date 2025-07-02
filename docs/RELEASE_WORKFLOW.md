@@ -7,8 +7,8 @@ Este documento describe el flujo automatizado completo para crear releases de Lu
 ```mermaid
 graph TD
     A["🚀 npm run release minor"] --> B["📝 Actualiza version en package.json<br/>src-tauri/tauri.conf.json<br/>Cargo.toml"]
-    B --> C["📋 Ejecuta update-manifest<br/>automáticamente"]
-    C --> D["📄 Actualiza updater.json<br/>con URLs correctas"]
+    B --> C["📋 Genera manifest latest.json<br/>automáticamente"]
+    C --> D["📄 Actualiza latest.json<br/>(manifest) con URLs correctas"]
     D --> E["💾 Hace commit de<br/>todos los cambios"]
     E --> F["🏷️ Crea git tag"]
     F --> G["📤 npm run release:push<br/>Push a GitHub"]
@@ -50,8 +50,8 @@ npm run release:push     # Push commits y tags para activar GitHub Actions
 
 ### 1. **Preparación del Release** (Local)
 - ✅ Actualiza versiones en todos los archivos de configuración
-- ✅ Ejecuta `update-manifest` automáticamente
-- ✅ Actualiza `updater.json` con URLs correctas (stable vs prerelease)
+- ✅ Genera `latest.json` automáticamente
+- ✅ Actualiza `latest.json` con URLs correctas (stable vs prerelease)
 - ✅ Crea commit con todos los cambios
 - ✅ Crea git tag con la versión
 
@@ -76,7 +76,7 @@ npm run release:push     # Push commits y tags para activar GitHub Actions
 | `src-tauri/tauri.conf.json` | Configuración Tauri | `release.js` |
 | `src-tauri/Cargo.toml` | Dependencias Rust | `release.js` |
 | `src/components/Layout/Sidebar.tsx` | Versión en UI | `release.js` |
-| `updater.json` | Endpoints de actualización | `update-manifest.cjs` |
+| `latest.json` | Manifest de actualización | GitHub Actions |
 
 ## 🎮 Tipos de URLs Generadas
 
@@ -126,7 +126,7 @@ npm run release:push
 
 ### Error: "No changes to commit"
 - Verifica que hayas modificado archivos de versión
-- Asegúrate de que `updater.json` se haya actualizado
+- Asegúrate de que `latest.json` se haya actualizado
 
 ### Build falla en GitHub Actions
 - Verifica que los secretos estén configurados:
