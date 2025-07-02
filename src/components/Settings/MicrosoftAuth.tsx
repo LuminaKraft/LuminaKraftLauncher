@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { UserIcon, ExternalLinkIcon, CheckCircleIcon, XCircleIcon } from 'lucide-react';
 import AuthService from '../../services/authService';
@@ -24,6 +24,22 @@ export default function MicrosoftAuth({
   
   const authService = AuthService.getInstance();
 
+  // If sidebar requested alternate flow
+  useEffect(() => {
+    if (typeof window !== 'undefined' && localStorage.getItem('pendingMicrosoftAuth') === '1') {
+      localStorage.removeItem('pendingMicrosoftAuth');
+      setAuthStep('waiting_for_url');
+    }
+  }, []);
+
+  // Trigger automatic authentication when requested from sidebar
+  useEffect(() => {
+    if (typeof window !== 'undefined' && localStorage.getItem('triggerMicrosoftAuth') === '1') {
+      localStorage.removeItem('triggerMicrosoftAuth');
+      void startMicrosoftAuthModal();
+    }
+  }, []);
+
   const startMicrosoftAuthModal = async () => {
     try {
       setIsAuthenticating(true);
@@ -33,25 +49,35 @@ export default function MicrosoftAuth({
       onAuthSuccess(account);
       
     } catch (error) {
-      // Show more detailed error information
+      // Determine type of error and message
       let errorMessage = t('auth.authFailed');
+      let isUserCanceled = false;
+
       if (error instanceof Error) {
-        if (error.message.includes('timeout')) {
+        const msg = error.message.toLowerCase();
+        if (msg.includes('timeout')) {
           errorMessage = t('auth.authTimeout');
-        } else if (error.message.includes('closed')) {
+        } else if (msg.includes('closed') || msg.includes('cancel')) {
           errorMessage = t('auth.authCanceled');
+          isUserCanceled = true;
         } else {
           errorMessage = error.message;
         }
       }
-      
+
       onError(errorMessage);
-      
-      // Automatically switch to alternative method if modal fails
-      setTimeout(() => {
-        setAuthStep('waiting_for_url');
-      }, 1000);
-      
+
+      // Fallback only if not canceled by user
+      if (!isUserCanceled) {
+        setTimeout(async () => {
+          try {
+            await authService.openMicrosoftAuthAndGetUrl();
+          } catch (fallbackErr) {
+            console.error('Failed to open Microsoft auth URL fallback:', fallbackErr);
+          }
+          setAuthStep('waiting_for_url');
+        }, 1000);
+      }
     } finally {
       setIsAuthenticating(false);
     }

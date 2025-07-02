@@ -6,14 +6,16 @@ import {
   AlertCircle, CheckCircle2, Clock3, CircleDot, Play, RefreshCw, Wrench, FolderOpen, Trash2,
   Loader2
 } from 'lucide-react';
-import type { Modpack, ModpackState, Feature } from '../../types/launcher';
+import type { Modpack, ModpackState, Feature, ProgressInfo } from '../../types/launcher';
 import { useLauncher } from '../../contexts/LauncherContext';
 import ConfirmDialog from '../ConfirmDialog';
 import LauncherService from '../../services/launcherService';
 
 interface ModpackDetailsProps {
   modpack: Modpack;
-  state: ModpackState;
+  state: ModpackState & {
+    progress?: ProgressInfo;
+  };
   onBack: () => void;
 }
 
@@ -104,6 +106,55 @@ const ModpackDetails: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack 
       icon: CircleDot,
       color: 'text-gray-400'
     };
+  };
+
+  const getStepMessage = (step?: string): string => {
+    if (!step) return '';
+    
+    const stepMessages: { [key: string]: string } = {
+      'checking': 'Verificando archivos...',
+      'initializing': 'Iniciando...',
+      'preparing_installation': 'Preparando instalación...',
+      'verifying_modpack_config': 'Verificando configuración...',
+      'configuring_minecraft': 'Configurando Minecraft...',
+      'downloading_minecraft': 'Descargando archivos de Minecraft...',
+      'installing_minecraft': 'Instalando Minecraft y modloader...',
+      'downloading_minecraft_file': 'Descargando archivos de Minecraft...',
+      'downloading_minecraft_multiple': 'Descargando múltiples archivos...',
+      'installing_component': 'Instalando componentes...',
+      'minecraft_ready': 'Minecraft instalado',
+      'downloading_modpack': 'Descargando modpack...',
+      'processing_modpack': 'Procesando modpack...',
+      'processing_curseforge': 'Procesando modpack de CurseForge...',
+      'preparing_mod_downloads': 'Descargando mods...',
+      'downloading_modpack_file': 'Descargando mods...',
+      'downloading_mod_file': 'Descargando mods...',
+      'mod_already_exists': 'Descargando mods...',
+      'mod_downloaded_verified': 'Descargando mods...',
+      'mod_unavailable': 'Descargando mods...',
+      'extracting_modpack': 'Extrayendo modpack...',
+      'downloading': 'Descargando archivos...',
+      'downloading_update': 'Descargando actualización...',
+      'processing': 'Procesando archivos...',
+      'processing_update': 'Procesando actualización...',
+      'extracting': 'Extrayendo archivos...',
+      'modpack_ready': 'Archivos del modpack listos',
+      'modpack_extracted': 'Modpack extraído exitosamente',
+      'no_modpack_files': 'Sin archivos adicionales',
+      'finalizing': 'Finalizando...',
+      'updating': 'Actualizando...',
+      'updating_curseforge_mods': 'Actualizando mods...',
+      'replacing_mods': 'Reemplazando mods...',
+      'updating_configs': 'Actualizando configuraciones...',
+      'updating_standard_modpack': 'Actualizando modpack...',
+      'backing_up_minecraft': 'Respaldando Minecraft...',
+      'extracting_new_version': 'Extrayendo nueva versión...',
+      'restoring_minecraft': 'Restaurando Minecraft...',
+      'finalizing_update': 'Finalizando actualización...',
+      'completed': 'Completado'
+    };
+    
+    return stepMessages[step] || step;
   };
 
   const modpackTranslations = state.translations;
@@ -311,8 +362,14 @@ const ModpackDetails: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack 
                 {/* Progress Bar */}
                 {['installing', 'updating', 'launching'].includes(state.status) && state.progress && (
                   <div className="space-y-2">
-                    <div className="flex justify-between text-sm text-dark-300">
-                      <span>{Math.round(state.progress.percentage)}%</span>
+                    <div className="flex justify-between text-sm text-dark-300 mb-1">
+                      <span className="truncate">
+                        {state.progress.generalMessage || getStepMessage(state.progress.step) || 
+                          (state.status === 'installing' ? t('modpacks.installing') : 
+                           state.status === 'updating' ? t('modpacks.updating') : 
+                           t('modpacks.launching'))}
+                      </span>
+                      <span className="font-mono">{Math.round(state.progress.percentage)}%</span>
                     </div>
                     <div className="w-full bg-dark-700 rounded-full h-2 overflow-hidden">
                       <div
@@ -320,6 +377,50 @@ const ModpackDetails: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack 
                         style={{ width: `${state.progress.percentage}%` }}
                       />
                     </div>
+                    {/* Progress details */}
+                    {(state.progress.detailMessage && state.progress.detailMessage.trim() !== '') || state.progress.eta ? (
+                      <div className="mt-2 text-xs">
+                        <div className="flex justify-between items-start">
+                          {/* Left side: current file details */}
+                          <div className="flex items-center space-x-2 flex-1 min-w-0">
+                            {state.progress.detailMessage && state.progress.detailMessage.trim() !== '' && (() => {
+                              const message = state.progress.detailMessage;
+                              let displayText = message;
+                              let bulletClass = "w-2 h-2 bg-lumina-600 rounded-full animate-pulse";
+
+                              // Extract only the filename from the message
+                              if (message.includes(":")) {
+                                displayText = message.substring(message.indexOf(":") + 1).trim();
+                              }
+
+                              // Set bullet color based on message type without changing text
+                              if (message.startsWith("mod_exists:") || message.startsWith("mod_completed:")) {
+                                bulletClass = "w-2 h-2 bg-green-500 rounded-full";
+                              } else if (message.startsWith("mod_error:") || message.startsWith("mod_unavailable:")) {
+                                bulletClass = "w-2 h-2 bg-red-500 rounded-full";
+                              }
+
+                              return (
+                                <>
+                                  <div className={bulletClass}></div>
+                                  <span className="truncate">{displayText}</span>
+                                </>
+                              );
+                            })()}
+                          </div>
+                          
+                          {/* Right side: ETA aligned with percentage */}
+                          <div className="flex-shrink-0 font-mono">
+                            <div className="relative">
+                              <span className="opacity-0 pointer-events-none select-none">00m 00s</span>
+                              {state.progress.eta && (
+                                <span className="absolute top-0 right-0 text-dark-400">{state.progress.eta}</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 )}
 

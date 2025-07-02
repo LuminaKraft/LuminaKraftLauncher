@@ -16,6 +16,7 @@ const SettingsPage: React.FC = () => {
   
   const [formData, setFormData] = useState(userSettings);
   const [hasChanges, setHasChanges] = useState(false);
+  const [usernameError, setUsernameError] = useState<string | null>(null);
   const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const [apiInfo, setApiInfo] = useState<any>(null);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
@@ -109,6 +110,16 @@ const SettingsPage: React.FC = () => {
       ...prev,
       [field]: value
     }));
+    if (field === 'username') {
+      const trimmed = value.trim();
+      if (trimmed === '') {
+        setUsernameError(t('settings.usernameRequired'));
+      } else if (trimmed.length > 16) {
+        setUsernameError(t('settings.usernameTooLong'));
+      } else {
+        setUsernameError(null);
+      }
+    }
   };
 
   const handleLanguageChange = async (language: string) => {
@@ -121,6 +132,10 @@ const SettingsPage: React.FC = () => {
   };
 
   const handleSave = () => {
+    if (usernameError) {
+      toast.error(t('settings.usernameInvalidToast'));
+      return;
+    }
     updateUserSettings(formData);
     setHasChanges(false);
     toast.success(t('settings.saved'));
@@ -256,13 +271,13 @@ const SettingsPage: React.FC = () => {
     }
   };
 
-  const isSaveDisabled = (javaPathValid === false);
-
   const getDisplayedJavaPath = () => {
     return (formData.javaPath && formData.javaPath.trim() !== '') ? formData.javaPath.trim() : (detectedJavaPath ?? '');
   };
 
   const useDetectedDisabled = !detectedJavaPath || getDisplayedJavaPath() === detectedJavaPath;
+
+  const isSaveDisabled = (javaPathValid === false) || !!usernameError;
 
   return (
     <div className="h-full overflow-auto">
@@ -423,6 +438,7 @@ const SettingsPage: React.FC = () => {
                   placeholder={t('settings.usernamePlaceholder')}
                   className="input-field w-full"
                   disabled={formData.authMethod === 'microsoft'}
+                  maxLength={16}
                 />
                 <p className="text-dark-400 text-xs mt-1">
                   {formData.authMethod === 'microsoft' 
@@ -430,6 +446,9 @@ const SettingsPage: React.FC = () => {
                     : t('settings.usernameDescription')
                   }
                 </p>
+                {usernameError && (
+                  <p className="text-red-500 text-xs mt-1 flex items-center"><XCircle className="w-4 h-4 mr-1" /> {usernameError}</p>
+                )}
               </div>
             </div>
           </div>

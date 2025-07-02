@@ -282,7 +282,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
               />
             </div>
             {/* Progress details */}
-            {(state.progress.detailMessage && state.progress.detailMessage.trim() !== '') || state.progress.eta || state.progress.downloadSpeed ? (
+            {(state.progress.detailMessage && state.progress.detailMessage.trim() !== '') || state.progress.eta ? (
               <div className="mt-2 text-xs">
                 <div className="flex justify-between items-start">
                   {/* Left side: current file details */}
@@ -311,10 +311,6 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
                         </>
                       );
                     })()}
-                    {/* Download speed */}
-                    {state.progress.downloadSpeed && (
-                      <span className="text-dark-500 ml-3">⚡ {state.progress.downloadSpeed}</span>
-                    )}
                   </div>
                   
                   {/* Right side: ETA aligned with percentage */}
