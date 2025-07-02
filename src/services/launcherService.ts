@@ -372,7 +372,7 @@ class LauncherService {
     };
   }
 
-  async installModpack(modpackId: string, onProgress?: (progress: ProgressInfo) => void): Promise<void> {
+  async installModpack(modpackId: string, _onProgress?: (_progress: ProgressInfo) => void): Promise<void> {
     const modpack = this.launcherData?.modpacks.find(m => m.id === modpackId);
     if (!modpack) {
       throw new Error('Modpack no encontrado');
@@ -386,12 +386,12 @@ class LauncherService {
       // Set up progress listener if callback provided
       let unlistenProgress: (() => void) | null = null;
       
-      if (onProgress && isTauriContext()) {
+      if (isTauriContext()) {
         const { listen } = await import('@tauri-apps/api/event');
         unlistenProgress = await listen(
           `modpack_progress_${modpackId}`,
-          (event: any) => {
-            const data = event.payload;
+          (_event: any) => {
+            const data = _event.payload;
             if (data) {
               // Filtrar mensajes que no deben aparecer en currentFile
               let currentFile = '';
@@ -401,7 +401,7 @@ class LauncherService {
                 currentFile = data.message;
               }
               
-              onProgress({
+              _onProgress?.({
                 percentage: data.percentage || 0,
                 currentFile: currentFile,
                 downloadSpeed: data.downloadSpeed || '',
@@ -439,10 +439,10 @@ class LauncherService {
     }
   }
 
-  async updateModpack(modpackId: string, onProgress?: (progress: ProgressInfo) => void): Promise<any[]> {
+  async updateModpack(modpackId: string, _onProgress?: (_progress: ProgressInfo) => void): Promise<any[]> {
     // Las actualizaciones usan la misma función que instalación con tracking de fallos
     // pero el backend detecta automáticamente si es instalación inicial o actualización
-    return this.installModpackWithFailedTracking(modpackId, onProgress);
+    return this.installModpackWithFailedTracking(modpackId, _onProgress);
   }
 
   async launchModpack(modpackId: string): Promise<void> {
@@ -472,9 +472,9 @@ class LauncherService {
     }
   }
 
-  async repairModpack(modpackId: string, onProgress?: (progress: ProgressInfo) => void): Promise<void> {
+  async repairModpack(modpackId: string, _onProgress?: (_progress: ProgressInfo) => void): Promise<void> {
     // Para reparación, simplemente reinstalamos el modpack
-    return this.installModpack(modpackId, onProgress);
+    return this.installModpack(modpackId, _onProgress);
   }
 
   async checkForLauncherUpdate(): Promise<{ hasUpdate: boolean; downloadUrl?: string }> {
@@ -591,7 +591,7 @@ class LauncherService {
     }
   }
 
-  async installModpackWithFailedTracking(modpackId: string, onProgress?: (progress: ProgressInfo) => void): Promise<any[]> {
+  async installModpackWithFailedTracking(modpackId: string, _onProgress?: (_progress: ProgressInfo) => void): Promise<any[]> {
     const modpack = this.launcherData?.modpacks.find(m => m.id === modpackId);
     if (!modpack) {
       throw new Error('Modpack no encontrado');
@@ -600,13 +600,13 @@ class LauncherService {
     let unlistenProgress: (() => void) | undefined;
 
     // Configurar listener de progreso si se proporciona callback
-    if (onProgress && isTauriContext()) {
+    if (_onProgress && isTauriContext()) {
       const { listen } = await import('@tauri-apps/api/event');
       
       unlistenProgress = await listen(
         `modpack-progress-${modpackId}`,
-        (event: any) => {
-          const data = event.payload;
+        (_event: any) => {
+          const data = _event.payload;
           if (data) {
             // Filtrar mensajes que no deben aparecer en currentFile
             let currentFile = '';
@@ -616,7 +616,7 @@ class LauncherService {
               currentFile = data.message;
             }
             
-            onProgress({
+            _onProgress({
               percentage: data.percentage || 0,
               currentFile: currentFile,
               downloadSpeed: data.downloadSpeed || '',

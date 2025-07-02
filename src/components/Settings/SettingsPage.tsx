@@ -81,7 +81,7 @@ const SettingsPage: React.FC = () => {
     try {
       const isHealthy = await LauncherService.getInstance().checkAPIHealth();
       setApiStatus(isHealthy ? 'online' : 'offline');
-    } catch (error) {
+    } catch (_error) {
       setApiStatus('offline');
     }
   };
@@ -90,8 +90,8 @@ const SettingsPage: React.FC = () => {
     try {
       const info = await LauncherService.getInstance().getAPIInfo();
       setApiInfo(info);
-    } catch (error) {
-      console.error('Error fetching API info:', error);
+    } catch (_error) {
+      console.error('Error fetching API info:', _error);
     }
   };
 
@@ -100,8 +100,8 @@ const SettingsPage: React.FC = () => {
       const languageData = await LauncherService.getInstance().getAvailableLanguages();
       // TODO: Implement dynamic language loading
       console.log('Available languages:', languageData.availableLanguages);
-    } catch (error) {
-      console.error('Error fetching available languages:', error);
+    } catch (_error) {
+      console.error('Error fetching available languages:', _error);
     }
   };
 
@@ -126,8 +126,8 @@ const SettingsPage: React.FC = () => {
     try {
       await changeLanguage(language);
       toast.success(t('settings.saved'));
-    } catch (error) {
-      console.error('Error changing language:', error);
+    } catch (_error) {
+      console.error('Error changing language:', _error);
     }
   };
 
@@ -169,8 +169,8 @@ const SettingsPage: React.FC = () => {
         handleInputChange('javaPath', selected);
         setDetectedJavaPath(selected);
       }
-    } catch (error) {
-      console.error('Error selecting Java path:', error);
+    } catch (_error) {
+      console.error('Error selecting Java path:', _error);
     }
   };
 
@@ -361,15 +361,15 @@ const SettingsPage: React.FC = () => {
               
               {formData.authMethod === 'offline' && (
                 <div className="p-4 bg-yellow-600/20 border border-yellow-600/30 rounded-lg">
-                                     <div className="flex items-center space-x-2">
-                     <CheckCircle className="w-5 h-5 text-yellow-500" />
-                     <span className="text-yellow-400 font-medium">
-                       {t('auth.offlineMode')}
-                     </span>
-                   </div>
-                   <p className="text-yellow-300 text-sm mt-2">
-                     {t('auth.offlineModeDescription')}
-                   </p>
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-5 h-5 text-yellow-500" />
+                    <span className="text-yellow-400 font-medium">
+                      {t('auth.offlineMode')}
+                    </span>
+                  </div>
+                  <p className="text-yellow-300 text-sm mt-2">
+                    {t('auth.offlineModeDescription')}
+                  </p>
                 </div>
               )}
             </div>

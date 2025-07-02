@@ -345,9 +345,9 @@ class UpdateService {
   /**
    * Download and install the update automatically (works for both stable and prereleases)
    */
-  async downloadAndInstallUpdate(onProgress?: (progress: number, total: number) => void): Promise<void> {
+  async downloadAndInstallUpdate(_onProgress?: (_progress: number, _total: number) => void): Promise<void> {
     if (this.currentUpdate) {
-      return this.installTauriUpdate(onProgress);
+      return this.installTauriUpdate(_onProgress);
     } else {
       // Check if there's a cached update info with download URL (for prereleases)
       const cached = this.getCachedUpdateInfo();
@@ -364,7 +364,7 @@ class UpdateService {
   /**
    * Install update using Tauri's updater
    */
-  private async installTauriUpdate(onProgress?: (progress: number, total: number) => void): Promise<void> {
+  private async installTauriUpdate(_onProgress?: (_progress: number, _total: number) => void): Promise<void> {
     if (!this.currentUpdate) {
       throw new Error('No Tauri update available to install');
     }
@@ -372,27 +372,27 @@ class UpdateService {
     try {
       console.log('📥 Starting automatic update download and installation...');
       
-      await this.currentUpdate.downloadAndInstall((event: any) => {
-        const data = event.data || {};
-        switch (event.event) {
+      await this.currentUpdate.downloadAndInstall((_event: any) => {
+        const data = _event.data || {};
+        switch (_event.event) {
           case 'Started':
             console.log('🔄 Update download started');
-            onProgress?.(0, data.contentLength ?? 0);
+            _onProgress?.(0, data.contentLength ?? 0);
             break;
           case 'Progress':
             if (typeof data.chunkLength === 'number' && typeof data.contentLength === 'number') {
               console.log(`📦 Update download progress: ${data.chunkLength}/${data.contentLength}`);
-              onProgress?.(data.chunkLength, data.contentLength);
+              _onProgress?.(data.chunkLength, data.contentLength);
             }
             break;
           case 'Finished':
             console.log('✅ Update download finished, installing...');
             if (typeof data.contentLength === 'number') {
-              onProgress?.(data.contentLength, data.contentLength);
+              _onProgress?.(data.contentLength, data.contentLength);
             }
             break;
           default:
-            console.log('Update event:', event);
+            console.log('Update event:', _event);
         }
       });
 

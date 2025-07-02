@@ -6,9 +6,9 @@ import type { MicrosoftAccount, UserSettings } from '../../types/launcher';
 
 interface MicrosoftAuthProps {
   userSettings: UserSettings;
-  onAuthSuccess: (account: MicrosoftAccount) => void;
+  onAuthSuccess: (_account: MicrosoftAccount) => void;
   onAuthClear: () => void;
-  onError: (error: string) => void;
+  onError: (_error: string) => void;
 }
 
 export default function MicrosoftAuth({ 

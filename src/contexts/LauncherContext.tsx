@@ -22,16 +22,16 @@ interface LauncherContextType {
   currentLanguage: string;
   isLoading: boolean;
   error: string | null;
-  updateUserSettings: (settings: Partial<UserSettings>) => void;
+  updateUserSettings: (_settings: Partial<UserSettings>) => void;
   refreshData: () => Promise<void>;
-  installModpack: (id: string) => Promise<void>;
-  updateModpack: (id: string) => Promise<void>;
-  launchModpack: (id: string) => Promise<void>;
-  repairModpack: (id: string) => Promise<void>;
-  getModpackTranslations: (id: string) => any;
-  getModpackFeatures: (id: string) => Promise<ModpackFeatures | null>;
-  changeLanguage: (language: string) => Promise<void>;
-  removeModpack: (id: string) => Promise<void>;
+  installModpack: (_id: string) => Promise<void>;
+  updateModpack: (_id: string) => Promise<void>;
+  launchModpack: (_id: string) => Promise<void>;
+  repairModpack: (_id: string) => Promise<void>;
+  getModpackTranslations: (_id: string) => any;
+  getModpackFeatures: (_id: string) => Promise<ModpackFeatures | null>;
+  changeLanguage: (_language: string) => Promise<void>;
+  removeModpack: (_id: string) => Promise<void>;
 }
 
 type LauncherAction =

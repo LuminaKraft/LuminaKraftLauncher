@@ -6,7 +6,7 @@ import PlayerHeadLoader from '../PlayerHeadLoader';
 
 interface SidebarProps {
   activeSection: string;
-  onSectionChange: (section: string) => void;
+  onSectionChange: (_section: string) => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => {

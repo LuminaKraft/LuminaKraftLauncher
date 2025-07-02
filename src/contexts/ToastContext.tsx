@@ -9,7 +9,7 @@ interface Toast {
 }
 
 interface ToastContextValue {
-  showToast: (message: string, type?: ToastType) => void;
+  showToast: (_message: string, _type?: ToastType) => void;
 }
 
 const ToastContext = createContext<ToastContextValue>({
