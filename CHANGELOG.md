@@ -8,10 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.0.9-alpha.2] - 2025-07-03
 
 ### ✨ **New Features**
-- **Dynamic Modpack Card Backgrounds**
-  - Added colorful gradient backgrounds for modpack cards based on modpack name hash
-  - Each modpack now has a unique, consistent gradient background for better visual distinction
-  - Removed screenshot backgrounds due to performance concerns
+- **Screenshot Card Backgrounds**
+  - Modpack cards now display a subtle, darkened version of the first screenshot behind the logo
+  - Uses a 35 %-opacity image with a low-cost brightness filter instead of heavy blur for better performance
+  - Removed the gradient helper entirely, trimming unused code and eliminating GPU-heavy effects
 
 - **Enhanced "Coming Soon" Modpack Styling**
   - "Próximamente" status badge changed from yellow to blue for better visual hierarchy
@@ -51,7 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🔧 **Technical Improvements**
 - **ModpackCard Enhancements**
   - Added index prop for better animation timing
-  - Improved gradient generation algorithm for consistent colors
+  - Replaced gradient generation with lightweight screenshot overlays and removed the gradient utility helper
   - Better error handling for missing modpack images
   - Optimized component rendering performance
 
@@ -294,85 +294,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Settings Reset**: New prerelease setting defaults to disabled for stability
 - **Backward Compatibility**: All existing functionality preserved
 - **Update Experience**: Users will see new update dialogs and progress indicators
-
-### 🎯 **Technical Implementation Details**
-
-#### **Frontend Changes**
-- **UpdateService Rewrite**: Complete rewrite using Tauri's native updater APIs
-- **UpdateDialog Enhancement**: New progress tracking and automatic installation
-- **Settings Integration**: New prerelease toggle with proper state management
-- **Internationalization**: Full i18n support for all new update-related features
-
-#### **Backend Changes**
-- **Tauri Configuration**: Added updater plugin and cryptographic key configuration
-- **Platform Detection**: New commands for version and platform detection
-- **URL Management**: Dynamic URL generation for different release types
-- **Security Integration**: Password-protected key support in build process
-
-#### **Infrastructure Changes**
-- **GitHub Actions**: Enhanced workflow with automatic signing
-- **Script Automation**: New scripts for manifest management and signing
-- **Documentation**: Comprehensive guides and visual workflow diagrams
-- **Security**: Cryptographic signing with password protection
-
-## [0.0.8-alpha.2] - 2025-06-30
-
-### 🔧 **Code Quality & Architecture Improvements** 
-
-#### **Dead Code Elimination & Warning Resolution**
-- **Removed 244 lines of duplicate code**: Eliminated unused `process_curseforge_modpack_for_update()` and related functions
-- **Fixed all compilation warnings**: Resolved 7 dead code warnings for cleaner builds
-- **Proper function integration**: Integrated `format_bytes()` into `get_meta_storage_info()` for better UX
-- **Enhanced cache management**: Exposed granular cache clearing functions as Tauri commands
-
-#### **Module Renaming & Organization**
-- **Renamed `shared.rs` to `meta.rs`**: More accurate naming reflecting meta directory management
-- **Updated all imports**: Changed `crate::shared::` → `crate::meta::` across codebase
-- **Better code organization**: Eliminated confusion between general shared utilities and meta storage
-
-#### **Enhanced Failed Mods Support**
-- **FailedModsDialog for Updates**: Now shows failed mod dialog during modpack updates (previously only installs)
-- **Consistent error handling**: Both install and update operations use `installModpackWithFailedTracking()`
-- **Better user experience**: Users can see and manually download failed mods during updates
-
-### 🎨 **UI/UX Enhancements**
-
-#### **Enhanced Meta Storage Information**
-- **Formatted file sizes**: Added human-readable size formatting (e.g., "2.4 GB" instead of raw bytes)
-- **Better storage display**: Meta storage info now shows both raw and formatted sizes
-- **Improved readability**: Users see "149.2 MB" instead of "156437504" bytes
-
-#### **New Cache Management Commands**
-- **Granular cache control**: Added `clear_icons_cache()` and `clear_screenshots_cache()` Tauri commands
-- **Selective cleanup**: Users can now clear specific cache types instead of all cache
-- **Better storage management**: More control over launcher storage usage
-
-### 🔧 **Technical Improvements**
-
-#### **Smart Update System**
-- **Unified install/update logic**: Single function handles both operations with automatic detection
-- **Version comparison**: Compares modpack version, Minecraft version, modloader, and modloader version
-- **Efficient updates**: Skips unnecessary processing when versions match
-- **Complete reinstall approach**: Updates work by replacing all files in existing instance directory
-
-#### **Code Documentation**
-- **API field documentation**: Added clear comments for CurseForge API fields reserved for future use
-- **Function documentation**: Documented planned features with `#[allow(dead_code)]` and explanatory comments
-- **Better maintainability**: Clear intent preserved for future development
-
-### 🐛 **Bug Fixes**
-- Fixed missing FailedModsDialog during modpack updates
-- Resolved all compilation warnings for cleaner builds
-- Fixed unused import warnings after dead code removal
-- Eliminated duplicate update functionality that was causing confusion
-
-### 📋 **Breaking Changes**
-- None - all changes maintain backward compatibility
-
-### 🔧 **Migration Notes**
-- Automatic improvements upon update
-- All user settings and installed modpacks preserved
-- Enhanced error tracking and cache management available immediately
 
 ### ✨ **Recent Additions & UX Polishing (post-alpha.2 hotfixes)**
 - **Global toast notifications**: Migrated to `react-hot-toast` with custom dark theme matching launcher palette. Notifications no longer shift layout.
