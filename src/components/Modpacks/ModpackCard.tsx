@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Download, Play, RefreshCw, Wrench, AlertTriangle, Loader2, Globe, Trash2, FolderOpen } from 'lucide-react';
 import type { Modpack, ModpackState, ProgressInfo } from '../../types/launcher';
 import { useLauncher } from '../../contexts/LauncherContext';
+import { useAnimation } from '../../contexts/AnimationContext';
 import ConfirmDialog from '../ConfirmDialog';
 import LauncherService from '../../services/launcherService';
 
@@ -12,10 +13,12 @@ interface ModpackCardProps {
     progress?: ProgressInfo;
   };
   onSelect: () => void;
+  index?: number;
 }
 
-const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) => {
+const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, index = 0 }) => {
   const { t } = useTranslation();
+  const { getAnimationClass, getAnimationStyle } = useAnimation();
   const { installModpack, updateModpack, launchModpack, repairModpack, removeModpack, translations } = useLauncher();
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
@@ -23,28 +26,28 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
   const getServerStatusBadge = () => {
     if (modpack.isNew) {
       return (
-        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-600/20 text-green-400 border border-green-600/30">
-          {translations?.ui.status.new || 'Nuevo'}
+        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-600/40 text-green-300 border border-green-600/60">
+          {translations?.ui?.status?.new || 'Nuevo'}
         </span>
       );
     }
     if (modpack.isActive) {
       return (
-        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-600/20 text-green-400 border border-green-600/30">
-          {translations?.ui.status.active || 'Activo'}
+        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-600/40 text-green-300 border border-green-600/60">
+          {translations?.ui?.status?.active || 'Activo'}
         </span>
       );
     }
     if (modpack.isComingSoon) {
       return (
-        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-600/20 text-yellow-400 border border-yellow-600/30">
-          {translations?.ui.status.coming_soon || 'Próximamente'}
+        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-600/40 text-blue-300 border border-blue-600/60">
+          {translations?.ui?.status?.coming_soon || 'Próximamente'}
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-600/20 text-gray-400 border border-gray-600/30">
-        {translations?.ui.status.inactive || 'Inactivo'}
+      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-600/40 text-gray-300 border border-gray-600/60">
+        {translations?.ui?.status?.inactive || 'Inactivo'}
       </span>
     );
   };
@@ -200,12 +203,10 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
   };
 
   const handleRemoveModpack = async () => {
-    console.log('🔴 Starting modpack removal for:', modpack.id);
-    setIsRemoving(true);
-    
     try {
+      setIsRemoving(true);
+      console.log('🗑️ Removing modpack:', modpack.id);
       await removeModpack(modpack.id);
-      console.log('✅ Modpack removed successfully');
       setShowRemoveDialog(false);
     } catch (error) {
       console.error('❌ Error removing modpack:', error);
@@ -223,21 +224,98 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
     }
   };
 
+  // Get a gradient based on modpack primary color or fallback to name hash
+  const getModpackGradient = () => {
+    if (modpack.primaryColor) {
+      // Use primary color if available
+      const baseColor = modpack.primaryColor;
+      // Create a complementary color by shifting hue
+      const rgb = parseInt(baseColor.slice(1), 16);
+      const r = (rgb >> 16) & 255;
+      const g = (rgb >> 8) & 255;
+      const b = rgb & 255;
+      
+      // Convert to HSL to shift hue
+      const max = Math.max(r, g, b) / 255;
+      const min = Math.min(r, g, b) / 255;
+      
+      let h;
+      if (max === min) {
+        h = 0;
+      } else {
+        const d = max - min;
+        switch (max) {
+          case r / 255: h = (g / 255 - b / 255) / d + (g < b ? 6 : 0); break;
+          case g / 255: h = (b / 255 - r / 255) / d + 2; break;
+          case b / 255: h = (r / 255 - g / 255) / d + 4; break;
+          default: h = 0;
+        }
+        h /= 6;
+      }
+      
+      const hue1 = Math.round(h * 360);
+      const hue2 = (hue1 + 60) % 360;
+      
+      return `linear-gradient(135deg, hsl(${hue1}, 70%, 25%) 0%, hsl(${hue2}, 60%, 15%) 100%)`;
+    } else {
+      // Fallback to name hash
+      const hash = modpack.name.split('').reduce((a, b) => {
+        a = ((a << 5) - a) + b.charCodeAt(0);
+        return a & a;
+      }, 0);
+      
+      const hue1 = Math.abs(hash) % 360;
+      const hue2 = (hue1 + 60) % 360;
+      
+      return `linear-gradient(135deg, hsl(${hue1}, 70%, 25%) 0%, hsl(${hue2}, 60%, 15%) 100%)`;
+    }
+  };
+
+  // Special styling for coming soon items
+  const isComingSoon = modpack.isComingSoon;
+  const cardClasses = `card cursor-pointer group flex flex-col h-full relative ${
+    getAnimationClass('hover:bg-dark-700 transition-all duration-200', 'hover:border-lumina-400/40')
+  } ${
+    isComingSoon 
+      ? `border-2 border-blue-500/50 shadow-blue-500/20 shadow-lg ${
+          getAnimationClass('', 'hover:border-blue-400/70 hover:shadow-blue-400/30 hover:shadow-xl')
+        }` 
+      : ''
+  }`;
+
   return (
-    <div className="card hover:bg-dark-700 transition-colors duration-200 cursor-pointer group flex flex-col h-full relative">
-      {/* Status Badge - Moved to top right corner */}
-      <div className="absolute top-2 right-2 z-10">
+    <div 
+      className={cardClasses}
+      style={{
+        animation: `fadeInUp 0.4s ease-out ${index * 0.05 + 0.2}s backwards`,
+        ...getAnimationStyle({})
+      }}
+    >
+      {/* Status Badge - Top right corner of entire card */}
+      <div className="absolute top-2 right-2 z-20 transition-all duration-200">
         {getServerStatusBadge()}
       </div>
 
+      {/* Coming Soon Glow Effect */}
+      {isComingSoon && (
+        <div className={`absolute inset-0 rounded-lg bg-gradient-to-br from-blue-500/10 via-transparent to-blue-400/5 pointer-events-none ${
+          getAnimationClass('', 'animate-pulse')
+        }`} />
+      )}
+
       <div onClick={onSelect} className="flex-1 flex flex-col">
         <div className="space-y-4 flex-1">
-          {/* Modpack Icon */}
-          <div className="w-full h-32 rounded-lg overflow-hidden bg-dark-700 flex items-center justify-center p-4">
+          {/* Modpack Icon with Gradient Background */}
+          <div className="w-full h-32 rounded-lg overflow-hidden flex items-center justify-center p-4 relative group-hover:bg-dark-600 transition-all duration-200"
+               style={{ background: getModpackGradient() }}>
+            
+            {/* Logo */}
             <img
               src={modpack.logo || modpack.urlIcono}
               alt={displayName}
-              className="max-w-full max-h-full object-contain"
+              className={`max-w-full max-h-full object-contain transition-all duration-200 ${
+                getAnimationClass('', 'group-hover:scale-105')
+              }`}
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSIjMzc0MTUxIi8+CjxwYXRoIGQ9Ik0yNCAyNEg0MFY0MEgyNFYyNFoiIGZpbGw9IiM2Mzc1ODMiLz4KPC9zdmc+';
@@ -247,20 +325,37 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
 
           {/* Modpack Info */}
           <div className="space-y-3 flex-1">
-            <h3 className="text-white font-semibold text-lg truncate group-hover:text-lumina-400 transition-colors pr-2">
+            <h3 className={`text-white font-semibold text-lg truncate transition-colors duration-200 pr-2 ${
+              getAnimationClass('', 'group-hover:text-lumina-300')
+            }`}>
               {displayName}
             </h3>
             
-            <p className="text-dark-300 text-sm line-clamp-2">
+            <p className={`text-dark-300 text-sm line-clamp-2 transition-colors duration-200 ${
+              getAnimationClass('', 'group-hover:text-dark-200')
+            }`}>
               {displayDescription}
             </p>
             
-            <div className="flex items-center space-x-4 text-xs text-dark-400">
-              <span>v{modpack.version}</span>
-              <span>Minecraft {modpack.minecraftVersion}</span>
-              <span className="capitalize">{modpack.modloader}</span>
+            <div className={`flex items-center space-x-3 text-xs text-dark-400 transition-colors duration-200 ${
+              getAnimationClass('', 'group-hover:text-dark-300')
+            }`}>
+              <span className={`bg-dark-700/50 px-2 py-1 rounded-full transition-all duration-200 ${
+                getAnimationClass('', 'group-hover:bg-lumina-600/20')
+              }`}>
+                v{modpack.version}
+              </span>
+              <span className={`capitalize bg-dark-700/50 px-2 py-1 rounded-full transition-all duration-200 ${
+                getAnimationClass('', 'group-hover:bg-lumina-600/20')
+              }`}>
+                {modpack.modloader} {modpack.minecraftVersion}
+              </span>
               {modpack.gamemode && (
-                <span className="text-lumina-400">{modpack.gamemode}</span>
+                <span className={`text-lumina-400 bg-lumina-600/20 px-2 py-1 rounded-full transition-all duration-200 ${
+                  getAnimationClass('', 'group-hover:bg-lumina-600/30')
+                }`}>
+                  {modpack.gamemode}
+                </span>
               )}
             </div>
           </div>
@@ -277,7 +372,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
             </div>
             <div className="w-full bg-dark-700 rounded-full h-2 overflow-hidden">
               <div
-                className="bg-gradient-to-r from-lumina-600 to-lumina-500 h-2 rounded-full transition-all duration-500 ease-out"
+                className="bg-gradient-to-r from-lumina-600 to-lumina-500 h-2 rounded-full transition-all duration-300 ease-out"
                 style={{ width: `${state.progress.percentage}%` }}
               />
             </div>
@@ -340,7 +435,9 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect }) =
       </div>
 
       {/* Action Buttons */}
-      <div className="mt-4 pt-4 border-t border-dark-700">
+      <div className={`mt-4 pt-4 border-t border-dark-700 transition-colors duration-200 ${
+        getAnimationClass('', 'group-hover:border-lumina-400/30')
+      }`}>
         <div className="flex gap-2">
           <button
             onClick={(e) => {

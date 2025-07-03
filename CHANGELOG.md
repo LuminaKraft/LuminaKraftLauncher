@@ -5,6 +5,67 @@ All notable changes to the LuminaKraft Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.9-alpha.2] - 2025-07-03
+
+### ✨ **New Features**
+- **Dynamic Modpack Card Backgrounds**
+  - Added colorful gradient backgrounds for modpack cards based on modpack name hash
+  - Each modpack now has a unique, consistent gradient background for better visual distinction
+  - Removed screenshot backgrounds due to performance concerns
+
+- **Enhanced "Coming Soon" Modpack Styling**
+  - "Próximamente" status badge changed from yellow to blue for better visual hierarchy
+  - Coming soon modpacks now feature special blue glowing borders and shadows
+  - Added subtle pulse animation and hover effects for coming soon items
+  - Status badges now properly positioned above modpack logos with improved z-index
+
+### 🎨 **User Interface Improvements**
+- **Optimized Tooltip System**
+  - Removed tooltips from player avatar to reduce visual clutter
+  - Sidebar button tooltips now only appear when sidebar is collapsed
+  - Improved overall navigation experience with cleaner hover states
+
+- **Faster Refresh Animation**
+  - Refresh button animation speed increased from 600ms to 300ms
+  - Icon transition optimized from 300ms to 150ms for snappier response
+  - Animation now properly returns to original position without visual jumps
+
+- **Enhanced Animation System**
+  - Improved AnimationContext with better conditional animation handling
+  - Added staggered animations for modpack cards with index-based delays
+  - Better performance when animations are disabled in settings
+  - All animations now respect user preferences for low-end devices
+
+### 🐛 **Bug Fixes**
+- **Code Quality Improvements**
+  - Fixed all ESLint warnings and unused imports
+  - Removed unused React state variables and imports
+  - Improved TypeScript strict mode compliance
+  - Better parameter naming conventions for unused function parameters
+
+- **Status Badge Positioning**
+  - Status badges now properly appear above modpack logos
+  - Improved z-index stacking for better visibility
+  - Fixed badge positioning consistency across all modpack cards
+
+### 🔧 **Technical Improvements**
+- **ModpackCard Enhancements**
+  - Added index prop for better animation timing
+  - Improved gradient generation algorithm for consistent colors
+  - Better error handling for missing modpack images
+  - Optimized component rendering performance
+
+- **Animation Performance**
+  - Reduced animation complexity for better performance on low-end devices
+  - Improved animation timing functions for smoother transitions
+  - Better memory management for animation states
+
+### 🧰 **Tooling**
+- **ESLint Compliance**
+  - All code now passes ESLint checks without warnings
+  - Improved code consistency and maintainability
+  - Better TypeScript integration with proper type checking
+
 ## [0.0.9-alpha.1] - 2025-07-02
 
 ### ✨ **New Features**

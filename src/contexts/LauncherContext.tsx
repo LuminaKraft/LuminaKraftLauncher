@@ -61,6 +61,7 @@ const defaultSettings: UserSettings = {
   language: 'es',
   authMethod: 'offline',
   enablePrereleases: false,
+  enableAnimations: true,
 };
 
 const initialState: LauncherState = {

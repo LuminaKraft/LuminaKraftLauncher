@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { LauncherProvider, useLauncher } from './contexts/LauncherContext';
+import { AnimationProvider, useAnimation } from './contexts/AnimationContext';
 import Sidebar from './components/Layout/Sidebar';
 import ModpacksPage from './components/Modpacks/ModpacksPage';
 import SettingsPage from './components/Settings/SettingsPage';
@@ -13,11 +14,14 @@ import { Toaster } from 'react-hot-toast';
 
 function AppContent() {
   const [activeSection, setActiveSection] = useState('home');
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
   const [isInstallingUpdate, setIsInstallingUpdate] = useState(false);
   const [updateProgress, setUpdateProgress] = useState<{ current: number; total: number }>({ current: 0, total: 0 });
+  const [modpacksPageKey, setModpacksPageKey] = useState(0); // Key to force re-render of ModpacksPage
   const { isLoading, error, launcherData } = useLauncher();
+  const { withDelay } = useAnimation();
   const launcherService = LauncherService.getInstance();
 
 
@@ -71,16 +75,39 @@ function AppContent() {
     setShowUpdateDialog(false);
   };
 
+  const handleSectionChange = (newSection: string) => {
+    if (newSection === activeSection) {
+      // If clicking on the same section (like modpacks button while viewing modpack details),
+      // reset the ModpacksPage to go back to the main list
+      if (newSection === 'home') {
+        setModpacksPageKey(prev => prev + 1);
+      }
+      return;
+    }
+    
+    setIsTransitioning(true);
+    withDelay(() => {
+      setActiveSection(newSection);
+      // Reset modpacks page when navigating to it
+      if (newSection === 'home') {
+        setModpacksPageKey(prev => prev + 1);
+      }
+      withDelay(() => {
+        setIsTransitioning(false);
+      }, 50);
+    }, 150);
+  };
+
   const renderContent = () => {
     switch (activeSection) {
       case 'home':
-        return <ModpacksPage />;
+        return <ModpacksPage key={modpacksPageKey} />;
       case 'settings':
         return <SettingsPage />;
       case 'about':
         return <AboutPage />;
       default:
-        return <ModpacksPage />;
+        return <ModpacksPage key={modpacksPageKey} />;
     }
   };
 
@@ -124,10 +151,18 @@ function AppContent() {
     <div className="flex h-screen bg-dark-900 text-white">
       <Sidebar 
         activeSection={activeSection} 
-        onSectionChange={setActiveSection} 
+        onSectionChange={handleSectionChange} 
       />
       <main className="flex-1 overflow-hidden">
-        {renderContent()}
+        <div 
+          className={`h-full transition-all duration-300 ease-out ${
+            isTransitioning 
+              ? 'opacity-0 scale-95 translate-y-2' 
+              : 'opacity-100 scale-100 translate-y-0'
+          }`}
+        >
+          {renderContent()}
+        </div>
       </main>
 
       {/* Update Dialog */}
@@ -169,7 +204,9 @@ function AppContent() {
 function App() {
   return (
     <LauncherProvider>
-      <AppContent />
+      <AnimationProvider>
+        <AppContent />
+      </AnimationProvider>
     </LauncherProvider>
   );
 }

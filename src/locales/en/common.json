@@ -104,7 +104,11 @@
       "active": "Active",
       "coming_soon": "Coming Soon",
       "inactive": "Inactive"
-    }
+    },
+    "screenshots": "Screenshots",
+    "scrollHint": "Scroll to see more",
+    "imagesAvailable": "images available",
+    "carouselHint": "Use arrows or click dots to navigate"
   },
   "errors": {
     "unknown": "Unknown error occurred",
@@ -165,6 +169,11 @@
     "minecraft": "Minecraft",
     "advanced": "Advanced Settings",
     "performance": "Performance",
+    "animations": "Animations & Transitions",
+    "enableAnimations": "Enable animations",
+    "enableAnimationsDesc": "Disable animations for better performance on low-end devices or personal preference",
+    "animationsEnabled": "Animations are enabled",
+    "animationsDisabled": "Animations are disabled",
     "java": "Java",
     "api": "API Status",
     "language": "Language",

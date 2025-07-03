@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Search, RefreshCw, AlertCircle, Loader2 } from 'lucide-react';
 import { useLauncher } from '../../contexts/LauncherContext';
+import { useAnimation } from '../../contexts/AnimationContext';
 import ModpackCard from './ModpackCard';
-import ModpackDetails from './ModpackDetails';
+import ModpackDetailsRefactored from './ModpackDetailsRefactored';
 import type { Modpack } from '../../types/launcher';
 
 const ModpacksPage: React.FC = () => {
   const { t } = useTranslation();
+  const { getAnimationClass, getAnimationStyle, withDelay } = useAnimation();
   const { 
     launcherData, 
     modpackStates, 
@@ -19,6 +21,10 @@ const ModpacksPage: React.FC = () => {
   const [selectedModpack, setSelectedModpack] = useState<Modpack | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
+  const [isRefreshAnimating, setIsRefreshAnimating] = useState(false);
+  const [showingDetails, setShowingDetails] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
   // Check if any modpack is currently installing/updating
   const hasActiveInstallation = Object.values(modpackStates).some(state => 
     ['installing', 'updating', 'launching'].includes(state.status)
@@ -27,6 +33,43 @@ const ModpacksPage: React.FC = () => {
   const filteredModpacks = launcherData?.modpacks.filter(modpack =>
     modpack.name.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
+
+  const handleModpackSelect = (modpack: Modpack) => {
+    setIsTransitioning(true);
+    
+    // First phase: fade out current view
+    withDelay(() => {
+      setSelectedModpack(modpack);
+      setShowingDetails(true);
+      
+      // Second phase: fade in details view
+      withDelay(() => {
+        setIsTransitioning(false);
+      }, 100);
+    }, 200);
+  };
+
+  const handleBackToList = () => {
+    setIsTransitioning(true);
+    setShowingDetails(false);
+    
+    withDelay(() => {
+      setSelectedModpack(null);
+      setIsTransitioning(false);
+    }, 200);
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshAnimating(true);
+    try {
+      await refreshData();
+    } finally {
+      // Make animation faster - 300ms instead of 600ms
+      withDelay(() => {
+        setIsRefreshAnimating(false);
+      }, 300);
+    }
+  };
 
   if (isLoading && !launcherData) {
     return (
@@ -60,63 +103,93 @@ const ModpacksPage: React.FC = () => {
   }
 
   if (selectedModpack) {
-    const modpackState = modpackStates[selectedModpack.id] || {
-      status: 'not_installed' as const,
-      installed: false,
-      downloading: false,
-      progress: {
-        percentage: 0,
-        downloaded: 0,
-        total: 0,
-        speed: 0,
-        currentFile: '',
-        downloadSpeed: '',
-        eta: '',
-        step: '',
-        generalMessage: '',
-        detailMessage: ''
-      }
+    const modpackState = modpackStates[selectedModpack.id] || { 
+      installed: false, 
+      downloading: false, 
+      progress: { percentage: 0 }, 
+      status: 'not_installed' 
     };
+
     return (
-      <ModpackDetails
-        modpack={selectedModpack}
-        state={modpackState}
-        onBack={() => setSelectedModpack(null)}
-      />
+      <div className={`h-full w-full ${
+        getAnimationClass('transition-opacity duration-300 ease-out', '')
+      } ${
+        showingDetails && !isTransitioning 
+          ? 'opacity-100' 
+          : 'opacity-0'
+      }`}
+      style={getAnimationStyle({})}
+      >
+        <ModpackDetailsRefactored 
+          modpack={selectedModpack} 
+          state={modpackState} 
+          onBack={handleBackToList} 
+        />
+      </div>
     );
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className={`h-full flex flex-col ${
+      getAnimationClass('transition-opacity duration-300 ease-out', '')
+    } ${
+      isTransitioning 
+        ? 'opacity-0' 
+        : 'opacity-100'
+    }`}
+    style={getAnimationStyle({})}
+    >
       {/* Header */}
-      <div className="p-6 border-b border-dark-700">
+      <div 
+        className="p-6 border-b border-dark-700"
+        style={{
+          animation: 'fadeInUp 0.4s ease-out',
+          ...getAnimationStyle({})
+        }}
+      >
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-white text-2xl font-bold">{t('modpacks.title')}</h1>
+            <h1 className="text-white text-2xl font-bold bg-gradient-to-r from-lumina-400 to-lumina-300 bg-clip-text text-transparent">
+              {t('modpacks.title')}
+            </h1>
             <p className="text-dark-400 mt-1">
               {t('modpacks.availableCount', { count: filteredModpacks.length })}
             </p>
           </div>
           
-          <div className="flex items-center space-x-3">
-            <div className="relative">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-dark-400" />
+          <div 
+            className="flex items-center space-x-3"
+            style={{
+              animation: 'fadeInRight 0.4s ease-out 0.1s backwards',
+              ...getAnimationStyle({})
+            }}
+          >
+            <div className="relative group">
+              <Search className={`w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-dark-400 transition-colors duration-200 ${
+                getAnimationClass('', 'group-focus-within:text-lumina-400')
+              }`} />
               <input
                 type="text"
                 placeholder={t('modpacks.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="input-field pl-10 w-64"
+                className={`input-field pl-10 w-64 transition-all duration-300 ${
+                  getAnimationClass('', 'focus:ring-2 focus:ring-lumina-400/50 focus:border-lumina-400')
+                }`}
+                style={getAnimationStyle({})}
               />
             </div>
             
             <button
-              onClick={refreshData}
+              onClick={handleRefresh}
               disabled={isLoading || hasActiveInstallation}
-              className="btn-secondary"
+              className={`btn-secondary transition-transform duration-200 group ${
+                getAnimationClass('', 'hover:scale-105')
+              }`}
+              style={getAnimationStyle({})}
               title={hasActiveInstallation ? t('modpacks.refreshDisabledDuringInstall') : t('modpacks.refresh')}
             >
-              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${isLoading || isRefreshAnimating ? 'animate-spin' : ''} transition-transform duration-150`} />
             </button>
           </div>
         </div>
@@ -152,7 +225,7 @@ const ModpacksPage: React.FC = () => {
         ) : (
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredModpacks.map((modpack) => {
+              {filteredModpacks.map((modpack, index) => {
                 const modpackState = modpackStates[modpack.id] || {
                   status: 'not_installed' as const,
                   installed: false,
@@ -165,19 +238,26 @@ const ModpacksPage: React.FC = () => {
                     currentFile: '',
                     downloadSpeed: '',
                     eta: '',
-                    step: '',
-                    generalMessage: '',
-                    detailMessage: ''
-                  }
+                    phase: ''
+                  },
+                  features: []
                 };
-                
+
                 return (
-                  <ModpackCard
+                  <div
                     key={modpack.id}
-                    modpack={modpack}
-                    state={modpackState}
-                    onSelect={() => setSelectedModpack(modpack)}
-                  />
+                    style={{
+                      animation: `fadeInUp 0.4s ease-out ${index * 0.05 + 0.2}s backwards`,
+                      ...getAnimationStyle({})
+                    }}
+                  >
+                    <ModpackCard
+                      modpack={modpack}
+                      state={modpackState}
+                      onSelect={() => handleModpackSelect(modpack)}
+                      index={index}
+                    />
+                  </div>
                 );
               })}
             </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, HardDrive, Coffee, FolderOpen, Save, Wifi, WifiOff, RefreshCw, Trash2, Server, Languages, Shield, XCircle, CheckCircle } from 'lucide-react';
+import { User, HardDrive, Coffee, FolderOpen, Save, Wifi, WifiOff, RefreshCw, Trash2, Server, Languages, Shield, XCircle, CheckCircle, Zap } from 'lucide-react';
 import { useLauncher } from '../../contexts/LauncherContext';
 import LauncherService from '../../services/launcherService';
 import MicrosoftAuth from './MicrosoftAuth';
@@ -486,6 +486,44 @@ const SettingsPage: React.FC = () => {
                     <strong>{t('app.note')}:</strong> {t('settings.ramNote')}
                   </p>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Animation Settings */}
+          <div className="card">
+            <div className="flex items-center space-x-3 mb-6">
+              <Zap className="w-6 h-6 text-lumina-500" />
+              <h2 className="text-white text-xl font-semibold">{t('settings.animations')}</h2>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <label className="block text-dark-300 text-sm font-medium mb-1">
+                    {t('settings.enableAnimations')}
+                  </label>
+                  <p className="text-dark-400 text-xs">
+                    {t('settings.enableAnimationsDesc')}
+                  </p>
+                </div>
+                <div className="flex items-center">
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.enableAnimations !== false}
+                      onChange={(e) => handleInputChange('enableAnimations', e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-dark-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-lumina-300/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-lumina-600"></div>
+                  </label>
+                </div>
+              </div>
+              
+              <div className={`p-3 rounded-lg ${formData.enableAnimations !== false ? 'bg-green-600/20 border border-green-600/30' : 'bg-orange-600/20 border border-orange-600/30'}`}>
+                <p className={`text-sm ${formData.enableAnimations !== false ? 'text-green-300' : 'text-orange-300'}`}>
+                  {formData.enableAnimations !== false ? t('settings.animationsEnabled') : t('settings.animationsDisabled')}
+                </p>
               </div>
             </div>
           </div>

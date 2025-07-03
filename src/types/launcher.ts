@@ -17,6 +17,7 @@ export interface Modpack {
   modloader: string;
   logo: string;
   banner?: string;
+  images?: string[]; // Array of screenshot URLs
   changelog?: string;
   gamemode?: string;
   ip?: string;
@@ -30,6 +31,7 @@ export interface Modpack {
   collaborators?: Collaborator[];
   urlModpackZip?: string;
   urlIcono?: string;
+  primaryColor?: string; // Hex color for gradient backgrounds
 }
 
 export interface Collaborator {
@@ -106,6 +108,7 @@ export interface UserSettings {
   authMethod: 'offline' | 'microsoft';
   microsoftAccount?: MicrosoftAccount;
   enablePrereleases?: boolean;
+  enableAnimations?: boolean;
 }
 
 export interface ProgressInfo {

@@ -29,7 +29,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
   const hasUpdate = false;
   
   // Version is automatically updated by release.js
-  const currentVersion = "0.0.9-alpha.1";
+  const currentVersion = "0.0.9-alpha.2";
 
   const menuItems = [
     {
@@ -61,7 +61,10 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
 
   return (
     <div 
-      className={`${isExpanded ? 'w-64' : 'w-20'} bg-dark-800 border-r border-dark-700 flex flex-col transition-all duration-300 ease-in-out select-none`}
+      className={`${isExpanded ? 'w-64' : 'w-20'} bg-dark-800 border-r border-dark-700 flex flex-col transition-all duration-200 ease-in-out select-none`}
+      style={{
+        animation: 'fadeInLeft 0.4s ease-out'
+      }}
       onMouseLeave={() => {
         if (!isPinned) {
           setIsExpanded(false);
@@ -75,19 +78,18 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
           {userSettings.authMethod === 'microsoft' && userSettings.microsoftAccount ? (
             <>
               <div
-                className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center cursor-pointer"
+                className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center cursor-pointer relative group"
                 role="button"
                 tabIndex={0}
                 onClick={handleAvatarClick}
                 onMouseEnter={() => {
                   if (!isPinned) setIsExpanded(true);
                 }}
-                title={t('settings.general')}
               >
                 <img 
                   src={`https://mc-heads.net/avatar/${userSettings.microsoftAccount.uuid}/40`}
                   alt={`${userSettings.microsoftAccount.username}'s head`}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover transition-all duration-300 group-hover:scale-110 group-hover:rotate-6 group-active:scale-125 group-active:rotate-12"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
                     if (!target.src.includes('crafatar')) {
@@ -95,6 +97,14 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
                     }
                   }}
                 />
+                {/* Fun sparkle effect on hover */}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                  <div className="absolute top-0 right-0 w-2 h-2 bg-yellow-400 rounded-full animate-ping" style={{ animationDelay: '0ms' }}></div>
+                  <div className="absolute bottom-0 left-0 w-1.5 h-1.5 bg-blue-400 rounded-full animate-ping" style={{ animationDelay: '200ms' }}></div>
+                  <div className="absolute top-1/2 left-0 w-1 h-1 bg-green-400 rounded-full animate-ping" style={{ animationDelay: '400ms' }}></div>
+                </div>
+                {/* Glow effect */}
+                <div className="absolute inset-0 rounded-lg bg-gradient-to-tr from-lumina-400/20 to-lumina-300/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
               </div>
               <div className={`min-w-0 transition-opacity duration-200 ${isExpanded ? 'opacity-100 ml-3' : 'opacity-0 w-0 ml-0'}`}>
                 <h1 className="text-white font-bold text-lg truncate">{userSettings.microsoftAccount.username}</h1>
@@ -104,8 +114,18 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
           ) : (
             /* Offline mode - show loader */
             <>
-              <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center cursor-pointer" role="button" tabIndex={0} onClick={handleAvatarClick} title={t('settings.general')} onMouseEnter={() => { if (!isPinned) setIsExpanded(true); }}>
-                <PlayerHeadLoader />
+              <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center cursor-pointer group relative" role="button" tabIndex={0} onClick={handleAvatarClick} onMouseEnter={() => { if (!isPinned) setIsExpanded(true); }}>
+                <div className="transition-all duration-300 group-hover:scale-110 group-hover:rotate-6 group-active:scale-125 group-active:rotate-12">
+                  <PlayerHeadLoader />
+                </div>
+                {/* Fun sparkle effect on hover for offline mode too */}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                  <div className="absolute top-0 right-0 w-2 h-2 bg-gray-400 rounded-full animate-ping" style={{ animationDelay: '0ms' }}></div>
+                  <div className="absolute bottom-0 left-0 w-1.5 h-1.5 bg-gray-300 rounded-full animate-ping" style={{ animationDelay: '200ms' }}></div>
+                  <div className="absolute top-1/2 left-0 w-1 h-1 bg-gray-500 rounded-full animate-ping" style={{ animationDelay: '400ms' }}></div>
+                </div>
+                {/* Glow effect */}
+                <div className="absolute inset-0 rounded-lg bg-gradient-to-tr from-gray-400/20 to-gray-300/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
               </div>
               <div className={`min-w-0 transition-opacity duration-200 ${isExpanded ? 'opacity-100 ml-3' : 'opacity-0 w-0 ml-0'}`}>
                 <h1 className="text-white font-bold text-lg truncate">{userSettings.username}</h1>
@@ -134,7 +154,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
       {/* Navigation */}
       <nav className="flex-1 p-4">
         <div className="space-y-2" onMouseEnter={() => { if(!isPinned) setIsExpanded(true); }}>
-          {menuItems.map((item) => {
+          {menuItems.map((item, index) => {
             const Icon = item.icon;
             const isActive = activeSection === item.id;
             
@@ -142,11 +162,14 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
               <button
                 key={item.id}
                 onClick={() => onSectionChange(item.id)}
-                className={`sidebar-item w-full flex items-center pl-[0.875rem] ${isActive ? 'active' : ''} transition-all duration-300`}
-                title={!isExpanded ? item.label : item.description}
+                className={`sidebar-item w-full flex items-center pl-[0.875rem] ${isActive ? 'active' : ''} transition-all duration-200 group`}
+                style={{
+                  animation: `fadeInLeft 0.4s ease-out ${index * 0.05 + 0.1}s backwards`
+                }}
+                title={!isExpanded ? item.label : undefined}
               >
-                <Icon className="w-5 h-5 flex-shrink-0" />
-                <span className={`font-medium truncate transition-opacity duration-200 ${isExpanded ? 'opacity-100 ml-3' : 'opacity-0 w-0 ml-0'}`}>
+                <Icon className={`w-5 h-5 flex-shrink-0 transition-all duration-200 ${isActive ? 'text-white' : ''} group-hover:text-lumina-300`} />
+                <span className={`font-medium truncate transition-all duration-150 ${isExpanded ? 'opacity-100 ml-3' : 'opacity-0 w-0 ml-0'} ${isActive ? 'text-white' : ''} group-hover:text-lumina-200`}>
                   {item.label}
                 </span>
               </button>
@@ -170,16 +193,32 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
           </p>
         </div>
         
-        {/* Toggle Button */}
+        {/* Pin Button with better UX */}
         <button
           onClick={() => {
             const newPinned = !isPinned;
             setIsPinned(newPinned);
           }}
-          className="w-full flex items-center justify-center p-3 text-lumina-400 hover:text-lumina-300 hover:bg-lumina-600/10 rounded-lg transition-all duration-200 border border-lumina-600/20 hover:border-lumina-500/30"
+          className={`w-full flex items-center justify-center p-3 rounded-lg transition-all duration-200 border group relative ${
+            isPinned 
+              ? 'text-lumina-400 bg-lumina-600/10 border-lumina-500/40 hover:bg-lumina-600/20 hover:border-lumina-400/60' 
+              : 'text-dark-400 hover:text-lumina-400 hover:bg-lumina-600/10 border-dark-600 hover:border-lumina-500/30'
+          }`}
+          style={{
+            animation: 'fadeInUp 0.4s ease-out 0.3s backwards'
+          }}
           title={isPinned ? t('sidebar.unpin') : t('sidebar.pin')}
         >
-          {isPinned ? <PinOff className="w-5 h-5" /> : <Pin className="w-5 h-5" />}
+          {isPinned ? (
+            <PinOff className="w-5 h-5 transform group-hover:rotate-12 transition-transform duration-200" />
+          ) : (
+            <Pin className="w-5 h-5 transform group-hover:-rotate-12 transition-transform duration-200" />
+          )}
+          
+          {/* Tooltip indicator */}
+          <div className={`absolute -top-2 -right-1 w-2 h-2 rounded-full transition-all duration-200 ${
+            isPinned ? 'bg-green-500 opacity-100' : 'bg-gray-500 opacity-40'
+          }`} />
         </button>
       </div>
     </div>

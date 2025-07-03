@@ -103,7 +103,11 @@
       "active": "Activo",
       "coming_soon": "Próximamente",
       "inactive": "Inactivo"
-    }
+    },
+    "screenshots": "Capturas de Pantalla",
+    "scrollHint": "Desliza para ver más",
+    "imagesAvailable": "imágenes disponibles",
+    "carouselHint": "Usa las flechas o haz clic en los puntos para navegar"
   },
   "errors": {
     "unknown": "Error desconocido",
@@ -162,8 +166,13 @@
     "title": "Ajustes",
     "general": "General",
     "minecraft": "Minecraft",
-    "advanced": "Ajustes Avanzados",
+    "advanced": "Configuración Avanzada",
     "performance": "Rendimiento",
+    "animations": "Animaciones y Transiciones",
+    "enableAnimations": "Habilitar animaciones",
+    "enableAnimationsDesc": "Desactiva las animaciones para mejor rendimiento en dispositivos de bajos recursos o preferencia personal",
+    "animationsEnabled": "Las animaciones están habilitadas",
+    "animationsDisabled": "Las animaciones están deshabilitadas",
     "java": "Java",
     "api": "Estado de la API",
     "language": "Idioma",

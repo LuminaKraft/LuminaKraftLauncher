@@ -7,7 +7,7 @@ import { updateService, UpdateInfo } from '../../services/updateService';
 const AboutPage: React.FC = () => {
   const { t } = useTranslation();
   // Version is automatically updated by release.js
-  const currentVersion = "0.0.6";
+  const currentVersion = "0.0.9-alpha.2";
   const [loadedVersion, setLoadedVersion] = useState<string>(currentVersion);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState<boolean>(false);
