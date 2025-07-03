@@ -34,32 +34,31 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
   const getServerStatusBadge = () => {
     if (modpack.isNew) {
       return (
-        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-600/20 text-green-400 border border-green-600/30">
+        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-600/40 text-green-300 border border-green-600/60">
           {translations?.ui?.status?.new || 'Nuevo'}
         </span>
       );
     }
     if (modpack.isActive) {
       return (
-        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-600/20 text-green-400 border border-green-600/30">
+        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-600/40 text-green-300 border border-green-600/60">
           {translations?.ui?.status?.active || 'Activo'}
         </span>
       );
     }
     if (modpack.isComingSoon) {
       return (
-        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-600/20 text-blue-400 border border-blue-600/30">
+        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-600/40 text-blue-300 border border-blue-600/60">
           {translations?.ui?.status?.coming_soon || 'Próximamente'}
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-600/20 text-gray-400 border border-gray-600/30">
+      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-600/40 text-gray-300 border border-gray-600/60">
         {translations?.ui?.status?.inactive || 'Inactivo'}
       </span>
     );
   };
-
   const stats = [
     { icon: Download, value: modpack.downloads || 0, label: t('modpacks.downloads') },
     { icon: Clock, value: modpack.playTime || 0, label: t('modpacks.playTime') },
@@ -80,36 +79,48 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
         <span className="text-sm font-medium">{t('navigation.backToList')}</span>
       </button>
 
-      {/* Hero Section - Now scrollable */}
-      <div className="relative min-h-64 bg-gradient-to-b from-dark-800 to-dark-900 pt-20">
-        <div className="absolute inset-0 bg-center bg-cover" style={{ 
-          backgroundImage: `url(${modpack.banner || modpack.logo})`,
-          opacity: 0.1 
-        }} />
+      {/* Hero Section with banner or fallback image */}
+      <div 
+        className="relative h-80 flex flex-col justify-end p-8 text-white"
+      >
+        {/* Banner / fallback image */}
+        <div 
+          className="absolute inset-0 bg-center bg-cover"
+          style={{
+            backgroundImage: `url(${modpack.banner || modpack.images?.[0] || modpack.logo})`,
+            opacity: 0.12
+          }}
+        />
+        {/* Dark overlay for better text readability */}
+        <div className="absolute inset-0 bg-black/40" />
         
-        <div className="relative container mx-auto px-6 py-8">
-          <div className="flex flex-col md:flex-row items-start md:items-center space-y-6 md:space-y-0 md:space-x-8">
-            <div className="w-32 h-32 rounded-xl overflow-hidden bg-dark-800 border border-dark-700 shadow-lg flex-shrink-0">
+        {/* Logo and Content */}
+        <div className="relative z-10 flex items-start space-x-6">
+          {/* Logo */}
+          <div className="flex-shrink-0">
+            <div 
+              className="w-40 h-40 rounded-lg overflow-hidden flex items-center justify-center"
+            >
               <img
-                src={modpack.logo}
+                src={modpack.logo || modpack.urlIcono}
                 alt={displayName}
-                className="w-full h-full object-contain"
+                className="w-full h-full object-contain object-top"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iOTYiIGhlaWdodD0iOTYiIHZpZXdCb3g9IjAgMCA5NiA5NiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9Ijk2IiBoZWlnaHQ9Ijk2IiBmaWxsPSIjMzc0MTUxIi8+CjxwYXRoIGQ9Ik0zNiAzNkg2MFY2MEgzNlYzNloiIGZpbGw9IiM2Mzc1ODMiLz4KPC9zdmc+';
                 }}
               />
             </div>
-            
-            <div className="flex-1 min-w-0">
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                <div className="min-w-0 flex-1">
-                  <h1 className="text-4xl font-bold text-white mb-2">{displayName}</h1>
-                  <p className="text-lg text-dark-300 leading-relaxed">{displayDescription}</p>
-                </div>
-                <div className="flex-shrink-0">
-                  {getServerStatusBadge()}
-                </div>
+          </div>
+          
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <h1 className="text-4xl font-bold text-white mb-2">{displayName}</h1>
+                <p className="text-lg text-dark-300 leading-relaxed">{displayDescription}</p>
+              </div>
+              <div className="flex-shrink-0">
+                {getServerStatusBadge()}
               </div>
             </div>
           </div>

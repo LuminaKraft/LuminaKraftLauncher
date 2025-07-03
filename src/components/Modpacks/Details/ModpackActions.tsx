@@ -225,10 +225,10 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state }) => {
       {/* Remove Confirmation Dialog */}
       {showRemoveDialog && (
         <ConfirmDialog
-          title={t('modpacks.removeModpack')}
-          message={t('modpacks.removeConfirmation', { name: modpack.name })}
-          confirmText={t('modpacks.removeFiles')}
-          cancelText={t('common.cancel')}
+          title={t('modpacks.removeConfirmTitle')}
+          message={t('modpacks.removeConfirmMessage', { name: modpack.name })}
+          confirmText={t('modpacks.removeButton')}
+          cancelText={t('app.cancel')}
           onConfirm={handleRemove}
           onCancel={() => setShowRemoveDialog(false)}
           isLoading={isRemoving}
