@@ -36,16 +36,27 @@ const LogsSection: React.FC<LogsSectionProps> = ({ logs }) => {
           </div>
           <div
             ref={containerRef}
-            className="bg-black text-green-400 font-mono text-sm p-4 rounded-lg h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-dark-600 scrollbar-track-transparent"
+            className="bg-black font-mono text-sm p-4 rounded-lg h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-dark-600 scrollbar-track-transparent"
           >
-            {logs.map((line, idx) => (
-              <div key={idx} className="whitespace-pre-wrap break-words leading-relaxed">
-                <span className="text-dark-500 select-none mr-2">
-                  {String(idx + 1).padStart(3, '0')}:
-                </span>
-                {line}
-              </div>
-            ))}
+            {logs.map((line, idx) => {
+              // Determine color based on log level keywords
+              let colorClass = "text-green-400"; // default for info/debug
+              const lower = line.toLowerCase();
+              if (lower.includes("error")) {
+                colorClass = "text-red-500";
+              } else if (lower.includes("warn")) {
+                colorClass = "text-yellow-400";
+              }
+
+              return (
+                <div key={idx} className={`whitespace-pre-wrap break-words leading-relaxed ${colorClass}`}>
+                  <span className="text-dark-500 select-none mr-2">
+                    {String(idx + 1).padStart(3, '0')}:
+                  </span>
+                  {line}
+                </div>
+              );
+            })}
           </div>
         </>
       )}

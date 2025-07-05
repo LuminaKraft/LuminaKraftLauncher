@@ -34,6 +34,7 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
 
   React.useEffect(() => {
     let unlisten: (() => void) | null = null;
+    let unlistenStart: (() => void) | null = null;
     const setup = async () => {
       try {
         const { listen } = await import('@tauri-apps/api/event');
@@ -47,6 +48,11 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
             return next;
           });
         });
+
+        // Clear logs when the instance (re)starts
+        unlistenStart = await listen(`minecraft-started-${modpack.id}`, () => {
+          setLogs([]);
+        });
       } catch (err) {
         console.error('Failed to listen logs', err);
       }
@@ -55,6 +61,9 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
     return () => {
       if (unlisten) {
         unlisten();
+      }
+      if (unlistenStart) {
+        unlistenStart();
       }
     };
   }, [modpack.id]);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Download, Play, RefreshCw, Wrench, FolderOpen, Trash2,
@@ -74,6 +74,15 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state }) => {
           icon: Loader2,
           label: t('modpacks.installing'),
           bgColor: 'bg-lumina-500/50 cursor-not-allowed',
+          textColor: 'text-white/70',
+          spinning: true,
+          disabled: true
+        };
+      case 'launching':
+        return {
+          icon: Loader2,
+          label: t('modpacks.launching'),
+          bgColor: 'bg-green-600/50 cursor-not-allowed',
           textColor: 'text-white/70',
           spinning: true,
           disabled: true
@@ -173,6 +182,37 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state }) => {
   const statusInfo = getStatusInfo();
   const Icon = statusInfo.icon;
 
+  // Fake progress for the "launching" phase
+  const [fakeLaunchProgress, setFakeLaunchProgress] = useState(0);
+
+  useEffect(() => {
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
+    if (state.status === 'launching') {
+      setFakeLaunchProgress(0);
+
+      intervalId = setInterval(() => {
+        setFakeLaunchProgress(prev => {
+          if (prev >= 100) {
+            if (intervalId) clearInterval(intervalId);
+            return 100;
+          }
+          return prev + 2; // +2% cada 50 ms -> ~2.5 s
+        });
+      }, 50);
+    } else {
+      setFakeLaunchProgress(0);
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [state.status]);
+
+  const displayedPercentage = state.status === 'launching'
+    ? fakeLaunchProgress
+    : state.progress?.percentage ?? 0;
+
   return (
     <>
       {/* Main Action Button */}
@@ -195,16 +235,16 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state }) => {
             {/* Progress header */}
             <div className="flex justify-between text-sm text-dark-300 mb-2">
               <span className="truncate">
-                {state.progress.generalMessage || getStepMessage(state.progress.step) || t('progress.preparing')}
+                {state.progress.generalMessage || getStepMessage(state.progress.step) || statusInfo.label}
               </span>
-              <span className="font-mono">{Math.round(state.progress.percentage)}%</span>
+              <span className="font-mono">{Math.round(displayedPercentage)}%</span>
             </div>
             
             {/* Progress Bar */}
             <div className="w-full bg-dark-700 rounded-full h-2 overflow-hidden">
               <div 
                 className="bg-gradient-to-r from-lumina-600 to-lumina-500 h-2 rounded-full transition-all duration-300 ease-out"
-                style={{ width: `${state.progress.percentage}%` }}
+                style={{ width: `${displayedPercentage}%` }}
               />
             </div>
 

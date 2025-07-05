@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Download, Play, RefreshCw, Wrench, AlertTriangle, Loader2, Globe, Trash2, FolderOpen } from 'lucide-react';
+import { Download, Play, RefreshCw, Wrench, AlertTriangle, Loader2, Globe, Trash2, FolderOpen, StopCircle } from 'lucide-react';
 import type { Modpack, ModpackState, ProgressInfo } from '../../types/launcher';
 import { useLauncher } from '../../contexts/LauncherContext';
 import { useAnimation } from '../../contexts/AnimationContext';
@@ -19,7 +19,7 @@ interface ModpackCardProps {
 const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, index = 0 }) => {
   const { t } = useTranslation();
   const { getAnimationClass, getAnimationStyle } = useAnimation();
-  const { installModpack, updateModpack, launchModpack, repairModpack, removeModpack, translations } = useLauncher();
+  const { installModpack, updateModpack, launchModpack, repairModpack, removeModpack, stopInstance, translations } = useLauncher();
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
 
@@ -126,6 +126,22 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
           className: 'btn-success',
           disabled: true
         };
+      case 'running':
+        return {
+          text: t('modpacks.stop'),
+          icon: StopCircle,
+          onClick: () => stopInstance(modpack.id),
+          className: 'btn-danger',
+          disabled: false
+        };
+      case 'stopping':
+        return {
+          text: t('modpacks.stopping'),
+          icon: Loader2,
+          onClick: () => {},
+          className: 'btn-danger',
+          disabled: true
+        };
       case 'error':
         return {
           text: t('modpacks.repair'),
@@ -147,7 +163,38 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
 
   const buttonConfig = getButtonConfig();
   const ButtonIcon = buttonConfig.icon;
-  const isLoading = ['installing', 'updating', 'launching'].includes(state.status);
+  const isLoading = ['installing', 'updating', 'launching', 'stopping'].includes(state.status);
+
+  // Fake progress for the "launching" phase
+  const [fakeLaunchProgress, setFakeLaunchProgress] = useState(0);
+
+  useEffect(() => {
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
+    if (state.status === 'launching') {
+      setFakeLaunchProgress(0);
+
+      intervalId = setInterval(() => {
+        setFakeLaunchProgress(prev => {
+          if (prev >= 100) {
+            if (intervalId) clearInterval(intervalId);
+            return 100;
+          }
+          return prev + 2; // +2% cada 50 ms -> ~2.5 s para llegar a 100 %
+        });
+      }, 50);
+    } else {
+      setFakeLaunchProgress(0);
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [state.status]);
+
+  const displayedPercentage = state.status === 'launching'
+    ? fakeLaunchProgress
+    : state.progress?.percentage ?? 0;
 
   const modpackTranslations = state.translations;
   const displayName = modpackTranslations?.name || modpack.name;
@@ -333,12 +380,12 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
               <span className="truncate">
                 {state.progress.generalMessage || getStepMessage(state.progress.step) || buttonConfig.text}
               </span>
-              <span className="font-mono">{Math.round(state.progress.percentage)}%</span>
+              <span className="font-mono">{Math.round(displayedPercentage)}%</span>
             </div>
             <div className="w-full bg-dark-700 rounded-full h-2 overflow-hidden">
               <div
                 className="bg-gradient-to-r from-lumina-600 to-lumina-500 h-2 rounded-full transition-all duration-300 ease-out"
-                style={{ width: `${state.progress.percentage}%` }}
+                style={{ width: `${displayedPercentage}%` }}
               />
             </div>
             {/* Progress details */}

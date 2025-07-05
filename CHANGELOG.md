@@ -35,6 +35,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tabbed interface gains screenshot counter badge and smoother transitions.
 - Improved animation handling via `AnimationContext` utilities.
 
+### 🚦 **Runtime & Instance Control**
+* **Stop Button**
+  * Added fully-functional **Detener** button to both `ModpackCard` and `ModpackDetailsRefactored`.
+  * Frontend now registers `minecraft-started-*`, `minecraft-stopping-*` and `minecraft-exited-*` events **before** invoking backend commands, guaranteeing that early events are never missed.
+  * State machine extended with `running` and `stopping` statuses; UI now switches instantly and stays in sync.
+* **Reliable Process Termination**
+  * Fixed parameter mismatch (`instanceId` vs `modpackId`) when calling `stop_instance` – the backend now receives the correct identifier and successfully kills the Java process.
+  * Backend emits `minecraft-stopping-*` → `minecraft-exited-*` sequence so the launcher can update UI without polling.
+* **Logs Enhancements**
+  * Logs are **cleared automatically** each time a new game session starts, providing a clean terminal view.
+  * Real-time colour-coding: `ERROR` lines in red, `WARN`/`Warning` in yellow, informational lines in green.
+* **Launch Progress UX**
+  * Added faster fake progress bar for the `launching` phase (0→100 % in ~2.5 s) when backend progress is absent.
+  * Progress bar and button texts are fully localised (`Iniciando…`, `Deteniendo…`).
+
 ### 🧹 **Cleanup & Maintenance**
 - Removed leftover debug prints & unused imports after Java refactor.
 - Ensured global Lyceris runtime directory is created under `.runtime_dir(meta_dirs.java_dir)`.

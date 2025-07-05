@@ -564,53 +564,56 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
             setShowFailedModsDialog(true);
           }
           break;
-        case 'launch':
-          await launcherService.launchModpack(modpackId);
-          if (action === 'launch') {
-            // Listen for runtime events to update state between running and stopped
-            const { listen } = await import('@tauri-apps/api/event');
+        case 'launch': {
+          // -----------------------------------------------------------------
+          // Setup listeners BEFORE invoking launch to avoid missing early events
+          // -----------------------------------------------------------------
+          const { listen } = await import('@tauri-apps/api/event');
 
-            const startEvent = `minecraft-started-${modpackId}`;
-            const exitEvent = `minecraft-exited-${modpackId}`;
+          const startEvent = `minecraft-started-${modpackId}`;
+          const exitEvent = `minecraft-exited-${modpackId}`;
 
-            let unlistenStart: (() => void) | null = null;
-            let unlistenExit: (() => void) | null = null;
+          let unlistenStart: (() => void) | null = null;
+          let unlistenExit: (() => void) | null = null;
 
-            try {
-              unlistenStart = await listen(startEvent, () => {
-                dispatch({
-                  type: 'SET_MODPACK_STATE',
-                  payload: {
-                    id: modpackId,
-                    state: {
-                      ...state.modpackStates[modpackId],
-                      status: 'running',
-                    },
+          try {
+            unlistenStart = await listen(startEvent, () => {
+              dispatch({
+                type: 'SET_MODPACK_STATE',
+                payload: {
+                  id: modpackId,
+                  state: {
+                    ...state.modpackStates[modpackId],
+                    status: 'running',
                   },
-                });
+                },
+              });
+            });
+
+            unlistenExit = await listen(exitEvent, () => {
+              dispatch({
+                type: 'SET_MODPACK_STATE',
+                payload: {
+                  id: modpackId,
+                  state: {
+                    ...state.modpackStates[modpackId],
+                    status: 'installed',
+                  },
+                },
               });
 
-              unlistenExit = await listen(exitEvent, () => {
-                dispatch({
-                  type: 'SET_MODPACK_STATE',
-                  payload: {
-                    id: modpackId,
-                    state: {
-                      ...state.modpackStates[modpackId],
-                      status: 'installed',
-                    },
-                  },
-                });
-
-                // Cleanup listeners once exited
-                if (unlistenStart) unlistenStart();
-                if (unlistenExit) unlistenExit();
-              });
-            } catch (err) {
-              console.error('Error setting up runtime listeners', err);
-            }
+              // Cleanup listeners once exited
+              if (unlistenStart) unlistenStart();
+              if (unlistenExit) unlistenExit();
+            });
+          } catch (err) {
+            console.error('Error setting up runtime listeners', err);
           }
+
+          // Now launch the modpack (event will be caught by listeners configured above)
+          await launcherService.launchModpack(modpackId);
           break;
+        }
         case 'repair':
           await launcherService.repairModpack(modpackId, onProgress);
           break;
@@ -673,18 +676,21 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
           break;
       }
 
-      // Actualizar estado después de la acción exitosa
-      const newStatus = await launcherService.getModpackStatus(modpackId);
-      dispatch({
-        type: 'SET_MODPACK_STATE',
-        payload: {
-          id: modpackId,
-          state: { 
-            ...(state.modpackStates[modpackId] || createModpackState('not_installed')),
-            status: newStatus
+      // Para instalación / actualización / reparación consultamos el estado final.
+      // Para lanzamiento, el estado se gestiona mediante eventos runtime (started / exited)
+      if (action !== 'launch') {
+        const newStatus = await launcherService.getModpackStatus(modpackId);
+        dispatch({
+          type: 'SET_MODPACK_STATE',
+          payload: {
+            id: modpackId,
+            state: { 
+              ...(state.modpackStates[modpackId] || createModpackState('not_installed')),
+              status: newStatus
+            },
           },
-        },
-      });
+        });
+      }
     } catch (error) {
       console.error(`Error ${action}ing modpack:`, error);
       
