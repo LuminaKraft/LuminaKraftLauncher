@@ -33,6 +33,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Ensured global Lyceris runtime directory is created under `.runtime_dir(meta_dirs.java_dir)`.
 - Resolved ESLint/TypeScript warnings introduced during refactors.
 
+### 🐛 **Bug Fixes**
+- **Windows Instance Installation**  
+  - Fixed "Unknown error" that occurred while installing modpacks on Windows when the launcher lacked the privileges to create directory symlinks/junctions.  
+  - When symlink creation fails, the launcher now automatically falls back to copying the shared `libraries`, `assets`, `versions` and `natives` folders, ensuring installations complete successfully without requiring Administrator rights or Developer Mode.
+
 ---
 
 ## [0.0.9-alpha.2] - 2025-07-03

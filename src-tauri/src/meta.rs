@@ -365,11 +365,43 @@ pub async fn link_meta_resources_to_instance(
 
     #[cfg(windows)]
     {
-        // On Windows, use junction points for directories
-        tokio::fs::symlink_dir(&meta_dirs.libraries_dir, &libraries_link).await?;
-        tokio::fs::symlink_dir(&meta_dirs.assets_dir, &assets_link).await?;
-        tokio::fs::symlink_dir(&meta_dirs.versions_dir, &versions_link).await?;
-        tokio::fs::symlink_dir(&meta_dirs.natives_dir, &natives_link).await?;
+        use std::os::windows::fs::symlink_dir;
+
+        fn try_symlink_or_copy(from: &std::path::Path, to: &std::path::Path) -> std::io::Result<()> {
+            match symlink_dir(from, to) {
+                Ok(_) => Ok(()),
+                Err(e) => {
+                    println!("[WARN] symlink_dir failed ({}). Falling back to copy for {} -> {}", e, from.display(), to.display());
+                    // Recursively copy the directory as a fallback
+                    fn copy_dir_recursive(src: &std::path::Path, dst: &std::path::Path) -> std::io::Result<()> {
+                        if !dst.exists() {
+                            std::fs::create_dir_all(dst)?;
+                        }
+                        for entry in std::fs::read_dir(src)? {
+                            let entry = entry?;
+                            let file_type = entry.file_type()?;
+                            let dest_path = dst.join(entry.file_name());
+                            if file_type.is_dir() {
+                                copy_dir_recursive(&entry.path(), &dest_path)?;
+                            } else {
+                                // If the file already exists skip copying to speed up subsequent installs
+                                if !dest_path.exists() {
+                                    std::fs::copy(entry.path(), dest_path)?;
+                                }
+                            }
+                        }
+                        Ok(())
+                    }
+                    copy_dir_recursive(from, to)
+                }
+            }
+        }
+
+        // Attempt to create directory junctions or fall back to copy
+        try_symlink_or_copy(&meta_dirs.libraries_dir, &libraries_link)?;
+        try_symlink_or_copy(&meta_dirs.assets_dir, &assets_link)?;
+        try_symlink_or_copy(&meta_dirs.versions_dir, &versions_link)?;
+        try_symlink_or_copy(&meta_dirs.natives_dir, &natives_link)?;
     }
 
     println!("✅ Linked meta resources to instance: {}", instance_dirs.instance_dir.display());
