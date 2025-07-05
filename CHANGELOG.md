@@ -14,6 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Service no longer sends/receives changelog data to the backend.
 
 ### ♻️ **Refactors & Architecture**
+- **Shared Meta Storage — Symlinkless**  
+  - Globally replaced per-instance symlink/junction approach with Lyceris’ built-in ability to read libraries, assets, versions and runtimes directly from the shared `meta/` folder.  
+  - Removed all symlink/junction creation and fallback copy logic on every platform.  
+  - Instances are now lightweight folders containing only `mods/`, `config/`, saves, etc.; no privilege elevation required on Windows.
+- **MetaDirectories Simplification**  
+  - Deleted unused fields (`base_dir`, `assets_index_dir`, `objects_dir`, `natives_dir`) and associated dead code.  
+  - Added `caches_dir` and cleaned up initialisation logic; compiler warnings eliminated.
 - **Java / JVM Cleanup**
   - Eliminated custom JVM detection & override logic; Lyceris now fully manages Java handling.
   - Deleted `JavaVersionCard` component and related service helpers (`validateJavaPath`, `installJava`, etc.).
@@ -34,9 +41,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Resolved ESLint/TypeScript warnings introduced during refactors.
 
 ### 🐛 **Bug Fixes**
-- **Windows Instance Installation**  
-  - Fixed "Unknown error" that occurred while installing modpacks on Windows when the launcher lacked the privileges to create directory symlinks/junctions.  
-  - When symlink creation fails, the launcher now automatically falls back to copying the shared `libraries`, `assets`, `versions` and `natives` folders, ensuring installations complete successfully without requiring Administrator rights or Developer Mode.
+- **Instance Installation (All Platforms)**  
+  - Installation could fail with an "Unknown error" when the launcher attempted to create directory symlinks/junctions without sufficient privileges (most visible on Windows).  
+  - Symlink logic has been removed entirely; the launcher now relies on Lyceris to read resources directly from the shared `meta/` storage.  
+  - This eliminates the error and speeds-up installs on every operating system.
 
 ---
 

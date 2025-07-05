@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use anyhow::{Result, anyhow};
 use tauri::Emitter;
 use lyceris::minecraft::{
-    config::ConfigBuilder,
+    config::{ConfigBuilder, Profile},
     emitter::{Emitter as LycerisEmitter, Event},
     install::install,
     launch::launch,
@@ -364,11 +364,22 @@ pub async fn launch_minecraft_with_token_refresh(modpack: Modpack, settings: Use
     // Get shared meta directories (includes global Java runtime dir)
     let meta_dirs = crate::meta::MetaDirectories::init().await?;
 
+    // Build Lyceris config using meta storage as the primary game dir.
+    // A profile pointing to the instance directory guarantees that saves,
+    // options.txt, screenshots etc. still live inside the instance folder
+    // while libraries / assets / versions / runtimes are looked up from the
+    // shared meta directory.  This strategy mirrors Modrinth-App behaviour
+    // and removes the need for symlinks/junctions on Windows.
+
     let mut config_builder = ConfigBuilder::new(
-        instance_dir,
+        meta_dirs.meta_dir.clone(),                        // global game_dir (meta)
         modpack.minecraft_version.clone(),
         auth_method,
     )
+    .profile(Profile::new(     // per-instance user dir (empty profile name to avoid nested directory)
+        "".to_string(),
+        instance_dir.clone(),
+    ))
     .runtime_dir(meta_dirs.java_dir.clone());
     
     // Set memory using Lyceris' memory system

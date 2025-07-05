@@ -143,9 +143,9 @@ where
         emit_progress("Minecraft ya instalado".to_string(), 60.0, "minecraft_already_installed".to_string());
     }
 
-    // Link meta resources to instance
-    emit_progress("Vinculando recursos...".to_string(), 65.0, "linking_resources".to_string());
-    crate::meta::link_meta_resources_to_instance(&meta_dirs, &instance_dirs, &modpack.minecraft_version).await?;
+    // Previously we created symlinks/junctions from the instance to the shared meta storage.
+    // That logic has been removed: Lyceris is now configured to read libraries/assets directly
+    // from the meta directory, so no additional linking or copying is necessary here.
 
     // Install modpack files
     emit_progress("Instalando archivos del modpack...".to_string(), 70.0, "installing_modpack_files".to_string());
@@ -223,13 +223,6 @@ pub async fn launch_modpack_with_shared_storage_and_token_refresh(
     settings: UserSettings,
     app: tauri::AppHandle,
 ) -> Result<()> {
-    let meta_dirs = MetaDirectories::init().await?;
-    let instance_dirs = InstanceDirectories::new(&modpack.id)?;
-    
-    // Ensure meta resources are linked to instance
-    crate::meta::link_meta_resources_to_instance(&meta_dirs, &instance_dirs, &modpack.minecraft_version).await?;
-    
-    // Launch using function that handles token refresh
     minecraft::launch_minecraft_with_token_refresh(modpack, settings, app).await
 }
 

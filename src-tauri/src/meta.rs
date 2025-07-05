@@ -13,21 +13,11 @@ pub const CACHES_FOLDER_NAME: &str = "caches";
 /// Directory structure for meta resources (following Modrinth's structure)
 #[derive(Debug, Clone)]
 pub struct MetaDirectories {
-    /// Base app data directory - Reserved for future use
-    #[allow(dead_code)]
-    pub base_dir: PathBuf,
     pub meta_dir: PathBuf,
     pub libraries_dir: PathBuf,
     pub assets_dir: PathBuf,
     pub versions_dir: PathBuf,
     pub java_dir: PathBuf,
-    /// Assets index directory - Reserved for direct asset management
-    #[allow(dead_code)]
-    pub assets_index_dir: PathBuf,
-    /// Assets objects directory - Reserved for direct asset management  
-    #[allow(dead_code)]
-    pub objects_dir: PathBuf,
-    pub natives_dir: PathBuf,
     pub caches_dir: PathBuf,
     pub modpack_icons_dir: PathBuf,
     pub modpack_screenshots_dir: PathBuf,
@@ -46,9 +36,9 @@ impl MetaDirectories {
         let versions_dir = meta_dir.join(VERSIONS_FOLDER_NAME);
         let java_dir = meta_dir.join(JAVA_FOLDER_NAME);
         let caches_dir = base_dir.join(CACHES_FOLDER_NAME);
-        let assets_index_dir = assets_dir.join("indexes");
-        let objects_dir = assets_dir.join("objects");
-        let natives_dir = meta_dir.join("natives");
+        let _assets_index_dir = assets_dir.join("indexes"); // created for completeness
+        let _objects_dir = assets_dir.join("objects"); // created for completeness
+        let natives_dir = meta_dir.join("natives"); // still created but not stored
         let modpack_icons_dir = caches_dir.join("icons");
         let modpack_screenshots_dir = caches_dir.join("screenshots");
 
@@ -60,8 +50,8 @@ impl MetaDirectories {
             &versions_dir,
             &java_dir,
             &caches_dir,
-            &assets_index_dir,
-            &objects_dir,
+            &_assets_index_dir,
+            &_objects_dir,
             &natives_dir,
             &modpack_icons_dir,
             &modpack_screenshots_dir,
@@ -72,15 +62,11 @@ impl MetaDirectories {
         }
 
         Ok(Self {
-            base_dir,
             meta_dir,
             libraries_dir,
             assets_dir,
             versions_dir,
             java_dir,
-            assets_index_dir,
-            objects_dir,
-            natives_dir,
             caches_dir,
             modpack_icons_dir,
             modpack_screenshots_dir,
@@ -308,102 +294,3 @@ impl InstanceDirectories {
         Ok(())
     }
 }
-
-/// Create symbolic links or junction points for meta resources in instance directory
-pub async fn link_meta_resources_to_instance(
-    meta_dirs: &MetaDirectories,
-    instance_dirs: &InstanceDirectories,
-    _minecraft_version: &str,
-) -> Result<()> {
-    // Create symlinks for meta resources in the instance directory
-    let libraries_link = instance_dirs.instance_dir.join("libraries");
-    let assets_link = instance_dirs.instance_dir.join("assets");
-    let versions_link = instance_dirs.instance_dir.join("versions");
-    let natives_link = instance_dirs.instance_dir.join("natives");
-
-    // Remove existing links/directories if they exist
-    if libraries_link.exists() {
-        if libraries_link.is_symlink() {
-            tokio::fs::remove_file(&libraries_link).await.ok();
-        } else {
-            tokio::fs::remove_dir_all(&libraries_link).await.ok();
-        }
-    }
-
-    if assets_link.exists() {
-        if assets_link.is_symlink() {
-            tokio::fs::remove_file(&assets_link).await.ok();
-        } else {
-            tokio::fs::remove_dir_all(&assets_link).await.ok();
-        }
-    }
-
-    if versions_link.exists() {
-        if versions_link.is_symlink() {
-            tokio::fs::remove_file(&versions_link).await.ok();
-        } else {
-            tokio::fs::remove_dir_all(&versions_link).await.ok();
-        }
-    }
-
-    if natives_link.exists() {
-        if natives_link.is_symlink() {
-            tokio::fs::remove_file(&natives_link).await.ok();
-        } else {
-            tokio::fs::remove_dir_all(&natives_link).await.ok();
-        }
-    }
-
-    // Create symbolic links to meta directories
-    #[cfg(unix)]
-    {
-        tokio::fs::symlink(&meta_dirs.libraries_dir, &libraries_link).await?;
-        tokio::fs::symlink(&meta_dirs.assets_dir, &assets_link).await?;
-        tokio::fs::symlink(&meta_dirs.versions_dir, &versions_link).await?;
-        tokio::fs::symlink(&meta_dirs.natives_dir, &natives_link).await?;
-    }
-
-    #[cfg(windows)]
-    {
-        use std::os::windows::fs::symlink_dir;
-
-        fn try_symlink_or_copy(from: &std::path::Path, to: &std::path::Path) -> std::io::Result<()> {
-            match symlink_dir(from, to) {
-                Ok(_) => Ok(()),
-                Err(e) => {
-                    println!("[WARN] symlink_dir failed ({}). Falling back to copy for {} -> {}", e, from.display(), to.display());
-                    // Recursively copy the directory as a fallback
-                    fn copy_dir_recursive(src: &std::path::Path, dst: &std::path::Path) -> std::io::Result<()> {
-                        if !dst.exists() {
-                            std::fs::create_dir_all(dst)?;
-                        }
-                        for entry in std::fs::read_dir(src)? {
-                            let entry = entry?;
-                            let file_type = entry.file_type()?;
-                            let dest_path = dst.join(entry.file_name());
-                            if file_type.is_dir() {
-                                copy_dir_recursive(&entry.path(), &dest_path)?;
-                            } else {
-                                // If the file already exists skip copying to speed up subsequent installs
-                                if !dest_path.exists() {
-                                    std::fs::copy(entry.path(), dest_path)?;
-                                }
-                            }
-                        }
-                        Ok(())
-                    }
-                    copy_dir_recursive(from, to)
-                }
-            }
-        }
-
-        // Attempt to create directory junctions or fall back to copy
-        try_symlink_or_copy(&meta_dirs.libraries_dir, &libraries_link)?;
-        try_symlink_or_copy(&meta_dirs.assets_dir, &assets_link)?;
-        try_symlink_or_copy(&meta_dirs.versions_dir, &versions_link)?;
-        try_symlink_or_copy(&meta_dirs.natives_dir, &natives_link)?;
-    }
-
-    println!("✅ Linked meta resources to instance: {}", instance_dirs.instance_dir.display());
-    Ok(())
-} 
