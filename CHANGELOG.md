@@ -10,8 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### ⚠️ **Breaking Changes**
 - **Removed Modpack Changelog Feature**
   - Deleted `ModpackChangelog` component and its usage in UI.
-  - Dropped `changelog` field from `Modpack` interfaces/structs (TypeScript & Rust).
-  - Service no longer sends/receives changelog data to the backend.
+  - Dropped `changelog` & `jvmargs` field from `Modpack` interfaces/structs (TypeScript & Rust).
+  - Service no longer sends/receives changelog and jvmargs data to the backend.
 
 ### ♻️ **Refactors & Architecture**
 - **Shared Meta Storage — Symlinkless**  

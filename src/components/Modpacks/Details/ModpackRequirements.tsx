@@ -1,14 +1,9 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Shield, Cpu } from 'lucide-react';
-import type { Modpack } from '../../../types/launcher';
+import { Shield } from 'lucide-react';
 import { useAnimation } from '../../../contexts/AnimationContext';
 
-interface ModpackRequirementsProps {
-  modpack: Modpack;
-}
-
-const ModpackRequirements: React.FC<ModpackRequirementsProps> = ({ modpack }) => {
+const ModpackRequirements: React.FC = () => {
   const { t } = useTranslation();
   const { getAnimationClass, getAnimationStyle } = useAnimation();
 
@@ -33,17 +28,6 @@ const ModpackRequirements: React.FC<ModpackRequirementsProps> = ({ modpack }) =>
             {t('modpacks.ramMinRecommended', { min: 4, recommended: 8 })}
           </p>
         </div>
-        {modpack.jvmArgsRecomendados && (
-          <div>
-            <div className="flex items-center space-x-2 text-dark-300 mb-2">
-              <Cpu className="w-4 h-4" />
-              <span>{t('modpacks.recommendedJVMArgs')}</span>
-            </div>
-            <code className="block text-lumina-400 bg-dark-900 px-3 py-2 rounded-lg text-sm break-all">
-              {modpack.jvmArgsRecomendados}
-            </code>
-          </div>
-        )}
       </div>
     </div>
   );

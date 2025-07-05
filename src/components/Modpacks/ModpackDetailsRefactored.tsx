@@ -280,7 +280,7 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
             <div className="space-y-6">
               <ModpackActions modpack={modpack} state={liveState} />
               <ModpackInfo modpack={modpack} />
-              <ModpackRequirements modpack={modpack} />
+              <ModpackRequirements />
             </div>
           </div>
         </div>
