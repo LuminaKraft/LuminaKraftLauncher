@@ -1,18 +1,41 @@
 use std::path::PathBuf;
 use anyhow::{Result, anyhow};
+use tauri::Emitter;
 use lyceris::minecraft::{
     config::ConfigBuilder,
-    emitter::{Emitter, Event},
+    emitter::{Emitter as LycerisEmitter, Event},
     install::install,
     launch::launch,
     loader::{fabric::Fabric, forge::Forge, quilt::Quilt, neoforge::NeoForge, Loader},
 };
 use lyceris::auth::AuthMethod;
 use crate::{Modpack, UserSettings};
+use once_cell::sync::Lazy;
+use std::collections::HashMap;
+use tokio::sync::Mutex as AsyncMutex;
+
+pub static RUNNING_PROCS: Lazy<std::sync::Mutex<HashMap<String, std::sync::Arc<AsyncMutex<tokio::process::Child>>>>> = Lazy::new(|| std::sync::Mutex::new(HashMap::new()));
+
+// Add helper
+pub async fn stop_instance_process(instance_id: &str) -> crate::Result<()> {
+    // Clone the Arc so we don't hold the MutexGuard across await points
+         let maybe_child_arc = {
+         let map_guard = RUNNING_PROCS.lock().unwrap();
+         map_guard.get(instance_id).cloned()
+     };
+
+    if let Some(child_arc) = maybe_child_arc {
+        let mut guard = child_arc.lock().await;
+        #[allow(clippy::let_underscore_future)]
+        let _ = guard.kill().await;
+    }
+
+    Ok(())
+}
 
 /// Create a Lyceris emitter for progress tracking
-pub fn create_emitter() -> Emitter {
-    let emitter = Emitter::default();
+pub fn create_emitter() -> LycerisEmitter {
+    let emitter = LycerisEmitter::default();
     
     // Set up progress tracking (you can customize these handlers)
     tokio::spawn({
@@ -68,37 +91,69 @@ fn get_loader_by_name(name: &str, loader_version: &str) -> Result<Box<dyn Loader
     }
 }
 
-/// Check if Java is available (Lyceris handles Java automatically)
-pub async fn check_java_availability() -> Result<bool> {
-    // Lyceris automatically downloads and manages Java versions
-    // So we can always return true as it handles Java internally
-    Ok(true)
-}
-
-/// Get the appropriate auth method based on user settings
-fn get_auth_method(settings: &UserSettings) -> AuthMethod {
+/// Get the appropriate auth method based on user settings with token validation and refresh
+/// Returns (AuthMethod, Option<RefreshedAccount>) where RefreshedAccount contains the new token if refreshed
+async fn get_auth_method_with_validation(settings: &UserSettings) -> Result<(AuthMethod, Option<lyceris::auth::microsoft::MinecraftAccount>)> {
     match settings.auth_method.as_str() {
         "microsoft" => {
             if let Some(ref account) = settings.microsoft_account {
-                AuthMethod::Microsoft {
-                    username: account.username.clone(),
-                    xuid: account.xuid.clone(),
-                    uuid: account.uuid.clone(),
-                    access_token: account.access_token.clone(),
-                    refresh_token: account.refresh_token.clone(),
+                // Check if token is expired or will expire in the next 5 minutes
+                let current_time = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map_err(|e| anyhow!("System time error: {}", e))?
+                    .as_secs();
+                
+                let buffer_time = 300; // 5 minutes buffer
+                let is_token_expired = account.exp <= (current_time + buffer_time);
+                
+                if is_token_expired {
+                    println!("🔄 Microsoft token is expired or expiring soon, attempting refresh...");
+                    
+                    // Use Lyceris to refresh the token
+                    let client = reqwest::Client::new();
+                    match lyceris::auth::microsoft::refresh(account.refresh_token.clone(), &client).await {
+                        Ok(refreshed_account) => {
+                            println!("✅ Microsoft token refreshed successfully");
+                            let auth_method = AuthMethod::Microsoft {
+                                username: refreshed_account.username.clone(),
+                                xuid: refreshed_account.xuid.clone(),
+                                uuid: refreshed_account.uuid.clone(),
+                                access_token: refreshed_account.access_token.clone(),
+                                refresh_token: refreshed_account.refresh_token.clone(),
+                            };
+                            Ok((auth_method, Some(refreshed_account)))
+                        }
+                        Err(e) => {
+                            println!("❌ Failed to refresh Microsoft token: {}", e);
+                            println!("🔄 Falling back to offline mode");
+                            Ok((AuthMethod::Offline {
+                                username: settings.username.clone(),
+                                uuid: None,
+                            }, None))
+                        }
+                    }
+                } else {
+                    println!("✅ Microsoft token is still valid");
+                    Ok((AuthMethod::Microsoft {
+                        username: account.username.clone(),
+                        xuid: account.xuid.clone(),
+                        uuid: account.uuid.clone(),
+                        access_token: account.access_token.clone(),
+                        refresh_token: account.refresh_token.clone(),
+                    }, None))
                 }
             } else {
                 // Fallback to offline if Microsoft account is not available
-                AuthMethod::Offline {
+                Ok((AuthMethod::Offline {
                     username: settings.username.clone(),
                     uuid: None,
-                }
+                }, None))
             }
         }
-        _ => AuthMethod::Offline {
+        _ => Ok((AuthMethod::Offline {
             username: settings.username.clone(),
             uuid: None,
-        }
+        }, None))
     }
 }
 
@@ -114,44 +169,47 @@ where
 {
     let emitter = create_emitter_with_progress(emit_progress.clone());
     
-    let auth_method = get_auth_method(settings);
+    let (auth_method, _refreshed_account) = get_auth_method_with_validation(settings).await?;
     
+    // Get shared meta directories (includes global Java runtime dir)
+    let meta_dirs = crate::meta::MetaDirectories::init().await?;
+
     let config_builder = ConfigBuilder::new(
         instance_dir,
         modpack.minecraft_version.clone(),
         auth_method,
-    );
+    )
+    .runtime_dir(meta_dirs.java_dir.clone());
     
-    // Build config with or without mod loader
+    // Build config with or without mod loader (we need the Config instance before calling install)
+
+    // --- Prepare Config instance (with or without loader) ---
     if !modpack.modloader.is_empty() && !modpack.modloader_version.is_empty() {
         let loader = get_loader_by_name(&modpack.modloader, &modpack.modloader_version)?;
+
         let config = config_builder.loader(loader).build();
+
+        // Install / verify Minecraft first (creates version json)
         install(&config, Some(&emitter)).await?;
+        return Ok(());
     } else {
         let config = config_builder.build();
-        install(&config, Some(&emitter)).await?;
-    }
     
-    Ok(())
-}
+        // Install/verify Minecraft installation first
+        install(&config, Some(&emitter)).await?;
 
-/// Install Minecraft and mod loader using Lyceris (backward compatibility)
-#[allow(dead_code)]
-pub async fn install_minecraft_with_lyceris(
-    modpack: &Modpack,
-    settings: &UserSettings,
-    instance_dir: PathBuf,
-) -> Result<()> {
-    let no_progress = |_: String, _: f32, _: String| {};
-    install_minecraft_with_lyceris_progress(modpack, settings, instance_dir, no_progress).await
+        return Ok(());
+    }
+ 
+    // unreachable
 }
 
 /// Create a Lyceris emitter with progress callback for progress tracking
-pub fn create_emitter_with_progress<F>(emit_progress: F) -> Emitter 
+pub fn create_emitter_with_progress<F>(emit_progress: F) -> LycerisEmitter 
 where
     F: Fn(String, f32, String) + Send + Sync + 'static + Clone,
 {
-    let emitter = Emitter::default();
+    let emitter = LycerisEmitter::default();
     
     // Set up single download progress tracking (NO mostrar porcentaje individual)
     tokio::spawn({
@@ -241,53 +299,8 @@ where
     emitter
 }
 
-/// Generate custom JVM arguments (excluding memory - handled by Lyceris)
-fn generate_custom_jvm_args(_settings: &UserSettings, modpack: &Modpack) -> Vec<String> {
-    let mut jvm_args = Vec::new();
-    
-    // Note: Memory allocation is handled by Lyceris' built-in memory system
-    // Do not add -Xmx or -Xms here as it conflicts with Lyceris
-    
-    // Parse modpack recommended JVM args if available
-    if !modpack.jvm_args_recomendados.is_empty() {
-        for arg in modpack.jvm_args_recomendados.split_whitespace() {
-            let arg = arg.trim();
-            if !arg.is_empty() && !arg.starts_with("-Xmx") && !arg.starts_with("-Xms") {
-                jvm_args.push(arg.to_string());
-            }
-        }
-    }
-    
-    // Default optimized JVM args for Minecraft
-    if jvm_args.len() <= 2 { // Only memory args added so far
-        jvm_args.extend([
-            "-XX:+UseG1GC".to_string(),
-            "-XX:+ParallelRefProcEnabled".to_string(),
-            "-XX:MaxGCPauseMillis=200".to_string(),
-            "-XX:+UnlockExperimentalVMOptions".to_string(),
-            "-XX:+DisableExplicitGC".to_string(),
-            "-XX:+AlwaysPreTouch".to_string(),
-            "-XX:G1NewSizePercent=30".to_string(),
-            "-XX:G1MaxNewSizePercent=40".to_string(),
-            "-XX:G1HeapRegionSize=8M".to_string(),
-            "-XX:G1ReservePercent=20".to_string(),
-            "-XX:G1HeapWastePercent=5".to_string(),
-            "-XX:G1MixedGCCountTarget=4".to_string(),
-            "-XX:InitiatingHeapOccupancyPercent=15".to_string(),
-            "-XX:G1MixedGCLiveThresholdPercent=90".to_string(),
-            "-XX:G1RSetUpdatingPauseTimePercent=5".to_string(),
-            "-XX:SurvivorRatio=32".to_string(),
-            "-XX:+PerfDisableSharedMem".to_string(),
-            "-Dfml.ignoreInvalidMinecraftCertificates=true".to_string(),
-            "-Dfml.ignorePatchDiscrepancies=true".to_string(),
-        ]);
-    }
-    
-    jvm_args
-}
-
-/// Launch Minecraft using Lyceris
-pub async fn launch_minecraft(modpack: Modpack, settings: UserSettings) -> Result<()> {
+/// Launch Minecraft using Lyceris with token refresh support
+pub async fn launch_minecraft_with_token_refresh(modpack: Modpack, settings: UserSettings, app: tauri::AppHandle) -> Result<()> {
     let launcher_data_dir = dirs::data_dir()
         .ok_or_else(|| anyhow!("Could not determine data directory"))?
         .join("LKLauncher");
@@ -300,90 +313,66 @@ pub async fn launch_minecraft(modpack: Modpack, settings: UserSettings) -> Resul
     std::fs::create_dir_all(&instance_dir)?;
     
     let emitter = create_emitter();
-    
-    // Generate custom JVM arguments (excluding memory settings)
-    let custom_jvm_args = generate_custom_jvm_args(&settings, &modpack);
-    println!("Using custom JVM arguments: {:?}", custom_jvm_args);
+
+    // --- Emit console logs to frontend in real-time ---
+    {
+        let app_clone = app.clone();
+        let modpack_id_clone = modpack.id.clone();
+        let emitter_clone = emitter.clone();
+        tokio::spawn(async move {
+            emitter_clone
+                .on(Event::Console, move |line: String| {
+                    let _ = app_clone.emit(&format!("minecraft-log-{}", modpack_id_clone), line);
+                })
+                .await;
+        });
+    }
     
     // Configure memory using Lyceris' built-in system
     let memory_gb = settings.allocated_ram.max(1);
     println!("Configuring memory: {}GB", memory_gb);
 
-    // ------------------------------------------------------------
-    // Attempt to use a user-selected Java executable if provided.
-    // We expose it to Lyceris via the `LYCERIS_JAVA_PATH` env var and
-    // also prepend its parent directory to the current PATH so that
-    // any internal `which java` look-ups can find it first.
-    // Lyceris will fall back to its own bundled/runtime Java download
-    // logic automatically if the binary is not valid.
-    if let Some(ref java_path) = settings.java_path {
-        let java_path_trimmed = java_path.trim();
-        if !java_path_trimmed.is_empty() {
-            let candidate = std::path::Path::new(java_path_trimmed);
-            if candidate.exists() {
-                // Further validation: ensure it's a regular file and appears executable
-                let metadata_ok = candidate.is_file();
-                // Quick sanity: filename should contain "java" (handles java/javaw/java.exe)
-                let name_ok = candidate
-                    .file_name()
-                    .and_then(|n| n.to_str())
-                    .map(|n| n.to_lowercase().contains("java"))
-                    .unwrap_or(false);
-
-                // Last resort: try invoking `java -version` to ensure it starts.
-                let mut exec_ok = false;
-                if metadata_ok {
-                    if let Ok(output) = std::process::Command::new(candidate)
-                        .arg("-version")
-                        .stdout(std::process::Stdio::null())
-                        .stderr(std::process::Stdio::null())
-                        .status()
-                    {
-                        exec_ok = output.success();
-                    }
-                }
-
-                if metadata_ok && name_ok && exec_ok {
-                    // 1) Explicit env var for Lyceris (future-proof if upstream adds support).
-                    std::env::set_var("LYCERIS_JAVA_PATH", java_path_trimmed);
-                    // 2) Prepend parent dir to PATH for good measure.
-                    if let Some(parent_dir) = candidate.parent() {
-                        let parent_str = parent_dir.to_string_lossy();
-                        let mut current_path = std::env::var("PATH").unwrap_or_default();
-                        let sep = if cfg!(windows) { ";" } else { ":" };
-                        if !current_path.split(if cfg!(windows) { ';' } else { ':' }).any(|p| p == parent_str) {
-                            current_path = format!("{}{}{}", parent_str, sep, current_path);
-                            std::env::set_var("PATH", current_path);
-                        }
-                    }
-                    println!("Using user-provided Java executable at {}", java_path_trimmed);
-                } else {
-                    eprintln!("Warning: provided Java path '{}' is not a valid Java executable. Falling back to default Lyceris detection.", java_path_trimmed);
-                    std::env::remove_var("LYCERIS_JAVA_PATH");
-                }
-            } else {
-                eprintln!("Warning: provided Java path '{}' does not exist. Falling back to default Lyceris detection.", java_path_trimmed);
-                std::env::remove_var("LYCERIS_JAVA_PATH");
-            }
-        }
-    } else {
-        // No custom Java path – make sure we don't keep a stale value around.
-        std::env::remove_var("LYCERIS_JAVA_PATH");
-    }
-
-    let auth_method = get_auth_method(&settings);
+    let (auth_method, refreshed_account) = get_auth_method_with_validation(&settings).await?;
     
+    // If token was refreshed, notify the frontend
+    if let Some(refreshed_account) = refreshed_account {
+        println!("🔄 Notifying frontend about refreshed Microsoft token");
+        
+        // Convert Lyceris MinecraftAccount to our MicrosoftAccount structure
+        let frontend_account = crate::MicrosoftAccount {
+            xuid: refreshed_account.xuid,
+            exp: refreshed_account.exp,
+            uuid: refreshed_account.uuid,
+            username: refreshed_account.username,
+            access_token: refreshed_account.access_token,
+            refresh_token: refreshed_account.refresh_token,
+            client_id: refreshed_account.client_id,
+        };
+        
+        // Emit event to notify frontend
+        let _ = app.emit("microsoft-token-refreshed", serde_json::json!({
+            "xuid": frontend_account.xuid,
+            "exp": frontend_account.exp,
+            "uuid": frontend_account.uuid,
+            "username": frontend_account.username,
+            "accessToken": frontend_account.access_token,
+            "refreshToken": frontend_account.refresh_token,
+            "clientId": frontend_account.client_id
+        }));
+    }
+    
+    // Get shared meta directories (includes global Java runtime dir)
+    let meta_dirs = crate::meta::MetaDirectories::init().await?;
+
     let mut config_builder = ConfigBuilder::new(
         instance_dir,
         modpack.minecraft_version.clone(),
         auth_method,
-    );
+    )
+    .runtime_dir(meta_dirs.java_dir.clone());
     
     // Set memory using Lyceris' memory system
     config_builder = config_builder.memory(lyceris::minecraft::config::Memory::Gigabyte(memory_gb as u16));
-    
-    // Add custom JVM arguments using Lyceris' system
-    config_builder = config_builder.custom_java_args(custom_jvm_args);
     
     // Build config with or without mod loader
     if !modpack.modloader.is_empty() && !modpack.modloader_version.is_empty() {
@@ -394,49 +383,53 @@ pub async fn launch_minecraft(modpack: Modpack, settings: UserSettings) -> Resul
         install(&config, Some(&emitter)).await?;
     
         // Launch Minecraft
-        let mut child = launch(&config, Some(&emitter)).await?;
+        let child = launch(&config, Some(&emitter)).await?;
         
-        // Spawn a task to wait for the process to complete
-        tokio::spawn(async move {
-            match child.wait().await {
-                Ok(status) => {
-                    if status.success() {
-                        println!("Minecraft exited successfully");
-                    } else {
-                        println!("Minecraft exited with error: {:?}", status);
-                    }
+        let child_arc = std::sync::Arc::new(AsyncMutex::new(child));
+        RUNNING_PROCS.lock().unwrap().insert(modpack.id.clone(), child_arc.clone());
+        let _ = app.emit(&format!("minecraft-started-{}", modpack.id), "started");
+
+        // Wait for exit
+        {
+            let app_clone = app.clone();
+            let id_clone = modpack.id.clone();
+            tokio::spawn(async move {
+                {
+                    let mut guard = child_arc.lock().await;
+                    let _ = guard.wait().await;
                 }
-                Err(e) => {
-                    eprintln!("Error waiting for Minecraft process: {}", e);
-                }
-            }
-        });
+                RUNNING_PROCS.lock().unwrap().remove(&id_clone);
+                let _ = app_clone.emit(&format!("minecraft-exited-{}", id_clone), "exited");
+            });
+        }
     } else {
         let config = config_builder.build();
-        
+    
         // Install/verify Minecraft installation first
         install(&config, Some(&emitter)).await?;
     
-    // Launch Minecraft
-        let mut child = launch(&config, Some(&emitter)).await?;
-    
-        // Spawn a task to wait for the process to complete
-    tokio::spawn(async move {
-            match child.wait().await {
-                Ok(status) => {
-                    if status.success() {
-                        println!("Minecraft exited successfully");
-                    } else {
-                        println!("Minecraft exited with error: {:?}", status);
-                    }
+        // Launch Minecraft
+        let child = launch(&config, Some(&emitter)).await?;
+        
+        let child_arc = std::sync::Arc::new(AsyncMutex::new(child));
+        RUNNING_PROCS.lock().unwrap().insert(modpack.id.clone(), child_arc.clone());
+        let _ = app.emit(&format!("minecraft-started-{}", modpack.id), "started");
+
+        // Wait for exit
+        {
+            let app_clone = app.clone();
+            let id_clone = modpack.id.clone();
+            tokio::spawn(async move {
+                {
+                    let mut guard = child_arc.lock().await;
+                    let _ = guard.wait().await;
                 }
-                Err(e) => {
-                    eprintln!("Error waiting for Minecraft process: {}", e);
-                }
-            }
-        });
+                RUNNING_PROCS.lock().unwrap().remove(&id_clone);
+                let _ = app_clone.emit(&format!("minecraft-exited-{}", id_clone), "exited");
+            });
+        }
     }
-    
+
     Ok(())
 }
 

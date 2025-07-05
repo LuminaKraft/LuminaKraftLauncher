@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Users, Download, Clock } from 'lucide-react';
+import { ArrowLeft, Download, Clock, Users, Terminal, Info, Image } from 'lucide-react';
+import LogsSection from './Details/Sections/LogsSection';
+import ScreenshotsSection from './Details/Sections/ScreenshotsSection';
 import type { Modpack, ModpackState, ProgressInfo } from '../../types/launcher';
 import { useLauncher } from '../../contexts/LauncherContext';
 import { useAnimation } from '../../contexts/AnimationContext';
@@ -8,9 +10,8 @@ import { useAnimation } from '../../contexts/AnimationContext';
 import ModpackActions from './Details/ModpackActions';
 import ModpackInfo from './Details/ModpackInfo';
 import ModpackRequirements from './Details/ModpackRequirements';
-import ModpackChangelog from './Details/ModpackChangelog';
 import ModpackFeatures from './Details/ModpackFeatures';
-import ScreenshotGallery from './ScreenshotGallery';
+import ModpackScreenshotGallery from './Details/ModpackScreenshotGallery';
 
 interface ModpackDetailsProps {
   modpack: Modpack;
@@ -22,13 +23,46 @@ interface ModpackDetailsProps {
 
 const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack }) => {
   const { t } = useTranslation();
-  const { translations } = useLauncher();
+  const { translations, modpackStates } = useLauncher();
   const { getAnimationClass, getAnimationStyle } = useAnimation();
+
+  const liveState = modpackStates[modpack.id] || state;
+
+  // Logs state
+  const [logs, setLogs] = React.useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState<'content' | 'logs' | 'screenshots'>('content');
+
+  React.useEffect(() => {
+    let unlisten: (() => void) | null = null;
+    const setup = async () => {
+      try {
+        const { listen } = await import('@tauri-apps/api/event');
+        unlisten = await listen<string>(`minecraft-log-${modpack.id}`, (event) => {
+          setLogs((prev) => {
+            // keep last 500 lines
+            const next = [...prev, event.payload];
+            if (next.length > 500) {
+              return next.slice(next.length - 500);
+            }
+            return next;
+          });
+        });
+      } catch (err) {
+        console.error('Failed to listen logs', err);
+      }
+    };
+    setup();
+    return () => {
+      if (unlisten) {
+        unlisten();
+      }
+    };
+  }, [modpack.id]);
 
   // Get modpack translations
   const displayName = translations?.modpacks?.[modpack.id]?.name || modpack.name;
   const displayDescription = translations?.modpacks?.[modpack.id]?.description || modpack.description;
-  const features = state.features;
+  const features = liveState.features;
 
   // Get server status badge like in ModpackCard
   const getServerStatusBadge = () => {
@@ -64,6 +98,47 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
     { icon: Clock, value: modpack.playTime || 0, label: t('modpacks.playTime') },
     { icon: Users, value: modpack.players || 0, label: t('modpacks.activePlayers') },
   ];
+
+  const renderContentTab = () => (
+    <>
+      {/* Quick Stats */}
+      <div className="grid grid-cols-3 gap-4 mb-8">
+        {stats.map((stat, index) => (
+          <div 
+            key={index} 
+            className={`bg-dark-800 rounded-xl p-4 border border-dark-700 group ${
+              getAnimationClass('hover:border-lumina-400/50 transition-all duration-200', 'hover:scale-105')
+            }`}
+            style={getAnimationStyle({
+              animation: `fadeInUp 0.4s ease-out ${index * 0.05}s backwards`
+            })}
+          >
+            <stat.icon className={`w-5 h-5 text-lumina-400 mb-2 ${
+              getAnimationClass('transition-transform duration-150', 'group-hover:scale-105')
+            }`} />
+            <div className={`text-2xl font-bold text-white ${
+              getAnimationClass('transition-colors duration-150', 'group-hover:text-lumina-300')
+            }`}>
+              {stat.value}
+            </div>
+            <div className="text-sm text-dark-400">{stat.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Screenshots */}
+      {modpack.images && modpack.images.length > 0 && (
+        <ModpackScreenshotGallery 
+          images={modpack.images} 
+          modpackName={displayName} 
+        />
+      )}
+
+      {/* Features */}
+      <ModpackFeatures features={features} />
+
+    </>
+  );
 
   return (
     <div className="h-full w-full overflow-y-auto overflow-x-hidden bg-dark-900">
@@ -132,55 +207,69 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Mobile Actions First */}
           <div className="lg:hidden">
-            <ModpackActions modpack={modpack} state={state} />
+            <ModpackActions modpack={modpack} state={liveState} />
           </div>
 
           {/* Left Column - Main Info */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Quick Stats */}
-            <div className="grid grid-cols-3 gap-4">
-              {stats.map((stat, index) => (
-                <div 
-                  key={index} 
-                  className={`bg-dark-800 rounded-xl p-4 border border-dark-700 group ${
-                    getAnimationClass('hover:border-lumina-400/50 transition-all duration-200', 'hover:scale-105')
-                  }`}
-                  style={getAnimationStyle({
-                    animation: `fadeInUp 0.4s ease-out ${index * 0.05}s backwards`
-                  })}
+            {/* Tab Navigation */}
+            <div className="flex space-x-1 bg-dark-800 p-1 rounded-lg">
+              <button
+                onClick={() => setActiveTab('content')}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-all duration-200 ${
+                  activeTab === 'content'
+                    ? 'bg-lumina-600 text-white shadow-lg'
+                    : 'text-dark-300 hover:text-white hover:bg-dark-700'
+                }`}
                 >
-                  <stat.icon className={`w-5 h-5 text-lumina-400 mb-2 ${
-                    getAnimationClass('transition-transform duration-150', 'group-hover:scale-105')
-                  }`} />
-                  <div className={`text-2xl font-bold text-white ${
-                    getAnimationClass('transition-colors duration-150', 'group-hover:text-lumina-300')
-                  }`}>
-                    {stat.value}
-                  </div>
-                  <div className="text-sm text-dark-400">{stat.label}</div>
-                </div>
-              ))}
+                <Info className="w-4 h-4" />
+                <span>Información</span>
+              </button>
+              {/* Screenshots Tab Button */}
+              <button
+                onClick={() => setActiveTab('screenshots')}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-all duration-200 ${
+                  activeTab === 'screenshots'
+                    ? 'bg-lumina-600 text-white shadow-lg'
+                    : 'text-dark-300 hover:text-white hover:bg-dark-700'
+                }`}
+              >
+                <Image className="w-4 h-4" />
+                <span>Screenshots</span>
+                {modpack.images && modpack.images.length > 0 && (
+                  <span className="bg-lumina-400 text-black text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+                    {modpack.images.length}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => setActiveTab('logs')}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-all duration-200 ${
+                  activeTab === 'logs'
+                    ? 'bg-lumina-600 text-white shadow-lg'
+                    : 'text-dark-300 hover:text-white hover:bg-dark-700'
+                }`}
+              >
+                <Terminal className="w-4 h-4" />
+                <span>Logs</span>
+                {logs.length > 0 && (
+                  <span className="bg-green-500 text-black text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+                    {logs.length}
+                  </span>
+                )}
+              </button>
             </div>
 
-            {/* Screenshots */}
-            {modpack.images && modpack.images.length > 0 && (
-              <ScreenshotGallery 
-                images={modpack.images} 
-                modpackName={displayName} 
-              />
-            )}
-
-            {/* Features */}
-            <ModpackFeatures features={features} />
-
-            {/* Changelog */}
-            <ModpackChangelog modpack={modpack} />
+            {/* Tab Content */}
+            <div className="min-h-[400px]">
+              {activeTab === 'content' ? renderContentTab() : activeTab === 'logs' ? <LogsSection logs={logs} /> : <ScreenshotsSection images={modpack.images} modpackName={displayName} />}
+            </div>
           </div>
 
           {/* Right Column - Desktop Actions */}
           <div className="hidden lg:block">
             <div className="space-y-6">
-              <ModpackActions modpack={modpack} state={state} />
+              <ModpackActions modpack={modpack} state={liveState} />
               <ModpackInfo modpack={modpack} />
               <ModpackRequirements modpack={modpack} />
             </div>

@@ -1,15 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Download, Play, RefreshCw, Wrench, FolderOpen, Trash2,
-  Loader2
+  Loader2, StopCircle, Globe, AlertTriangle
 } from 'lucide-react';
 import type { Modpack, ModpackState, ProgressInfo } from '../../../types/launcher';
 import { useLauncher } from '../../../contexts/LauncherContext';
 import { useAnimation } from '../../../contexts/AnimationContext';
 import ConfirmDialog from '../../ConfirmDialog';
 import LauncherService from '../../../services/launcherService';
-import { useState } from 'react';
 
 interface ModpackActionsProps {
   modpack: Modpack;
@@ -20,12 +19,47 @@ interface ModpackActionsProps {
 
 const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state }) => {
   const { t } = useTranslation();
-  const { installModpack, updateModpack, launchModpack, repairModpack, removeModpack } = useLauncher();
+  const { installModpack, updateModpack, launchModpack, repairModpack, removeModpack, stopInstance } = useLauncher();
   const { getAnimationClass, getAnimationStyle } = useAnimation();
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
 
+  const isVanillaServer = modpack.modloader === 'vanilla' || modpack.modloader === 'paper';
+  const requiresModpack = !!modpack.urlModpackZip;
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (error) {
+      console.error('Error copying to clipboard:', error);
+    }
+  };
+
   const getStatusInfo = () => {
+    // Handle vanilla/paper servers with IP
+    if (isVanillaServer && modpack.ip) {
+      return {
+        icon: Globe,
+        label: `${t('modpacks.connect')} ${modpack.ip}`,
+        bgColor: 'bg-blue-600 hover:bg-blue-700',
+        textColor: 'text-white',
+        action: () => copyToClipboard(modpack.ip!),
+        disabled: false
+      };
+    }
+
+    // Handle servers without modpack and without IP
+    if (!requiresModpack && !modpack.ip) {
+      return {
+        icon: AlertTriangle,
+        label: t('modpacks.notAvailable'),
+        bgColor: 'bg-gray-600/50 cursor-not-allowed',
+        textColor: 'text-gray-400',
+        action: () => {},
+        disabled: true
+      };
+    }
+
     switch (state.status) {
       case 'not_installed':
         return {
@@ -77,6 +111,24 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state }) => {
           textColor: 'text-white',
           action: () => repairModpack(modpack.id)
         };
+      case 'running':
+        return {
+          icon: StopCircle,
+          label: t('modpacks.stop'),
+          bgColor: 'bg-red-600 hover:bg-red-700',
+          textColor: 'text-white',
+          action: () => stopInstance(modpack.id),
+          disabled: false
+        };
+      case 'stopping':
+        return {
+          icon: Loader2,
+          label: t('modpacks.stopping'),
+          bgColor: 'bg-red-600/50 cursor-not-allowed',
+          textColor: 'text-white/70',
+          spinning: true,
+          disabled: true
+        };
 
       default:
         return {
@@ -112,7 +164,7 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state }) => {
       await removeModpack(modpack.id);
       setShowRemoveDialog(false);
     } catch (error) {
-      console.error('Failed to remove modpack:', error);
+              console.error('Failed to remove instance:', error);
     } finally {
       setIsRemoving(false);
     }
@@ -138,35 +190,45 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state }) => {
         </button>
 
         {/* Progress Display */}
-        {['installing', 'updating'].includes(state.status) && state.progress && (
+        {['installing', 'updating', 'launching'].includes(state.status) && state.progress && (
           <div className="space-y-3">
+            {/* Progress header */}
+            <div className="flex justify-between text-sm text-dark-300 mb-2">
+              <span className="truncate">
+                {state.progress.generalMessage || getStepMessage(state.progress.step) || t('progress.preparing')}
+              </span>
+              <span className="font-mono">{Math.round(state.progress.percentage)}%</span>
+            </div>
+            
             {/* Progress Bar */}
-            <div className="w-full bg-dark-700 rounded-full h-3 overflow-hidden">
+            <div className="w-full bg-dark-700 rounded-full h-2 overflow-hidden">
               <div 
-                className={getAnimationClass('h-full bg-gradient-to-r from-lumina-500 to-lumina-400 transition-all duration-300 ease-out', '')}
-                style={getAnimationStyle({
-                  width: `${Math.max(0, Math.min(100, state.progress.percentage || 0))}%`
-                })}
+                className="bg-gradient-to-r from-lumina-600 to-lumina-500 h-2 rounded-full transition-all duration-300 ease-out"
+                style={{ width: `${state.progress.percentage}%` }}
               />
             </div>
 
-            {/* Progress Info */}
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center space-x-2 min-w-0 flex-1">
-                <div className="flex items-center space-x-2 min-w-0 flex-1">
-                  {(() => {
-                    const step = state.progress?.step;
-                    const percentage = state.progress?.percentage;
-                    const displayText = step ? getStepMessage(step) : '';
-                    
-                    let bulletClass = 'w-2 h-2 rounded-full flex-shrink-0 ';
-                    
-                    if (step === 'complete') {
-                      bulletClass += 'bg-green-500';
-                    } else if (percentage !== undefined && percentage > 0) {
-                      bulletClass += 'bg-lumina-400 animate-pulse';
-                    } else {
-                      bulletClass += 'bg-dark-500';
+            {/* Progress details */}
+            {(state.progress.detailMessage && state.progress.detailMessage.trim() !== '') || state.progress.eta ? (
+              <div className="mt-2 text-xs">
+                <div className="flex justify-between items-start">
+                  {/* Left side: current file details */}
+                  <div className="flex items-center space-x-2 flex-1 min-w-0">
+                    {state.progress.detailMessage && state.progress.detailMessage.trim() !== '' && (() => {
+                      const message = state.progress.detailMessage;
+                      let displayText = message;
+                      let bulletClass = "w-2 h-2 bg-lumina-600 rounded-full animate-heartbeat";
+
+                      // Extract only the filename from the message
+                      if (message.includes(":")) {
+                        displayText = message.substring(message.indexOf(":") + 1).trim();
+                      }
+
+                      // Set bullet color based on message type without changing text
+                      if (message.startsWith("mod_exists:") || message.startsWith("mod_completed:")) {
+                        bulletClass = "w-2 h-2 bg-green-500 rounded-full";
+                      } else if (message.startsWith("mod_error:") || message.startsWith("mod_unavailable:")) {
+                        bulletClass = "w-2 h-2 bg-red-500 rounded-full";
                     }
 
                     return (
@@ -178,6 +240,7 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state }) => {
                   })()}
                 </div>
                 
+                  {/* Right side: ETA aligned with percentage */}
                 <div className="flex-shrink-0 font-mono">
                   <div className="relative">
                     <span className="opacity-0 pointer-events-none select-none">00m 00s</span>
@@ -188,6 +251,7 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state }) => {
                 </div>
               </div>
             </div>
+            ) : null}
           </div>
         )}
 

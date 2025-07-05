@@ -5,6 +5,36 @@ All notable changes to the LuminaKraft Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.9-alpha.3] - 2025-07-05
+
+### ⚠️ **Breaking Changes**
+- **Removed Modpack Changelog Feature**
+  - Deleted `ModpackChangelog` component and its usage in UI.
+  - Dropped `changelog` field from `Modpack` interfaces/structs (TypeScript & Rust).
+  - Service no longer sends/receives changelog data to the backend.
+
+### ♻️ **Refactors & Architecture**
+- **Java / JVM Cleanup**
+  - Eliminated custom JVM detection & override logic; Lyceris now fully manages Java handling.
+  - Deleted `JavaVersionCard` component and related service helpers (`validateJavaPath`, `installJava`, etc.).
+  - Backend `generate_custom_jvm_args` now returns an empty vector; removed `LYCERIS_JAVA_PATH` support.
+- **Modpack Details Modularization**
+  - Introduced `LogsSection` (auto-scroll) and `ScreenshotsSection` under `Modpacks/Details/Sections` for a cleaner layout.
+  - Added `variant` prop to screenshot gallery and renamed component to `ModpackScreenshotGallery`.
+  - Reorganized file structure accordingly and updated imports project-wide.
+
+### 🎨 **User Interface Improvements**
+- `ModpackCard` and `ModpackDetailsRefactored` now stay in sync with live download/launch state.
+- Tabbed interface gains screenshot counter badge and smoother transitions.
+- Improved animation handling via `AnimationContext` utilities.
+
+### 🧹 **Cleanup & Maintenance**
+- Removed leftover debug prints & unused imports after Java refactor.
+- Ensured global Lyceris runtime directory is created under `.runtime_dir(meta_dirs.java_dir)`.
+- Resolved ESLint/TypeScript warnings introduced during refactors.
+
+---
+
 ## [0.0.9-alpha.2] - 2025-07-03
 
 ### ✨ **New Features**

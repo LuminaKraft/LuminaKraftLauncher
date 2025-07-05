@@ -18,10 +18,8 @@ export interface Modpack {
   logo: string;
   banner?: string;
   images?: string[]; // Array of screenshot URLs
-  changelog?: string;
   gamemode?: string;
   ip?: string;
-  jvmArgsRecomendados?: string;
   isNew?: boolean;
   isActive?: boolean;
   isComingSoon?: boolean;
@@ -102,7 +100,6 @@ export interface MicrosoftAccount {
 export interface UserSettings {
   username: string;
   allocatedRam: number; // in GB
-  javaPath?: string;
   launcherDataUrl: string;
   language: string; // 'es' | 'en'
   authMethod: 'offline' | 'microsoft';
@@ -134,6 +131,8 @@ export type ModpackStatus =
   | 'installing'
   | 'updating'
   | 'launching'
+  | 'running'
+  | 'stopping'
   | 'error';
 
 export interface ProgressHistoryEntry {

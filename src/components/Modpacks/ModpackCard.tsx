@@ -205,11 +205,11 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
   const handleRemoveModpack = async () => {
     try {
       setIsRemoving(true);
-      console.log('🗑️ Removing modpack:', modpack.id);
+              console.log('🗑️ Removing instance:', modpack.id);
       await removeModpack(modpack.id);
       setShowRemoveDialog(false);
     } catch (error) {
-      console.error('❌ Error removing modpack:', error);
+              console.error('❌ Error removing instance:', error);
     } finally {
       setIsRemoving(false);
     }
@@ -350,7 +350,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
                     {state.progress.detailMessage && state.progress.detailMessage.trim() !== '' && (() => {
                       const message = state.progress.detailMessage;
                       let displayText = message;
-                      let bulletClass = "w-2 h-2 bg-lumina-600 rounded-full animate-pulse";
+                      let bulletClass = "w-2 h-2 bg-lumina-600 rounded-full animate-heartbeat";
 
                       // Extract only the filename from the message
                       if (message.includes(":")) {
@@ -438,7 +438,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                console.log('🔴 Remove button clicked for modpack:', modpack.id);
+                console.log('🔴 Remove button clicked for instance:', modpack.id);
                 setShowRemoveDialog(true);
               }}
               disabled={isLoading}

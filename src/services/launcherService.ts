@@ -354,8 +354,6 @@ class LauncherService {
       modloaderVersion: modpack.modloaderVersion,
       urlIcono: modpack.urlIcono || modpack.logo || '',
       urlModpackZip: modpack.urlModpackZip || '',
-      changelog: modpack.changelog || '',
-      jvmArgsRecomendados: modpack.jvmArgsRecomendados || ''
     };
   }
 
@@ -364,7 +362,6 @@ class LauncherService {
     return {
       username: settings.username,
       allocatedRam: settings.allocatedRam, // Keep camelCase, backend should handle it
-      javaPath: settings.javaPath || null,
       launcherDataUrl: settings.launcherDataUrl,
       authMethod: settings.authMethod,
       microsoftAccount: settings.microsoftAccount || null
@@ -662,6 +659,20 @@ class LauncherService {
       throw error;
     }
   }
+
+  async stopInstance(instanceId: string): Promise<void> {
+    if (!isTauriContext()) {
+      throw new Error('Esta función requiere ejecutar la aplicación con Tauri.');
+    }
+    try {
+      await safeInvoke('stop_instance', { instanceId });
+    } catch (error) {
+      console.error('Error stopping instance:', error);
+      throw new Error('Error al detener la instancia');
+    }
+  }
+
+  // Java-specific helper methods removed – Lyceris handles runtimes automatically.
 }
 
 export default LauncherService; 

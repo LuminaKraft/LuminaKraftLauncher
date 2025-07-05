@@ -4,7 +4,6 @@
 use tauri::{Manager, Emitter};
 use serde::{Deserialize, Serialize};
 use anyhow::Result;
-use std::process::Command;
 
 mod launcher;
 mod meta;
@@ -28,9 +27,6 @@ pub struct Modpack {
     pub url_icono: String,
     #[serde(rename = "urlModpackZip")]
     pub url_modpack_zip: String,
-    pub changelog: String,
-    #[serde(rename = "jvmArgsRecomendados")]
-    pub jvm_args_recomendados: String,
     
     // Campos adicionales que aparecen en el TypeScript pero no estaban en Rust
     #[serde(default)]
@@ -86,8 +82,6 @@ pub struct UserSettings {
     pub username: String,
     #[serde(rename = "allocatedRam")]
     pub allocated_ram: u32,
-    #[serde(rename = "javaPath")]
-    pub java_path: Option<String>,
     #[serde(rename = "launcherDataUrl")]
     pub launcher_data_url: String,
     #[serde(rename = "authMethod")]
@@ -206,7 +200,7 @@ async fn install_modpack_with_minecraft(app: tauri::AppHandle, modpack: Modpack,
                     file_name.to_string()
                 };
                 
-                // Actualizar el último mensaje válido
+                // Actualizar el último detailMessage válido
                 if let Ok(mut last) = last_detail_message.lock() {
                     *last = detail_msg.clone();
                 }
@@ -632,13 +626,13 @@ async fn install_modpack_with_failed_tracking(app: tauri::AppHandle, modpack: Mo
 }
 
 #[tauri::command]
-async fn launch_modpack(modpack: Modpack, settings: UserSettings) -> Result<(), String> {
+async fn launch_modpack(app: tauri::AppHandle, modpack: Modpack, settings: UserSettings) -> Result<(), String> {
     // Validate modpack before launching
     if let Err(e) = launcher::validate_modpack(&modpack) {
         return Err(format!("Invalid modpack configuration: {}", e));
     }
     
-    match launcher::launch_modpack_with_shared_storage(modpack, settings).await {
+    match launcher::launch_modpack_with_shared_storage_and_token_refresh(modpack, settings, app).await {
         Ok(_) => Ok(()),
         Err(e) => Err(format!("Failed to launch modpack: {}", e)),
     }
@@ -667,14 +661,6 @@ async fn get_platform() -> Result<String, String> {
         "linux"
     };
     Ok(platform.to_string())
-}
-
-#[tauri::command]
-async fn check_java() -> Result<bool, String> {
-    match minecraft::check_java_availability().await {
-        Ok(available) => Ok(available),
-        Err(e) => Err(format!("Failed to check Java: {}", e)),
-    }
 }
 
 #[tauri::command]
@@ -1023,6 +1009,25 @@ async fn clear_screenshots_cache() -> Result<Vec<String>, String> {
     }
 }
 
+#[tauri::command]
+async fn stop_instance(app: tauri::AppHandle, instance_id: String) -> Result<(), String> {
+    // Emit event that instance is stopping
+    let _ = app.emit(&format!("minecraft-stopping-{}", instance_id), serde_json::json!({}));
+    
+    match crate::minecraft::stop_instance_process(&instance_id).await {
+        Ok(_) => {
+            // Remove from RUNNING_PROCS and emit stopped event
+            {
+                let mut map_guard = crate::minecraft::RUNNING_PROCS.lock().unwrap();
+                map_guard.remove(&instance_id);
+            }
+            let _ = app.emit(&format!("minecraft-exited-{}", instance_id), serde_json::json!({}));
+            Ok(())
+        },
+        Err(e) => Err(e.to_string()),
+    }
+}
+
 /// Parsea mensajes de "Progress:" para crear mensajes generales útiles
 /// Ejemplo: "Progress: 3835/3855 - Java (99.48119%)" -> "Progreso: Descargando Java... (3835/3855)"
 /// Devuelve None si debe mantener el mensaje anterior (evita parpadeo)
@@ -1059,78 +1064,6 @@ fn parse_progress_line(message: &str) -> Option<String> {
 }
 
 #[tauri::command]
-async fn detect_system_java_path() -> Result<Option<String>, String> {
-    // Try to locate Java on the system PATH using platform-specific command
-    #[cfg(target_os = "windows")]
-    let cmd = {
-        Command::new("where").arg("java").output()
-    };
-    #[cfg(not(target_os = "windows"))]
-    let cmd = {
-        Command::new("which").arg("java").output()
-    };
-
-    match cmd {
-        Ok(output) => {
-            if output.status.success() {
-                let path = String::from_utf8_lossy(&output.stdout).lines().next().unwrap_or("").trim().to_string();
-                if !path.is_empty() {
-                    return Ok(Some(path));
-                }
-            }
-            Ok(None)
-        },
-        Err(e) => Err(format!("Failed to execute java detection: {}", e)),
-    }
-}
-
-// Add helper for Java validation (reuse in detect_system_java_path maybe)
-fn is_valid_java_executable(path: &str) -> bool {
-    let candidate = std::path::Path::new(path);
-    if !candidate.exists() {
-        return false;
-    }
-
-    // Accept regular files or symlinks pointing to files (e.g. /usr/bin/java -> /System/…)
-    if let Ok(meta) = std::fs::symlink_metadata(candidate) {
-        let ftype = meta.file_type();
-        if !(ftype.is_file() || ftype.is_symlink()) {
-            return false;
-        }
-    } else {
-        return false;
-    }
-
-    if !candidate
-        .file_name()
-        .and_then(|n| n.to_str())
-        .map(|n| n.to_lowercase().contains("java"))
-        .unwrap_or(false)
-    {
-        return false;
-    }
-
-    // Optional extra check: attempt to run `java -version`, but ignore exit code – just spawning means it's executable.
-    if Command::new(candidate)
-        .arg("-version")
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .status()
-        .is_ok()
-    {
-        return true;
-    }
-
-    // Even if spawning failed (e.g., macOS stub requiring GUI), still treat as valid because JVM will be resolved at runtime.
-    true
-}
-
-#[tauri::command]
-async fn validate_java_path(java_path: String) -> Result<bool, String> {
-    Ok(is_valid_java_executable(&java_path))
-}
-
-#[tauri::command]
 async fn list_minecraft_versions() -> Result<Vec<String>, String> {
     launcher::list_minecraft_versions()
         .await
@@ -1138,10 +1071,19 @@ async fn list_minecraft_versions() -> Result<Vec<String>, String> {
 }
 
 #[tauri::command]
-async fn list_java_installations() -> Result<Vec<String>, String> {
-    launcher::list_java_installations()
-        .await
-        .map_err(|e| e.to_string())
+async fn update_refreshed_microsoft_token(app: tauri::AppHandle, refreshed_account: MicrosoftAccount) -> Result<(), String> {
+    // Emit an event to notify the frontend about the refreshed token
+    let _ = app.emit("microsoft-token-refreshed", serde_json::json!({
+        "xuid": refreshed_account.xuid,
+        "exp": refreshed_account.exp,
+        "uuid": refreshed_account.uuid,
+        "username": refreshed_account.username,
+        "accessToken": refreshed_account.access_token,
+        "refreshToken": refreshed_account.refresh_token,
+        "clientId": refreshed_account.client_id
+    }));
+    
+    Ok(())
 }
 
 #[allow(unused_must_use)]
@@ -1165,7 +1107,6 @@ fn main() {
             delete_instance,
             get_launcher_version,
             get_platform,
-            check_java,
             get_supported_loaders,
             validate_modpack_config,
             check_instance_needs_update,
@@ -1185,10 +1126,9 @@ fn main() {
             cache_modpack_images_command,
             clear_icons_cache,
             clear_screenshots_cache,
-            detect_system_java_path,
-            validate_java_path,
             list_minecraft_versions,
-            list_java_installations
+            update_refreshed_microsoft_token,
+            stop_instance,
         ])
         .setup(|app| {
             // Initialize app data directory

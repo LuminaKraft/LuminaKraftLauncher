@@ -251,20 +251,6 @@ impl MetaDirectories {
         versions.sort();
         Ok(versions)
     }
-
-    pub async fn get_java_installations_list(&self) -> Result<Vec<String>> {
-        let mut installs = Vec::new();
-        if self.java_dir.exists() {
-            let mut entries = tokio::fs::read_dir(&self.java_dir).await?;
-            while let Some(entry) = entries.next_entry().await? {
-                if let Some(name) = entry.file_name().to_str() {
-                    installs.push(name.to_string());
-                }
-            }
-        }
-        installs.sort();
-        Ok(installs)
-    }
 }
 
 /// Helper functions for instance-specific directories

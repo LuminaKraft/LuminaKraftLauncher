@@ -8,7 +8,8 @@ import type {
   ModpackFeatures,
   ProgressInfo,
   FailedMod,
-  ModpackStatus
+  ModpackStatus,
+  MicrosoftAccount
 } from '../types/launcher';
 import LauncherService from '../services/launcherService';
 import { FailedModsDialog } from '../components/FailedModsDialog';
@@ -28,6 +29,7 @@ interface LauncherContextType {
   updateModpack: (_id: string) => Promise<void>;
   launchModpack: (_id: string) => Promise<void>;
   repairModpack: (_id: string) => Promise<void>;
+  stopInstance: (_id: string) => Promise<void>;
   getModpackTranslations: (_id: string) => any;
   getModpackFeatures: (_id: string) => Promise<ModpackFeatures | null>;
   changeLanguage: (_language: string) => Promise<void>;
@@ -309,6 +311,47 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     };
   }, [state.userSettings.authMethod, state.userSettings.microsoftAccount?.exp]);
 
+  // ---------------------------------------------------------------------------
+  // Listen for Microsoft token refresh events from backend
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    const setupTokenRefreshListener = async () => {
+      try {
+        const { listen } = await import('@tauri-apps/api/event');
+        const unlisten = await listen<MicrosoftAccount>('microsoft-token-refreshed', (event) => {
+          console.log('🔄 Received refreshed Microsoft token from backend');
+          const refreshedAccount = event.payload;
+          
+          // Update user settings with the new token
+          updateUserSettings({
+            authMethod: 'microsoft',
+            microsoftAccount: refreshedAccount,
+            username: refreshedAccount.username,
+          });
+          
+          console.log('✅ Microsoft token updated in frontend');
+        });
+
+        // Return cleanup function
+        return unlisten;
+      } catch (error) {
+        console.error('Failed to setup Microsoft token refresh listener:', error);
+        return null;
+      }
+    };
+
+    const cleanupPromise = setupTokenRefreshListener();
+    
+    // Cleanup on unmount
+    return () => {
+      cleanupPromise.then(cleanup => {
+        if (cleanup) {
+          cleanup();
+        }
+      });
+    };
+  }, []); // Empty dependency array since this should only run once
+
   const refreshData = async () => {
     dispatch({ type: 'SET_LOADING', payload: true });
     dispatch({ type: 'SET_ERROR', payload: null });
@@ -456,7 +499,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
   };
 
   const performModpackAction = async (
-    action: 'install' | 'update' | 'launch' | 'repair',
+    action: 'install' | 'update' | 'launch' | 'repair' | 'stop',
     modpackId: string
   ) => {
     const modpack = state.launcherData?.modpacks.find(m => m.id === modpackId);
@@ -523,9 +566,110 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
           break;
         case 'launch':
           await launcherService.launchModpack(modpackId);
+          if (action === 'launch') {
+            // Listen for runtime events to update state between running and stopped
+            const { listen } = await import('@tauri-apps/api/event');
+
+            const startEvent = `minecraft-started-${modpackId}`;
+            const exitEvent = `minecraft-exited-${modpackId}`;
+
+            let unlistenStart: (() => void) | null = null;
+            let unlistenExit: (() => void) | null = null;
+
+            try {
+              unlistenStart = await listen(startEvent, () => {
+                dispatch({
+                  type: 'SET_MODPACK_STATE',
+                  payload: {
+                    id: modpackId,
+                    state: {
+                      ...state.modpackStates[modpackId],
+                      status: 'running',
+                    },
+                  },
+                });
+              });
+
+              unlistenExit = await listen(exitEvent, () => {
+                dispatch({
+                  type: 'SET_MODPACK_STATE',
+                  payload: {
+                    id: modpackId,
+                    state: {
+                      ...state.modpackStates[modpackId],
+                      status: 'installed',
+                    },
+                  },
+                });
+
+                // Cleanup listeners once exited
+                if (unlistenStart) unlistenStart();
+                if (unlistenExit) unlistenExit();
+              });
+            } catch (err) {
+              console.error('Error setting up runtime listeners', err);
+            }
+          }
           break;
         case 'repair':
           await launcherService.repairModpack(modpackId, onProgress);
+          break;
+        case 'stop':
+          // Set stopping state immediately
+          dispatch({
+            type: 'SET_MODPACK_STATE',
+            payload: {
+              id: modpackId,
+              state: {
+                ...state.modpackStates[modpackId],
+                status: 'stopping',
+              },
+            },
+          });
+          
+          // Setup listeners for stopping/stopped events
+          let unlistenStopping: (() => void) | null = null;
+          let unlistenStopped: (() => void) | null = null;
+          
+          try {
+            const { listen } = await import('@tauri-apps/api/event');
+            const stoppingEvent = `minecraft-stopping-${modpackId}`;
+            const stoppedEvent = `minecraft-exited-${modpackId}`;
+            
+            unlistenStopping = await listen(stoppingEvent, () => {
+              dispatch({
+                type: 'SET_MODPACK_STATE',
+                payload: {
+                  id: modpackId,
+                  state: {
+                    ...state.modpackStates[modpackId],
+                    status: 'stopping',
+                  },
+                },
+              });
+            });
+
+            unlistenStopped = await listen(stoppedEvent, () => {
+              dispatch({
+                type: 'SET_MODPACK_STATE',
+                payload: {
+                  id: modpackId,
+                  state: {
+                    ...state.modpackStates[modpackId],
+                    status: 'installed',
+                  },
+                },
+              });
+              
+              // Cleanup listeners once stopped
+              if (unlistenStopping) unlistenStopping();
+              if (unlistenStopped) unlistenStopped();
+            });
+          } catch (err) {
+            console.error('Error setting up stopping listeners', err);
+          }
+          
+          await launcherService.stopInstance(modpackId);
           break;
       }
 
@@ -593,7 +737,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
   
   const removeModpack = async (id: string) => {
     try {
-      console.log('🗑️ Removing modpack:', id);
+      console.log('🗑️ Removing instance:', id);
       
       dispatch({
         type: 'SET_MODPACK_STATE',
@@ -609,7 +753,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
       console.log('📡 Calling removeModpack service...');
       await launcherService.removeModpack(id);
       
-      console.log('✅ Modpack removed successfully, updating state');
+              console.log('✅ Instance removed successfully, updating state');
       // Después de eliminar exitosamente, cambiar el estado a not_installed
       dispatch({
         type: 'SET_MODPACK_STATE',
@@ -619,7 +763,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
         },
       });
     } catch (error) {
-      console.error('❌ Error removing modpack:', error);
+              console.error('❌ Error removing instance:', error);
       dispatch({
         type: 'SET_MODPACK_STATE',
         payload: {
@@ -627,7 +771,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
           state: { 
             ...(state.modpackStates[id] || createModpackState('not_installed')),
             status: 'error', 
-            error: error instanceof Error ? error.message : 'Error al remover el modpack'
+            error: error instanceof Error ? error.message : 'Error al remover la instancia'
           },
         },
       });
@@ -649,6 +793,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     updateModpack,
     launchModpack,
     repairModpack,
+          stopInstance: (id: string) => performModpackAction('stop', id), // Added stopInstance
     getModpackTranslations,
     getModpackFeatures,
     changeLanguage,

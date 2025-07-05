@@ -24,11 +24,11 @@ pub async fn install_modpack(modpack: Modpack) -> Result<()> {
     let temp_zip_path = app_data_dir.join("temp").join(format!("{}.zip", modpack.id));
     std::fs::create_dir_all(temp_zip_path.parent().unwrap())?;
     
-    println!("Downloading modpack from: {}", modpack.url_modpack_zip);
+    println!("Downloading instance files from: {}", modpack.url_modpack_zip);
     download_file(&modpack.url_modpack_zip, &temp_zip_path).await?;
     
     // Extract modpack
-    println!("Extracting modpack to: {}", instance_dir.display());
+    println!("Extracting instance to: {}", instance_dir.display());
     extract_zip(&temp_zip_path, &instance_dir)?;
     
     // Clean up temporary file
@@ -48,7 +48,7 @@ pub async fn install_modpack(modpack: Modpack) -> Result<()> {
     
     filesystem::save_instance_metadata(&metadata).await?;
     
-    println!("Modpack installation completed successfully!");
+    println!("Instance installation completed successfully!");
     Ok(())
 }
 
@@ -210,15 +210,18 @@ where
     emit_progress("Finalizando instalación...".to_string(), 98.0, "finalizing_installation".to_string());
     
     emit_progress("Instalación completada".to_string(), 100.0, "completed".to_string());
-    println!("✅ Modpack installation completed successfully!");
+    println!("✅ Instance installation completed successfully!");
     
     Ok(failed_mods)
 }
 
-/// Launch a modpack (always uses meta storage like Modrinth)
-pub async fn launch_modpack_with_shared_storage(
+
+
+/// Launch a modpack (always uses meta storage like Modrinth) with token refresh support
+pub async fn launch_modpack_with_shared_storage_and_token_refresh(
     modpack: Modpack,
     settings: UserSettings,
+    app: tauri::AppHandle,
 ) -> Result<()> {
     let meta_dirs = MetaDirectories::init().await?;
     let instance_dirs = InstanceDirectories::new(&modpack.id)?;
@@ -226,8 +229,8 @@ pub async fn launch_modpack_with_shared_storage(
     // Ensure meta resources are linked to instance
     crate::meta::link_meta_resources_to_instance(&meta_dirs, &instance_dirs, &modpack.minecraft_version).await?;
     
-    // Launch using regular function (instance directory now has symlinks to meta resources)
-    minecraft::launch_minecraft(modpack, settings).await
+    // Launch using function that handles token refresh
+    minecraft::launch_minecraft_with_token_refresh(modpack, settings, app).await
 }
 
 /// Get meta storage information for the UI
@@ -348,12 +351,6 @@ pub async fn clear_screenshots_cache() -> Result<Vec<String>> {
 pub async fn list_minecraft_versions() -> Result<Vec<String>> {
     let meta_dirs = MetaDirectories::init().await?;
     meta_dirs.get_minecraft_versions_list().await
-}
-
-/// Return list of Java installations stored in meta
-pub async fn list_java_installations() -> Result<Vec<String>> {
-    let meta_dirs = MetaDirectories::init().await?;
-    meta_dirs.get_java_installations_list().await
 }
 
 fn format_bytes(bytes: u64) -> String {

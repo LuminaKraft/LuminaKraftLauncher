@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, HardDrive, Coffee, FolderOpen, Save, Wifi, WifiOff, RefreshCw, Trash2, Server, Languages, Shield, XCircle, CheckCircle, Zap } from 'lucide-react';
+import { User, HardDrive, Save, Wifi, WifiOff, RefreshCw, Trash2, Server, Languages, Shield, XCircle, CheckCircle, Zap } from 'lucide-react';
 import { useLauncher } from '../../contexts/LauncherContext';
 import LauncherService from '../../services/launcherService';
 import MicrosoftAuth from './MicrosoftAuth';
-import MetaStorageSettings from './MetaStorageSettings.tsx';
+import MetaStorageSettings from './MetaStorageSettings';
 import type { MicrosoftAccount } from '../../types/launcher';
-import { invoke } from '@tauri-apps/api/core';
-import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import toast from 'react-hot-toast';
 
 const SettingsPage: React.FC = () => {
@@ -21,20 +19,9 @@ const SettingsPage: React.FC = () => {
   const [apiInfo, setApiInfo] = useState<any>(null);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
-  const [detectedJavaPath, setDetectedJavaPath] = useState<string | null>(null);
-  const [javaPathValid, setJavaPathValid] = useState<boolean | null>(null);
+  // Java runtime handled internally by Lyceris; no user-facing settings.
 
   useEffect(() => {
-    // Detect system Java path on mount
-    const fetchJavaPath = async () => {
-      try {
-        const path = await LauncherService.getInstance().isTauriAvailable() ? await invoke<string | null>('detect_system_java_path') : null;
-        setDetectedJavaPath(path ?? null);
-      } catch (e) {
-        console.warn('Failed to detect system Java:', e);
-      }
-    };
-    fetchJavaPath();
     setFormData(userSettings);
   }, [userSettings]);
 
@@ -48,33 +35,6 @@ const SettingsPage: React.FC = () => {
     fetchAPIInfo();
     fetchAvailableLanguages();
   }, []);
-
-  useEffect(() => {
-    const effectivePath = (formData.javaPath && formData.javaPath.trim() !== '') ? formData.javaPath.trim() : detectedJavaPath ?? '';
-
-    const validatePath = async () => {
-      if (effectivePath === '') {
-        // No path provided (auto-detect mode) – treat as valid
-        setJavaPathValid(true);
-        return;
-      }
-      try {
-        if (LauncherService.getInstance().isTauriAvailable()) {
-          const valid = await invoke<boolean>('validate_java_path', { javaPath: effectivePath });
-          setJavaPathValid(valid);
-        } else {
-          // Browser preview: naive check file name includes java
-          const naive = effectivePath.toLowerCase().includes('java');
-          setJavaPathValid(naive);
-        }
-      } catch (e) {
-        console.error('Java path validation failed:', e);
-        setJavaPathValid(false);
-      }
-    };
-
-    validatePath();
-  }, [formData.javaPath, detectedJavaPath]);
 
   const checkAPIStatus = async () => {
     setApiStatus('checking');
@@ -145,39 +105,6 @@ const SettingsPage: React.FC = () => {
     setFormData(userSettings);
     setHasChanges(false);
     toast(t('settings.changesDiscarded'));
-  };
-
-  const handleSelectJavaPath = async () => {
-    try {
-      const defaultPath = formData.javaPath || detectedJavaPath || undefined;
-      console.log('Opening Java file picker with defaultPath:', defaultPath);
-      const isWindows = navigator.userAgent.toLowerCase().includes('win');
-      const dialogOpts: any = {
-        multiple: false,
-        directory: false,
-        title: t('settings.javaPath'),
-        defaultPath,
-      };
-      if (isWindows) {
-        dialogOpts.filters = [{ name: 'Java Executable', extensions: ['exe'] }];
-      }
-
-      const selected = await openDialog(dialogOpts);
-      console.log('Dialog result:', selected);
-
-      if (selected && typeof selected === 'string') {
-        handleInputChange('javaPath', selected);
-        setDetectedJavaPath(selected);
-      }
-    } catch (_error) {
-      console.error('Error selecting Java path:', _error);
-    }
-  };
-
-  const handleResetJavaPath = () => {
-    if (detectedJavaPath) {
-      handleInputChange('javaPath', detectedJavaPath);
-    }
   };
 
   const handleTestConnection = async () => {
@@ -271,13 +198,9 @@ const SettingsPage: React.FC = () => {
     }
   };
 
-  const getDisplayedJavaPath = () => {
-    return (formData.javaPath && formData.javaPath.trim() !== '') ? formData.javaPath.trim() : (detectedJavaPath ?? '');
-  };
+  // Java runtime handled internally by Lyceris; no user-facing settings.
 
-  const useDetectedDisabled = !detectedJavaPath || getDisplayedJavaPath() === detectedJavaPath;
-
-  const isSaveDisabled = (javaPathValid === false) || !!usernameError;
+  const isSaveDisabled = !!usernameError;
 
   return (
     <div className="h-full overflow-auto">
@@ -524,54 +447,6 @@ const SettingsPage: React.FC = () => {
                 <p className={`text-sm ${formData.enableAnimations !== false ? 'text-green-300' : 'text-orange-300'}`}>
                   {formData.enableAnimations !== false ? t('settings.animationsEnabled') : t('settings.animationsDisabled')}
                 </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Java Settings */}
-          <div className="card">
-            <div className="flex items-center space-x-3 mb-6">
-              <Coffee className="w-6 h-6 text-lumina-500" />
-              <h2 className="text-white text-xl font-semibold">{t('settings.java')}</h2>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-dark-300 text-sm font-medium mb-2">
-                  {t('settings.javaPathOptional')}
-                </label>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="text"
-                    value={getDisplayedJavaPath()}
-                    onChange={(e) => handleInputChange('javaPath', e.target.value)}
-                    placeholder={t('settings.javaPathAuto')}
-                    className="input-field flex-1"
-                  />
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={handleSelectJavaPath}
-                      className="btn-secondary inline-flex items-center"
-                      title={t('settings.selectFolder')}
-                    >
-                      <FolderOpen className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={handleResetJavaPath}
-                      className={`btn-secondary inline-flex items-center ${useDetectedDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      title={t('settings.useDetectedJava')}
-                      disabled={useDetectedDisabled}
-                    >
-                      <RefreshCw className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-                <p className="text-dark-400 text-xs mt-1">
-                  {t('settings.javaPathDescription')}
-                </p>
-                {javaPathValid === false && (
-                  <p className="text-red-500 text-xs mt-1 flex items-center"><XCircle className="w-4 h-4 mr-1" /> {t('settings.invalidJava')}</p>
-                )}
               </div>
             </div>
           </div>

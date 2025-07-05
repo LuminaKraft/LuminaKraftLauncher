@@ -107,7 +107,8 @@ const ModpacksPage: React.FC = () => {
       installed: false, 
       downloading: false, 
       progress: { percentage: 0 }, 
-      status: 'not_installed' 
+      status: 'not_installed' as const,
+      features: []
     };
 
     return (
