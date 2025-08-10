@@ -27,10 +27,9 @@ function hasCommand(cmd) {
 
 function isInstalledDpkg(pkgName) {
 	try {
-		const out = execSync(
-			`dpkg-query -W -f='${Status}' ${pkgName} 2>/dev/null || true`,
-			{ encoding: 'utf8' }
-		);
+		// Use plain string concatenation so ${Status} is passed literally to dpkg-query (avoid JS template interpolation)
+		const cmd = "dpkg-query -W -f='${Status}' " + pkgName + " 2>/dev/null || true";
+		const out = execSync(cmd, { encoding: 'utf8' });
 		return out.includes('install ok installed');
 	} catch (_) {
 		return false;
