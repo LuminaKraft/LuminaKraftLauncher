@@ -1,0 +1,7 @@
+# New format: Title | P0|P1|P2 | Optional description
+# Example tasks - delete when done or leave as reference
+#
+# Fix launcher crash on startup | P0
+# Add support for multiple Java versions | P1
+# Improve UI animations | P2
+
