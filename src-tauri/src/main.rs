@@ -1088,6 +1088,49 @@ async fn update_refreshed_microsoft_token(app: tauri::AppHandle, refreshed_accou
 
 #[allow(unused_must_use)]
 fn main() {
+    // Linux graphics/display server compatibility setup must run BEFORE Tauri/GTK init
+    // Prefer Wayland with automatic fallback to X11, and disable fragile DMABUF path.
+    // Also provide a safe software rendering fallback on X11.
+    #[cfg(target_os = "linux")]
+    {
+        use std::env;
+
+        // If the user didn't force a backend, prefer Wayland but allow fallback to X11
+        if env::var("GDK_BACKEND").is_err() {
+            env::set_var("GDK_BACKEND", "wayland,x11");
+        }
+
+        // Force GTK scene renderer to OpenGL for better compatibility on Wayland (avoids Vulkan issues)
+        if env::var("GSK_RENDERER").is_err() {
+            env::set_var("GSK_RENDERER", "gl");
+        }
+
+        // Disable WebKitGTK DMABUF hardware path which can fail with GBM on some drivers
+        if env::var("WEBKIT_DISABLE_DMABUF_RENDERER").is_err() {
+            env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+        }
+
+        // If running under X11 (no Wayland), provide a software rendering fallback to avoid GBM errors
+        let is_wayland = env::var("WAYLAND_DISPLAY").is_ok();
+        let is_x11 = !is_wayland && env::var("DISPLAY").is_ok();
+        if is_x11 && env::var("LIBGL_ALWAYS_SOFTWARE").is_err() {
+            env::set_var("LIBGL_ALWAYS_SOFTWARE", "1");
+        }
+
+        // Log what we decided for easier support/debugging
+        eprintln!(
+            "[Linux gfx] GDK_BACKEND={:?} GSK_RENDERER={:?} WEBKIT_DISABLE_DMABUF_RENDERER={:?} LIBGL_ALWAYS_SOFTWARE={:?}",
+            env::var("GDK_BACKEND").ok(),
+            env::var("GSK_RENDERER").ok(),
+            env::var("WEBKIT_DISABLE_DMABUF_RENDERER").ok(),
+            env::var("LIBGL_ALWAYS_SOFTWARE").ok()
+        );
+
+        if !is_wayland && !is_x11 {
+            eprintln!("[Linux gfx] Warning: No display server detected (neither WAYLAND_DISPLAY nor DISPLAY set)");
+        }
+    }
+
     // Esta anotación permite que Rust ignore el "referenced_by" error que ocurre durante la compilación
     #[allow(unused_variables, dead_code)]
     tauri::Builder::default()
