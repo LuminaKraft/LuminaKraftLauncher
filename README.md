@@ -175,6 +175,24 @@ Releases/
   - `WEBKIT_DISABLE_DMABUF_RENDERER=1` (disable fragile dmabuf path)
   - `LIBGL_ALWAYS_SOFTWARE=1` (software rendering fallback on X11)
 
+### 🐧 Linux dependencies (Debian/Ubuntu/Kali-based)
+
+Before building locally on Linux, install the required system packages:
+
+```bash
+sudo apt update && sudo apt install \
+  pkg-config \
+  libgtk-3-dev \
+  libwebkit2gtk-4.1-dev \
+  libayatana-appindicator3-dev \
+  librsvg2-dev \
+  libglib2.0-dev
+```
+
+Notes:
+- `libwebkit2gtk-4.1-dev` is preferred. If unavailable on your distro, `libwebkit2gtk-4.0-dev` may work.
+- Our build scripts warn (but do not fail) if these are missing on APT-based systems.
+
 ## 🛠 Building and Releases
 
 ### Automated Builds via GitHub Actions

@@ -164,6 +164,35 @@ Releases/
 - **Dependencias faltantes**: Instala GTK 3.24+ y WebKit2GTK
 - **Conflictos de paquetes**: Usa AppImage para compatibilidad universal
 
+#### Servidores de Pantalla en Linux (Wayland/X11)
+- El launcher ahora prefiere automáticamente Wayland y cae con gracia a X11 si Wayland no está disponible.
+- También deshabilita la ruta DMABUF de WebKit y selecciona un renderizador GTK compatible para evitar fallos comunes como:
+  - `Gdk-Message: Error 71 (Protocol error) dispatching to Wayland display.`
+  - `Failed to create GBM buffer of size 1200x800: Invalid argument`
+- No se requiere configuración manual de variables de entorno. Para depuración, aún puedes usar:
+  - `GDK_BACKEND=wayland,x11` (preferencia de backend)
+  - `GSK_RENDERER=gl` (renderizador GTK)
+  - `WEBKIT_DISABLE_DMABUF_RENDERER=1` (desactivar ruta dmabuf frágil)
+  - `LIBGL_ALWAYS_SOFTWARE=1` (renderizado por software en X11)
+
+### 🐧 Dependencias de Linux (basadas en Debian/Ubuntu/Kali)
+
+Antes de compilar localmente en Linux, instala los paquetes del sistema requeridos:
+
+```bash
+sudo apt update && sudo apt install \
+  pkg-config \
+  libgtk-3-dev \
+  libwebkit2gtk-4.1-dev \
+  libayatana-appindicator3-dev \
+  librsvg2-dev \
+  libglib2.0-dev
+```
+
+Notas:
+- Se prefiere `libwebkit2gtk-4.1-dev`. Si no está disponible en tu distro, `libwebkit2gtk-4.0-dev` puede funcionar.
+- Nuestros scripts de compilación avisan (pero no fallan) si faltan estos paquetes en sistemas basados en APT.
+
 ## 🛠 Compilación y Releases
 
 ### Compilaciones Automatizadas via GitHub Actions
