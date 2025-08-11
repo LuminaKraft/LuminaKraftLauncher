@@ -15,7 +15,14 @@ const SettingsPage: React.FC = () => {
   const [formData, setFormData] = useState(userSettings);
   const [hasChanges, setHasChanges] = useState(false);
   const [usernameError, setUsernameError] = useState<string | null>(null);
-  const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+  const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>(() => {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('LK_lastApiStatus') : null;
+    return saved === 'online' || saved === 'offline' ? saved : 'offline';
+  });
+  const [lastCheckedAt, setLastCheckedAt] = useState<number | null>(() => {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('LK_lastApiCheckAt') : null;
+    return saved ? Number(saved) : null;
+  });
   const [apiInfo, setApiInfo] = useState<any>(null);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -31,7 +38,6 @@ const SettingsPage: React.FC = () => {
   }, [formData, userSettings]);
 
   useEffect(() => {
-    checkAPIStatus();
     fetchAPIInfo();
     fetchAvailableLanguages();
   }, []);
@@ -40,9 +46,23 @@ const SettingsPage: React.FC = () => {
     setApiStatus('checking');
     try {
       const isHealthy = await LauncherService.getInstance().checkAPIHealth();
-      setApiStatus(isHealthy ? 'online' : 'offline');
+      const status: 'online' | 'offline' = isHealthy ? 'online' : 'offline';
+      setApiStatus(status);
+      const now = Date.now();
+      setLastCheckedAt(now);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('LK_lastApiStatus', status);
+        localStorage.setItem('LK_lastApiCheckAt', String(now));
+      }
     } catch (_error) {
-      setApiStatus('offline');
+      const status: 'online' | 'offline' = 'offline';
+      setApiStatus(status);
+      const now = Date.now();
+      setLastCheckedAt(now);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('LK_lastApiStatus', status);
+        localStorage.setItem('LK_lastApiCheckAt', String(now));
+      }
     }
   };
 
@@ -177,14 +197,23 @@ const SettingsPage: React.FC = () => {
   };
 
   const getStatusText = () => {
+    let base = '';
     switch (apiStatus) {
       case 'checking':
-        return t('settings.checking');
+        base = t('settings.checking');
+        break;
       case 'online':
-        return t('settings.connected');
+        base = t('settings.connected');
+        break;
       case 'offline':
-        return t('settings.disconnected');
+        base = t('settings.disconnected');
+        break;
     }
+    if (apiStatus !== 'checking' && lastCheckedAt) {
+      const time = new Date(lastCheckedAt).toLocaleString();
+      return `${base} (${time})`;
+    }
+    return base;
   };
 
   const getStatusColor = () => {

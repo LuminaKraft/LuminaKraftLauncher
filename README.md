@@ -54,6 +54,21 @@ Releases/
 ```
 
 ## 🚀 Installation
+## 🔐 API Authentication & Caching
+
+### Authentication headers sent by the launcher
+
+- Microsoft users: `Authorization: Bearer <msToken>`
+- Offline users: `x-lk-token: <clientToken>` (stable token generated and stored in settings)
+- Additional header: `x-luminakraft-client: luminakraft-launcher`
+
+### Caching behavior
+
+- Persistent cache (localStorage):
+  - `launcher_data` TTL: 5 minutes
+  - `translations_*`, `features_*`, `available_languages` TTL: 1 hour
+- Tauri backend caches icon/screenshots to disk under meta storage; the frontend triggers this caching after loading launcher data.
+
 
 ### 📥 Quick Installation Guide
 

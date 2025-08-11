@@ -106,6 +106,7 @@ export interface UserSettings {
   microsoftAccount?: MicrosoftAccount;
   enablePrereleases?: boolean;
   enableAnimations?: boolean;
+  clientToken?: string; // launcher-generated token to authenticate offline users
 }
 
 export interface ProgressInfo {

@@ -56,6 +56,27 @@ class LauncherService {
     axios.defaults.timeout = this.requestTimeout;
     // Note: User-Agent header cannot be set in browsers for security reasons
     // Only set other headers that are allowed
+    axios.interceptors.request.use((config) => {
+      try {
+        const msToken = this.userSettings?.microsoftAccount?.accessToken;
+        const offlineToken = this.userSettings?.clientToken;
+        const baseUrl = this.getBaseUrl();
+        const url = config.url || '';
+        // Attach auth header only for our API base URL
+        if (url.startsWith(baseUrl) || url.startsWith(this.userSettings.launcherDataUrl)) {
+          config.headers = config.headers || {};
+          if (msToken) {
+            (config.headers as any)['Authorization'] = `Bearer ${msToken}`;
+          } else if (offlineToken) {
+            (config.headers as any)['x-lk-token'] = offlineToken;
+          }
+          (config.headers as any)['x-luminakraft-client'] = 'luminakraft-launcher';
+        }
+      } catch (_) {
+        // noop
+      }
+      return config;
+    });
   }
 
   private detectDefaultLanguage(): string {
@@ -84,18 +105,29 @@ class LauncherService {
       allocatedRam: 4,
       launcherDataUrl: 'https://api.luminakraft.com/v1/launcher_data.json',
       language: this.detectDefaultLanguage(),
-      authMethod: 'offline'
+      authMethod: 'offline',
+      clientToken: undefined
     };
 
     try {
       const saved = localStorage.getItem('LuminaKraftLauncher_settings');
       if (saved) {
-        return { ...defaultSettings, ...JSON.parse(saved) };
+        const merged = { ...defaultSettings, ...JSON.parse(saved) } as UserSettings;
+        if (!merged.clientToken) {
+          merged.clientToken = this.generateClientToken();
+          localStorage.setItem('LuminaKraftLauncher_settings', JSON.stringify(merged));
+        }
+        return merged;
       }
     } catch (error) {
       console.error('Error loading user settings:', error);
     }
 
+    // Ensure we have a client token for offline auth
+    defaultSettings.clientToken = this.generateClientToken();
+    try {
+      localStorage.setItem('LuminaKraftLauncher_settings', JSON.stringify(defaultSettings));
+    } catch (_) {}
     return defaultSettings;
   }
 
@@ -141,11 +173,18 @@ class LauncherService {
     try {
       const cacheKey = 'launcher_data';
       const cached = this.cache.get(cacheKey);
+      const persisted = this.readPersistentCache<LauncherData>(cacheKey);
       
       // Verificar caché
       if (cached && Date.now() - cached.timestamp < this.cacheTTL) {
         this.launcherData = cached.data;
         return cached.data;
+      }
+      if (persisted && Date.now() - persisted.timestamp < this.cacheTTL) {
+        this.launcherData = persisted.data;
+        // hydrate in-memory cache for faster subsequent access
+        this.cache.set(cacheKey, { data: persisted.data, timestamp: persisted.timestamp });
+        return persisted.data;
       }
 
       console.log('Fetching launcher data from API...');
@@ -163,6 +202,7 @@ class LauncherService {
         data: response.data,
         timestamp: Date.now()
       });
+      this.writePersistentCache(cacheKey, response.data);
 
       // Cache modpack images automatically in background
       if (response.data.modpacks && response.data.modpacks.length > 0) {
@@ -177,11 +217,11 @@ class LauncherService {
       console.error('Error fetching launcher data:', error);
       
       // Intentar usar datos en caché como fallback
-      const cached = this.cache.get('launcher_data');
-      if (cached) {
+      const cached2 = this.cache.get('launcher_data');
+      if (cached2) {
         console.warn('Using cached data as fallback');
-        this.launcherData = cached.data;
-        return cached.data;
+        this.launcherData = cached2.data;
+        return cached2.data;
       }
 
       // Último recurso: datos de fallback
@@ -196,9 +236,14 @@ class LauncherService {
     try {
       const cacheKey = 'available_languages';
       const cached = this.cache.get(cacheKey);
+      const persisted = this.readPersistentCache<AvailableLanguages>(cacheKey);
       
       if (cached && Date.now() - cached.timestamp < this.translationsTTL) {
         return cached.data;
+      }
+      if (persisted && Date.now() - persisted.timestamp < this.translationsTTL) {
+        this.cache.set(cacheKey, persisted);
+        return persisted.data;
       }
 
       const baseUrl = this.getBaseUrl();
@@ -208,6 +253,7 @@ class LauncherService {
         data: response.data,
         timestamp: Date.now()
       });
+      this.writePersistentCache(cacheKey, response.data);
 
       return response.data;
     } catch (error) {
@@ -224,9 +270,14 @@ class LauncherService {
       const lang = language || this.userSettings.language;
       const cacheKey = `translations_${lang}`;
       const cached = this.cache.get(cacheKey);
+      const persisted = this.readPersistentCache<Translations>(cacheKey);
       
       if (cached && Date.now() - cached.timestamp < this.translationsTTL) {
         return cached.data;
+      }
+      if (persisted && Date.now() - persisted.timestamp < this.translationsTTL) {
+        this.cache.set(cacheKey, persisted);
+        return persisted.data;
       }
 
       const baseUrl = this.getBaseUrl();
@@ -236,6 +287,7 @@ class LauncherService {
         data: response.data,
         timestamp: Date.now()
       });
+      this.writePersistentCache(cacheKey, response.data);
 
       return response.data;
     } catch (error) {
@@ -249,9 +301,14 @@ class LauncherService {
       const lang = language || this.userSettings.language;
       const cacheKey = `features_${modpackId}_${lang}`;
       const cached = this.cache.get(cacheKey);
+      const persisted = this.readPersistentCache<ModpackFeatures>(cacheKey);
       
       if (cached && Date.now() - cached.timestamp < this.translationsTTL) {
         return cached.data;
+      }
+      if (persisted && Date.now() - persisted.timestamp < this.translationsTTL) {
+        this.cache.set(cacheKey, persisted);
+        return persisted.data;
       }
 
       const baseUrl = this.getBaseUrl();
@@ -261,6 +318,7 @@ class LauncherService {
         data: response.data,
         timestamp: Date.now()
       });
+      this.writePersistentCache(cacheKey, response.data);
 
       return response.data;
     } catch (error) {
@@ -524,6 +582,45 @@ class LauncherService {
   // Método para limpiar caché manualmente
   clearCache(): void {
     this.cache.clear();
+    // Persisted cache remains; caller may want to clear it explicitly
+  }
+
+  // ---- Persistent cache helpers (localStorage) ----
+  private readPersistentCache<T = any>(key: string): CacheEntry<T> | null {
+    try {
+      const raw = localStorage.getItem(`LK_CACHE:${key}`);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed.timestamp === 'number' && 'data' in parsed) {
+        return parsed as CacheEntry<T>;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  private writePersistentCache<T = any>(key: string, data: T): void {
+    try {
+      const entry: CacheEntry<T> = { data, timestamp: Date.now() };
+      localStorage.setItem(`LK_CACHE:${key}`, JSON.stringify(entry));
+    } catch (_) {
+      // ignore
+    }
+  }
+
+  private generateClientToken(): string {
+    // Generate URL-safe random token
+    const bytes = new Uint8Array(24);
+    if (typeof crypto !== 'undefined' && (crypto as any).getRandomValues) {
+      (crypto as any).getRandomValues(bytes);
+    } else {
+      for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+    }
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    const base64 = typeof btoa === 'function' ? btoa(binary) : Buffer.from(binary, 'binary').toString('base64');
+    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   }
 
   // Método para obtener información de la API
