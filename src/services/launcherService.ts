@@ -67,10 +67,14 @@ class LauncherService {
           config.headers = config.headers || {};
           if (msToken) {
             (config.headers as any)['Authorization'] = `Bearer ${msToken}`;
+            console.log(`[LauncherService] Added Microsoft token to request: ${url}`);
           } else if (offlineToken) {
             (config.headers as any)['x-lk-token'] = offlineToken;
+            console.log(`[LauncherService] Added offline token to request: ${url}`);
           }
           (config.headers as any)['x-luminakraft-client'] = 'luminakraft-launcher';
+        } else {
+          console.log(`[LauncherService] No auth headers added - URL ${url} doesn't match baseUrl ${baseUrl}`);
         }
       } catch (_) {
         // noop

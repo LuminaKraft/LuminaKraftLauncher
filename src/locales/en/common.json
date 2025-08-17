@@ -129,6 +129,9 @@
     "diskSpaceFull": "Insufficient disk space for installation",
     "corruptedFile": "Downloaded file appears to be corrupted",
     "networkError": "Network connection error",
+    "curseforgeUnauthorized": "CurseForge API authentication failed. The launcher is not authorized to access mod data. Please try again later or contact support.",
+    "curseforgeForbidden": "CurseForge API access forbidden. The launcher does not have permission to access this content.",
+    "curseforgeApiError": "Failed to connect to CurseForge API. Please check your internet connection and try again.",
     "retryInstallation": "Please try the installation again",
     "contactSupport": "If the problem persists, contact support"
   },
@@ -175,7 +178,9 @@
     "downloadingMinecraft": "Downloading Minecraft files...",
     "installingComponent": "Installing: {{component}}",
     "processingAdditionalFiles": "Processing additional files...",
-    "additionalFilesCompleted": "Additional files processed successfully"
+    "additionalFilesCompleted": "Additional files processed successfully",
+    "fetchingModInfo": "Fetching mod information...",
+    "curseforgeApiError": "CurseForge API Error: {{error}}"
   },
   "settings": {
     "title": "Settings",

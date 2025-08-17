@@ -733,6 +733,12 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
           userFriendlyError = t('errors.networkError');
         } else if (errorMessage.includes('failed to download')) {
           userFriendlyError = t('errors.downloadFailed');
+        } else if (errorMessage.includes('curseforge api authentication failed (401)')) {
+          userFriendlyError = t('errors.curseforgeUnauthorized');
+        } else if (errorMessage.includes('curseforge api access forbidden (403)')) {
+          userFriendlyError = t('errors.curseforgeForbidden');
+        } else if (errorMessage.includes('curseforge api') || errorMessage.includes('failed to retrieve any mod file information')) {
+          userFriendlyError = t('errors.curseforgeApiError');
         } else {
           userFriendlyError = error.message;
         }
@@ -839,6 +845,12 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
           // Format: "progress.installingComponent|component"
           const component = parts[1];
           return t('progress.installingComponent', { component });
+        }
+        
+        if (key === 'progress.curseforgeApiError') {
+          // Format: "progress.curseforgeApiError|error message"
+          const error = parts[1];
+          return t('progress.curseforgeApiError', { error });
         }
       }
       
