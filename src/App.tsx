@@ -87,6 +87,14 @@ function AppContent() {
       return;
     }
     
+    // Check for unsaved changes before allowing navigation
+    if ((window as any).blockNavigation) {
+      const shouldBlock = (window as any).blockNavigation();
+      if (shouldBlock === false) {
+        return; // Block navigation
+      }
+    }
+    
     setIsTransitioning(true);
     withDelay(() => {
       setActiveSection(newSection);
@@ -109,7 +117,7 @@ function AppContent() {
       case 'home':
         return <ModpacksPage key={modpacksPageKey} />;
       case 'settings':
-        return <SettingsPage />;
+        return <SettingsPage onNavigationBlocked={() => {}} />;
       case 'about':
         return <AboutPage />;
       default:

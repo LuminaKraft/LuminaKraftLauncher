@@ -8,13 +8,19 @@ import MetaStorageSettings from './MetaStorageSettings';
 import type { MicrosoftAccount } from '../../types/launcher';
 import toast from 'react-hot-toast';
 
-const SettingsPage: React.FC = () => {
+interface SettingsPageProps {
+  onNavigationBlocked?: () => void;
+}
+
+const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
   const { t } = useTranslation();
   const { userSettings, updateUserSettings, currentLanguage, changeLanguage, setIsAuthenticating } = useLauncher();
   
   const [formData, setFormData] = useState(userSettings);
   const [hasChanges, setHasChanges] = useState(false);
   const [usernameError, setUsernameError] = useState<string | null>(null);
+  const [shakeAttempts, setShakeAttempts] = useState(0);
+  const [isShaking, setIsShaking] = useState(false);
   const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>(() => {
     const saved = typeof window !== 'undefined' ? localStorage.getItem('LK_lastApiStatus') : null;
     return saved === 'online' || saved === 'offline' ? saved : 'offline';
@@ -182,6 +188,39 @@ const SettingsPage: React.FC = () => {
     setIsAuthenticating(false);
   };
 
+  const triggerShake = () => {
+    if (isShaking) return; // Prevent multiple simultaneous shakes
+    
+    setShakeAttempts(prev => prev + 1);
+    setIsShaking(true);
+    
+    // Reset shake after animation completes
+    setTimeout(() => {
+      setIsShaking(false);
+    }, 600); // Animation duration
+    
+    // Reset attempts after 3 seconds of no attempts
+    setTimeout(() => {
+      setShakeAttempts(0);
+    }, 3000);
+  };
+
+  // Expose the navigation blocking function
+  React.useEffect(() => {
+    if (hasChanges && onNavigationBlocked) {
+      (window as any).blockNavigation = () => {
+        triggerShake();
+        return false; // Block navigation
+      };
+    } else {
+      (window as any).blockNavigation = null;
+    }
+    
+    return () => {
+      (window as any).blockNavigation = null;
+    };
+  }, [hasChanges, onNavigationBlocked]);
+
   const MIN_RAM = 1;
   const MAX_RAM = 64;
   
@@ -267,8 +306,16 @@ const SettingsPage: React.FC = () => {
 
   const isSaveDisabled = !!usernameError;
 
+  const getShakeClass = () => {
+    if (!isShaking) return '';
+    if (shakeAttempts === 1) return 'shake-light';
+    if (shakeAttempts === 2) return 'shake-medium';
+    if (shakeAttempts === 3) return 'shake-heavy';
+    return 'shake-extreme';
+  };
+
   return (
-    <div className="h-full overflow-auto">
+    <div className={`h-full overflow-auto ${getShakeClass()}`}>
       <div className="p-6">
         {/* Header */}
         <div className="mb-8">
@@ -572,7 +619,7 @@ const SettingsPage: React.FC = () => {
 
           {/* Save Button */}
           {hasChanges && (
-            <div className="sticky bottom-0 bg-dark-900 border-t border-dark-700 p-4 -mx-6">
+            <div className={`sticky bottom-0 bg-dark-900 border-t border-dark-700 p-4 -mx-6 ${isShaking ? 'unsaved-changes-pulse' : ''}`}>
               <div className="flex justify-between items-center">
                 <p className="text-dark-400 text-sm">
                   {t('settings.unsavedChanges')}
