@@ -56,7 +56,7 @@
     "version": "Versión",
     "minecraftVersion": "Minecraft {{version}}",
     "modloader": "Modloader",
-    "description": "Descripción",
+    "information": "Información",
     "systemRequirements": "Requisitos del sistema",
     "javaVersion": "Java {{version}}",
     "ramRequired": "RAM Requerida: {{ram}}GB",
@@ -107,6 +107,7 @@
       "inactive": "Inactivo"
     },
     "screenshots": "Capturas de Pantalla",
+    "logs": "Registros",
     "scrollHint": "Desliza para ver más",
     "imagesAvailable": "imágenes disponibles",
     "carouselHint": "Usa las flechas o haz clic en los puntos para navegar"
@@ -205,6 +206,7 @@
     "ramAllocationDesc": "Cantidad de RAM asignada a Minecraft",
     "ramRecommended": "Recomendado: 4-8 GB para la mayoría de modpacks",
     "ramNote": "Nota: Asignar demasiada RAM puede ser contraproducente. La mayoría de modpacks funcionan bien con 4-8 GB.",
+    "ramPreciseValue": "Valor preciso:",
     "dataUrl": "URL de datos del launcher",
     "dataUrlPlaceholder": "URL del archivo launcher_data.json",
     "dataUrlDesc": "URL remota para obtener los datos de modpacks",

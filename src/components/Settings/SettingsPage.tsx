@@ -170,15 +170,39 @@ const SettingsPage: React.FC = () => {
     setTimeout(() => setAuthError(null), 5000);
   };
 
-  const ramOptions = [
-    { value: 2, label: '2 GB' },
-    { value: 4, label: '4 GB' },
-    { value: 6, label: '6 GB' },
-    { value: 8, label: '8 GB' },
-    { value: 12, label: '12 GB' },
-    { value: 16, label: '16 GB' },
-    { value: 32, label: '32 GB' }
-  ];
+  const MIN_RAM = 1;
+  const MAX_RAM = 64;
+  
+  const handleRamSliderChange = (value: number) => {
+    const clampedValue = Math.max(MIN_RAM, Math.min(MAX_RAM, value));
+    handleInputChange('allocatedRam', clampedValue);
+  };
+
+  const handleRamTextChange = (value: string) => {
+    // Allow empty string for better UX while typing
+    if (value === '') {
+      return;
+    }
+    
+    const numValue = parseFloat(value);
+    if (!isNaN(numValue)) {
+      const clampedValue = Math.max(MIN_RAM, Math.min(MAX_RAM, numValue));
+      const roundedValue = Math.round(clampedValue * 2) / 2; // Round to nearest 0.5
+      handleInputChange('allocatedRam', roundedValue);
+    }
+  };
+
+  const handleRamTextBlur = (value: string) => {
+    // On blur, ensure we have a valid value
+    const numValue = parseFloat(value);
+    if (isNaN(numValue) || value === '') {
+      // Reset to current value if invalid
+      const input = document.querySelector('input[type="number"]') as HTMLInputElement;
+      if (input) {
+        input.value = formData.allocatedRam.toString();
+      }
+    }
+  };
 
   const languageOptions = [
     { value: 'es', label: '🇪🇸 Español', name: 'Español' },
@@ -417,26 +441,45 @@ const SettingsPage: React.FC = () => {
                 <label className="block text-dark-300 text-sm font-medium mb-2">
                   {t('settings.ramAllocationLabel')}
                 </label>
-                <div className="flex items-center space-x-4">
-                  <select
-                    value={formData.allocatedRam}
-                    onChange={(e) => handleInputChange('allocatedRam', parseInt(e.target.value))}
-                    className="input-field"
-                  >
-                    {ramOptions.map(option => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                
+                {/* RAM allocation display with inline editing */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="number"
+                      min={MIN_RAM}
+                      max={MAX_RAM}
+                      step="0.5"
+                      value={formData.allocatedRam}
+                      onChange={(e) => handleRamTextChange(e.target.value)}
+                      onBlur={(e) => handleRamTextBlur(e.target.value)}
+                      className="bg-transparent border-0 text-white text-lg font-medium w-16 text-center focus:outline-none focus:bg-dark-700 rounded px-1"
+                    />
+                    <span className="text-white text-lg font-medium">GB</span>
+                  </div>
                   <div className="text-dark-400 text-sm">
                     <p>{t('settings.ramRecommended')}</p>
                   </div>
                 </div>
-                <div className="mt-3 p-3 bg-dark-700 rounded-lg">
-                  <p className="text-dark-300 text-sm">
-                    <strong>{t('app.note')}:</strong> {t('settings.ramNote')}
-                  </p>
+
+                {/* Slider */}
+                <div className="mb-4">
+                  <input
+                    type="range"
+                    min={MIN_RAM}
+                    max={MAX_RAM}
+                    step="0.5"
+                    value={formData.allocatedRam}
+                    onChange={(e) => handleRamSliderChange(parseFloat(e.target.value))}
+                    className="w-full h-2 bg-dark-600 rounded-lg appearance-none cursor-pointer slider"
+                    style={{
+                      background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${((formData.allocatedRam - MIN_RAM) / (MAX_RAM - MIN_RAM)) * 100}%, #374151 ${((formData.allocatedRam - MIN_RAM) / (MAX_RAM - MIN_RAM)) * 100}%, #374151 100%)`
+                    }}
+                  />
+                  <div className="flex justify-between text-xs text-dark-400 mt-1">
+                    <span>{MIN_RAM} GB</span>
+                    <span>{MAX_RAM} GB</span>
+                  </div>
                 </div>
               </div>
             </div>
