@@ -11,6 +11,7 @@ import LauncherService from './services/launcherService';
 import { updateService, UpdateInfo } from './services/updateService';
 import './App.css';
 import { Toaster } from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 
 function AppContent() {
   const [activeSection, setActiveSection] = useState('home');
@@ -20,8 +21,9 @@ function AppContent() {
   const [isInstallingUpdate, setIsInstallingUpdate] = useState(false);
   const [updateProgress, setUpdateProgress] = useState<{ current: number; total: number }>({ current: 0, total: 0 });
   const [modpacksPageKey, setModpacksPageKey] = useState(0); // Key to force re-render of ModpacksPage
-  const { isLoading, error, launcherData } = useLauncher();
+  const { isLoading, error, launcherData, isAuthenticating, refreshData } = useLauncher();
   const { withDelay } = useAnimation();
+  const { t } = useTranslation();
   const launcherService = LauncherService.getInstance();
 
 
@@ -88,9 +90,13 @@ function AppContent() {
     setIsTransitioning(true);
     withDelay(() => {
       setActiveSection(newSection);
-      // Reset modpacks page when navigating to it
+      // Reset modpacks page when navigating to it and ensure data is loaded
       if (newSection === 'home') {
         setModpacksPageKey(prev => prev + 1);
+        // If no launcher data is available, try to refresh
+        if (!launcherData && !isLoading) {
+          refreshData();
+        }
       }
       withDelay(() => {
         setIsTransitioning(false);
@@ -197,6 +203,23 @@ function AppContent() {
           },
         }}
       />
+
+      {/* Global Authentication Overlay */}
+      {isAuthenticating && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] pointer-events-auto">
+          <div className="bg-dark-800 rounded-lg p-6 max-w-md w-full mx-4 border border-dark-700">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lumina-500 mx-auto mb-4"></div>
+              <h3 className="text-white text-lg font-semibold mb-2">
+                {t('auth.signing')}
+              </h3>
+              <p className="text-dark-300 text-sm">
+                {t('auth.microsoftDescription')}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

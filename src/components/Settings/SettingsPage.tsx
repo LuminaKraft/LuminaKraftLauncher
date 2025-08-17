@@ -10,7 +10,7 @@ import toast from 'react-hot-toast';
 
 const SettingsPage: React.FC = () => {
   const { t } = useTranslation();
-  const { userSettings, updateUserSettings, currentLanguage, changeLanguage } = useLauncher();
+  const { userSettings, updateUserSettings, currentLanguage, changeLanguage, setIsAuthenticating } = useLauncher();
   
   const [formData, setFormData] = useState(userSettings);
   const [hasChanges, setHasChanges] = useState(false);
@@ -141,6 +141,7 @@ const SettingsPage: React.FC = () => {
 
   const handleMicrosoftAuthSuccess = (account: MicrosoftAccount) => {
     setAuthError(null);
+    setIsAuthenticating(false);
     const newSettings = {
       ...formData,
       authMethod: 'microsoft' as const,
@@ -154,6 +155,7 @@ const SettingsPage: React.FC = () => {
 
   const handleMicrosoftAuthClear = () => {
     setAuthError(null);
+    setIsAuthenticating(false);
     const newSettings = {
       ...formData,
       authMethod: 'offline' as const,
@@ -167,7 +169,17 @@ const SettingsPage: React.FC = () => {
 
   const handleAuthError = (error: string) => {
     setAuthError(error);
+    setIsAuthenticating(false);
     setTimeout(() => setAuthError(null), 5000);
+  };
+
+  const handleAuthStart = () => {
+    setIsAuthenticating(true);
+    setAuthError(null);
+  };
+
+  const handleAuthStop = () => {
+    setIsAuthenticating(false);
   };
 
   const MIN_RAM = 1;
@@ -332,6 +344,8 @@ const SettingsPage: React.FC = () => {
                   onAuthSuccess={handleMicrosoftAuthSuccess}
                   onAuthClear={handleMicrosoftAuthClear}
                   onError={handleAuthError}
+                  onAuthStart={handleAuthStart}
+                  onAuthStop={handleAuthStop}
                 />
               </div>
               
@@ -584,6 +598,7 @@ const SettingsPage: React.FC = () => {
           )}
         </div>
       </div>
+
     </div>
   );
 };

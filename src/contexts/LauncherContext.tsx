@@ -23,6 +23,8 @@ interface LauncherContextType {
   currentLanguage: string;
   isLoading: boolean;
   error: string | null;
+  isAuthenticating: boolean;
+  setIsAuthenticating: (_value: boolean) => void;
   updateUserSettings: (_settings: Partial<UserSettings>) => void;
   refreshData: () => Promise<void>;
   installModpack: (_id: string) => Promise<void>;
@@ -108,15 +110,15 @@ function launcherReducer(state: LauncherState, action: LauncherAction): Launcher
       let eta = '';
       let progressHistory = currentState?.progressHistory || [];
       
-      // Agregar nueva entrada al historial (mantener últimas 20 entradas para mayor estabilidad)
+      // Add new entry to history (keep last 20 entries for better stability)
       progressHistory = [...progressHistory.slice(-19), {
         percentage: newProgress.percentage,
         timestamp: currentTime
       }];
       
-      // Calcular ETA solo si tenemos suficientes datos y progreso > 10% y < 95%
+      // Calculate ETA only if we have enough data and progress is between 10% and 95%
       if (progressHistory.length >= 5 && newProgress.percentage > 10 && newProgress.percentage < 95) {
-        // Usar ventana más grande para mayor estabilidad - últimos 10 puntos si están disponibles
+        // Use larger window for better stability - last 10 points if available
         const windowSize = Math.min(10, progressHistory.length);
         const windowStart = progressHistory.length - windowSize;
         const window = progressHistory.slice(windowStart);
@@ -124,20 +126,20 @@ function launcherReducer(state: LauncherState, action: LauncherAction): Launcher
         const oldest = window[0];
         const newest = window[window.length - 1];
         
-        const timeElapsed = (newest.timestamp - oldest.timestamp) / 1000; // segundos
+        const timeElapsed = (newest.timestamp - oldest.timestamp) / 1000; // seconds
         const progressMade = newest.percentage - oldest.percentage;
         
-        if (progressMade > 0.5 && timeElapsed > 2) { // Más restrictivo para evitar saltos
+        if (progressMade > 0.5 && timeElapsed > 2) { // More restrictive to avoid jumps
           const remainingProgress = 100 - newProgress.percentage;
           let estimatedTimeRemaining = (remainingProgress * timeElapsed) / progressMade;
           
-          // Suavizar el ETA usando promedio móvil con el ETA anterior
+          // Smooth ETA using moving average with previous ETA
           if (currentState?.lastEtaSeconds) {
-            const weight = 0.7; // 70% del valor anterior, 30% del nuevo (más suave)
+            const weight = 0.7; // 70% previous value, 30% new value (smoother)
             estimatedTimeRemaining = (currentState.lastEtaSeconds * weight) + (estimatedTimeRemaining * (1 - weight));
           }
           
-          // Solo mostrar si es razonable (menos de 30 minutos)
+          // Only show if reasonable (less than 30 minutes)
           if (estimatedTimeRemaining < 1800) {
             const minutes = Math.floor(estimatedTimeRemaining / 60);
             const seconds = Math.floor(estimatedTimeRemaining % 60);
@@ -167,11 +169,11 @@ function launcherReducer(state: LauncherState, action: LauncherAction): Launcher
         }
       }
       
-      // Mantener el último mensaje general y ETA si el nuevo no tiene uno (evitar saltos visuales)
+      // Keep last general message and ETA if new one doesn't have one (avoid visual jumps)
       const finalProgress = {
         ...newProgress,
         percentage: finalPercentage,
-        eta: eta || currentProgress?.eta || '', // Preservar ETA anterior si no hay uno nuevo
+        eta: eta || currentProgress?.eta || '', // Preserve previous ETA if no new one
         generalMessage: newProgress.generalMessage || currentProgress?.generalMessage || '',
         detailMessage: newProgress.detailMessage || ''
       };
@@ -225,10 +227,11 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(launcherReducer, initialState);
   const [failedMods, setFailedMods] = useState<FailedMod[]>([]);
   const [showFailedModsDialog, setShowFailedModsDialog] = useState(false);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
   const launcherService = LauncherService.getInstance();
   const { i18n, t } = useTranslation();
 
-  // Cargar configuración del usuario al inicializar
+  // Load user configuration on initialization
   useEffect(() => {
     const initializeApp = async () => {
       try {
@@ -236,21 +239,21 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'SET_USER_SETTINGS', payload: settings });
         dispatch({ type: 'SET_LANGUAGE', payload: settings.language });
         
-        // Sincronizar el idioma con react-i18next
+        // Synchronize language with react-i18next
         await i18n.changeLanguage(settings.language);
         
-        // Cargar datos iniciales
+        // Load initial data
         await refreshData();
       } catch (error) {
         console.error('Error initializing app:', error);
-        dispatch({ type: 'SET_ERROR', payload: 'Error al inicializar la aplicación' });
+        dispatch({ type: 'SET_ERROR', payload: 'Error initializing application' });
       }
     };
 
     initializeApp();
   }, []);
 
-  // Cargar estados de modpacks cuando se cargan los datos
+  // Load modpack states when data is loaded
   useEffect(() => {
     if (state.launcherData) {
       loadModpackStates().catch(error => {
@@ -352,12 +355,12 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     };
   }, []); // Empty dependency array since this should only run once
 
-  const refreshData = async () => {
+  const refreshData = async (retryCount = 0) => {
     dispatch({ type: 'SET_LOADING', payload: true });
     dispatch({ type: 'SET_ERROR', payload: null });
 
     try {
-      // Cargar datos del launcher y traducciones en paralelo
+      // Load launcher data and translations in parallel
       const currentLang = launcherService.getUserSettings().language;
       const [launcherData, translations] = await Promise.all([
         launcherService.fetchLauncherData(),
@@ -366,11 +369,25 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
 
       dispatch({ type: 'SET_LAUNCHER_DATA', payload: launcherData });
       dispatch({ type: 'SET_TRANSLATIONS', payload: translations });
+      dispatch({ type: 'SET_LOADING', payload: false });
     } catch (error) {
       console.error('Error loading launcher data:', error);
-      dispatch({ type: 'SET_ERROR', payload: 'Error al cargar los datos del launcher' });
+      
+      // Retry logic for startup (max 2 retries)
+      if (retryCount < 2) {
+        console.log(`Retrying data load... (attempt ${retryCount + 1}/2)`);
+        setTimeout(() => {
+          refreshData(retryCount + 1);
+        }, 2000); // Wait 2 seconds before retry
+        return;
+      }
+      
+      dispatch({ type: 'SET_ERROR', payload: 'Error loading launcher data' });
     } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
+      // Only set loading to false on final failure (after all retries)
+      if (retryCount >= 2) {
+        dispatch({ type: 'SET_LOADING', payload: false });
+      }
     }
   };
 
@@ -383,7 +400,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
       try {
         const status = await launcherService.getModpackStatus(modpack.id);
         
-        // Cargar traducciones y características del modpack
+        // Load translations and modpack features
         const [translations, features] = await Promise.all([
           getModpackTranslations(modpack.id),
           launcherService.getModpackFeatures(modpack.id, currentLang)
@@ -405,7 +422,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
           type: 'SET_MODPACK_STATE',
           payload: {
             id: modpack.id,
-            state: createModpackState('error', { error: 'Error al cargar el estado' }),
+            state: createModpackState('error', { error: 'Error loading state' }),
           },
         });
       }
@@ -420,22 +437,22 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
 
   const changeLanguage = async (language: string) => {
     try {
-      // Cambiar el idioma en react-i18next
+      // Change language in react-i18next
       await i18n.changeLanguage(language);
       
-      // Actualizar el estado local
+      // Update local state
       dispatch({ type: 'SET_LANGUAGE', payload: language });
       updateUserSettings({ language });
       
-      // Limpiar caché completamente para forzar recarga de todos los datos
+      // Clear cache completely to force reload of all data
       launcherService.clearCache();
       
-      // Activar estado de carga mientras se recargan los datos
+      // Activate loading state while reloading data
       dispatch({ type: 'SET_LOADING', payload: true });
       dispatch({ type: 'SET_ERROR', payload: null });
       
       try {
-        // Recargar datos del launcher y traducciones del servidor
+        // Reload launcher data and translations from server
         const [launcherData, translations] = await Promise.all([
           launcherService.fetchLauncherData(),
           launcherService.getTranslations(language)
@@ -444,7 +461,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'SET_LAUNCHER_DATA', payload: launcherData });
         dispatch({ type: 'SET_TRANSLATIONS', payload: translations });
         
-        // Recargar estados y características de todos los modpacks en el nuevo idioma
+        // Reload states and features of all modpacks in the new language
         if (launcherData) {
           for (const modpack of launcherData.modpacks) {
             try {
@@ -466,12 +483,12 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
               });
             } catch (modpackError) {
               console.warn(`Error loading data for modpack ${modpack.id}:`, modpackError);
-              // En caso de error, mantener un estado básico
+              // In case of error, maintain a basic state
               dispatch({
                 type: 'SET_MODPACK_STATE',
                 payload: {
                   id: modpack.id,
-                  state: createModpackState('error', { error: 'Error al cargar datos del modpack' }),
+                  state: createModpackState('error', { error: 'Error loading modpack data' }),
                 },
               });
             }
@@ -479,7 +496,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
         }
       } catch (dataError) {
         console.error('Error reloading data after language change:', dataError);
-        dispatch({ type: 'SET_ERROR', payload: 'Error al cargar datos en el nuevo idioma' });
+        dispatch({ type: 'SET_ERROR', payload: 'Error loading data in new language' });
       } finally {
         dispatch({ type: 'SET_LOADING', payload: false });
       }
@@ -676,8 +693,8 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
           break;
       }
 
-      // Para instalación / actualización / reparación consultamos el estado final.
-      // Para lanzamiento, el estado se gestiona mediante eventos runtime (started / exited)
+      // For installation / update / repair we check the final state.
+      // For launch, state is managed via runtime events (started / exited)
       if (action !== 'launch') {
         const newStatus = await launcherService.getModpackStatus(modpackId);
         dispatch({
@@ -760,7 +777,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
       await launcherService.removeModpack(id);
       
               console.log('✅ Instance removed successfully, updating state');
-      // Después de eliminar exitosamente, cambiar el estado a not_installed
+      // After successful removal, change state to not_installed
       dispatch({
         type: 'SET_MODPACK_STATE',
         payload: {
@@ -793,6 +810,8 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     currentLanguage: state.currentLanguage,
     isLoading: state.isLoading,
     error: state.error,
+    isAuthenticating,
+    setIsAuthenticating,
     updateUserSettings,
     refreshData,
     installModpack,

@@ -38,7 +38,7 @@ class LauncherService {
   private cache: Map<string, CacheEntry> = new Map();
   private readonly cacheTTL = 5 * 60 * 1000; // 5 minutos para datos principales
   private readonly translationsTTL = 60 * 60 * 1000; // 1 hora para traducciones
-  private readonly requestTimeout = 10000; // 10 segundos
+  private readonly requestTimeout = 30000; // 30 segundos
 
   constructor() {
     this.userSettings = this.loadUserSettings();
@@ -127,7 +127,9 @@ class LauncherService {
     defaultSettings.clientToken = this.generateClientToken();
     try {
       localStorage.setItem('LuminaKraftLauncher_settings', JSON.stringify(defaultSettings));
-    } catch (_) {}
+    } catch {
+      // Ignore localStorage errors in non-browser environments
+    }
     return defaultSettings;
   }
 

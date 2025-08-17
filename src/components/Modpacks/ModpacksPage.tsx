@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Search, RefreshCw, AlertCircle, Loader2 } from 'lucide-react';
+import { Search, RefreshCw, AlertCircle } from 'lucide-react';
 import { useLauncher } from '../../contexts/LauncherContext';
 import { useAnimation } from '../../contexts/AnimationContext';
 import ModpackCard from './ModpackCard';
@@ -71,17 +71,8 @@ const ModpacksPage: React.FC = () => {
     }
   };
 
-  if (isLoading && !launcherData) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-lumina-500 mx-auto mb-4" />
-          <p className="text-white">{t('modpacks.loading')}</p>
-          <p className="text-dark-400 text-sm mt-1">{t('modpacks.serverData')}</p>
-        </div>
-      </div>
-    );
-  }
+  // Show overlay loader when loading initial data
+  const showLoadingOverlay = isLoading && !launcherData;
 
   if (error) {
     return (
@@ -265,6 +256,23 @@ const ModpacksPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Loading Overlay */}
+      {showLoadingOverlay && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] pointer-events-auto">
+          <div className="bg-dark-800 rounded-lg p-6 max-w-md w-full mx-4 border border-dark-700">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lumina-500 mx-auto mb-4"></div>
+              <h3 className="text-white text-lg font-semibold mb-2">
+                {t('modpacks.loading')}
+              </h3>
+              <p className="text-dark-300 text-sm">
+                {t('modpacks.serverData')}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

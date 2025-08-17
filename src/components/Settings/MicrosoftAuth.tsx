@@ -9,13 +9,17 @@ interface MicrosoftAuthProps {
   onAuthSuccess: (_account: MicrosoftAccount) => void;
   onAuthClear: () => void;
   onError: (_error: string) => void;
+  onAuthStart?: () => void;
+  onAuthStop?: () => void;
 }
 
 export default function MicrosoftAuth({ 
   userSettings, 
   onAuthSuccess, 
   onAuthClear, 
-  onError 
+  onError,
+  onAuthStart,
+  onAuthStop
 }: MicrosoftAuthProps) {
   const { t } = useTranslation();
   const [isAuthenticating, setIsAuthenticating] = useState(false);
@@ -43,6 +47,7 @@ export default function MicrosoftAuth({
   const startMicrosoftAuthModal = async () => {
     try {
       setIsAuthenticating(true);
+      onAuthStart?.();
       
       // Use the new modal-based authentication (like Modrinth)
       const account = await authService.authenticateWithMicrosoftModal();
@@ -76,6 +81,8 @@ export default function MicrosoftAuth({
             console.error('Failed to open Microsoft auth URL fallback:', fallbackErr);
           }
           setAuthStep('waiting_for_url');
+          // Clear the global overlay since we're switching to alternative method
+          onAuthStop?.();
         }, 1000);
       }
     } finally {
@@ -86,6 +93,7 @@ export default function MicrosoftAuth({
   const startMicrosoftAuth = async () => {
     try {
       setIsAuthenticating(true);
+      // Don't call onAuthStart for alternative method - user needs to interact with launcher
       
       // Open browser and get auth URL
       await authService.openMicrosoftAuthAndGetUrl();
@@ -134,6 +142,7 @@ export default function MicrosoftAuth({
 
     try {
       setIsAuthenticating(true);
+      onAuthStart?.();
       
       const refreshedAccount = await authService.refreshMicrosoftToken(
         userSettings.microsoftAccount.refreshToken
