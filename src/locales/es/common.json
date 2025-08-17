@@ -108,6 +108,10 @@
     },
     "screenshots": "Capturas de Pantalla",
     "logs": "Registros",
+    "noLogsAvailable": "No hay logs disponibles",
+    "logsWillAppear": "Los logs aparecerán aquí cuando se inicie el modpack",
+    "executionLogs": "Logs de ejecución",
+    "linesCount": "{{count}} líneas",
     "scrollHint": "Desliza para ver más",
     "imagesAvailable": "imágenes disponibles",
     "carouselHint": "Usa las flechas o haz clic en los puntos para navegar"

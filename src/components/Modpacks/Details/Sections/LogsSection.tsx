@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Terminal } from 'lucide-react';
 
 interface LogsSectionProps {
@@ -6,6 +7,7 @@ interface LogsSectionProps {
 }
 
 const LogsSection: React.FC<LogsSectionProps> = ({ logs }) => {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new logs arrive
@@ -20,18 +22,18 @@ const LogsSection: React.FC<LogsSectionProps> = ({ logs }) => {
       {logs.length === 0 ? (
         <div className="text-center py-12">
           <Terminal className="w-12 h-12 text-dark-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-white mb-2">No hay logs disponibles</h3>
-          <p className="text-dark-400">Los logs aparecerán aquí cuando se inicie el modpack</p>
+          <h3 className="text-lg font-semibold text-white mb-2">{t('modpacks.noLogsAvailable')}</h3>
+          <p className="text-dark-400">{t('modpacks.logsWillAppear')}</p>
         </div>
       ) : (
         <>
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-white flex items-center space-x-2">
               <Terminal className="w-5 h-5" />
-              <span>Logs de ejecución</span>
+              <span>{t('modpacks.executionLogs')}</span>
             </h3>
             <span className="text-xs bg-dark-700 px-2 py-1 rounded-full text-dark-300">
-              {logs.length} líneas
+{t('modpacks.linesCount', { count: logs.length })}
             </span>
           </div>
           <div

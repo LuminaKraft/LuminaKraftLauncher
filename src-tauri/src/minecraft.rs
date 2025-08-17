@@ -16,20 +16,155 @@ use tokio::sync::Mutex as AsyncMutex;
 
 pub static RUNNING_PROCS: Lazy<std::sync::Mutex<HashMap<String, std::sync::Arc<AsyncMutex<tokio::process::Child>>>>> = Lazy::new(|| std::sync::Mutex::new(HashMap::new()));
 
+// Add helper to find and kill Java processes for an instance
+async fn kill_java_processes_for_instance(instance_id: &str) -> Result<bool, anyhow::Error> {
+    let launcher_data_dir = dirs::data_dir()
+        .ok_or_else(|| anyhow::anyhow!("Could not determine data directory"))?
+        .join("LKLauncher");
+    
+    let instance_dir = launcher_data_dir
+        .join("instances")
+        .join(instance_id);
+    
+    let instance_path = instance_dir.to_string_lossy();
+    
+    #[cfg(target_os = "windows")]
+    {
+        // On Windows, find Java processes with the instance path in their command line
+        let output = std::process::Command::new("wmic")
+            .args([
+                "process", "where", 
+                &format!("name='java.exe' and CommandLine like '%{}%'", instance_path),
+                "get", "ProcessId", "/value"
+            ])
+            .output()?;
+        
+        if output.status.success() {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let mut killed_any = false;
+            
+            for line in stdout.lines() {
+                if line.starts_with("ProcessId=") {
+                    if let Some(pid_str) = line.strip_prefix("ProcessId=") {
+                        if let Ok(pid) = pid_str.parse::<u32>() {
+                            println!("🔄 Killing Java process PID: {}", pid);
+                            let _ = std::process::Command::new("taskkill")
+                                .args(["/F", "/PID", &pid.to_string()])
+                                .output();
+                            killed_any = true;
+                        }
+                    }
+                }
+            }
+            return Ok(killed_any);
+        }
+    }
+    
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    {
+        // On Unix-like systems, find Java processes with the instance path
+        let output = std::process::Command::new("pgrep")
+            .args(["-f", &format!("java.*{}", instance_path)])
+            .output()?;
+        
+        if output.status.success() {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let mut killed_any = false;
+            
+            for line in stdout.lines() {
+                if let Ok(pid) = line.trim().parse::<i32>() {
+                    println!("🔄 Killing Java process PID: {}", pid);
+                    
+                    // First try SIGTERM (graceful shutdown)
+                    let _ = std::process::Command::new("kill")
+                        .args(["-TERM", &pid.to_string()])
+                        .output();
+                    
+                    // Wait a moment
+                    tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+                    
+                    // Then force kill with SIGKILL if needed
+                    let _ = std::process::Command::new("kill")
+                        .args(["-KILL", &pid.to_string()])
+                        .output();
+                    
+                    killed_any = true;
+                }
+            }
+            return Ok(killed_any);
+        }
+    }
+    
+    Ok(false)
+}
+
 // Add helper
 pub async fn stop_instance_process(instance_id: &str) -> crate::Result<()> {
-    // Clone the Arc so we don't hold the MutexGuard across await points
-         let maybe_child_arc = {
-         let map_guard = RUNNING_PROCS.lock().unwrap();
-         map_guard.get(instance_id).cloned()
-     };
+    println!("🔄 Stopping Minecraft instance: {}", instance_id);
+    
+    // First, try to find and kill Java processes directly
+    match kill_java_processes_for_instance(instance_id).await {
+        Ok(true) => {
+            println!("✅ Successfully killed Java processes for instance {}", instance_id);
+        }
+        Ok(false) => {
+            println!("⚠️ No Java processes found for instance {}", instance_id);
+        }
+        Err(e) => {
+            println!("⚠️ Error searching for Java processes: {}", e);
+        }
+    }
+    
+    // Also try to kill via the tracked process (if any)
+    let maybe_child_arc = {
+        let map_guard = RUNNING_PROCS.lock().unwrap();
+        map_guard.get(instance_id).cloned()
+    };
 
     if let Some(child_arc) = maybe_child_arc {
         let mut guard = child_arc.lock().await;
+        
+        // Get the process ID to kill the entire process tree
+        if let Some(pid) = guard.id() {
+            println!("🔄 Stopping tracked process PID: {}", pid);
+            
+            // Kill the entire process tree (including Java process)
+            #[cfg(target_os = "windows")]
+            {
+                // On Windows, use taskkill to terminate the entire process tree
+                let _ = std::process::Command::new("taskkill")
+                    .args(["/F", "/T", "/PID", &pid.to_string()])
+                    .output();
+            }
+            
+            #[cfg(any(target_os = "macos", target_os = "linux"))]
+            {
+                // On Unix-like systems, send SIGTERM to the process group
+                use std::process::Command;
+                
+                // First try SIGTERM (graceful shutdown)
+                let _ = Command::new("kill")
+                    .args(["-TERM", &format!("-{}", pid)]) // Negative PID kills process group
+                    .output();
+                
+                // Wait a bit for graceful shutdown
+                tokio::time::sleep(tokio::time::Duration::from_millis(2000)).await;
+                
+                // If still running, force kill with SIGKILL
+                let _ = Command::new("kill")
+                    .args(["-KILL", &format!("-{}", pid)]) // Negative PID kills process group
+                    .output();
+            }
+        }
+        
+        // Also call the standard kill method as fallback
         #[allow(clippy::let_underscore_future)]
         let _ = guard.kill().await;
+    } else {
+        println!("⚠️ No running process tracked for instance {}", instance_id);
     }
 
+    println!("✅ Stop instance process completed for {}", instance_id);
     Ok(())
 }
 

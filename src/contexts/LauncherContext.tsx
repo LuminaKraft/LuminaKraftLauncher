@@ -694,8 +694,8 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
       }
 
       // For installation / update / repair we check the final state.
-      // For launch, state is managed via runtime events (started / exited)
-      if (action !== 'launch') {
+      // For launch and stop, state is managed via runtime events (started / exited / stopped)
+      if (action !== 'launch' && action !== 'stop') {
         const newStatus = await launcherService.getModpackStatus(modpackId);
         dispatch({
           type: 'SET_MODPACK_STATE',
@@ -712,7 +712,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
       console.error(`Error ${action}ing modpack:`, error);
       
       // Parse specific error messages for better user experience
-      let userFriendlyError = 'Error desconocido';
+      let userFriendlyError = 'Unknown error';
       
       if (error instanceof Error) {
         const errorMessage = error.message.toLowerCase();

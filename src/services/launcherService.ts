@@ -761,13 +761,13 @@ class LauncherService {
 
   async stopInstance(instanceId: string): Promise<void> {
     if (!isTauriContext()) {
-      throw new Error('Esta función requiere ejecutar la aplicación con Tauri.');
+      throw new Error('This function requires running the application with Tauri.');
     }
     try {
       await safeInvoke('stop_instance', { instanceId });
     } catch (error) {
       console.error('Error stopping instance:', error);
-      throw new Error('Error al detener la instancia');
+      throw new Error('Error stopping instance');
     }
   }
 

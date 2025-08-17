@@ -1028,18 +1028,18 @@ async fn stop_instance(app: tauri::AppHandle, instance_id: String) -> Result<(),
     }
 }
 
-/// Parsea mensajes de "Progress:" para crear mensajes generales útiles
-/// Ejemplo: "Progress: 3835/3855 - Java (99.48119%)" -> "Progreso: Descargando Java... (3835/3855)"
-/// Devuelve None si debe mantener el mensaje anterior (evita parpadeo)
+/// Parse "Progress:" messages to create useful general messages
+/// Example: "Progress: 3835/3855 - Java (99.48119%)" -> "Progress: Downloading Java... (3835/3855)"
+/// Returns None if should keep previous message (avoids flickering)
 fn parse_progress_line(message: &str) -> Option<String> {
     if !message.starts_with("Progress:") {
-        return Some("Instalando...".to_string());
+        return Some("Installing...".to_string());
     }
     
-    // Cambiar "Progress:" por "Progreso:"
-    let message = message.replacen("Progress:", "Progreso:", 1);
+    // Change "Progress:" to "Progress:"
+    let message = message.replacen("Progress:", "Progress:", 1);
     
-    // Ejemplo: "Progreso: 3835/3855 - Java (99.48119%)"
+    // Example: "Progress: 3835/3855 - Java (99.48119%)"
     if let Some(dash_pos) = message.find(" - ") {
         let progress_part = &message[9..dash_pos].trim(); // Quitar "Progreso: "
         let after_dash = &message[dash_pos + 3..];

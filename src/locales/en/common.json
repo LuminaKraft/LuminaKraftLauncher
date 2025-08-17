@@ -109,6 +109,10 @@
     },
     "screenshots": "Screenshots",
     "logs": "Logs",
+    "noLogsAvailable": "No logs available",
+    "logsWillAppear": "Logs will appear here when the modpack starts",
+    "executionLogs": "Execution Logs",
+    "linesCount": "{{count}} lines",
     "scrollHint": "Scroll to see more",
     "imagesAvailable": "images available",
     "carouselHint": "Use arrows or click dots to navigate"
