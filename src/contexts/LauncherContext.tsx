@@ -559,7 +559,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
               downloadSpeed: progress.downloadSpeed,
               eta: progress.eta,
               step: progress.step,
-              generalMessage: progress.generalMessage,
+              generalMessage: translateBackendMessage(progress.generalMessage),
               detailMessage: progress.detailMessage
             }
           },
@@ -800,6 +800,53 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
       });
       throw error;
     }
+  };
+
+  // Helper function to translate backend messages
+  const translateBackendMessage = (message: string): string => {
+    if (!message) return message;
+    
+    // Handle translation keys from backend
+    if (message.startsWith('progress.')) {
+      // Handle complex messages with parameters
+      if (message.includes('|')) {
+        const parts = message.split('|');
+        const key = parts[0];
+        
+        if (key === 'progress.downloadingModpack') {
+          // Format: "progress.downloadingModpack|current/total"
+          const currentTotal = parts[1];
+          return t('progress.downloadingModpack', { 
+            current: currentTotal.split('/')[0], 
+            total: currentTotal.split('/')[1] 
+          });
+        }
+        
+        if (key === 'progress.downloadingMinecraft') {
+          // Format: "progress.downloadingMinecraft|component|progress"
+          const component = parts[1];
+          const progressPart = parts[2];
+          return t('progress.downloadingMods') + ` (${progressPart})`;
+        }
+        
+        if (key === 'progress.downloadingMinecraftFile') {
+          // Format: "progress.downloadingMinecraftFile|fileName"
+          const fileName = parts[1];
+          return t('progress.downloadingMinecraftFile', { fileName });
+        }
+        
+        if (key === 'progress.installingComponent') {
+          // Format: "progress.installingComponent|component"
+          const component = parts[1];
+          return t('progress.installingComponent', { component });
+        }
+      }
+      
+      // Simple translation key
+      return t(message);
+    }
+    
+    return message;
   };
 
   const contextValue: LauncherContextType = {

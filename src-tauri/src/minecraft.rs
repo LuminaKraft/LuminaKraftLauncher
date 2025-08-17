@@ -362,7 +362,7 @@ where
                         
                         // No actualizar porcentaje para archivos individuales, solo mostrar detalle
                         emit_progress(
-                            format!("Descargando {}", file_name), 
+                            format!("progress.downloadingMinecraftFile|{}", file_name), 
                             -1.0, // -1 indica que no se debe actualizar el porcentaje
                             "downloading_minecraft_file".to_string()
                         );
@@ -421,7 +421,7 @@ where
                     // Opcional: parsear líneas del console para mostrar progreso específico
                     if line.contains("Installing") {
                         emit_progress(
-                            format!("Instalando: {}", line), 
+                            format!("progress.installingComponent|{}", line), 
                             -1.0, // -1 indica progreso indeterminado
                             "installing_component".to_string()
                         );

@@ -123,11 +123,11 @@ where
         instance_dirs.ensure_directories().await?;
     }
 
-    emit_progress("Instalando Minecraft...".to_string(), 15.0, "installing_minecraft".to_string());
+    emit_progress("progress.installingMinecraft".to_string(), 15.0, "installing_minecraft".to_string());
 
     // Install Minecraft to meta storage if not already installed
     if !meta_dirs.is_version_installed(&modpack.minecraft_version).await {
-        emit_progress("Descargando Minecraft...".to_string(), 20.0, "downloading_minecraft".to_string());
+        emit_progress("progress.downloadingMinecraft".to_string(), 20.0, "downloading_minecraft".to_string());
         
         minecraft::install_minecraft_with_lyceris_progress(&modpack, &settings, meta_dirs.meta_dir.clone(), {
             let emit_progress = emit_progress.clone();
@@ -148,14 +148,14 @@ where
     // from the meta directory, so no additional linking or copying is necessary here.
 
     // Install modpack files
-    emit_progress("Instalando archivos del modpack...".to_string(), 70.0, "installing_modpack_files".to_string());
+    emit_progress("progress.installingModpackFiles".to_string(), 70.0, "installing_modpack_files".to_string());
     
     let failed_mods = if !modpack.url_modpack_zip.is_empty() {
         // Download and extract modpack
         let temp_zip_path = app_data_dir.join("temp").join(format!("{}.zip", modpack.id));
         std::fs::create_dir_all(temp_zip_path.parent().unwrap())?;
         
-        emit_progress("Descargando modpack...".to_string(), 75.0, "downloading_modpack".to_string());
+        emit_progress("progress.downloadingModpackFiles".to_string(), 75.0, "downloading_modpack".to_string());
         download_file(&modpack.url_modpack_zip, &temp_zip_path).await?;
         
         // Check if it's a CurseForge modpack
@@ -165,7 +165,7 @@ where
         };
         
         if is_curseforge_modpack {
-            emit_progress("Procesando modpack de CurseForge...".to_string(), 70.0, "processing_curseforge".to_string());
+            emit_progress("progress.processingCurseforge".to_string(), 70.0, "processing_curseforge".to_string());
             let (_cf_modloader, _cf_version, failed_mods) = curseforge::process_curseforge_modpack_with_failed_tracking(
                 &temp_zip_path, 
                 &instance_dirs.instance_dir,

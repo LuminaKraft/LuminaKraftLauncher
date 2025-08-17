@@ -168,7 +168,14 @@
     "preparingModDownloads": "Preparing mod downloads...",
     "processingCurseforge": "Processing CurseForge modpack...",
     "readingManifest": "Reading modpack information...",
-    "curseforgeCompleted": "CurseForge modpack processed successfully"
+    "curseforgeCompleted": "CurseForge modpack processed successfully",
+    "installing": "Installing...",
+    "installingModpackFiles": "Installing modpack files...",
+    "downloadingMinecraftFile": "Downloading {{fileName}}",
+    "downloadingMinecraft": "Downloading Minecraft files...",
+    "installingComponent": "Installing: {{component}}",
+    "processingAdditionalFiles": "Processing additional files...",
+    "additionalFilesCompleted": "Additional files processed successfully"
   },
   "settings": {
     "title": "Settings",
