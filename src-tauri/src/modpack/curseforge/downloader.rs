@@ -9,7 +9,7 @@ use super::types::{CurseForgeManifest, ModFileInfo, ApiResponse, GetModFilesRequ
 
 
 /// Fetch mod file information in batches from CurseForge API
-pub async fn fetch_mod_files_batch(file_ids: &[i64]) -> Result<Vec<ModFileInfo>> {
+pub async fn fetch_mod_files_batch(file_ids: &[i64], auth_token: Option<&str>) -> Result<Vec<ModFileInfo>> {
     let client = Client::builder()
         .user_agent("LKLauncher/1.0 (CurseForge API Client)")
         .timeout(std::time::Duration::from_secs(30))
@@ -39,10 +39,19 @@ pub async fn fetch_mod_files_batch(file_ids: &[i64]) -> Result<Vec<ModFileInfo>>
                 println!("🌐 Fetching mod info from CurseForge API: {} (batch size: {})", batch_url, chunk.len());
             }
             
-            match client.post(&batch_url)
-                .json(&request_body)
-                .send()
-                .await {
+            let mut request = client.post(&batch_url)
+                .json(&request_body);
+            
+            // Add authentication headers
+            if let Some(token) = auth_token {
+                if let Some(microsoft_account) = token.strip_prefix("Bearer ") {
+                    request = request.header("Authorization", format!("Bearer {}", microsoft_account));
+                } else {
+                    request = request.header("x-lk-token", token);
+                }
+            }
+            
+            match request.send().await {
                 Ok(resp) => {
                     let status = resp.status();
                     
@@ -181,6 +190,7 @@ pub async fn download_mods_with_failed_tracking<F>(
     emit_progress: F,
     start_percentage: f32,
     end_percentage: f32,
+    auth_token: Option<&str>,
 ) -> Result<Vec<serde_json::Value>>
 where
     F: Fn(String, f32, String) + Send + Sync + 'static,
@@ -198,7 +208,7 @@ where
         "fetching_mod_info".to_string()
     );
     
-    let all_file_infos = match fetch_mod_files_batch(&file_ids).await {
+    let all_file_infos = match fetch_mod_files_batch(&file_ids, auth_token).await {
         Ok(infos) => infos,
         Err(e) => {
             emit_progress(

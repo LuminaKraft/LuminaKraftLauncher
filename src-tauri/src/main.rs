@@ -88,6 +88,8 @@ pub struct UserSettings {
     pub auth_method: String, // "offline" or "microsoft"
     #[serde(rename = "microsoftAccount")]
     pub microsoft_account: Option<MicrosoftAccount>,
+    #[serde(rename = "clientToken")]
+    pub client_token: Option<String>,
     #[serde(rename = "enablePrereleases", default)]
     pub enable_prereleases: bool,
 }

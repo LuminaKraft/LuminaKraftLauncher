@@ -166,6 +166,14 @@ where
         
         if is_curseforge_modpack {
             emit_progress("progress.processingCurseforge".to_string(), 70.0, "processing_curseforge".to_string());
+            
+            // Prepare auth token for CurseForge API calls
+            let auth_token = if let Some(microsoft_account) = &settings.microsoft_account {
+                Some(format!("Bearer {}", microsoft_account.access_token))
+            } else {
+                settings.client_token.clone()
+            };
+            
             let (_cf_modloader, _cf_version, failed_mods) = curseforge::process_curseforge_modpack_with_failed_tracking(
                 &temp_zip_path, 
                 &instance_dirs.instance_dir,
@@ -175,7 +183,8 @@ where
                         let final_percentage = 70.0 + (percentage * 0.30); // 30% del total para CurseForge (70% to 100%)
                         emit_progress(message, final_percentage, step);
                     }
-                }
+                },
+                auth_token.as_deref()
             ).await?;
     
             // Clean up temp file

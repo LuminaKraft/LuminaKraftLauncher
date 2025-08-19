@@ -10,6 +10,7 @@ pub async fn process_curseforge_modpack_with_failed_tracking<F>(
     modpack_zip_path: &PathBuf,
     instance_dir: &PathBuf,
     emit_progress: F,
+    auth_token: Option<&str>,
 ) -> Result<(String, String, Vec<serde_json::Value>)> 
 where
     F: Fn(String, f32, String) + Send + Sync + 'static + Clone,
@@ -72,7 +73,7 @@ where
         "preparing_mod_downloads".to_string()
     );
     
-    let failed_mods = download_mods_with_failed_tracking(&manifest, instance_dir, emit_progress.clone(), 30.0, 95.0).await?;
+    let failed_mods = download_mods_with_failed_tracking(&manifest, instance_dir, emit_progress.clone(), 30.0, 95.0, auth_token).await?;
     
     // Clean up temp directory
     emit_progress(
