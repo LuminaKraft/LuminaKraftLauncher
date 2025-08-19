@@ -56,7 +56,7 @@
     "version": "Versión",
     "minecraftVersion": "Minecraft {{version}}",
     "modloader": "Modloader",
-    "description": "Descripción",
+    "information": "Información",
     "systemRequirements": "Requisitos del sistema",
     "javaVersion": "Java {{version}}",
     "ramRequired": "RAM Requerida: {{ram}}GB",
@@ -107,6 +107,11 @@
       "inactive": "Inactivo"
     },
     "screenshots": "Capturas de Pantalla",
+    "logs": "Registros",
+    "noLogsAvailable": "No hay logs disponibles",
+    "logsWillAppear": "Los logs aparecerán aquí cuando se inicie el modpack",
+    "executionLogs": "Logs de ejecución",
+    "linesCount": "{{count}} líneas",
     "scrollHint": "Desliza para ver más",
     "imagesAvailable": "imágenes disponibles",
     "carouselHint": "Usa las flechas o haz clic en los puntos para navegar"
@@ -123,6 +128,9 @@
     "diskSpaceFull": "Espacio en disco insuficiente para la instalación",
     "corruptedFile": "El archivo descargado parece estar corrupto",
     "networkError": "Error de conexión de red",
+    "curseforgeUnauthorized": "Error de autenticación de la API de CurseForge. El launcher no está autorizado para acceder a los datos de mods. Por favor, inténtalo más tarde o contacta soporte.",
+    "curseforgeForbidden": "Acceso prohibido a la API de CurseForge. El launcher no tiene permisos para acceder a este contenido.",
+    "curseforgeApiError": "Error al conectar con la API de CurseForge. Por favor, verifica tu conexión a internet e inténtalo de nuevo.",
     "retryInstallation": "Por favor intenta la instalación de nuevo",
     "contactSupport": "Si el problema persiste, contacta soporte"
   },
@@ -162,7 +170,16 @@
     "preparingModDownloads": "Preparando descarga de mods...",
     "processingCurseforge": "Procesando modpack de CurseForge...",
     "readingManifest": "Leyendo información del modpack...",
-    "curseforgeCompleted": "Modpack de CurseForge procesado exitosamente"
+    "curseforgeCompleted": "Modpack de CurseForge procesado exitosamente",
+    "installing": "Instalando...",
+    "installingModpackFiles": "Instalando archivos del modpack...",
+    "downloadingMinecraftFile": "Descargando {{fileName}}",
+    "downloadingMinecraft": "Descargando archivos de Minecraft...",
+    "installingComponent": "Instalando: {{component}}",
+    "processingAdditionalFiles": "Procesando archivos adicionales...",
+    "additionalFilesCompleted": "Archivos adicionales procesados correctamente",
+    "fetchingModInfo": "Obteniendo información de mods...",
+    "curseforgeApiError": "Error de API de CurseForge: {{error}}"
   },
   "settings": {
     "title": "Ajustes",
@@ -205,6 +222,7 @@
     "ramAllocationDesc": "Cantidad de RAM asignada a Minecraft",
     "ramRecommended": "Recomendado: 4-8 GB para la mayoría de modpacks",
     "ramNote": "Nota: Asignar demasiada RAM puede ser contraproducente. La mayoría de modpacks funcionan bien con 4-8 GB.",
+    "ramPreciseValue": "Valor preciso:",
     "dataUrl": "URL de datos del launcher",
     "dataUrlPlaceholder": "URL del archivo launcher_data.json",
     "dataUrlDesc": "URL remota para obtener los datos de modpacks",

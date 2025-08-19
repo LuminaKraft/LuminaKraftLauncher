@@ -69,6 +69,104 @@
   .sidebar-item.active {
     @apply bg-lumina-600 hover:bg-lumina-700;
   }
+
+  /* Range slider styling */
+  .slider {
+    -webkit-appearance: none;
+    appearance: none;
+    outline: none;
+  }
+
+  .slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #3b82f6;
+    cursor: pointer;
+    border: 2px solid theme('colors.dark.900');
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s ease;
+  }
+
+  .slider::-webkit-slider-thumb:hover {
+    background: #60a5fa;
+    transform: scale(1.1);
+  }
+
+  .slider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #3b82f6;
+    cursor: pointer;
+    border: 2px solid theme('colors.dark.900');
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s ease;
+  }
+
+  .slider::-moz-range-thumb:hover {
+    background: #60a5fa;
+    transform: scale(1.1);
+  }
+
+  /* Discord-like shake animations */
+  .shake-light {
+    animation: shake-light 0.6s ease-in-out;
+  }
+
+  .shake-medium {
+    animation: shake-medium 0.6s ease-in-out;
+  }
+
+  .shake-heavy {
+    animation: shake-heavy 0.6s ease-in-out;
+  }
+
+  .shake-extreme {
+    animation: shake-extreme 0.6s ease-in-out;
+  }
+
+  @keyframes shake-light {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
+    20%, 40%, 60%, 80% { transform: translateX(2px); }
+  }
+
+  @keyframes shake-medium {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+    20%, 40%, 60%, 80% { transform: translateX(4px); }
+  }
+
+  @keyframes shake-heavy {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-6px); }
+    20%, 40%, 60%, 80% { transform: translateX(6px); }
+  }
+
+  @keyframes shake-extreme {
+    0%, 100% { transform: translateX(0); }
+    8%, 24%, 40%, 56%, 72%, 88% { transform: translateX(-8px) rotate(-1deg); }
+    16%, 32%, 48%, 64%, 80%, 96% { transform: translateX(8px) rotate(1deg); }
+  }
+
+  /* Discord-like pulsing red highlight */
+  .unsaved-changes-pulse {
+    animation: unsaved-pulse 2s infinite;
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 0 1px #ef4444, 0 0 20px rgba(239, 68, 68, 0.3);
+  }
+
+  @keyframes unsaved-pulse {
+    0%, 100% { 
+      box-shadow: 0 0 0 1px #ef4444, 0 0 20px rgba(239, 68, 68, 0.3);
+    }
+    50% { 
+      box-shadow: 0 0 0 2px #ef4444, 0 0 30px rgba(239, 68, 68, 0.6);
+    }
+  }
 }
 
 /* Custom scrollbar */

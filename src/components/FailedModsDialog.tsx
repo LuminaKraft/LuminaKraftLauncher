@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { X, ExternalLink, AlertTriangle } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
+import axios from 'axios';
+import LauncherService from '../services/launcherService';
 
 interface FailedMod {
   projectId: number;
@@ -47,24 +49,21 @@ export const FailedModsDialog: React.FC<FailedModsDialogProps> = ({
     try {
       const modIds = failedMods.map(mod => mod.projectId);
       
-      const response = await fetch('https://api.luminakraft.com/v1/curseforge/mods', {
-        method: 'POST',
+      // Use LauncherService to make authenticated requests
+      const launcherService = LauncherService.getInstance();
+      const baseUrl = launcherService.getUserSettings().launcherDataUrl.replace('/v1/launcher_data.json', '');
+      
+      const response = await axios.post(`${baseUrl}/v1/curseforge/mods`, {
+        modIds: modIds,
+        filterPcOnly: true
+      }, {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-          modIds: modIds,
-          filterPcOnly: true
-        })
+        }
       });
 
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      setModInfos(data.data || []);
+      setModInfos(response.data.data || []);
     } catch (err) {
       console.error('Error fetching mod information:', err);
       setError(t('failedMods.error'));

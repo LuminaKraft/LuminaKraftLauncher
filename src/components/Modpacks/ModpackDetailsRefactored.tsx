@@ -232,7 +232,7 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
                 }`}
                 >
                 <Info className="w-4 h-4" />
-                <span>Información</span>
+                <span>{t('modpacks.information')}</span>
               </button>
               {/* Screenshots Tab Button */}
               <button
@@ -244,7 +244,7 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
                 }`}
               >
                 <Image className="w-4 h-4" />
-                <span>Screenshots</span>
+                <span>{t('modpacks.screenshots')}</span>
                 {modpack.images && modpack.images.length > 0 && (
                   <span className="bg-lumina-400 text-black text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
                     {modpack.images.length}
@@ -260,7 +260,7 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
                 }`}
               >
                 <Terminal className="w-4 h-4" />
-                <span>Logs</span>
+                <span>{t('modpacks.logs')}</span>
                 {logs.length > 0 && (
                   <span className="bg-green-500 text-black text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
                     {logs.length}

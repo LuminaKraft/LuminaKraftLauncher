@@ -38,7 +38,7 @@ class LauncherService {
   private cache: Map<string, CacheEntry> = new Map();
   private readonly cacheTTL = 5 * 60 * 1000; // 5 minutos para datos principales
   private readonly translationsTTL = 60 * 60 * 1000; // 1 hora para traducciones
-  private readonly requestTimeout = 10000; // 10 segundos
+  private readonly requestTimeout = 30000; // 30 segundos
 
   constructor() {
     this.userSettings = this.loadUserSettings();
@@ -67,10 +67,14 @@ class LauncherService {
           config.headers = config.headers || {};
           if (msToken) {
             (config.headers as any)['Authorization'] = `Bearer ${msToken}`;
+            console.log(`[LauncherService] Added Microsoft token to request: ${url}`);
           } else if (offlineToken) {
             (config.headers as any)['x-lk-token'] = offlineToken;
+            console.log(`[LauncherService] Added offline token to request: ${url}`);
           }
           (config.headers as any)['x-luminakraft-client'] = 'luminakraft-launcher';
+        } else {
+          console.log(`[LauncherService] No auth headers added - URL ${url} doesn't match baseUrl ${baseUrl}`);
         }
       } catch (_) {
         // noop
@@ -127,7 +131,9 @@ class LauncherService {
     defaultSettings.clientToken = this.generateClientToken();
     try {
       localStorage.setItem('LuminaKraftLauncher_settings', JSON.stringify(defaultSettings));
-    } catch (_) {}
+    } catch {
+      // Ignore localStorage errors in non-browser environments
+    }
     return defaultSettings;
   }
 
@@ -759,13 +765,13 @@ class LauncherService {
 
   async stopInstance(instanceId: string): Promise<void> {
     if (!isTauriContext()) {
-      throw new Error('Esta función requiere ejecutar la aplicación con Tauri.');
+      throw new Error('This function requires running the application with Tauri.');
     }
     try {
       await safeInvoke('stop_instance', { instanceId });
     } catch (error) {
       console.error('Error stopping instance:', error);
-      throw new Error('Error al detener la instancia');
+      throw new Error('Error stopping instance');
     }
   }
 

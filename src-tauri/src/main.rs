@@ -88,6 +88,8 @@ pub struct UserSettings {
     pub auth_method: String, // "offline" or "microsoft"
     #[serde(rename = "microsoftAccount")]
     pub microsoft_account: Option<MicrosoftAccount>,
+    #[serde(rename = "clientToken")]
+    pub client_token: Option<String>,
     #[serde(rename = "enablePrereleases", default)]
     pub enable_prereleases: bool,
 }
@@ -149,7 +151,7 @@ async fn install_modpack_with_minecraft(app: tauri::AppHandle, modpack: Modpack,
         
         // Estado para mantener el último detailMessage válido
         let last_detail_message = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
-        let last_general_message = std::sync::Arc::new(std::sync::Mutex::new("Instalando...".to_string()));
+        let last_general_message = std::sync::Arc::new(std::sync::Mutex::new("progress.installing".to_string()));
         
         move |message: String, percentage: f32, step: String| {
             // Determinar el mensaje general y detallado basado en el tipo de mensaje
@@ -174,7 +176,7 @@ async fn install_modpack_with_minecraft(app: tauri::AppHandle, modpack: Modpack,
                     let preserved_general = if let Ok(last) = last_general_message.lock() {
                         last.clone()
                     } else {
-                        "Instalando...".to_string()
+                        "progress.installing".to_string()
                     };
                     
                     // Mantener el último detailMessage válido
@@ -212,7 +214,7 @@ async fn install_modpack_with_minecraft(app: tauri::AppHandle, modpack: Modpack,
                 if parts.len() >= 3 {
                     let current = parts[1];
                     let total = parts[2];
-                    let general_msg = format!("Descargando modpack... ({}/{})", current, total);
+                    let general_msg = format!("progress.downloadingModpack|{}/{}", current, total);
                     
                     // Mantener el último detailMessage válido en lugar de enviar vacío
                     let preserved_detail = if let Ok(last) = last_detail_message.lock() {
@@ -223,7 +225,7 @@ async fn install_modpack_with_minecraft(app: tauri::AppHandle, modpack: Modpack,
                     
                     (general_msg, preserved_detail)
                 } else {
-                    ("Descargando mods...".to_string(), "".to_string())
+                    ("progress.downloadingMods".to_string(), "".to_string())
                 }
             } else if message.starts_with("mod_name:") {
                 // Para archivos individuales de mods: "mod_name:filename"
@@ -239,7 +241,7 @@ async fn install_modpack_with_minecraft(app: tauri::AppHandle, modpack: Modpack,
                 let preserved_general = if let Ok(last) = last_general_message.lock() {
                     last.clone()
                 } else {
-                    "Descargando mods...".to_string()
+                    "progress.downloadingMods".to_string()
                 };
                 
                 (preserved_general, detail_msg)
@@ -257,7 +259,7 @@ async fn install_modpack_with_minecraft(app: tauri::AppHandle, modpack: Modpack,
                 let preserved_general = if let Ok(last) = last_general_message.lock() {
                     last.clone()
                 } else {
-                    "Descargando mods...".to_string()
+                    "progress.downloadingMods".to_string()
                 };
                 
                 (preserved_general, detail_msg)
@@ -275,7 +277,7 @@ async fn install_modpack_with_minecraft(app: tauri::AppHandle, modpack: Modpack,
                 let preserved_general = if let Ok(last) = last_general_message.lock() {
                     last.clone()
                 } else {
-                    "Descargando mods...".to_string()
+                    "progress.downloadingMods".to_string()
                 };
                 
                 (preserved_general, detail_msg)
@@ -293,7 +295,7 @@ async fn install_modpack_with_minecraft(app: tauri::AppHandle, modpack: Modpack,
                 let preserved_general = if let Ok(last) = last_general_message.lock() {
                     last.clone()
                 } else {
-                    "Descargando mods...".to_string()
+                    "progress.downloadingMods".to_string()
                 };
                 
                 (preserved_general, detail_msg)
@@ -316,7 +318,7 @@ async fn install_modpack_with_minecraft(app: tauri::AppHandle, modpack: Modpack,
                 let preserved_general = if let Ok(last) = last_general_message.lock() {
                     last.clone()
                 } else {
-                    "Descargando mods...".to_string()
+                    "progress.downloadingMods".to_string()
                 };
                 
                 (preserved_general, detail_msg)
@@ -326,17 +328,17 @@ async fn install_modpack_with_minecraft(app: tauri::AppHandle, modpack: Modpack,
             } else {
                 // Para otros mensajes, determinar basado en el step
                 let general = match step.as_str() {
-                    "preparing_installation" | "verifying_modpack_config" | "configuring_minecraft" => "Preparando Minecraft...",
-                    "downloading_minecraft" | "installing_minecraft" => "Instalando Minecraft...",
-                    "downloading_modpack" | "processing_modpack" | "processing_curseforge" | "extracting_modpack" | "reading_manifest" | "processing_overrides" => "Procesando modpack...",
+                    "preparing_installation" | "verifying_modpack_config" | "configuring_minecraft" => "progress.configuringMinecraft",
+                    "downloading_minecraft" | "installing_minecraft" => "progress.installingMinecraft",
+                    "downloading_modpack" | "processing_modpack" | "processing_curseforge" | "extracting_modpack" | "reading_manifest" | "processing_overrides" => "progress.processingCurseforge",
                     "updating" | "downloading_update" | "processing_update" | "updating_curseforge_mods" | 
                     "replacing_mods" | "updating_configs" | "removing_old_mods" | "copying_new_mods" |
                     "backing_up_minecraft" | "extracting_new_version" | "restoring_minecraft" |
-                    "finalizing_update" => "Actualizando modpack...",
+                    "finalizing_update" => "progress.updating",
                     "downloading_mods" | "downloading_modpack_file" | "downloading_mod_file" | "preparing_mod_downloads" | 
-                    "mod_already_exists" | "mod_unavailable" | "mod_downloaded_verified" | "mod_hash_mismatch" | "mod_download_error" => "Descargando mods...",
-                    "finalizing" | "completed" | "curseforge_completed" | "saving_instance_config" | "finalizing_installation" => "Finalizando...",
-                    _ => "Instalando...",
+                    "mod_already_exists" | "mod_unavailable" | "mod_downloaded_verified" | "mod_hash_mismatch" | "mod_download_error" => "progress.downloadingMods",
+                    "finalizing" | "completed" | "curseforge_completed" | "saving_instance_config" | "finalizing_installation" => "progress.finalizing",
+                    _ => "progress.installing",
                 };
                 (general.to_string(), "".to_string())
             };
@@ -401,7 +403,7 @@ async fn install_modpack_with_failed_tracking(app: tauri::AppHandle, modpack: Mo
         
         // Estado para mantener el último detailMessage válido
         let last_detail_message = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
-        let last_general_message = std::sync::Arc::new(std::sync::Mutex::new("Instalando...".to_string()));
+        let last_general_message = std::sync::Arc::new(std::sync::Mutex::new("progress.installing".to_string()));
         
         move |message: String, percentage: f32, step: String| {
             // Determinar el mensaje general y detallado basado en el tipo de mensaje
@@ -426,7 +428,7 @@ async fn install_modpack_with_failed_tracking(app: tauri::AppHandle, modpack: Mo
                     let preserved_general = if let Ok(last) = last_general_message.lock() {
                         last.clone()
                     } else {
-                        "Instalando...".to_string()
+                        "progress.installing".to_string()
                     };
                     
                     // Mantener el último detailMessage válido
@@ -460,7 +462,7 @@ async fn install_modpack_with_failed_tracking(app: tauri::AppHandle, modpack: Mo
                 let preserved_general = if let Ok(last) = last_general_message.lock() {
                     last.clone()
                 } else {
-                    "Instalando Minecraft...".to_string()
+                    "progress.installingMinecraft".to_string()
                 };
                 
                 (preserved_general, detail_msg)
@@ -470,7 +472,7 @@ async fn install_modpack_with_failed_tracking(app: tauri::AppHandle, modpack: Mo
                 if parts.len() == 3 {
                     let current = parts[1];
                     let total = parts[2];
-                    let general_msg = format!("Descargando modpack... ({}/{})", current, total);
+                    let general_msg = format!("progress.downloadingModpack|{}/{}", current, total);
                     
                     // Actualizar el último mensaje general válido
                     if let Ok(mut last) = last_general_message.lock() {
@@ -490,7 +492,7 @@ async fn install_modpack_with_failed_tracking(app: tauri::AppHandle, modpack: Mo
                     let preserved_general = if let Ok(last) = last_general_message.lock() {
                         last.clone()
                     } else {
-                        "Descargando modpack...".to_string()
+                        "progress.downloadingModpackFiles".to_string()
                     };
                     
                     let preserved_detail = if let Ok(last) = last_detail_message.lock() {
@@ -515,7 +517,7 @@ async fn install_modpack_with_failed_tracking(app: tauri::AppHandle, modpack: Mo
                 let preserved_general = if let Ok(last) = last_general_message.lock() {
                     last.clone()
                 } else {
-                    "Descargando mods...".to_string()
+                    "progress.downloadingMods".to_string()
                 };
                 
                 (preserved_general, detail_msg)
@@ -533,7 +535,7 @@ async fn install_modpack_with_failed_tracking(app: tauri::AppHandle, modpack: Mo
                 let preserved_general = if let Ok(last) = last_general_message.lock() {
                     last.clone()
                 } else {
-                    "Descargando mods...".to_string()
+                    "progress.downloadingMods".to_string()
                 };
                 
                 (preserved_general, detail_msg)
@@ -551,7 +553,7 @@ async fn install_modpack_with_failed_tracking(app: tauri::AppHandle, modpack: Mo
                 let preserved_general = if let Ok(last) = last_general_message.lock() {
                     last.clone()
                 } else {
-                    "Descargando mods...".to_string()
+                    "progress.downloadingMods".to_string()
                 };
                 
                 (preserved_general, detail_msg)
@@ -569,7 +571,7 @@ async fn install_modpack_with_failed_tracking(app: tauri::AppHandle, modpack: Mo
                 let preserved_general = if let Ok(last) = last_general_message.lock() {
                     last.clone()
                 } else {
-                    "Descargando mods...".to_string()
+                    "progress.downloadingMods".to_string()
                 };
                 
                 (preserved_general, detail_msg)
@@ -592,7 +594,7 @@ async fn install_modpack_with_failed_tracking(app: tauri::AppHandle, modpack: Mo
                 let preserved_general = if let Ok(last) = last_general_message.lock() {
                     last.clone()
                 } else {
-                    "Descargando mods...".to_string()
+                    "progress.downloadingMods".to_string()
                 };
                 
                 (preserved_general, detail_msg)
@@ -1028,18 +1030,18 @@ async fn stop_instance(app: tauri::AppHandle, instance_id: String) -> Result<(),
     }
 }
 
-/// Parsea mensajes de "Progress:" para crear mensajes generales útiles
-/// Ejemplo: "Progress: 3835/3855 - Java (99.48119%)" -> "Progreso: Descargando Java... (3835/3855)"
-/// Devuelve None si debe mantener el mensaje anterior (evita parpadeo)
+/// Parse "Progress:" messages to create useful general messages
+/// Example: "Progress: 3835/3855 - Java (99.48119%)" -> "Progress: Downloading Java... (3835/3855)"
+/// Returns None if should keep previous message (avoids flickering)
 fn parse_progress_line(message: &str) -> Option<String> {
     if !message.starts_with("Progress:") {
-        return Some("Instalando...".to_string());
+        return Some("Installing...".to_string());
     }
     
-    // Cambiar "Progress:" por "Progreso:"
-    let message = message.replacen("Progress:", "Progreso:", 1);
+    // Change "Progress:" to "Progress:"
+    let message = message.replacen("Progress:", "Progress:", 1);
     
-    // Ejemplo: "Progreso: 3835/3855 - Java (99.48119%)"
+    // Example: "Progress: 3835/3855 - Java (99.48119%)"
     if let Some(dash_pos) = message.find(" - ") {
         let progress_part = &message[9..dash_pos].trim(); // Quitar "Progreso: "
         let after_dash = &message[dash_pos + 3..];
@@ -1056,11 +1058,11 @@ fn parse_progress_line(message: &str) -> Option<String> {
                 _ => "Archivos"
             };
             
-            return Some(format!("Descargando {}... ({})", translated_name, progress_part));
+            return Some(format!("progress.downloadingMinecraft|{}|{}", translated_name, progress_part));
         }
     }
     
-    Some("Instalando Minecraft...".to_string())
+    Some("progress.installingMinecraft".to_string())
 }
 
 #[tauri::command]

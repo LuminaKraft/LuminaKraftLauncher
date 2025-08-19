@@ -8,13 +8,19 @@ import MetaStorageSettings from './MetaStorageSettings';
 import type { MicrosoftAccount } from '../../types/launcher';
 import toast from 'react-hot-toast';
 
-const SettingsPage: React.FC = () => {
+interface SettingsPageProps {
+  onNavigationBlocked?: () => void;
+}
+
+const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
   const { t } = useTranslation();
-  const { userSettings, updateUserSettings, currentLanguage, changeLanguage } = useLauncher();
+  const { userSettings, updateUserSettings, currentLanguage, changeLanguage, setIsAuthenticating } = useLauncher();
   
   const [formData, setFormData] = useState(userSettings);
   const [hasChanges, setHasChanges] = useState(false);
   const [usernameError, setUsernameError] = useState<string | null>(null);
+  const [shakeAttempts, setShakeAttempts] = useState(0);
+  const [isShaking, setIsShaking] = useState(false);
   const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>(() => {
     const saved = typeof window !== 'undefined' ? localStorage.getItem('LK_lastApiStatus') : null;
     return saved === 'online' || saved === 'offline' ? saved : 'offline';
@@ -141,6 +147,7 @@ const SettingsPage: React.FC = () => {
 
   const handleMicrosoftAuthSuccess = (account: MicrosoftAccount) => {
     setAuthError(null);
+    setIsAuthenticating(false);
     const newSettings = {
       ...formData,
       authMethod: 'microsoft' as const,
@@ -154,6 +161,7 @@ const SettingsPage: React.FC = () => {
 
   const handleMicrosoftAuthClear = () => {
     setAuthError(null);
+    setIsAuthenticating(false);
     const newSettings = {
       ...formData,
       authMethod: 'offline' as const,
@@ -167,18 +175,85 @@ const SettingsPage: React.FC = () => {
 
   const handleAuthError = (error: string) => {
     setAuthError(error);
+    setIsAuthenticating(false);
     setTimeout(() => setAuthError(null), 5000);
   };
 
-  const ramOptions = [
-    { value: 2, label: '2 GB' },
-    { value: 4, label: '4 GB' },
-    { value: 6, label: '6 GB' },
-    { value: 8, label: '8 GB' },
-    { value: 12, label: '12 GB' },
-    { value: 16, label: '16 GB' },
-    { value: 32, label: '32 GB' }
-  ];
+  const handleAuthStart = () => {
+    setIsAuthenticating(true);
+    setAuthError(null);
+  };
+
+  const handleAuthStop = () => {
+    setIsAuthenticating(false);
+  };
+
+  const triggerShake = () => {
+    if (isShaking) return; // Prevent multiple simultaneous shakes
+    
+    setShakeAttempts(prev => prev + 1);
+    setIsShaking(true);
+    
+    // Reset shake after animation completes
+    setTimeout(() => {
+      setIsShaking(false);
+    }, 600); // Animation duration
+    
+    // Reset attempts after 3 seconds of no attempts
+    setTimeout(() => {
+      setShakeAttempts(0);
+    }, 3000);
+  };
+
+  // Expose the navigation blocking function
+  React.useEffect(() => {
+    if (hasChanges && onNavigationBlocked) {
+      (window as any).blockNavigation = () => {
+        triggerShake();
+        return false; // Block navigation
+      };
+    } else {
+      (window as any).blockNavigation = null;
+    }
+    
+    return () => {
+      (window as any).blockNavigation = null;
+    };
+  }, [hasChanges, onNavigationBlocked]);
+
+  const MIN_RAM = 1;
+  const MAX_RAM = 64;
+  
+  const handleRamSliderChange = (value: number) => {
+    const clampedValue = Math.max(MIN_RAM, Math.min(MAX_RAM, value));
+    handleInputChange('allocatedRam', clampedValue);
+  };
+
+  const handleRamTextChange = (value: string) => {
+    // Allow empty string for better UX while typing
+    if (value === '') {
+      return;
+    }
+    
+    const numValue = parseFloat(value);
+    if (!isNaN(numValue)) {
+      const clampedValue = Math.max(MIN_RAM, Math.min(MAX_RAM, numValue));
+      const roundedValue = Math.round(clampedValue * 2) / 2; // Round to nearest 0.5
+      handleInputChange('allocatedRam', roundedValue);
+    }
+  };
+
+  const handleRamTextBlur = (value: string) => {
+    // On blur, ensure we have a valid value
+    const numValue = parseFloat(value);
+    if (isNaN(numValue) || value === '') {
+      // Reset to current value if invalid
+      const input = document.querySelector('input[type="number"]') as HTMLInputElement;
+      if (input) {
+        input.value = formData.allocatedRam.toString();
+      }
+    }
+  };
 
   const languageOptions = [
     { value: 'es', label: '🇪🇸 Español', name: 'Español' },
@@ -231,8 +306,16 @@ const SettingsPage: React.FC = () => {
 
   const isSaveDisabled = !!usernameError;
 
+  const getShakeClass = () => {
+    if (!isShaking) return '';
+    if (shakeAttempts === 1) return 'shake-light';
+    if (shakeAttempts === 2) return 'shake-medium';
+    if (shakeAttempts === 3) return 'shake-heavy';
+    return 'shake-extreme';
+  };
+
   return (
-    <div className="h-full overflow-auto">
+    <div className={`h-full overflow-auto ${getShakeClass()}`}>
       <div className="p-6">
         {/* Header */}
         <div className="mb-8">
@@ -308,6 +391,8 @@ const SettingsPage: React.FC = () => {
                   onAuthSuccess={handleMicrosoftAuthSuccess}
                   onAuthClear={handleMicrosoftAuthClear}
                   onError={handleAuthError}
+                  onAuthStart={handleAuthStart}
+                  onAuthStop={handleAuthStop}
                 />
               </div>
               
@@ -417,26 +502,45 @@ const SettingsPage: React.FC = () => {
                 <label className="block text-dark-300 text-sm font-medium mb-2">
                   {t('settings.ramAllocationLabel')}
                 </label>
-                <div className="flex items-center space-x-4">
-                  <select
-                    value={formData.allocatedRam}
-                    onChange={(e) => handleInputChange('allocatedRam', parseInt(e.target.value))}
-                    className="input-field"
-                  >
-                    {ramOptions.map(option => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                
+                {/* RAM allocation display with inline editing */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="number"
+                      min={MIN_RAM}
+                      max={MAX_RAM}
+                      step="0.5"
+                      value={formData.allocatedRam}
+                      onChange={(e) => handleRamTextChange(e.target.value)}
+                      onBlur={(e) => handleRamTextBlur(e.target.value)}
+                      className="bg-transparent border-0 text-white text-lg font-medium w-16 text-center focus:outline-none focus:bg-dark-700 rounded px-1"
+                    />
+                    <span className="text-white text-lg font-medium">GB</span>
+                  </div>
                   <div className="text-dark-400 text-sm">
                     <p>{t('settings.ramRecommended')}</p>
                   </div>
                 </div>
-                <div className="mt-3 p-3 bg-dark-700 rounded-lg">
-                  <p className="text-dark-300 text-sm">
-                    <strong>{t('app.note')}:</strong> {t('settings.ramNote')}
-                  </p>
+
+                {/* Slider */}
+                <div className="mb-4">
+                  <input
+                    type="range"
+                    min={MIN_RAM}
+                    max={MAX_RAM}
+                    step="0.5"
+                    value={formData.allocatedRam}
+                    onChange={(e) => handleRamSliderChange(parseFloat(e.target.value))}
+                    className="w-full h-2 bg-dark-600 rounded-lg appearance-none cursor-pointer slider"
+                    style={{
+                      background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${((formData.allocatedRam - MIN_RAM) / (MAX_RAM - MIN_RAM)) * 100}%, #374151 ${((formData.allocatedRam - MIN_RAM) / (MAX_RAM - MIN_RAM)) * 100}%, #374151 100%)`
+                    }}
+                  />
+                  <div className="flex justify-between text-xs text-dark-400 mt-1">
+                    <span>{MIN_RAM} GB</span>
+                    <span>{MAX_RAM} GB</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -515,7 +619,7 @@ const SettingsPage: React.FC = () => {
 
           {/* Save Button */}
           {hasChanges && (
-            <div className="sticky bottom-0 bg-dark-900 border-t border-dark-700 p-4 -mx-6">
+            <div className={`sticky bottom-0 bg-dark-900 border-t border-dark-700 p-4 -mx-6 ${isShaking ? 'unsaved-changes-pulse' : ''}`}>
               <div className="flex justify-between items-center">
                 <p className="text-dark-400 text-sm">
                   {t('settings.unsavedChanges')}
@@ -541,6 +645,7 @@ const SettingsPage: React.FC = () => {
           )}
         </div>
       </div>
+
     </div>
   );
 };

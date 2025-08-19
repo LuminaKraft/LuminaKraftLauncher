@@ -7,11 +7,11 @@ import LauncherService from './launcherService';
 export class CurseForgeService {
   private static instance: CurseForgeService;
   private readonly launcherService: LauncherService;
-  private readonly requestTimeout = 30000; // 30 segundos para descargas
 
   private constructor() {
     this.launcherService = LauncherService.getInstance();
-    this.setupAxiosDefaults();
+    // No need to setup axios defaults here since LauncherService already handles it
+    // this.setupAxiosDefaults();
   }
 
   public static getInstance(): CurseForgeService {
@@ -21,9 +21,6 @@ export class CurseForgeService {
     return CurseForgeService.instance;
   }
 
-  private setupAxiosDefaults(): void {
-    axios.defaults.timeout = this.requestTimeout;
-  }
 
   private getProxyBaseUrl(): string {
     const settings = this.launcherService.getUserSettings();
@@ -37,6 +34,7 @@ export class CurseForgeService {
   async getModInfo(modId: number): Promise<CurseForgeModInfo | null> {
     try {
       const url = `${this.getProxyBaseUrl()}/mods/${modId}`;
+      console.log(`[CurseForgeService] Making request to: ${url}`);
       const response = await axios.get<ProxyResponse>(url);
       
       if (response.data.status === 200 && response.data.data) {
@@ -45,8 +43,12 @@ export class CurseForgeService {
       
       console.error('Error fetching mod info:', response.data.message);
       return null;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching mod info:', error);
+      if (error.response?.status === 401) {
+        console.error('[CurseForgeService] 401 Unauthorized - authentication headers may be missing');
+        console.error('[CurseForgeService] Request headers:', error.config?.headers);
+      }
       return null;
     }
   }
@@ -127,6 +129,26 @@ export class CurseForgeService {
     } catch (error) {
       console.error('Error getting download URL:', error);
       return null;
+    }
+  }
+
+  /**
+   * Debug method to test authentication with the proxy
+   */
+  async testAuthentication(): Promise<boolean> {
+    try {
+      const url = `${this.getProxyBaseUrl()}/test`;
+      console.log(`[CurseForgeService] Testing authentication with: ${url}`);
+      const response = await axios.get(url);
+      console.log('[CurseForgeService] Authentication test successful:', response.data);
+      return true;
+    } catch (error: any) {
+      console.error('[CurseForgeService] Authentication test failed:', error);
+      if (error.response?.status === 401) {
+        console.error('[CurseForgeService] 401 Unauthorized - authentication headers missing or invalid');
+        console.error('[CurseForgeService] Request headers:', error.config?.headers);
+      }
+      return false;
     }
   }
 } 

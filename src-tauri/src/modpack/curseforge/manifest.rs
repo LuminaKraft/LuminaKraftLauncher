@@ -64,7 +64,7 @@ where
     
     if overrides_dir.exists() && overrides_dir.is_dir() {
         emit_progress(
-            "Procesando archivos adicionales...".to_string(),
+            "progress.processingAdditionalFiles".to_string(),
             97.0,
             "processing_overrides".to_string()
         );
@@ -72,7 +72,7 @@ where
         copy_dir_recursively(&overrides_dir, instance_dir)?;
         
         emit_progress(
-            "Archivos adicionales procesados correctamente".to_string(),
+            "progress.additionalFilesCompleted".to_string(),
             99.0,
             "overrides_completed".to_string()
         );
