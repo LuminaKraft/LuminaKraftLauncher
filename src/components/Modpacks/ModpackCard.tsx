@@ -323,7 +323,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
 
             {/* Logo */}
             <img
-              src={modpack.logo || modpack.urlIcono}
+              src={modpack.logo}
               alt={displayName}
               className={`relative z-10 max-w-full max-h-full object-contain transition-transform duration-200 ${
                 getAnimationClass('', 'group-hover:scale-105')

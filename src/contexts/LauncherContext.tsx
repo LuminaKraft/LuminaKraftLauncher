@@ -62,7 +62,7 @@ interface LauncherState {
 const defaultSettings: UserSettings = {
   username: 'Player',
   allocatedRam: 4096,
-  launcherDataUrl: 'https://api.luminakraft.com/v1/launcher_data.json',
+  launcherDataUrl: 'https://api.luminakraft.com/v1/modpacks?lang=es',
   language: 'es',
   authMethod: 'offline',
   enablePrereleases: false,
@@ -361,13 +361,10 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'SET_ERROR', payload: null });
 
     try {
-      // Load launcher data and translations in parallel
-      const currentLang = launcherService.getUserSettings().language;
-      const [launcherData, translations] = await Promise.all([
-        launcherService.fetchLauncherData(),
-        launcherService.getTranslations(currentLang)
-      ]);
-
+      // Load launcher data (includes UI translations in new API)
+      const launcherData = await launcherService.fetchLauncherData();
+      const translations = await launcherService.getTranslations(); // Get UI translations
+      
       dispatch({ type: 'SET_LAUNCHER_DATA', payload: launcherData });
       dispatch({ type: 'SET_TRANSLATIONS', payload: translations });
       dispatch({ type: 'SET_LOADING', payload: false });
@@ -453,11 +450,9 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
       dispatch({ type: 'SET_ERROR', payload: null });
       
       try {
-        // Reload launcher data and translations from server
-        const [launcherData, translations] = await Promise.all([
-          launcherService.fetchLauncherData(),
-          launcherService.getTranslations(language)
-        ]);
+        // Reload launcher data (includes UI translations in new API)
+        const launcherData = await launcherService.fetchLauncherData();
+        const translations = await launcherService.getTranslations(); // Get UI translations
 
         dispatch({ type: 'SET_LAUNCHER_DATA', payload: launcherData });
         dispatch({ type: 'SET_TRANSLATIONS', payload: translations });

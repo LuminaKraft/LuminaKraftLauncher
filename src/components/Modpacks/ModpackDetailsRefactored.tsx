@@ -186,7 +186,7 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
               className="w-40 h-40 rounded-lg overflow-hidden flex items-center justify-center"
             >
               <img
-                src={modpack.logo || modpack.urlIcono}
+                src={modpack.logo}
                 alt={displayName}
                 className="w-full h-full object-contain object-top"
                 onError={(e) => {

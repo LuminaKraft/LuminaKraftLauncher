@@ -34,6 +34,7 @@ async function safeInvoke<T>(command: string, payload?: any): Promise<T> {
 class LauncherService {
   private static instance: LauncherService;
   private launcherData: LauncherData | null = null;
+  private uiTranslations: any = null; // Store UI translations from API
   private userSettings: UserSettings;
   private cache: Map<string, CacheEntry> = new Map();
   private readonly cacheTTL = 5 * 60 * 1000; // 5 minutos para datos principales
@@ -107,7 +108,7 @@ class LauncherService {
     const defaultSettings: UserSettings = {
       username: 'Player',
       allocatedRam: 4,
-      launcherDataUrl: 'https://api.luminakraft.com/v1/launcher_data.json',
+      launcherDataUrl: 'https://api.luminakraft.com/v1/modpacks?lang=es',
       language: this.detectDefaultLanguage(),
       authMethod: 'offline',
       clientToken: undefined
@@ -160,17 +161,11 @@ class LauncherService {
   }
 
   private getBaseUrl(): string {
-    return this.userSettings.launcherDataUrl.replace('/v1/launcher_data.json', '');
+    return this.userSettings.launcherDataUrl.replace(/\/v1\/modpacks.*$/, '');
   }
 
   private getFallbackData(): LauncherData {
     return {
-      launcherVersion: "1.0.0",
-      launcherDownloadUrls: {
-        windows: "https://github.com/luminakraft/luminakraft-launcher/releases/latest/download/LuminaKraft-Launcher_x64_en-US.msi",
-        macos: "https://github.com/luminakraft/luminakraft-launcher/releases/latest/download/LuminaKraft-Launcher_x64.dmg",
-        linux: "https://github.com/luminakraft/luminakraft-launcher/releases/latest/download/LuminaKraft-Launcher_amd64.deb"
-      },
       modpacks: []
     };
   }
@@ -194,31 +189,38 @@ class LauncherService {
       }
 
       console.log('Fetching launcher data from API...');
-      const response = await axios.get<LauncherData>(this.userSettings.launcherDataUrl, {
+      // Update URL to include current language
+      const currentLang = this.userSettings.language || 'es';
+      const urlWithLang = this.userSettings.launcherDataUrl.includes('?') 
+        ? this.userSettings.launcherDataUrl.replace(/[?&]lang=[^&]*/, `?lang=${currentLang}`)
+        : `${this.userSettings.launcherDataUrl}?lang=${currentLang}`;
+
+      const response = await axios.get<{ count: number; modpacks: any[]; ui: any }>(urlWithLang, {
         headers: {
           'Accept': 'application/json',
           'Cache-Control': 'no-cache'
         }
       });
 
-      this.launcherData = response.data;
+      this.launcherData = { modpacks: response.data.modpacks };
+      this.uiTranslations = response.data.ui; // Store UI translations
       
       // Guardar en caché
       this.cache.set(cacheKey, {
-        data: response.data,
+        data: this.launcherData,
         timestamp: Date.now()
       });
-      this.writePersistentCache(cacheKey, response.data);
+      this.writePersistentCache(cacheKey, this.launcherData);
 
       // Cache modpack images automatically in background
-      if (response.data.modpacks && response.data.modpacks.length > 0) {
-        this.cacheModpackImages(response.data.modpacks).catch((error: any) => {
+      if (this.launcherData.modpacks && this.launcherData.modpacks.length > 0) {
+        this.cacheModpackImages(this.launcherData.modpacks).catch((error: any) => {
           console.warn('Failed to cache modpack images:', error);
         });
       }
 
       console.log('Launcher data loaded successfully');
-      return response.data;
+      return this.launcherData;
     } catch (error) {
       console.error('Error fetching launcher data:', error);
       
@@ -272,29 +274,22 @@ class LauncherService {
   }
 
   async getTranslations(language?: string): Promise<Translations | null> {
+    // UI translations are now included in the modpacks response
+    // Return them from memory if available, otherwise fallback to individual API call
+    if (this.uiTranslations) {
+      // Create a minimal translations object with UI translations
+      return {
+        modpacks: {}, // Modpack translations are embedded in modpack objects
+        features: {}, // Features need individual API calls
+        ui: this.uiTranslations
+      } as Translations;
+    }
+    
+    // Fallback to individual API call if not available
     try {
       const lang = language || this.userSettings.language;
-      const cacheKey = `translations_${lang}`;
-      const cached = this.cache.get(cacheKey);
-      const persisted = this.readPersistentCache<Translations>(cacheKey);
-      
-      if (cached && Date.now() - cached.timestamp < this.translationsTTL) {
-        return cached.data;
-      }
-      if (persisted && Date.now() - persisted.timestamp < this.translationsTTL) {
-        this.cache.set(cacheKey, persisted);
-        return persisted.data;
-      }
-
       const baseUrl = this.getBaseUrl();
       const response = await axios.get<Translations>(`${baseUrl}/v1/translations/${lang}`);
-      
-      this.cache.set(cacheKey, {
-        data: response.data,
-        timestamp: Date.now()
-      });
-      this.writePersistentCache(cacheKey, response.data);
-
       return response.data;
     } catch (error) {
       console.error('Error fetching translations:', error);
@@ -344,14 +339,20 @@ class LauncherService {
         return null;
       }
 
-      const [translations, features] = await Promise.all([
-        this.getTranslations(),
+      // Get full modpack details with individual API call
+      const baseUrl = this.getBaseUrl();
+      const [modpackDetails, features] = await Promise.all([
+        axios.get(`${baseUrl}/v1/modpacks/${modpackId}`),
         this.getModpackFeatures(modpackId)
       ]);
 
       return {
-        modpack,
-        translations: translations?.modpacks[modpackId] || null,
+        modpack: modpackDetails.data,
+        translations: {
+          name: modpack.name,
+          shortDescription: modpack.shortDescription || '',
+          description: modpack.description || ''
+        },
         features: features?.features || []
       };
     } catch (error) {
@@ -416,7 +417,7 @@ class LauncherService {
       minecraftVersion: modpack.minecraftVersion,
       modloader: modpack.modloader,
       modloaderVersion: modpack.modloaderVersion,
-      urlIcono: modpack.urlIcono || modpack.logo || '',
+      // urlIcono field removed
       urlModpackZip: modpack.urlModpackZip || '',
     };
   }
@@ -538,52 +539,7 @@ class LauncherService {
     return this.installModpack(modpackId, _onProgress);
   }
 
-  async checkForLauncherUpdate(): Promise<{ hasUpdate: boolean; downloadUrl?: string }> {
-    if (!this.launcherData) {
-      return { hasUpdate: false };
-    }
 
-    if (!isTauriContext()) {
-      // When not in Tauri context, can't check for updates
-      return { hasUpdate: false };
-    }
-
-    try {
-      const currentVersion = await safeInvoke<string>('get_launcher_version');
-      const remoteVersion = this.launcherData.launcherVersion;
-
-      if (this.isVersionNewer(remoteVersion, currentVersion)) {
-        const platform = await safeInvoke<string>('get_platform');
-        const downloadUrl = this.launcherData.launcherDownloadUrls[platform as keyof typeof this.launcherData.launcherDownloadUrls];
-        
-        return {
-          hasUpdate: true,
-          downloadUrl
-        };
-      }
-
-      return { hasUpdate: false };
-    } catch (error) {
-      console.error('Error checking for launcher update:', error);
-      return { hasUpdate: false };
-    }
-  }
-
-  private isVersionNewer(remote: string, current: string): boolean {
-    const parseVersion = (version: string) => version.split('.').map(Number);
-    const remoteVersion = parseVersion(remote);
-    const currentVersion = parseVersion(current);
-
-    for (let i = 0; i < Math.max(remoteVersion.length, currentVersion.length); i++) {
-      const remotePart = remoteVersion[i] || 0;
-      const currentPart = currentVersion[i] || 0;
-
-      if (remotePart > currentPart) return true;
-      if (remotePart < currentPart) return false;
-    }
-
-    return false;
-  }
 
   // Método para limpiar caché manualmente
   clearCache(): void {
