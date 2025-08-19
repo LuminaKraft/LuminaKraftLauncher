@@ -44,9 +44,11 @@ pub async fn fetch_mod_files_batch(file_ids: &[i64], auth_token: Option<&str>) -
             
             // Add authentication headers
             if let Some(token) = auth_token {
-                if let Some(microsoft_account) = token.strip_prefix("Bearer ") {
-                    request = request.header("Authorization", format!("Bearer {}", microsoft_account));
+                if token.starts_with("Bearer ") {
+                    // Microsoft token - use Authorization header
+                    request = request.header("Authorization", token);
                 } else {
+                    // Offline launcher token - use x-lk-token header
                     request = request.header("x-lk-token", token);
                 }
             }
