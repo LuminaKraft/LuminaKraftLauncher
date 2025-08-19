@@ -71,6 +71,13 @@ class LauncherService {
           } else if (offlineToken) {
             (config.headers as any)['x-lk-token'] = offlineToken;
             console.log(`[LauncherService] Added offline token to request: ${url}`);
+            console.log(`[DEBUG] Offline token details:`, {
+              length: offlineToken.length,
+              token: offlineToken,
+              hasSpecialChars: /[^A-Za-z0-9_\-]/.test(offlineToken)
+            });
+          } else {
+            console.log(`[LauncherService] No token available - msToken: ${!!msToken}, offlineToken: ${!!offlineToken}`);
           }
           (config.headers as any)['x-luminakraft-client'] = 'luminakraft-launcher';
         } else {
