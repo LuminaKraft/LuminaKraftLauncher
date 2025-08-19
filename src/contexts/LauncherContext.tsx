@@ -559,7 +559,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
               downloadSpeed: progress.downloadSpeed,
               eta: progress.eta,
               step: progress.step,
-              generalMessage: translateBackendMessage(progress.generalMessage),
+              generalMessage: translateBackendMessage(progress.generalMessage || ''),
               detailMessage: progress.detailMessage
             }
           },
@@ -849,7 +849,6 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
         
         if (key === 'progress.downloadingMinecraft') {
           // Format: "progress.downloadingMinecraft|component|progress"
-          const component = parts[1];
           const progressPart = parts[2];
           return t('progress.downloadingMods') + ` (${progressPart})`;
         }

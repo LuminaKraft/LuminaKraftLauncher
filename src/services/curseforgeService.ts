@@ -7,7 +7,6 @@ import LauncherService from './launcherService';
 export class CurseForgeService {
   private static instance: CurseForgeService;
   private readonly launcherService: LauncherService;
-  private readonly requestTimeout = 30000; // 30 segundos para descargas
 
   private constructor() {
     this.launcherService = LauncherService.getInstance();
