@@ -712,12 +712,20 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
       console.error(`Error ${action}ing modpack:`, error);
       
       // Parse specific error messages for better user experience
-      let userFriendlyError = 'Unknown error';
+      let userFriendlyError = t('errors.unknown');
       
+      let errorMessage = '';
       if (error instanceof Error) {
-        const errorMessage = error.message.toLowerCase();
-        
-        if (errorMessage.includes('failed to extract zip file') || errorMessage.includes('no such file or directory')) {
+        errorMessage = error.message.toLowerCase();
+      } else if (typeof error === 'string') {
+        errorMessage = error.toLowerCase();
+      } else if (error && typeof error === 'object' && 'message' in error) {
+        errorMessage = String(error.message).toLowerCase();
+      } else {
+        errorMessage = String(error).toLowerCase();
+      }
+      
+      if (errorMessage.includes('failed to extract zip file') || errorMessage.includes('no such file or directory')) {
           userFriendlyError = t('errors.zipExtractionFailed');
         } else if (errorMessage.includes('java') || errorMessage.includes('No such file or directory') || errorMessage.includes('exec format error')) {
           userFriendlyError = t('settings.invalidJava');
@@ -733,16 +741,27 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
           userFriendlyError = t('errors.networkError');
         } else if (errorMessage.includes('failed to download')) {
           userFriendlyError = t('errors.downloadFailed');
-        } else if (errorMessage.includes('curseforge api authentication failed (401)')) {
+        } else if (errorMessage.includes('authentication failed (401)') || 
+                   errorMessage.includes('not authorized') ||
+                   errorMessage.includes('curseforge api authentication failed')) {
           userFriendlyError = t('errors.curseforgeUnauthorized');
-        } else if (errorMessage.includes('curseforge api access forbidden (403)')) {
+        } else if (errorMessage.includes('access forbidden (403)') || 
+                   errorMessage.includes('curseforge api access forbidden')) {
           userFriendlyError = t('errors.curseforgeForbidden');
         } else if (errorMessage.includes('curseforge api') || errorMessage.includes('failed to retrieve any mod file information')) {
           userFriendlyError = t('errors.curseforgeApiError');
         } else {
-          userFriendlyError = error.message;
+          // Use the original error message as fallback
+          if (error instanceof Error) {
+            userFriendlyError = error.message;
+          } else if (typeof error === 'string') {
+            userFriendlyError = error;
+          } else if (error && typeof error === 'object' && 'message' in error) {
+            userFriendlyError = String(error.message);
+          } else {
+            userFriendlyError = String(error);
+          }
         }
-      }
       
       dispatch({
         type: 'SET_MODPACK_STATE',
