@@ -305,14 +305,14 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
 
       <div onClick={onSelect} className="flex-1 flex flex-col">
         <div className="space-y-4 flex-1">
-          {/* Modpack Icon with Screenshot Background */}
+          {/* Modpack Icon with API Background */}
           <div className="w-full h-32 rounded-lg overflow-hidden flex items-center justify-center p-4 relative group-hover:bg-dark-600 transition-all duration-200">
-            {/* Screenshot Background */}
-            {modpack.images && modpack.images.length > 0 && (
+            {/* API backgroundImage */}
+            {modpack.backgroundImage && (
               <div
                 className="absolute inset-0 bg-center bg-cover"
                 style={{
-                  backgroundImage: `url(${modpack.images[0]})`,
+                  backgroundImage: `url(${modpack.backgroundImage})`,
                   opacity: 0.35
                 }}
               />

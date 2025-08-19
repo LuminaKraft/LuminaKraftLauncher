@@ -19,9 +19,10 @@ interface ModpackDetailsProps {
     progress?: ProgressInfo;
   };
   onBack: () => void;
+  features?: any[] | null;
 }
 
-const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack }) => {
+const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack, features }) => {
   const { t } = useTranslation();
   const { translations, modpackStates } = useLauncher();
   const { getAnimationClass, getAnimationStyle } = useAnimation();
@@ -71,7 +72,8 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
   // Get modpack translations
   const displayName = translations?.modpacks?.[modpack.id]?.name || modpack.name;
   const displayDescription = translations?.modpacks?.[modpack.id]?.description || modpack.description;
-  const features = liveState.features;
+  // Ensure resolvedFeatures is Feature[] or undefined, never null
+  const resolvedFeatures = (typeof features !== 'undefined' ? features : liveState.features) || undefined;
 
   // Get server status badge like in ModpackCard
   const getServerStatusBadge = () => {
@@ -144,7 +146,7 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
       )}
 
       {/* Features */}
-      <ModpackFeatures features={features} />
+  <ModpackFeatures features={resolvedFeatures} />
 
     </>
   );

@@ -392,25 +392,17 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
   const loadModpackStates = async () => {
     if (!state.launcherData) return;
 
-    const currentLang = launcherService.getUserSettings().language;
-    
     for (const modpack of state.launcherData.modpacks) {
       try {
         const status = await launcherService.getModpackStatus(modpack.id);
-        
-        // Load translations and modpack features
-        const [translations, features] = await Promise.all([
-          getModpackTranslations(modpack.id),
-          launcherService.getModpackFeatures(modpack.id, currentLang)
-        ]);
-
+        // Only load translations for the list, not features
+        const translations = getModpackTranslations(modpack.id);
         dispatch({
           type: 'SET_MODPACK_STATE',
           payload: {
             id: modpack.id,
             state: createModpackState(status, {
-              translations: translations || undefined,
-              features: features?.features || []
+              translations: translations || undefined
             }),
           },
         });

@@ -19,6 +19,9 @@ const ModpacksPage: React.FC = () => {
   } = useLauncher();
   
   const [selectedModpack, setSelectedModpack] = useState<Modpack | null>(null);
+  const [selectedModpackDetails, setSelectedModpackDetails] = useState<any | null>(null);
+  const [selectedModpackFeatures, setSelectedModpackFeatures] = useState<any[] | null>(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
   const [isRefreshAnimating, setIsRefreshAnimating] = useState(false);
@@ -36,12 +39,28 @@ const ModpacksPage: React.FC = () => {
 
   const handleModpackSelect = (modpack: Modpack) => {
     setIsTransitioning(true);
-    
+    setDetailsLoading(true);
     // First phase: fade out current view
-    withDelay(() => {
+    withDelay(async () => {
       setSelectedModpack(modpack);
       setShowingDetails(true);
-      
+      try {
+        const launcherService = (await import('../../services/launcherService')).default.getInstance();
+        // Use launcherService to fetch details and features (axios attaches auth headers)
+        const baseUrl = launcherService.getBaseUrl();
+        const lang = launcherService.getUserSettings().language;
+        // Fetch details
+        const detailsResp = await (await import('axios')).default.get(`${baseUrl}/v1/modpacks/${modpack.id}`);
+        setSelectedModpackDetails(detailsResp.data);
+        // Fetch features
+        const featuresResp = await launcherService.getModpackFeatures(modpack.id, lang);
+        setSelectedModpackFeatures(featuresResp?.features || []);
+      } catch (err) {
+        setSelectedModpackDetails(null);
+        setSelectedModpackFeatures(null);
+      } finally {
+        setDetailsLoading(false);
+      }
       // Second phase: fade in details view
       withDelay(() => {
         setIsTransitioning(false);
@@ -101,7 +120,6 @@ const ModpacksPage: React.FC = () => {
       status: 'not_installed' as const,
       features: []
     };
-
     return (
       <div className={`h-full w-full ${
         getAnimationClass('transition-opacity duration-300 ease-out', '')
@@ -112,11 +130,18 @@ const ModpacksPage: React.FC = () => {
       }`}
       style={getAnimationStyle({})}
       >
-        <ModpackDetailsRefactored 
-          modpack={selectedModpack} 
-          state={modpackState} 
-          onBack={handleBackToList} 
-        />
+        {detailsLoading ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-white text-lg">{t('modpacks.loadingDetails')}</div>
+          </div>
+        ) : (
+          <ModpackDetailsRefactored 
+            modpack={selectedModpackDetails || selectedModpack} 
+            state={modpackState} 
+            features={selectedModpackFeatures}
+            onBack={handleBackToList} 
+          />
+        )}
       </div>
     );
   }

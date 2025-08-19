@@ -160,7 +160,7 @@ class LauncherService {
     }
   }
 
-  private getBaseUrl(): string {
+  public getBaseUrl(): string {
     return this.userSettings.launcherDataUrl.replace(/\/v1\/modpacks.*$/, '');
   }
 
