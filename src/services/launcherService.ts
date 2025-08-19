@@ -37,9 +37,9 @@ class LauncherService {
   private uiTranslations: any = null; // Store UI translations from API
   private userSettings: UserSettings;
   private cache: Map<string, CacheEntry> = new Map();
-  private readonly cacheTTL = 5 * 60 * 1000; // 5 minutos para datos principales
-  private readonly translationsTTL = 60 * 60 * 1000; // 1 hora para traducciones
-  private readonly requestTimeout = 30000; // 30 segundos
+  private readonly cacheTTL = 5 * 60 * 1000; // 5 minutes for main modpacks data
+  private readonly translationsTTL = 60 * 60 * 1000; // 1 hour for translations
+  private readonly requestTimeout = 30000; // 30 seconds
 
   constructor() {
     this.userSettings = this.loadUserSettings();
@@ -170,13 +170,16 @@ class LauncherService {
     };
   }
 
+  /**
+   * Fetches the lightweight modpacks data for browsing (new API: /v1/modpacks?lang=)
+   * Caches under 'modpacks_data' for clarity.
+   */
   async fetchLauncherData(): Promise<LauncherData> {
     try {
-      const cacheKey = 'launcher_data';
+      const cacheKey = 'modpacks_data';
       const cached = this.cache.get(cacheKey);
       const persisted = this.readPersistentCache<LauncherData>(cacheKey);
-      
-      // Verificar caché
+      // Check cache
       if (cached && Date.now() - cached.timestamp < this.cacheTTL) {
         this.launcherData = cached.data;
         return cached.data;
@@ -188,7 +191,7 @@ class LauncherService {
         return persisted.data;
       }
 
-      console.log('Fetching launcher data from API...');
+      console.log('Fetching modpacks data from API...');
       // Update URL to include current language
       const currentLang = this.userSettings.language || 'es';
       const urlWithLang = this.userSettings.launcherDataUrl.includes('?') 
@@ -204,8 +207,8 @@ class LauncherService {
 
       this.launcherData = { modpacks: response.data.modpacks };
       this.uiTranslations = response.data.ui; // Store UI translations
-      
-      // Guardar en caché
+
+      // Save to cache
       this.cache.set(cacheKey, {
         data: this.launcherData,
         timestamp: Date.now()
@@ -219,21 +222,21 @@ class LauncherService {
         });
       }
 
-      console.log('Launcher data loaded successfully');
+      console.log('Modpacks data loaded successfully');
       return this.launcherData;
     } catch (error) {
-      console.error('Error fetching launcher data:', error);
-      
-      // Intentar usar datos en caché como fallback
-      const cached2 = this.cache.get('launcher_data');
+      console.error('Error fetching modpacks data:', error);
+
+      // Try to use cached data as fallback
+      const cached2 = this.cache.get('modpacks_data');
       if (cached2) {
-        console.warn('Using cached data as fallback');
+        console.warn('Using cached modpacks data as fallback');
         this.launcherData = cached2.data;
         return cached2.data;
       }
 
-      // Último recurso: datos de fallback
-      console.warn('Using fallback data');
+      // Last resort: fallback data
+      console.warn('Using fallback modpacks data');
       const fallback = this.getFallbackData();
       this.launcherData = fallback;
       return fallback;
