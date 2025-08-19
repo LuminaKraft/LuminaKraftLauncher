@@ -199,6 +199,7 @@
     "selectLanguage": "Select language",
     "currentLanguage": "Current language: {{language}}",
     "languageDescription": "Language changes will be applied immediately throughout the application",
+    "languageDisabledDuringOperations": "Language cannot be changed while modpacks are being installed, updated, or launched",
     "username": "Username",
     "usernamePlaceholder": "Enter your username",
     "usernameDescription": "This name will be used for Minecraft offline mode",

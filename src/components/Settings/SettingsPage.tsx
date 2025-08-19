@@ -14,7 +14,7 @@ interface SettingsPageProps {
 
 const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
   const { t } = useTranslation();
-  const { userSettings, updateUserSettings, currentLanguage, changeLanguage, setIsAuthenticating } = useLauncher();
+  const { userSettings, updateUserSettings, currentLanguage, changeLanguage, setIsAuthenticating, hasActiveOperations } = useLauncher();
   
   const [formData, setFormData] = useState(userSettings);
   const [hasChanges, setHasChanges] = useState(false);
@@ -256,8 +256,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
   };
 
   const languageOptions = [
-    { value: 'es', label: '🇪🇸 Español', name: 'Español' },
-    { value: 'en', label: '🇺🇸 English', name: 'English' }
+    { value: 'es', label: 'Español', name: 'Español' },
+    { value: 'en', label: 'English', name: 'English' }
   ];
 
   const getStatusIcon = () => {
@@ -350,22 +350,38 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
                 <label className="block text-dark-300 text-sm font-medium mb-2">
                   {t('settings.selectLanguage')}
                 </label>
-                <div className="flex items-center space-x-4">
+                <div className="relative">
                   <select
                     value={currentLanguage}
                     onChange={(e) => handleLanguageChange(e.target.value)}
-                    className="input-field"
+                    disabled={hasActiveOperations}
+                    className={`input-field w-full appearance-none pr-10 ${
+                      hasActiveOperations 
+                        ? 'cursor-not-allowed opacity-50' 
+                        : 'cursor-pointer'
+                    }`}
                   >
                     {languageOptions.map(option => (
-                      <option key={option.value} value={option.value}>
+                      <option key={option.value} value={option.value} className="bg-dark-800 text-white">
                         {option.label}
                       </option>
                     ))}
                   </select>
-                  <div className="text-dark-400 text-sm">
-                    <p>{t('settings.currentLanguage', { language: languageOptions.find(l => l.value === currentLanguage)?.name })}</p>
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    <Languages className={`w-5 h-5 ${hasActiveOperations ? 'text-dark-500' : 'text-dark-400'}`} />
                   </div>
                 </div>
+                {hasActiveOperations ? (
+                  <div className="mt-2 p-3 bg-orange-600/20 border border-orange-600/30 rounded-lg">
+                    <p className="text-orange-400 text-sm">
+                      {t('settings.languageDisabledDuringOperations')}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-dark-400 text-sm mt-2">
+                    {t('settings.currentLanguage', { language: languageOptions.find(l => l.value === currentLanguage)?.name })}
+                  </p>
+                )}
                 <p className="text-dark-400 text-xs mt-1">
                   {t('settings.languageDescription')}
                 </p>

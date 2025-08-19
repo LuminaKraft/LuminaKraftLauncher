@@ -24,6 +24,7 @@ interface LauncherContextType {
   isLoading: boolean;
   error: string | null;
   isAuthenticating: boolean;
+  hasActiveOperations: boolean;
   setIsAuthenticating: (_value: boolean) => void;
   updateUserSettings: (_settings: Partial<UserSettings>) => void;
   refreshData: () => Promise<void>;
@@ -879,6 +880,11 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     return message;
   };
 
+  // Check if there are any active operations
+  const hasActiveOperations = Object.values(state.modpackStates).some(
+    modpackState => ['installing', 'updating', 'launching', 'stopping'].includes(modpackState.status)
+  );
+
   const contextValue: LauncherContextType = {
     launcherData: state.launcherData,
     modpackStates: state.modpackStates,
@@ -888,6 +894,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     isLoading: state.isLoading,
     error: state.error,
     isAuthenticating,
+    hasActiveOperations,
     setIsAuthenticating,
     updateUserSettings,
     refreshData,
