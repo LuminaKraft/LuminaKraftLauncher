@@ -1,23 +1,23 @@
 {
-  "version": "0.0.9-alpha.3",
-  "notes": "Prerelease 0.0.9-alpha.3 - Experimental version with latest features",
+  "version": "0.0.9-alpha.4",
+  "notes": "Prerelease 0.0.9-alpha.4 - Experimental version with latest features",
   "pub_date": "2025-07-05T03:44:13.627Z",
   "platforms": {
     "darwin-x86_64": {
       "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTNVlLSjhXbjFxT25sRUxVTU9JeG5XallodjdNa0NBaERMaTllKzNEU1FSSFRQUjdhNitmWTloVG4wdnNHWTF0M1pPUFFWRHRtR3NhYVBKTTErQjVNZzFSZmpETGkwc0FRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzUxNjg2NzQ2CWZpbGU6THVtaW5hS3JhZnQgTGF1bmNoZXIuYXBwLnRhci5negprNEpRcVUzdDBUOXJRakx6YVJVQnMzVEMrUWpkdm9mTk5GS2w5dDRzNWtUQWh3TkJ0bGZuQlU1KzV3MTltanYxVThGQXVSWWpuSjlqMHJZempIdmpEQT09Cg==",
-      "url": "https://github.com/LuminaKraft/LuminakraftLauncher/releases/download/v0.0.9-alpha.3/LuminaKraft.Launcher_x64.app.tar.gz"
+      "url": "https://github.com/LuminaKraft/LuminakraftLauncher/releases/download/v0.0.9-alpha.4/LuminaKraft.Launcher_x64.app.tar.gz"
     },
     "darwin-aarch64": {
       "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTNVlLSjhXbjFxT3NtOGdJTDJRdVZsZWgzei9sTVljN0JDYlhTRThRai9KTU5veENTb1loR0djUlcvZlUzYTBSb08xV3hvTm5iYnI4amNraUoxdWZvd0Q5cmIvY2NTSlFVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzUxNjg2NzI2CWZpbGU6THVtaW5hS3JhZnQgTGF1bmNoZXIuYXBwLnRhci5negpNL0x4ck43RWVoNmlzaUdhWDhuMURwc0hzdmJSM0Y1ZzRTVUtMMjhPUmJKWU55dTdUc2FuOGMrWG16c1dIQ0Y1Y0tjZ1FVSk5kMkFSNTdhK2tpOUZDUT09Cg==",
-      "url": "https://github.com/LuminaKraft/LuminakraftLauncher/releases/download/v0.0.9-alpha.3/LuminaKraft.Launcher_aarch64.app.tar.gz"
+      "url": "https://github.com/LuminaKraft/LuminakraftLauncher/releases/download/v0.0.9-alpha.4/LuminaKraft.Launcher_aarch64.app.tar.gz"
     },
     "linux-x86_64": {
       "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTNVlLSjhXbjFxT3BRVGhwMTJobUZDRit6aW5CQkR5cTRucUNlZmJmdEswa0dnRUtncU9GMlpjTlZNck5ycmJlcVdoa3BVNWdnd1NKRzkvOFhpbFZpVTZSNUFweXhEcXdVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzUxNjg2OTcyCWZpbGU6THVtaW5hS3JhZnQgTGF1bmNoZXJfMC4wLjktYWxwaGEuM19hbWQ2NC5BcHBJbWFnZQpKQTd1T0d5TStldW5KQmxyQ1JaRVEyZlViQjRlWFJyMko5NTFTUzZlWnV4T09TaVk3ZEk4bWhNbHVKZVpTOXp4eUtDcHZEcGJDeWMxMGlvVytFSy9DZz09Cg==",
-      "url": "https://github.com/LuminaKraft/LuminakraftLauncher/releases/download/v0.0.9-alpha.3/LuminaKraft.Launcher_0.0.9-alpha.3_amd64.AppImage.tar.gz"
+      "url": "https://github.com/LuminaKraft/LuminakraftLauncher/releases/download/v0.0.9-alpha.4/LuminaKraft.Launcher_0.0.9-alpha.4_amd64.AppImage.tar.gz"
     },
     "windows-x86_64": {
       "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTNVlLSjhXbjFxT3F6NVoyL1RXcFBGQzdhNHVRT0dUTzBncWpDNlJpNStHV1FRRk9CWENBNzZDZWh0YXNoSnBKdmRFaU5qS3lMYStkeEZUK3Bra2NmRmtub0ZKa2lIU0E4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzUxNjg3MDUxCWZpbGU6THVtaW5hS3JhZnQgTGF1bmNoZXJfMC4wLjlfeDY0X2VuLVVTLm1zaQpXaEo5NFhKcDRVYU1QYmdHQzI0T2N1MmZNZFpmdkV6a2pqbkxUN0I3cW9lYUV3ZkZtSFV0ckphdmdBbXBmSHNLM3ZpZ0RpbkpnWW1TaFZDTDU2Q3hDUT09Cg==",
-      "url": "https://github.com/LuminaKraft/LuminakraftLauncher/releases/download/v0.0.9-alpha.3/LuminaKraft.Launcher_0.0.9_x64-setup.nsis.zip"
+      "url": "https://github.com/LuminaKraft/LuminakraftLauncher/releases/download/v0.0.9-alpha.4/LuminaKraft.Launcher_0.0.9_x64-setup.nsis.zip"
     }
   }
 }
