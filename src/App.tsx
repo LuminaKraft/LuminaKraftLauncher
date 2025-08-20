@@ -21,7 +21,7 @@ function AppContent() {
   const [isInstallingUpdate, setIsInstallingUpdate] = useState(false);
   const [updateProgress, setUpdateProgress] = useState<{ current: number; total: number }>({ current: 0, total: 0 });
   const [modpacksPageKey, setModpacksPageKey] = useState(0); // Key to force re-render of ModpacksPage
-  const { isLoading, error, launcherData, isAuthenticating, refreshData } = useLauncher();
+  const { isLoading, error, modpacksData, isAuthenticating, refreshData } = useLauncher();
   const { withDelay } = useAnimation();
   const { t } = useTranslation();
   const launcherService = LauncherService.getInstance();
@@ -102,7 +102,7 @@ function AppContent() {
       if (newSection === 'home') {
         setModpacksPageKey(prev => prev + 1);
         // If no launcher data is available, try to refresh
-        if (!launcherData && !isLoading) {
+        if (!modpacksData && !isLoading) {
           refreshData();
         }
       }
@@ -126,7 +126,7 @@ function AppContent() {
   };
 
   // Mostrar pantalla de carga inicial solo si no hay datos y está cargando
-  if (isLoading && !launcherData) {
+  if (isLoading && !modpacksData) {
     return (
       <div className="flex h-screen bg-dark-900 text-white">
         <div className="flex-1 flex items-center justify-center">
@@ -141,7 +141,7 @@ function AppContent() {
   }
 
   // Mostrar error crítico solo si no hay datos en absoluto
-  if (error && !launcherData && !isLoading) {
+  if (error && !modpacksData && !isLoading) {
     return (
       <div className="flex h-screen bg-dark-900 text-white">
         <div className="flex-1 flex items-center justify-center">
