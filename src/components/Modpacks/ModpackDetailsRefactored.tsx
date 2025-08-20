@@ -19,11 +19,12 @@ interface ModpackDetailsProps {
     progress?: ProgressInfo;
   };
   onBack: () => void;
+  features?: any[] | null;
 }
 
 const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack }) => {
   const { t } = useTranslation();
-  const { translations, modpackStates } = useLauncher();
+  const { modpackStates } = useLauncher();
   const { getAnimationClass, getAnimationStyle } = useAnimation();
 
   const liveState = modpackStates[modpack.id] || state;
@@ -68,37 +69,38 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
     };
   }, [modpack.id]);
 
-  // Get modpack translations
-  const displayName = translations?.modpacks?.[modpack.id]?.name || modpack.name;
-  const displayDescription = translations?.modpacks?.[modpack.id]?.description || modpack.description;
-  const features = liveState.features;
+  // Use modpack fields directly (translations/features are now in modpack details)
+  const displayName = modpack.name;
+  const displayDescription = modpack.description;
+  // Defensive: always use features from modpack details, fallback to []
+  const resolvedFeatures = Array.isArray((modpack as any).features) ? (modpack as any).features : [];
 
   // Get server status badge like in ModpackCard
   const getServerStatusBadge = () => {
     if (modpack.isNew) {
       return (
         <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-600/40 text-green-300 border border-green-600/60">
-          {translations?.ui?.status?.new || 'Nuevo'}
+          {'Nuevo'}
         </span>
       );
     }
     if (modpack.isActive) {
       return (
         <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-600/40 text-green-300 border border-green-600/60">
-          {translations?.ui?.status?.active || 'Activo'}
+          {'Activo'}
         </span>
       );
     }
     if (modpack.isComingSoon) {
       return (
         <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-600/40 text-blue-300 border border-blue-600/60">
-          {translations?.ui?.status?.coming_soon || 'Próximamente'}
+          {'Próximamente'}
         </span>
       );
     }
     return (
       <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-600/40 text-gray-300 border border-gray-600/60">
-        {translations?.ui?.status?.inactive || 'Inactivo'}
+        {'Inactivo'}
       </span>
     );
   };
@@ -144,7 +146,7 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
       )}
 
       {/* Features */}
-      <ModpackFeatures features={features} />
+  <ModpackFeatures features={resolvedFeatures} />
 
     </>
   );
@@ -186,7 +188,7 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
               className="w-40 h-40 rounded-lg overflow-hidden flex items-center justify-center"
             >
               <img
-                src={modpack.logo || modpack.urlIcono}
+                src={modpack.logo}
                 alt={displayName}
                 className="w-full h-full object-contain object-top"
                 onError={(e) => {

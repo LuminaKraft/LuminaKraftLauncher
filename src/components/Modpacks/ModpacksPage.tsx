@@ -5,20 +5,23 @@ import { useLauncher } from '../../contexts/LauncherContext';
 import { useAnimation } from '../../contexts/AnimationContext';
 import ModpackCard from './ModpackCard';
 import ModpackDetailsRefactored from './ModpackDetailsRefactored';
+
 import type { Modpack } from '../../types/launcher';
 
 const ModpacksPage: React.FC = () => {
   const { t } = useTranslation();
   const { getAnimationClass, getAnimationStyle, withDelay } = useAnimation();
   const { 
-    launcherData, 
+    modpacksData, 
     modpackStates, 
     isLoading, 
     error, 
-    refreshData 
+    refreshData
   } = useLauncher();
   
   const [selectedModpack, setSelectedModpack] = useState<Modpack | null>(null);
+  const [selectedModpackDetails, setSelectedModpackDetails] = useState<Modpack | null>(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
   const [isRefreshAnimating, setIsRefreshAnimating] = useState(false);
@@ -30,19 +33,25 @@ const ModpacksPage: React.FC = () => {
     ['installing', 'updating', 'launching'].includes(state.status)
   );
 
-  const filteredModpacks = launcherData?.modpacks.filter(modpack =>
+  const filteredModpacks = modpacksData?.modpacks.filter(modpack =>
     modpack.name.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
 
   const handleModpackSelect = (modpack: Modpack) => {
     setIsTransitioning(true);
-    
-    // First phase: fade out current view
-    withDelay(() => {
+    setDetailsLoading(true);
+    withDelay(async () => {
       setSelectedModpack(modpack);
       setShowingDetails(true);
-      
-      // Second phase: fade in details view
+      try {
+        const launcherService = (await import('../../services/launcherService')).default.getInstance();
+        const details = await launcherService.fetchModpackDetails(modpack.id);
+        setSelectedModpackDetails(details);
+      } catch (err) {
+        setSelectedModpackDetails(null);
+      } finally {
+        setDetailsLoading(false);
+      }
       withDelay(() => {
         setIsTransitioning(false);
       }, 100);
@@ -62,9 +71,11 @@ const ModpacksPage: React.FC = () => {
   const handleRefresh = async () => {
     setIsRefreshAnimating(true);
     try {
+      // Limpia caché completa antes de refrescar
+      const launcherService = (await import('../../services/launcherService')).default.getInstance();
+      launcherService.clearCache();
       await refreshData();
     } finally {
-      // Make animation faster - 300ms instead of 600ms
       withDelay(() => {
         setIsRefreshAnimating(false);
       }, 300);
@@ -72,7 +83,7 @@ const ModpacksPage: React.FC = () => {
   };
 
   // Show overlay loader when loading initial data
-  const showLoadingOverlay = isLoading && !launcherData;
+  const showLoadingOverlay = isLoading && !modpacksData;
 
   if (error) {
     return (
@@ -98,10 +109,8 @@ const ModpacksPage: React.FC = () => {
       installed: false, 
       downloading: false, 
       progress: { percentage: 0 }, 
-      status: 'not_installed' as const,
-      features: []
+      status: 'not_installed' as const
     };
-
     return (
       <div className={`h-full w-full ${
         getAnimationClass('transition-opacity duration-300 ease-out', '')
@@ -112,11 +121,17 @@ const ModpacksPage: React.FC = () => {
       }`}
       style={getAnimationStyle({})}
       >
-        <ModpackDetailsRefactored 
-          modpack={selectedModpack} 
-          state={modpackState} 
-          onBack={handleBackToList} 
-        />
+        {detailsLoading ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-white text-lg">{t('modpacks.loadingDetails')}</div>
+          </div>
+        ) : (
+          <ModpackDetailsRefactored 
+            modpack={selectedModpackDetails || selectedModpack} 
+            state={modpackState} 
+            onBack={handleBackToList} 
+          />
+        )}
       </div>
     );
   }

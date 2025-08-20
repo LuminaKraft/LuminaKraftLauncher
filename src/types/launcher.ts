@@ -1,21 +1,17 @@
-export interface LauncherData {
-  launcherVersion: string;
-  launcherDownloadUrls: {
-    windows: string;
-    macos: string;
-    linux: string;
-  };
+export interface ModpacksData {
   modpacks: Modpack[];
 }
 
 export interface Modpack {
   id: string;
   name: string;
-  description: string;
+  description?: string;
+  shortDescription?: string; // From translations in lightweight response
   version: string;
   minecraftVersion: string;
   modloader: string;
   logo: string;
+  backgroundImage: string; // First image from images array
   banner?: string;
   images?: string[]; // Array of screenshot URLs
   gamemode?: string;
@@ -28,7 +24,6 @@ export interface Modpack {
   players?: number;
   collaborators?: Collaborator[];
   urlModpackZip?: string;
-  urlIcono?: string;
   primaryColor?: string; // Hex color for gradient backgrounds
 }
 
@@ -100,7 +95,7 @@ export interface MicrosoftAccount {
 export interface UserSettings {
   username: string;
   allocatedRam: number; // in GB
-  launcherDataUrl: string;
+  // launcherDataUrl removed, endpoint is now hardcoded
   language: string; // 'es' | 'en'
   authMethod: 'offline' | 'microsoft';
   microsoftAccount?: MicrosoftAccount;

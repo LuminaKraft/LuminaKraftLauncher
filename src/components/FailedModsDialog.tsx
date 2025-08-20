@@ -3,7 +3,7 @@ import { X, ExternalLink, AlertTriangle } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
-import LauncherService from '../services/launcherService';
+
 
 interface FailedMod {
   projectId: number;
@@ -45,14 +45,10 @@ export const FailedModsDialog: React.FC<FailedModsDialogProps> = ({
   const fetchModInfos = async () => {
     setLoading(true);
     setError('');
-    
     try {
       const modIds = failedMods.map(mod => mod.projectId);
-      
-      // Use LauncherService to make authenticated requests
-      const launcherService = LauncherService.getInstance();
-      const baseUrl = launcherService.getUserSettings().launcherDataUrl.replace('/v1/launcher_data.json', '');
-      
+      // Use hardcoded API endpoint
+      const baseUrl = 'https://api.luminakraft.com';
       const response = await axios.post(`${baseUrl}/v1/curseforge/mods`, {
         modIds: modIds,
         filterPcOnly: true
@@ -62,7 +58,6 @@ export const FailedModsDialog: React.FC<FailedModsDialogProps> = ({
           'Accept': 'application/json'
         }
       });
-
       setModInfos(response.data.data || []);
     } catch (err) {
       console.error('Error fetching mod information:', err);

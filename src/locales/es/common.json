@@ -174,7 +174,6 @@
     "installing": "Instalando...",
     "installingModpackFiles": "Instalando archivos del modpack...",
     "downloadingMinecraftFile": "Descargando {{fileName}}",
-    "downloadingMinecraft": "Descargando archivos de Minecraft...",
     "installingComponent": "Instalando: {{component}}",
     "processingAdditionalFiles": "Procesando archivos adicionales...",
     "additionalFilesCompleted": "Archivos adicionales procesados correctamente",

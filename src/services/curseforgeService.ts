@@ -1,15 +1,13 @@
 import axios from 'axios';
 import { CurseForgeModInfo, ProxyResponse, CurseForgeFileInfo } from '../types/curseforge';
 
-// Importamos LauncherService como default y luego lo referenciamos
-import LauncherService from './launcherService';
 
 export class CurseForgeService {
   private static instance: CurseForgeService;
-  private readonly launcherService: LauncherService;
+
 
   private constructor() {
-    this.launcherService = LauncherService.getInstance();
+    // No need to instantiate launcherService, endpoint is hardcoded
     // No need to setup axios defaults here since LauncherService already handles it
     // this.setupAxiosDefaults();
   }
@@ -23,9 +21,9 @@ export class CurseForgeService {
 
 
   private getProxyBaseUrl(): string {
-    const settings = this.launcherService.getUserSettings();
-    const baseUrl = settings.launcherDataUrl.replace('/v1/launcher_data.json', '');
-    return `${baseUrl}/v1/curseforge`;
+  // Use hardcoded API endpoint
+  const baseUrl = 'https://api.luminakraft.com';
+  return `${baseUrl}/v1/curseforge`;
   }
 
   /**

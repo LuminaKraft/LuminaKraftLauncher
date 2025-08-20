@@ -1,25 +1,32 @@
 import { createContext, useContext, useReducer, useEffect, ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { 
-  LauncherData, 
+  ModpacksData, 
   ModpackState, 
   UserSettings, 
-  Translations, 
-  ModpackFeatures,
   ProgressInfo,
   FailedMod,
   ModpackStatus,
   MicrosoftAccount
 } from '../types/launcher';
+
+// Define LauncherState here since it is missing from types
+interface LauncherState {
+  modpacksData: ModpacksData | null;
+  modpackStates: { [id: string]: ModpackState };
+  userSettings: UserSettings;
+  currentLanguage: string;
+  isLoading: boolean;
+  error: string | null;
+}
 import LauncherService from '../services/launcherService';
 import { FailedModsDialog } from '../components/FailedModsDialog';
 import AuthService from '../services/authService';
 
 interface LauncherContextType {
-  launcherData: LauncherData | null;
+  modpacksData: ModpacksData | null;
   modpackStates: { [id: string]: ModpackState };
   userSettings: UserSettings;
-  translations: Translations | null;
   currentLanguage: string;
   isLoading: boolean;
   error: string | null;
@@ -33,48 +40,33 @@ interface LauncherContextType {
   launchModpack: (_id: string) => Promise<void>;
   repairModpack: (_id: string) => Promise<void>;
   stopInstance: (_id: string) => Promise<void>;
-  getModpackTranslations: (_id: string) => any;
-  getModpackFeatures: (_id: string) => Promise<ModpackFeatures | null>;
   changeLanguage: (_language: string) => Promise<void>;
   removeModpack: (_id: string) => Promise<void>;
 }
 
-type LauncherAction =
+type LauncherAction = 
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }
-  | { type: 'SET_LAUNCHER_DATA'; payload: LauncherData }
-  | { type: 'SET_TRANSLATIONS'; payload: Translations | null }
+  | { type: 'SET_MODPACKS_DATA'; payload: ModpacksData }
   | { type: 'SET_LANGUAGE'; payload: string }
   | { type: 'SET_USER_SETTINGS'; payload: UserSettings }
   | { type: 'SET_MODPACK_STATE'; payload: { id: string; state: ModpackState } }
   | { type: 'UPDATE_MODPACK_PROGRESS'; payload: { id: string; progress: ProgressInfo } };
 
-interface LauncherState {
-  launcherData: LauncherData | null;
-  modpackStates: { [id: string]: ModpackState };
-  userSettings: UserSettings;
-  translations: Translations | null;
-  currentLanguage: string;
-  isLoading: boolean;
-  error: string | null;
-}
-
 const defaultSettings: UserSettings = {
   username: 'Player',
   allocatedRam: 4096,
-  launcherDataUrl: 'https://api.luminakraft.com/v1/launcher_data.json',
-  language: 'es',
+  language: 'en',
   authMethod: 'offline',
   enablePrereleases: false,
   enableAnimations: true,
 };
 
 const initialState: LauncherState = {
-  launcherData: null,
+  modpacksData: null,
   modpackStates: {},
   userSettings: defaultSettings,
-  translations: null,
-  currentLanguage: 'es',
+  currentLanguage: 'en',
   isLoading: false,
   error: null,
 };
@@ -85,10 +77,8 @@ function launcherReducer(state: LauncherState, action: LauncherAction): Launcher
       return { ...state, isLoading: action.payload };
     case 'SET_ERROR':
       return { ...state, error: action.payload, isLoading: false };
-    case 'SET_LAUNCHER_DATA':
-      return { ...state, launcherData: action.payload, isLoading: false };
-    case 'SET_TRANSLATIONS':
-      return { ...state, translations: action.payload };
+    case 'SET_MODPACKS_DATA':
+      return { ...state, modpacksData: action.payload, isLoading: false };
     case 'SET_LANGUAGE':
       return { ...state, currentLanguage: action.payload };
     case 'SET_USER_SETTINGS':
@@ -256,12 +246,12 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
 
   // Load modpack states when data is loaded
   useEffect(() => {
-    if (state.launcherData) {
+    if (state.modpacksData) {
       loadModpackStates().catch(error => {
         console.error('Error loading modpack states:', error);
       });
     }
-  }, [state.launcherData]);
+  }, [state.modpacksData]);
 
   // ---------------------------------------------------------------------------
   // Automatic Microsoft token refresh
@@ -361,19 +351,12 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'SET_ERROR', payload: null });
 
     try {
-      // Load launcher data and translations in parallel
-      const currentLang = launcherService.getUserSettings().language;
-      const [launcherData, translations] = await Promise.all([
-        launcherService.fetchLauncherData(),
-        launcherService.getTranslations(currentLang)
-      ]);
-
-      dispatch({ type: 'SET_LAUNCHER_DATA', payload: launcherData });
-      dispatch({ type: 'SET_TRANSLATIONS', payload: translations });
+      // Load modpacks data
+      const modpacksData = await launcherService.fetchModpacksData();
+      dispatch({ type: 'SET_MODPACKS_DATA', payload: modpacksData });
       dispatch({ type: 'SET_LOADING', payload: false });
     } catch (error) {
-      console.error('Error loading launcher data:', error);
-      
+      console.error('Error loading modpacks data:', error);
       // Retry logic for startup (max 2 retries)
       if (retryCount < 2) {
         console.log(`Retrying data load... (attempt ${retryCount + 1}/2)`);
@@ -382,10 +365,8 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
         }, 2000); // Wait 2 seconds before retry
         return;
       }
-      
-      dispatch({ type: 'SET_ERROR', payload: 'Error loading launcher data' });
+      dispatch({ type: 'SET_ERROR', payload: 'Error loading modpacks data' });
     } finally {
-      // Only set loading to false on final failure (after all retries)
       if (retryCount >= 2) {
         dispatch({ type: 'SET_LOADING', payload: false });
       }
@@ -393,28 +374,16 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
   };
 
   const loadModpackStates = async () => {
-    if (!state.launcherData) return;
+    if (!state.modpacksData) return;
 
-    const currentLang = launcherService.getUserSettings().language;
-    
-    for (const modpack of state.launcherData.modpacks) {
+    for (const modpack of state.modpacksData.modpacks) {
       try {
         const status = await launcherService.getModpackStatus(modpack.id);
-        
-        // Load translations and modpack features
-        const [translations, features] = await Promise.all([
-          getModpackTranslations(modpack.id),
-          launcherService.getModpackFeatures(modpack.id, currentLang)
-        ]);
-
         dispatch({
           type: 'SET_MODPACK_STATE',
           payload: {
             id: modpack.id,
-            state: createModpackState(status, {
-              translations: translations || undefined,
-              features: features?.features || []
-            }),
+            state: createModpackState(status),
           },
         });
       } catch (error) {
@@ -438,53 +407,30 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
 
   const changeLanguage = async (language: string) => {
     try {
-      // Change language in react-i18next
       await i18n.changeLanguage(language);
-      
-      // Update local state
       dispatch({ type: 'SET_LANGUAGE', payload: language });
       updateUserSettings({ language });
       
       // Clear cache completely to force reload of all data
       launcherService.clearCache();
-      
-      // Activate loading state while reloading data
       dispatch({ type: 'SET_LOADING', payload: true });
       dispatch({ type: 'SET_ERROR', payload: null });
-      
       try {
-        // Reload launcher data and translations from server
-        const [launcherData, translations] = await Promise.all([
-          launcherService.fetchLauncherData(),
-          launcherService.getTranslations(language)
-        ]);
-
-        dispatch({ type: 'SET_LAUNCHER_DATA', payload: launcherData });
-        dispatch({ type: 'SET_TRANSLATIONS', payload: translations });
-        
-        // Reload states and features of all modpacks in the new language
-        if (launcherData) {
-          for (const modpack of launcherData.modpacks) {
+        const modpacksData = await launcherService.fetchModpacksData();
+        dispatch({ type: 'SET_MODPACKS_DATA', payload: modpacksData });
+        if (modpacksData) {
+          for (const modpack of modpacksData.modpacks) {
             try {
-              const [status, modpackTranslations, features] = await Promise.all([
-                launcherService.getModpackStatus(modpack.id),
-                getModpackTranslations(modpack.id),
-                launcherService.getModpackFeatures(modpack.id, language)
-              ]);
-
+              const status = await launcherService.getModpackStatus(modpack.id);
               dispatch({
                 type: 'SET_MODPACK_STATE',
                 payload: {
                   id: modpack.id,
-                  state: createModpackState(status, {
-                    translations: modpackTranslations || undefined,
-                    features: features?.features || []
-                  }),
+                  state: createModpackState(status),
                 },
               });
             } catch (modpackError) {
               console.warn(`Error loading data for modpack ${modpack.id}:`, modpackError);
-              // In case of error, maintain a basic state
               dispatch({
                 type: 'SET_MODPACK_STATE',
                 payload: {
@@ -508,19 +454,12 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const getModpackTranslations = (modpackId: string) => {
-    return state.translations?.modpacks[modpackId] || null;
-  };
-
-  const getModpackFeatures = async (modpackId: string) => {
-    return launcherService.getModpackFeatures(modpackId, state.currentLanguage);
-  };
 
   const performModpackAction = async (
     action: 'install' | 'update' | 'launch' | 'repair' | 'stop',
     modpackId: string
   ) => {
-    const modpack = state.launcherData?.modpacks.find(m => m.id === modpackId);
+  const modpack = state.modpacksData?.modpacks.find((m: { id: string }) => m.id === modpackId);
     if (!modpack) {
       throw new Error('Modpack no encontrado');
     }
@@ -882,14 +821,13 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
 
   // Check if there are any active operations
   const hasActiveOperations = Object.values(state.modpackStates).some(
-    modpackState => ['installing', 'updating', 'launching', 'stopping'].includes(modpackState.status)
+    (modpackState: ModpackState) => ['installing', 'updating', 'launching', 'stopping'].includes(modpackState.status)
   );
 
   const contextValue: LauncherContextType = {
-    launcherData: state.launcherData,
+    modpacksData: state.modpacksData,
     modpackStates: state.modpackStates,
     userSettings: state.userSettings,
-    translations: state.translations,
     currentLanguage: state.currentLanguage,
     isLoading: state.isLoading,
     error: state.error,
@@ -902,9 +840,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     updateModpack,
     launchModpack,
     repairModpack,
-          stopInstance: (id: string) => performModpackAction('stop', id), // Added stopInstance
-    getModpackTranslations,
-    getModpackFeatures,
+    stopInstance: (id: string) => performModpackAction('stop', id), // Added stopInstance
     changeLanguage,
     removeModpack,
   };
