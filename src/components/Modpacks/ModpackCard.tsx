@@ -19,7 +19,7 @@ interface ModpackCardProps {
 const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, index = 0 }) => {
   const { t } = useTranslation();
   const { getAnimationClass, getAnimationStyle } = useAnimation();
-  const { installModpack, updateModpack, launchModpack, repairModpack, removeModpack, stopInstance, translations } = useLauncher();
+  const { installModpack, updateModpack, launchModpack, repairModpack, removeModpack, stopInstance } = useLauncher();
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
 
@@ -27,27 +27,27 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
     if (modpack.isNew) {
       return (
         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-600/40 text-green-300 border border-green-600/60">
-          {translations?.ui?.status?.new || 'Nuevo'}
+          {'Nuevo'}
         </span>
       );
     }
     if (modpack.isActive) {
       return (
         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-600/40 text-green-300 border border-green-600/60">
-          {translations?.ui?.status?.active || 'Activo'}
+          {'Activo'}
         </span>
       );
     }
     if (modpack.isComingSoon) {
       return (
         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-600/40 text-blue-300 border border-blue-600/60">
-          {translations?.ui?.status?.coming_soon || 'Próximamente'}
+          {'Próximamente'}
         </span>
       );
     }
     return (
       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-600/40 text-gray-300 border border-gray-600/60">
-        {translations?.ui?.status?.inactive || 'Inactivo'}
+        {'Inactivo'}
       </span>
     );
   };
@@ -196,9 +196,8 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
     ? fakeLaunchProgress
     : state.progress?.percentage ?? 0;
 
-  const modpackTranslations = state.translations;
-  const displayName = modpackTranslations?.name || modpack.name;
-  const displayDescription = modpackTranslations?.shortDescription || modpackTranslations?.description || t('modpacks.description');
+  const displayName = modpack.name;
+  const displayDescription = modpack.shortDescription || modpack.description || t('modpacks.description');
 
   const getStepMessage = (step?: string): string => {
     if (!step) return '';

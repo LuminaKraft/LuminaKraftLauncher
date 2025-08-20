@@ -5,10 +5,6 @@ import type {
   InstanceMetadata, 
   UserSettings, 
   ModpackStatus,
-  Translations,
-  ModpackFeatures,
-  AvailableLanguages,
-  Modpack,
   ProgressInfo
 } from '../types/launcher';
 
@@ -34,11 +30,11 @@ async function safeInvoke<T>(command: string, payload?: any): Promise<T> {
 class LauncherService {
   private static instance: LauncherService;
   private launcherData: LauncherData | null = null;
-  private uiTranslations: any = null; // Store UI translations from API
+  // uiTranslations removed (deprecated)
   private userSettings: UserSettings;
   private cache: Map<string, CacheEntry> = new Map();
   private readonly cacheTTL = 5 * 60 * 1000; // 5 minutes for main modpacks data
-  private readonly translationsTTL = 60 * 60 * 1000; // 1 hour for translations
+  // translationsTTL removed (deprecated)
   private readonly requestTimeout = 30000; // 30 seconds
 
   constructor() {
@@ -205,8 +201,7 @@ class LauncherService {
         }
       });
 
-      this.launcherData = { modpacks: response.data.modpacks };
-      this.uiTranslations = response.data.ui; // Store UI translations
+  this.launcherData = { modpacks: response.data.modpacks };
 
       // Save to cache
       this.cache.set(cacheKey, {
@@ -240,127 +235,6 @@ class LauncherService {
       const fallback = this.getFallbackData();
       this.launcherData = fallback;
       return fallback;
-    }
-  }
-
-  async getAvailableLanguages(): Promise<AvailableLanguages> {
-    try {
-      const cacheKey = 'available_languages';
-      const cached = this.cache.get(cacheKey);
-      const persisted = this.readPersistentCache<AvailableLanguages>(cacheKey);
-      
-      if (cached && Date.now() - cached.timestamp < this.translationsTTL) {
-        return cached.data;
-      }
-      if (persisted && Date.now() - persisted.timestamp < this.translationsTTL) {
-        this.cache.set(cacheKey, persisted);
-        return persisted.data;
-      }
-
-      const baseUrl = this.getBaseUrl();
-      const response = await axios.get<AvailableLanguages>(`${baseUrl}/v1/translations`);
-      
-      this.cache.set(cacheKey, {
-        data: response.data,
-        timestamp: Date.now()
-      });
-      this.writePersistentCache(cacheKey, response.data);
-
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching available languages:', error);
-      return {
-        availableLanguages: ['es', 'en'],
-        defaultLanguage: 'es'
-      };
-    }
-  }
-
-  async getTranslations(language?: string): Promise<Translations | null> {
-    // UI translations are now included in the modpacks response
-    // Return them from memory if available, otherwise fallback to individual API call
-    if (this.uiTranslations) {
-      // Create a minimal translations object with UI translations
-      return {
-        modpacks: {}, // Modpack translations are embedded in modpack objects
-        features: {}, // Features need individual API calls
-        ui: this.uiTranslations
-      } as Translations;
-    }
-    
-    // Fallback to individual API call if not available
-    try {
-      const lang = language || this.userSettings.language;
-      const baseUrl = this.getBaseUrl();
-      const response = await axios.get<Translations>(`${baseUrl}/v1/translations/${lang}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching translations:', error);
-      return null;
-    }
-  }
-
-  async getModpackFeatures(modpackId: string, language?: string): Promise<ModpackFeatures | null> {
-    try {
-      const lang = language || this.userSettings.language;
-      const cacheKey = `features_${modpackId}_${lang}`;
-      const cached = this.cache.get(cacheKey);
-      const persisted = this.readPersistentCache<ModpackFeatures>(cacheKey);
-      
-      if (cached && Date.now() - cached.timestamp < this.translationsTTL) {
-        return cached.data;
-      }
-      if (persisted && Date.now() - persisted.timestamp < this.translationsTTL) {
-        this.cache.set(cacheKey, persisted);
-        return persisted.data;
-      }
-
-      const baseUrl = this.getBaseUrl();
-      const response = await axios.get<ModpackFeatures>(`${baseUrl}/v1/modpacks/${modpackId}/features/${lang}`);
-      
-      this.cache.set(cacheKey, {
-        data: response.data,
-        timestamp: Date.now()
-      });
-      this.writePersistentCache(cacheKey, response.data);
-
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching modpack features:', error);
-      return null;
-    }
-  }
-
-  async getModpackWithTranslations(modpackId: string): Promise<{ modpack: Modpack; translations: any; features: any } | null> {
-    try {
-      if (!this.launcherData) {
-        await this.fetchLauncherData();
-      }
-
-      const modpack = this.launcherData?.modpacks.find(m => m.id === modpackId);
-      if (!modpack) {
-        return null;
-      }
-
-      // Get full modpack details with individual API call
-      const baseUrl = this.getBaseUrl();
-      const [modpackDetails, features] = await Promise.all([
-        axios.get(`${baseUrl}/v1/modpacks/${modpackId}`),
-        this.getModpackFeatures(modpackId)
-      ]);
-
-      return {
-        modpack: modpackDetails.data,
-        translations: {
-          name: modpack.name,
-          shortDescription: modpack.shortDescription || '',
-          description: modpack.description || ''
-        },
-        features: features?.features || []
-      };
-    } catch (error) {
-      console.error('Error getting modpack with translations:', error);
-      return null;
     }
   }
 

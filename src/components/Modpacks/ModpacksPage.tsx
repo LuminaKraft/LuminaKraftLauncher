@@ -5,6 +5,7 @@ import { useLauncher } from '../../contexts/LauncherContext';
 import { useAnimation } from '../../contexts/AnimationContext';
 import ModpackCard from './ModpackCard';
 import ModpackDetailsRefactored from './ModpackDetailsRefactored';
+
 import type { Modpack } from '../../types/launcher';
 
 const ModpacksPage: React.FC = () => {
@@ -15,12 +16,12 @@ const ModpacksPage: React.FC = () => {
     modpackStates, 
     isLoading, 
     error, 
-    refreshData 
+    refreshData, 
+    currentLanguage
   } = useLauncher();
   
   const [selectedModpack, setSelectedModpack] = useState<Modpack | null>(null);
-  const [selectedModpackDetails, setSelectedModpackDetails] = useState<any | null>(null);
-  const [selectedModpackFeatures, setSelectedModpackFeatures] = useState<any[] | null>(null);
+  const [selectedModpackDetails, setSelectedModpackDetails] = useState<Modpack | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -40,28 +41,21 @@ const ModpacksPage: React.FC = () => {
   const handleModpackSelect = (modpack: Modpack) => {
     setIsTransitioning(true);
     setDetailsLoading(true);
-    // First phase: fade out current view
     withDelay(async () => {
       setSelectedModpack(modpack);
       setShowingDetails(true);
       try {
         const launcherService = (await import('../../services/launcherService')).default.getInstance();
-        // Use launcherService to fetch details and features (axios attaches auth headers)
         const baseUrl = launcherService.getBaseUrl();
-        const lang = launcherService.getUserSettings().language;
-        // Fetch details
-        const detailsResp = await (await import('axios')).default.get(`${baseUrl}/v1/modpacks/${modpack.id}`);
+        // Fetch full modpack details (includes features), with lang param
+        const lang = currentLanguage || 'en';
+        const detailsResp = await (await import('axios')).default.get(`${baseUrl}/v1/modpacks/${modpack.id}?lang=${lang}`);
         setSelectedModpackDetails(detailsResp.data);
-        // Fetch features
-        const featuresResp = await launcherService.getModpackFeatures(modpack.id, lang);
-        setSelectedModpackFeatures(featuresResp?.features || []);
       } catch (err) {
         setSelectedModpackDetails(null);
-        setSelectedModpackFeatures(null);
       } finally {
         setDetailsLoading(false);
       }
-      // Second phase: fade in details view
       withDelay(() => {
         setIsTransitioning(false);
       }, 100);
@@ -117,8 +111,7 @@ const ModpacksPage: React.FC = () => {
       installed: false, 
       downloading: false, 
       progress: { percentage: 0 }, 
-      status: 'not_installed' as const,
-      features: []
+      status: 'not_installed' as const
     };
     return (
       <div className={`h-full w-full ${
@@ -138,7 +131,6 @@ const ModpacksPage: React.FC = () => {
           <ModpackDetailsRefactored 
             modpack={selectedModpackDetails || selectedModpack} 
             state={modpackState} 
-            features={selectedModpackFeatures}
             onBack={handleBackToList} 
           />
         )}

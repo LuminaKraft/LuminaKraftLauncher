@@ -29,7 +29,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
     const saved = typeof window !== 'undefined' ? localStorage.getItem('LK_lastApiCheckAt') : null;
     return saved ? Number(saved) : null;
   });
-  const [apiInfo, setApiInfo] = useState<any>(null);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   // Java runtime handled internally by Lyceris; no user-facing settings.
@@ -42,11 +41,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
     const isDifferent = JSON.stringify(formData) !== JSON.stringify(userSettings);
     setHasChanges(isDifferent);
   }, [formData, userSettings]);
-
-  useEffect(() => {
-    fetchAPIInfo();
-    fetchAvailableLanguages();
-  }, []);
 
   const checkAPIStatus = async () => {
     setApiStatus('checking');
@@ -69,25 +63,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
         localStorage.setItem('LK_lastApiStatus', status);
         localStorage.setItem('LK_lastApiCheckAt', String(now));
       }
-    }
-  };
-
-  const fetchAPIInfo = async () => {
-    try {
-      const info = await LauncherService.getInstance().getAPIInfo();
-      setApiInfo(info);
-    } catch (_error) {
-      console.error('Error fetching API info:', _error);
-    }
-  };
-
-  const fetchAvailableLanguages = async () => {
-    try {
-      const languageData = await LauncherService.getInstance().getAvailableLanguages();
-      // TODO: Implement dynamic language loading
-      console.log('Available languages:', languageData.availableLanguages);
-    } catch (_error) {
-      console.error('Error fetching available languages:', _error);
     }
   };
 
@@ -136,7 +111,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
   const handleTestConnection = async () => {
     setIsTestingConnection(true);
     await checkAPIStatus();
-    await fetchAPIInfo();
     setIsTestingConnection(false);
   };
 
@@ -444,7 +418,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
                       {getStatusText()}
                     </p>
                     <p className="text-dark-400 text-sm">
-                      {(apiInfo?.name || 'LuminaKraft Launcher API')}{apiInfo?.version ? `/${apiInfo.version}` : ''}
+                      {('LuminaKraft Launcher API')}
                     </p>
                   </div>
                 </div>
