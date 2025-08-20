@@ -1,4 +1,4 @@
-export interface LauncherData {
+export interface ModpacksData {
   modpacks: Modpack[];
 }
 
@@ -95,7 +95,7 @@ export interface MicrosoftAccount {
 export interface UserSettings {
   username: string;
   allocatedRam: number; // in GB
-  launcherDataUrl: string;
+  // launcherDataUrl removed, endpoint is now hardcoded
   language: string; // 'es' | 'en'
   authMethod: 'offline' | 'microsoft';
   microsoftAccount?: MicrosoftAccount;

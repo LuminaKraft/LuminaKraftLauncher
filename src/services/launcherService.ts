@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import axios from 'axios';
 import type { 
-  LauncherData, 
+  ModpacksData, 
   InstanceMetadata, 
   UserSettings, 
   ModpackStatus,
@@ -29,9 +29,10 @@ async function safeInvoke<T>(command: string, payload?: any): Promise<T> {
 
 class LauncherService {
   private static instance: LauncherService;
-  private launcherData: LauncherData | null = null;
+  private modpacksData: ModpacksData | null = null;
   // uiTranslations removed (deprecated)
   private userSettings: UserSettings;
+  private readonly API_BASE_URL = 'https://api.luminakraft.com';
   private cache: Map<string, CacheEntry> = new Map();
   private readonly cacheTTL = 15 * 60 * 1000; // 15 minutes for all modpack data
   // translationsTTL removed (deprecated)
@@ -40,6 +41,19 @@ class LauncherService {
   constructor() {
     this.userSettings = this.loadUserSettings();
     this.setupAxiosDefaults();
+    // Remove legacy launcherDataUrl from localStorage if present
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const saved = localStorage.getItem('LuminaKraftLauncher_settings');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if ('launcherDataUrl' in parsed) {
+            delete parsed.launcherDataUrl; // removed, endpoint is hardcoded
+            localStorage.setItem('LuminaKraftLauncher_settings', JSON.stringify(parsed));
+          }
+        } catch {}
+      }
+    }
   }
 
   static getInstance(): LauncherService {
@@ -57,10 +71,10 @@ class LauncherService {
       try {
         const msToken = this.userSettings?.microsoftAccount?.accessToken;
         const offlineToken = this.userSettings?.clientToken;
-        const baseUrl = this.getBaseUrl();
-        const url = config.url || '';
-        // Attach auth header only for our API base URL
-        if (url.startsWith(baseUrl) || url.startsWith(this.userSettings.launcherDataUrl)) {
+  const baseUrl = this.API_BASE_URL;
+  const url = config.url || '';
+  // Attach auth header only for our API base URL
+  if (url.startsWith(baseUrl)) {
           config.headers = config.headers || {};
           if (msToken) {
             (config.headers as any)['Authorization'] = `Bearer ${msToken}`;
@@ -104,7 +118,6 @@ class LauncherService {
     const defaultSettings: UserSettings = {
       username: 'Player',
       allocatedRam: 4,
-      launcherDataUrl: 'https://api.luminakraft.com/v1/modpacks?lang=es',
       language: this.detectDefaultLanguage(),
       authMethod: 'offline',
       clientToken: undefined
@@ -157,10 +170,10 @@ class LauncherService {
   }
 
   public getBaseUrl(): string {
-    return this.userSettings.launcherDataUrl.replace(/\/v1\/modpacks.*$/, '');
+    return this.API_BASE_URL;
   }
 
-  private getFallbackData(): LauncherData {
+  private getFallbackData(): ModpacksData {
     return {
       modpacks: []
     };
@@ -170,44 +183,42 @@ class LauncherService {
    * Fetches the lightweight modpacks data for browsing (new API: /v1/modpacks?lang=)
    * Caches under 'modpacks_data' for clarity.
    */
-  async fetchLauncherData(): Promise<LauncherData> {
+  async fetchModpacksData(): Promise<ModpacksData> {
     try {
       const lang = this.userSettings.language || 'en';
       const cacheKey = `modpacks_data_${lang}`;
       const cached = this.cache.get(cacheKey);
-      const persisted = this.readPersistentCache<LauncherData>(cacheKey);
+      const persisted = this.readPersistentCache<ModpacksData>(cacheKey);
       if (cached && Date.now() - cached.timestamp < this.cacheTTL) {
-        this.launcherData = cached.data;
+        this.modpacksData = cached.data;
         return cached.data;
       }
       if (persisted && Date.now() - persisted.timestamp < this.cacheTTL) {
-        this.launcherData = persisted.data;
+        this.modpacksData = persisted.data;
         this.cache.set(cacheKey, { data: persisted.data, timestamp: persisted.timestamp });
         return persisted.data;
       }
       console.log('Fetching modpacks data from API...');
-      const urlWithLang = this.userSettings.launcherDataUrl.includes('?') 
-        ? this.userSettings.launcherDataUrl.replace(/[?&]lang=[^&]*/, `?lang=${lang}`)
-        : `${this.userSettings.launcherDataUrl}?lang=${lang}`;
+      const urlWithLang = `${this.API_BASE_URL}/v1/modpacks?lang=${lang}`;
       const response = await axios.get<{ count: number; modpacks: any[]; ui: any }>(urlWithLang, {
         headers: {
           'Accept': 'application/json',
           'Cache-Control': 'no-cache'
         }
       });
-      this.launcherData = { modpacks: response.data.modpacks };
+      this.modpacksData = { modpacks: response.data.modpacks };
       this.cache.set(cacheKey, {
-        data: this.launcherData,
+        data: this.modpacksData,
         timestamp: Date.now()
       });
-      this.writePersistentCache(cacheKey, this.launcherData);
-      if (this.launcherData.modpacks && this.launcherData.modpacks.length > 0) {
-        this.cacheModpackImages(this.launcherData.modpacks).catch((error: any) => {
+      this.writePersistentCache(cacheKey, this.modpacksData);
+      if (this.modpacksData.modpacks && this.modpacksData.modpacks.length > 0) {
+        this.cacheModpackImages(this.modpacksData.modpacks).catch((error: any) => {
           console.warn('Failed to cache modpack images:', error);
         });
       }
       console.log('Modpacks data loaded successfully');
-      return this.launcherData;
+      return this.modpacksData;
     } catch (error) {
       console.error('Error fetching modpacks data:', error);
       const lang = this.userSettings.language || 'en';
@@ -215,11 +226,11 @@ class LauncherService {
       const cached2 = this.cache.get(cacheKey);
       if (cached2) {
         console.warn('Using cached modpacks data as fallback');
-        this.launcherData = cached2.data;
+        this.modpacksData = cached2.data;
         return cached2.data;
       }
       const fallback = this.getFallbackData();
-      this.launcherData = fallback;
+      this.modpacksData = fallback;
       return fallback;
     }
   }
@@ -259,8 +270,8 @@ class LauncherService {
     }
   }
 
-  getLauncherData(): LauncherData | null {
-    return this.launcherData;
+  getModpacksData(): ModpacksData | null {
+    return this.modpacksData;
   }
 
   async getModpackStatus(modpackId: string): Promise<ModpackStatus> {
@@ -275,7 +286,7 @@ class LauncherService {
         return 'not_installed';
       }
 
-      const modpack = this.launcherData?.modpacks.find(m => m.id === modpackId);
+      const modpack = this.modpacksData?.modpacks.find((m: any) => m.id === modpackId);
       if (!modpack) {
         return 'error';
       }
@@ -325,7 +336,7 @@ class LauncherService {
     return {
       username: settings.username,
       allocatedRam: settings.allocatedRam, // Keep camelCase, backend should handle it
-      launcherDataUrl: settings.launcherDataUrl,
+      // launcherDataUrl removed, endpoint is hardcoded
       authMethod: settings.authMethod,
       microsoftAccount: settings.microsoftAccount || null
       // Note: Don't send language to backend as it's frontend-only
@@ -333,7 +344,7 @@ class LauncherService {
   }
 
   async installModpack(modpackId: string, _onProgress?: (_progress: ProgressInfo) => void): Promise<void> {
-    const modpack = this.launcherData?.modpacks.find(m => m.id === modpackId);
+  const modpack = this.modpacksData?.modpacks.find((m: any) => m.id === modpackId);
     if (!modpack) {
       throw new Error('Modpack no encontrado');
     }
@@ -406,7 +417,7 @@ class LauncherService {
   }
 
   async launchModpack(modpackId: string): Promise<void> {
-    const modpack = this.launcherData?.modpacks.find(m => m.id === modpackId);
+    const modpack = this.modpacksData?.modpacks.find(m => m.id === modpackId);
     if (!modpack) {
       throw new Error('Modpack no encontrado');
     }
@@ -556,7 +567,7 @@ class LauncherService {
   }
 
   async installModpackWithFailedTracking(modpackId: string, _onProgress?: (_progress: ProgressInfo) => void): Promise<any[]> {
-    const modpack = this.launcherData?.modpacks.find(m => m.id === modpackId);
+  const modpack = this.modpacksData?.modpacks.find((m: any) => m.id === modpackId);
     if (!modpack) {
       throw new Error('Modpack no encontrado');
     }

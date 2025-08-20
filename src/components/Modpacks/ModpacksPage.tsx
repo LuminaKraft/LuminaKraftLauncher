@@ -12,7 +12,7 @@ const ModpacksPage: React.FC = () => {
   const { t } = useTranslation();
   const { getAnimationClass, getAnimationStyle, withDelay } = useAnimation();
   const { 
-    launcherData, 
+    modpacksData, 
     modpackStates, 
     isLoading, 
     error, 
@@ -33,7 +33,7 @@ const ModpacksPage: React.FC = () => {
     ['installing', 'updating', 'launching'].includes(state.status)
   );
 
-  const filteredModpacks = launcherData?.modpacks.filter(modpack =>
+  const filteredModpacks = modpacksData?.modpacks.filter(modpack =>
     modpack.name.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
 
@@ -83,7 +83,7 @@ const ModpacksPage: React.FC = () => {
   };
 
   // Show overlay loader when loading initial data
-  const showLoadingOverlay = isLoading && !launcherData;
+  const showLoadingOverlay = isLoading && !modpacksData;
 
   if (error) {
     return (
