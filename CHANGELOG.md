@@ -5,6 +5,50 @@ All notable changes to the LuminaKraft Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.9-alpha.4] - 2025-08-20
+
+### ✨ Features
+- Add persistent cache for modpack details, unified cache clearing, and 15min TTL ([caddf0a])
+- Fetch modpack details/features with authentication and optimize API usage ([23f0d5c])
+- Enhance error handling and messaging for CurseForge API ([070975c])
+- Enhance progress messaging and translations ([a3d60c1])
+- Add shake animations and unsaved changes indication ([971ee17])
+- Enhance authentication flow and loading indicators ([99d2455])
+- Enhance RAM allocation settings and add range slider ([3383333])
+- Implement API authentication and caching mechanisms ([ca6d15c])
+- Add scripts for managing GitHub tasks ([fb0ea8f])
+- Add dependency checker and update scripts for Tauri development ([4b0ecf7])
+- Enhance display server compatibility with automatic Wayland/X11 fallback ([3812133])
+
+### ♻️ Refactors & Architecture
+- Rename launcherData to modpacksData across components and services ([7914e81])
+- Fetch features and images from modpack details endpoint, remove legacy translation logic ([52c8f40])
+- Update cache keys and logging for modpacks data fetching ([8138538])
+- Update modpack logo handling and API integration ([7f7ea35])
+- Remove unused ModpackCard component and update translation keys ([c52b728])
+- Prevent language changes during active modpack operations ([d671c82])
+- Remove launcherDataUrl usage and hardcode API endpoint for modpack and curseforge services ([c8469b0])
+
+### 🐛 Bug Fixes
+- Fix authentication issues ([b78d3d1])
+- Fix CurseForge API authentication in Rust ([ed60ddf])
+- Fix TypeScript compilation errors ([4b97969])
+- Improve error handling in UI ([d9d6f5c])
+- Update error messages for Tauri context and instance stopping ([210dcb5])
+- Correct command string handling in dependency checker ([23f59ed])
+- Resolve installation issues on Windows by implementing fallback for symlink creation ([b865991])
+
+### 🧹 Cleanup & Maintenance
+- Remove unused fields and debug logging ([aebdd27], [ed60ddf])
+- Clean up tasks.txt by removing outdated entries ([6fef5f8])
+- Remove files and images no longer needed ([edaff75], [aec9b39], [92ec322])
+
+### 🔀 Merges
+- Merge remote-tracking branch 'origin/main' into dev ([19090dd], [aa3e157], [58f7582])
+- Merge pull requests #65, #64, #55, #54, #3, #2 ([37a7f37], [1659fe2], [03f9934], [222757a], [5b6592f], [5528981])
+
+---
+
 ## [0.0.9-alpha.3] - 2025-07-05
 
 ### ⚠️ **Breaking Changes**
