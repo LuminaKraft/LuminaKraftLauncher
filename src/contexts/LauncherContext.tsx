@@ -410,26 +410,17 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
 
   const changeLanguage = async (language: string) => {
     try {
-      // Change language in react-i18next
       await i18n.changeLanguage(language);
-      
-      // Update local state
       dispatch({ type: 'SET_LANGUAGE', payload: language });
       updateUserSettings({ language });
       
       // Clear cache completely to force reload of all data
       launcherService.clearCache();
-      
-      // Activate loading state while reloading data
       dispatch({ type: 'SET_LOADING', payload: true });
       dispatch({ type: 'SET_ERROR', payload: null });
-      
       try {
-        // Reload launcher data (includes UI translations in new API)
-  const launcherData = await launcherService.fetchLauncherData();
-  dispatch({ type: 'SET_LAUNCHER_DATA', payload: launcherData });
-        
-        // Reload states and features of all modpacks in the new language
+        const launcherData = await launcherService.fetchLauncherData();
+        dispatch({ type: 'SET_LAUNCHER_DATA', payload: launcherData });
         if (launcherData) {
           for (const modpack of launcherData.modpacks) {
             try {
@@ -443,7 +434,6 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
               });
             } catch (modpackError) {
               console.warn(`Error loading data for modpack ${modpack.id}:`, modpackError);
-              // In case of error, maintain a basic state
               dispatch({
                 type: 'SET_MODPACK_STATE',
                 payload: {

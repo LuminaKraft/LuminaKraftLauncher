@@ -33,7 +33,7 @@ class LauncherService {
   // uiTranslations removed (deprecated)
   private userSettings: UserSettings;
   private cache: Map<string, CacheEntry> = new Map();
-  private readonly cacheTTL = 5 * 60 * 1000; // 5 minutes for main modpacks data
+  private readonly cacheTTL = 15 * 60 * 1000; // 15 minutes for all modpack data
   // translationsTTL removed (deprecated)
   private readonly requestTimeout = 30000; // 30 seconds
 
@@ -172,69 +172,90 @@ class LauncherService {
    */
   async fetchLauncherData(): Promise<LauncherData> {
     try {
-      const cacheKey = 'modpacks_data';
+      const lang = this.userSettings.language || 'en';
+      const cacheKey = `modpacks_data_${lang}`;
       const cached = this.cache.get(cacheKey);
       const persisted = this.readPersistentCache<LauncherData>(cacheKey);
-      // Check cache
       if (cached && Date.now() - cached.timestamp < this.cacheTTL) {
         this.launcherData = cached.data;
         return cached.data;
       }
       if (persisted && Date.now() - persisted.timestamp < this.cacheTTL) {
         this.launcherData = persisted.data;
-        // hydrate in-memory cache for faster subsequent access
         this.cache.set(cacheKey, { data: persisted.data, timestamp: persisted.timestamp });
         return persisted.data;
       }
-
       console.log('Fetching modpacks data from API...');
-      // Update URL to include current language
-      const currentLang = this.userSettings.language || 'es';
       const urlWithLang = this.userSettings.launcherDataUrl.includes('?') 
-        ? this.userSettings.launcherDataUrl.replace(/[?&]lang=[^&]*/, `?lang=${currentLang}`)
-        : `${this.userSettings.launcherDataUrl}?lang=${currentLang}`;
-
+        ? this.userSettings.launcherDataUrl.replace(/[?&]lang=[^&]*/, `?lang=${lang}`)
+        : `${this.userSettings.launcherDataUrl}?lang=${lang}`;
       const response = await axios.get<{ count: number; modpacks: any[]; ui: any }>(urlWithLang, {
         headers: {
           'Accept': 'application/json',
           'Cache-Control': 'no-cache'
         }
       });
-
-  this.launcherData = { modpacks: response.data.modpacks };
-
-      // Save to cache
+      this.launcherData = { modpacks: response.data.modpacks };
       this.cache.set(cacheKey, {
         data: this.launcherData,
         timestamp: Date.now()
       });
       this.writePersistentCache(cacheKey, this.launcherData);
-
-      // Cache modpack images automatically in background
       if (this.launcherData.modpacks && this.launcherData.modpacks.length > 0) {
         this.cacheModpackImages(this.launcherData.modpacks).catch((error: any) => {
           console.warn('Failed to cache modpack images:', error);
         });
       }
-
       console.log('Modpacks data loaded successfully');
       return this.launcherData;
     } catch (error) {
       console.error('Error fetching modpacks data:', error);
-
-      // Try to use cached data as fallback
-      const cached2 = this.cache.get('modpacks_data');
+      const lang = this.userSettings.language || 'en';
+      const cacheKey = `modpacks_data_${lang}`;
+      const cached2 = this.cache.get(cacheKey);
       if (cached2) {
         console.warn('Using cached modpacks data as fallback');
         this.launcherData = cached2.data;
         return cached2.data;
       }
-
-      // Last resort: fallback data
-      console.warn('Using fallback modpacks data');
       const fallback = this.getFallbackData();
       this.launcherData = fallback;
       return fallback;
+    }
+  }
+
+  /**
+   * Fetches and caches full details for a specific modpack (with language)
+   * @param modpackId string
+   */
+  async fetchModpackDetails(modpackId: string): Promise<any> {
+    const lang = this.userSettings.language || 'es';
+    const cacheKey = `modpack_details_${modpackId}_${lang}`;
+    const cached = this.cache.get(cacheKey);
+    const persisted = this.readPersistentCache<any>(cacheKey);
+    if (cached && Date.now() - cached.timestamp < this.cacheTTL) {
+      return cached.data;
+    }
+    if (persisted && Date.now() - persisted.timestamp < this.cacheTTL) {
+      this.cache.set(cacheKey, { data: persisted.data, timestamp: persisted.timestamp });
+      return persisted.data;
+    }
+    const baseUrl = this.getBaseUrl();
+    const url = `${baseUrl}/v1/modpacks/${modpackId}?lang=${lang}`;
+    try {
+      const response = await axios.get(url, {
+        headers: {
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache'
+        }
+      });
+      this.cache.set(cacheKey, { data: response.data, timestamp: Date.now() });
+      this.writePersistentCache(cacheKey, response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching modpack details:', error);
+      if (persisted) return persisted.data;
+      return null;
     }
   }
 
@@ -421,7 +442,17 @@ class LauncherService {
   // Método para limpiar caché manualmente
   clearCache(): void {
     this.cache.clear();
-    // Persisted cache remains; caller may want to clear it explicitly
+    // Remove all LK_CACHE:* keys from localStorage
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('LK_CACHE:')) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+    }
   }
 
   // ---- Persistent cache helpers (localStorage) ----

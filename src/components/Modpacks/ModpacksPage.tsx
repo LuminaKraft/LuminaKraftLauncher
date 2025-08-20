@@ -16,8 +16,7 @@ const ModpacksPage: React.FC = () => {
     modpackStates, 
     isLoading, 
     error, 
-    refreshData, 
-    currentLanguage
+    refreshData
   } = useLauncher();
   
   const [selectedModpack, setSelectedModpack] = useState<Modpack | null>(null);
@@ -46,11 +45,8 @@ const ModpacksPage: React.FC = () => {
       setShowingDetails(true);
       try {
         const launcherService = (await import('../../services/launcherService')).default.getInstance();
-        const baseUrl = launcherService.getBaseUrl();
-        // Fetch full modpack details (includes features), with lang param
-        const lang = currentLanguage || 'en';
-        const detailsResp = await (await import('axios')).default.get(`${baseUrl}/v1/modpacks/${modpack.id}?lang=${lang}`);
-        setSelectedModpackDetails(detailsResp.data);
+        const details = await launcherService.fetchModpackDetails(modpack.id);
+        setSelectedModpackDetails(details);
       } catch (err) {
         setSelectedModpackDetails(null);
       } finally {
@@ -75,9 +71,11 @@ const ModpacksPage: React.FC = () => {
   const handleRefresh = async () => {
     setIsRefreshAnimating(true);
     try {
+      // Limpia caché completa antes de refrescar
+      const launcherService = (await import('../../services/launcherService')).default.getInstance();
+      launcherService.clearCache();
       await refreshData();
     } finally {
-      // Make animation faster - 300ms instead of 600ms
       withDelay(() => {
         setIsRefreshAnimating(false);
       }, 300);
