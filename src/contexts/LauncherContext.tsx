@@ -489,6 +489,18 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
 
     try {
       const onProgress = (progress: ProgressInfo) => {
+        // Customize messages for repair action
+        let generalMessage = translateBackendMessage(progress.generalMessage || '');
+        if (action === 'repair') {
+          if (generalMessage.includes('Iniciando instalación') || generalMessage.includes('Starting installation')) {
+            generalMessage = 'Iniciando reparación...';
+          } else if (generalMessage.includes('Instalando') || generalMessage.includes('Installing')) {
+            generalMessage = generalMessage.replace('Instalando', 'Reparando').replace('Installing', 'Repairing');
+          } else if (generalMessage.includes('Descargando') || generalMessage.includes('Downloading')) {
+            generalMessage = generalMessage.replace('Descargando', 'Revalidando').replace('Downloading', 'Revalidating');
+          }
+        }
+        
         dispatch({
           type: 'UPDATE_MODPACK_PROGRESS',
           payload: { 
@@ -499,7 +511,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
               downloadSpeed: progress.downloadSpeed,
               eta: progress.eta,
               step: progress.step,
-              generalMessage: translateBackendMessage(progress.generalMessage || ''),
+              generalMessage: generalMessage,
               detailMessage: progress.detailMessage
             }
           },
@@ -572,7 +584,11 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
           break;
         }
         case 'repair':
-          await launcherService.repairModpack(modpackId, onProgress);
+          const repairFailedModsResult = await launcherService.repairModpack(modpackId, onProgress);
+          if (repairFailedModsResult && repairFailedModsResult.length > 0) {
+            setFailedMods(repairFailedModsResult);
+            setShowFailedModsDialog(true);
+          }
           break;
         case 'stop':
           // Set stopping state immediately
@@ -665,41 +681,54 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
         errorMessage = String(error).toLowerCase();
       }
       
+      // Add context for repair actions
+      const isRepairAction = action === 'repair';
+      const repairPrefix = isRepairAction ? 'reparación' : (action === 'install' ? 'instalación' : action === 'update' ? 'actualización' : action);
+      
       if (errorMessage.includes('failed to extract zip file') || errorMessage.includes('no such file or directory')) {
-          userFriendlyError = t('errors.zipExtractionFailed');
+          userFriendlyError = `Error durante la ${repairPrefix}: No se pudo extraer el archivo ZIP`;
         } else if (errorMessage.includes('java') || errorMessage.includes('No such file or directory') || errorMessage.includes('exec format error')) {
-          userFriendlyError = t('settings.invalidJava');
+          userFriendlyError = `Error durante la ${repairPrefix}: Java no válido o no encontrado`;
         } else if (errorMessage.includes('zip file not found') || errorMessage.includes('file not found')) {
-          userFriendlyError = t('errors.zipFileNotFound');
+          userFriendlyError = `Error durante la ${repairPrefix}: Archivo ZIP no encontrado`;
         } else if (errorMessage.includes('permission denied')) {
-          userFriendlyError = t('errors.permissionDenied');
+          userFriendlyError = `Error durante la ${repairPrefix}: Permisos insuficientes`;
         } else if (errorMessage.includes('no space left') || errorMessage.includes('disk space')) {
-          userFriendlyError = t('errors.diskSpaceFull');
+          userFriendlyError = `Error durante la ${repairPrefix}: Espacio en disco insuficiente`;
         } else if (errorMessage.includes('corrupted') || errorMessage.includes('invalid zip')) {
-          userFriendlyError = t('errors.corruptedFile');
+          userFriendlyError = `Error durante la ${repairPrefix}: Archivo corrupto o inválido`;
         } else if (errorMessage.includes('network') || errorMessage.includes('connection')) {
-          userFriendlyError = t('errors.networkError');
+          userFriendlyError = `Error durante la ${repairPrefix}: Problema de conexión de red`;
         } else if (errorMessage.includes('failed to download')) {
-          userFriendlyError = t('errors.downloadFailed');
+          userFriendlyError = `Error durante la ${repairPrefix}: Fallo en la descarga`;
         } else if (errorMessage.includes('authentication failed (401)') || 
                    errorMessage.includes('not authorized') ||
                    errorMessage.includes('curseforge api authentication failed')) {
-          userFriendlyError = t('errors.curseforgeUnauthorized');
+          userFriendlyError = `Error durante la ${repairPrefix}: Autenticación fallida con CurseForge`;
         } else if (errorMessage.includes('access forbidden (403)') || 
                    errorMessage.includes('curseforge api access forbidden')) {
-          userFriendlyError = t('errors.curseforgeForbidden');
+          userFriendlyError = `Error durante la ${repairPrefix}: Acceso prohibido a CurseForge`;
         } else if (errorMessage.includes('curseforge api') || errorMessage.includes('failed to retrieve any mod file information')) {
-          userFriendlyError = t('errors.curseforgeApiError');
+          userFriendlyError = `Error durante la ${repairPrefix}: Problema con la API de CurseForge`;
         } else {
-          // Use the original error message as fallback
+          // Use the original error message as fallback, but add context for repair
+          let originalError = '';
           if (error instanceof Error) {
-            userFriendlyError = error.message;
+            originalError = error.message;
           } else if (typeof error === 'string') {
-            userFriendlyError = error;
+            originalError = error;
           } else if (error && typeof error === 'object' && 'message' in error) {
-            userFriendlyError = String(error.message);
+            originalError = String(error.message);
           } else {
-            userFriendlyError = String(error);
+            originalError = String(error);
+          }
+          
+          // If the error already mentions repair context, keep it as is
+          if (originalError.toLowerCase().includes('reparación') || 
+              originalError.toLowerCase().includes('repair')) {
+            userFriendlyError = originalError;
+          } else {
+            userFriendlyError = `Error durante la ${repairPrefix}: ${originalError}`;
           }
         }
       
@@ -789,8 +818,17 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
         
         if (key === 'progress.downloadingMinecraft') {
           // Format: "progress.downloadingMinecraft|component|progress"
+          const component = parts[1];
           const progressPart = parts[2];
-          return t('progress.downloadingMods') + ` (${progressPart})`;
+          
+          // Use component name to get specific translation
+          const translationKey = component === 'Assets' ? 'progress.downloadingAssets' :
+                                component === 'Java' ? 'progress.downloadingJava' :
+                                component === 'Librerías' ? 'progress.downloadingLibraries' :
+                                component === 'Nativos' ? 'progress.downloadingNatives' :
+                                'progress.downloadingMinecraftFiles';
+          
+          return `${t(translationKey)} (${progressPart})`;
         }
         
         if (key === 'progress.downloadingMinecraftFile') {

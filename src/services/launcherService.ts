@@ -51,7 +51,9 @@ class LauncherService {
             delete parsed.launcherDataUrl; // removed, endpoint is hardcoded
             localStorage.setItem('LuminaKraftLauncher_settings', JSON.stringify(parsed));
           }
-        } catch {}
+        } catch {
+          // Ignore JSON parsing errors for legacy settings
+        }
       }
     }
   }
@@ -316,9 +318,49 @@ class LauncherService {
     }
   }
 
+  // Helper function to ensure modpack has required fields, refreshing data if needed
+  private async ensureModpackHasRequiredFields(modpackId: string): Promise<any> {
+    let modpack = this.modpacksData?.modpacks.find((m: any) => m.id === modpackId);
+    if (!modpack) {
+      throw new Error('Modpack no encontrado');
+    }
+
+    // Check if modpack has modloaderVersion, if not, try to refresh data
+    if (!modpack.modloaderVersion) {
+      console.warn(`⚠️ Modpack ${modpackId} missing modloaderVersion, attempting to refresh data...`);
+      try {
+        // Clear cache and fetch fresh data
+        this.clearCache();
+        await this.fetchModpacksData();
+        
+        // Try to find the modpack again with fresh data
+        modpack = this.modpacksData?.modpacks.find((m: any) => m.id === modpackId);
+        
+        if (!modpack) {
+          throw new Error('Modpack no encontrado después de refrescar datos');
+        }
+        
+        if (!modpack.modloaderVersion) {
+          throw new Error(`Modpack ${modpackId} aún no tiene modloaderVersion después de refrescar. La API puede no estar actualizada.`);
+        }
+        
+        console.log(`✅ Successfully refreshed modpack data for ${modpackId}`);
+      } catch (refreshError) {
+        console.error('Failed to refresh modpack data:', refreshError);
+        throw new Error(`No se pudo obtener modloaderVersion para ${modpackId}. Intenta refrescar la aplicación.`);
+      }
+    }
+
+    return modpack;
+  }
+
   // Transform frontend modpack structure to backend-expected structure
   private transformModpackForBackend(modpack: any) {
-    return {
+    if (!modpack.modloaderVersion) {
+      throw new Error(`Modpack ${modpack.id} is missing modloaderVersion field. Please refresh the modpack data.`);
+    }
+
+    const transformed = {
       id: modpack.id,
       nombre: modpack.name, // Transform 'name' to 'nombre'
       descripcion: modpack.description || '', // Add missing field
@@ -326,28 +368,33 @@ class LauncherService {
       minecraftVersion: modpack.minecraftVersion,
       modloader: modpack.modloader,
       modloaderVersion: modpack.modloaderVersion,
-      // urlIcono field removed
+      logo: modpack.logo || '', // Use logo field directly
       urlModpackZip: modpack.urlModpackZip || '',
     };
+
+
+    return transformed;
   }
 
   // Transform frontend UserSettings structure to backend-expected structure
   private transformUserSettingsForBackend(settings: UserSettings) {
-    return {
+    const transformed = {
       username: settings.username,
       allocatedRam: settings.allocatedRam, // Keep camelCase, backend should handle it
-      // launcherDataUrl removed, endpoint is hardcoded
+      language: settings.language || 'en',
       authMethod: settings.authMethod,
-      microsoftAccount: settings.microsoftAccount || null
-      // Note: Don't send language to backend as it's frontend-only
+      microsoftAccount: settings.microsoftAccount || null,
+      clientToken: settings.clientToken || null,
+      enablePrereleases: settings.enablePrereleases || false,
+      enableAnimations: settings.enableAnimations || true,
     };
+
+
+    return transformed;
   }
 
   async installModpack(modpackId: string, _onProgress?: (_progress: ProgressInfo) => void): Promise<void> {
-  const modpack = this.modpacksData?.modpacks.find((m: any) => m.id === modpackId);
-    if (!modpack) {
-      throw new Error('Modpack no encontrado');
-    }
+    const modpack = await this.ensureModpackHasRequiredFields(modpackId);
 
     if (!modpack.urlModpackZip) {
       throw new Error('Este servidor no requiere instalación de modpack');
@@ -417,10 +464,7 @@ class LauncherService {
   }
 
   async launchModpack(modpackId: string): Promise<void> {
-    const modpack = this.modpacksData?.modpacks.find(m => m.id === modpackId);
-    if (!modpack) {
-      throw new Error('Modpack no encontrado');
-    }
+    const modpack = await this.ensureModpackHasRequiredFields(modpackId);
 
     try {
       // Transform the modpack structure to match backend expectations
@@ -443,9 +487,59 @@ class LauncherService {
     }
   }
 
-  async repairModpack(modpackId: string, _onProgress?: (_progress: ProgressInfo) => void): Promise<void> {
-    // Para reparación, simplemente reinstalamos el modpack
-    return this.installModpack(modpackId, _onProgress);
+  async repairModpack(modpackId: string, _onProgress?: (_progress: ProgressInfo) => void): Promise<any[]> {
+    // For repair, use installModpackWithFailedTracking to get detailed information
+    // about any issues and show specific errors
+    try {
+      console.log(`🔧 Starting repair for modpack: ${modpackId}`);
+      
+      // Report initial progress specific to repair
+      if (_onProgress) {
+        _onProgress({
+          percentage: 0,
+          currentFile: '',
+          downloadSpeed: '',
+          eta: '',
+          step: 'checking',
+          generalMessage: 'Iniciando reparación...',
+          detailMessage: 'Verificando estado del modpack'
+        });
+      }
+      
+      // Use installModpackWithFailedTracking to get detailed information
+      const failedMods = await this.installModpackWithFailedTracking(modpackId, _onProgress);
+      
+      console.log(`✅ Repair completed for modpack: ${modpackId}`, { failedMods: failedMods.length });
+      return failedMods;
+      
+    } catch (error) {
+      console.error(`❌ Repair failed for modpack: ${modpackId}`, error);
+      
+      // Improve error message to be more specific about repair
+      if (error instanceof Error) {
+        const originalMessage = error.message;
+        
+        // If error is already specific, keep it
+        if (originalMessage.includes('authentication') || 
+            originalMessage.includes('forbidden') ||
+            originalMessage.includes('network') ||
+            originalMessage.includes('download') ||
+            originalMessage.includes('extraction') ||
+            originalMessage.includes('permission') ||
+            originalMessage.includes('space') ||
+            originalMessage.includes('java')) {
+          throw error; // Keep specific error
+        }
+        
+        // For generic errors, create a more useful message
+        const repairError = new Error(`Error durante la reparación: ${originalMessage}`);
+        repairError.stack = error.stack;
+        throw repairError;
+      }
+      
+      // For non-specific errors
+      throw new Error(`Error durante la reparación del modpack: ${String(error)}`);
+    }
   }
 
 
@@ -567,10 +661,7 @@ class LauncherService {
   }
 
   async installModpackWithFailedTracking(modpackId: string, _onProgress?: (_progress: ProgressInfo) => void): Promise<any[]> {
-  const modpack = this.modpacksData?.modpacks.find((m: any) => m.id === modpackId);
-    if (!modpack) {
-      throw new Error('Modpack no encontrado');
-    }
+    const modpack = await this.ensureModpackHasRequiredFields(modpackId);
 
     let unlistenProgress: (() => void) | undefined;
 

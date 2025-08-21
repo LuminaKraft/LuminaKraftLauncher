@@ -64,23 +64,27 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
   };
 
   const getButtonConfig = () => {
-    if (isVanillaServer && modpack.ip) {
-      return {
-        text: `${t('modpacks.connect')} ${modpack.ip}`,
-        icon: Globe,
-        onClick: () => copyToClipboard(modpack.ip!),
-        className: 'btn-secondary',
-        disabled: false
-      };
-    }
-
-    if (!requiresModpack && !modpack.ip) {
+    const hasValidIp = modpack.ip && modpack.ip.trim() !== '';
+    
+    // Handle servers without modpack and without IP (not available)
+    if (!requiresModpack && !hasValidIp) {
       return {
         text: t('modpacks.notAvailable'),
         icon: AlertTriangle,
         onClick: () => {},
         className: 'btn-secondary',
         disabled: true
+      };
+    }
+
+    // Handle any server with IP (vanilla or non-vanilla)
+    if (!requiresModpack && hasValidIp) {
+      return {
+        text: `${t('modpacks.connect')} ${modpack.ip}`,
+        icon: Globe,
+        onClick: () => copyToClipboard(modpack.ip!),
+        className: 'btn-secondary',
+        disabled: false
       };
     }
 

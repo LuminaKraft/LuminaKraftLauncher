@@ -36,20 +36,10 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state }) => {
   };
 
   const getStatusInfo = () => {
-    // Handle vanilla/paper servers with IP
-    if (isVanillaServer && modpack.ip) {
-      return {
-        icon: Globe,
-        label: `${t('modpacks.connect')} ${modpack.ip}`,
-        bgColor: 'bg-blue-600 hover:bg-blue-700',
-        textColor: 'text-white',
-        action: () => copyToClipboard(modpack.ip!),
-        disabled: false
-      };
-    }
-
-    // Handle servers without modpack and without IP
-    if (!requiresModpack && !modpack.ip) {
+    const hasValidIp = modpack.ip && modpack.ip.trim() !== '';
+    
+    // Handle servers without modpack and without IP (check this FIRST)
+    if (!requiresModpack && !hasValidIp) {
       return {
         icon: AlertTriangle,
         label: t('modpacks.notAvailable'),
@@ -57,6 +47,18 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state }) => {
         textColor: 'text-gray-400',
         action: () => {},
         disabled: true
+      };
+    }
+
+    // Handle any server with IP (vanilla or non-vanilla)
+    if (!requiresModpack && hasValidIp) {
+      return {
+        icon: Globe,
+        label: `${t('modpacks.connect')} ${modpack.ip}`,
+        bgColor: 'bg-blue-600 hover:bg-blue-700',
+        textColor: 'text-white',
+        action: () => copyToClipboard(modpack.ip!),
+        disabled: false
       };
     }
 
@@ -116,7 +118,7 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state }) => {
         return {
           icon: Wrench,
           label: t('modpacks.repair'),
-          bgColor: 'bg-red-600 hover:bg-red-700',
+          bgColor: 'bg-orange-600 hover:bg-orange-700',
           textColor: 'text-white',
           action: () => repairModpack(modpack.id)
         };
@@ -295,6 +297,16 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state }) => {
           </div>
         )}
 
+        {/* Error Message */}
+        {state.status === 'error' && state.error && (
+          <div className="p-3 bg-red-600/20 border border-red-600/30 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />
+              <span className="text-red-400 text-sm">{state.error}</span>
+            </div>
+          </div>
+        )}
+
         {/* Secondary Actions */}
         {['installed', 'outdated', 'error'].includes(state.status) && (
           <div className="flex gap-2">
@@ -312,7 +324,7 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state }) => {
             </button>
             <button
               onClick={() => setShowRemoveDialog(true)}
-              className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2.5 rounded-lg bg-red-600/10 hover:bg-red-600/20 text-red-400 hover:text-red-300 transition-all duration-200 ${
+              className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white transition-all duration-200 ${
                 getAnimationClass('', 'hover:scale-[1.02]')
               } min-w-0 group`}
               style={getAnimationStyle({})}

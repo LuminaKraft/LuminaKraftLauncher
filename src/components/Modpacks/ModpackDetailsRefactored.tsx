@@ -186,6 +186,9 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
           <div className="flex-shrink-0">
             <div 
               className="w-40 h-40 rounded-lg overflow-hidden flex items-center justify-center"
+              style={getAnimationStyle({
+                animation: `fadeInUp 0.4s ease-out 0.05s backwards`
+              })}
             >
               <img
                 src={modpack.logo}
@@ -202,10 +205,33 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
           <div className="flex-1 min-w-0">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div className="min-w-0 flex-1">
-                <h1 className="text-4xl font-bold text-white mb-2">{displayName}</h1>
-                <p className="text-lg text-dark-300 leading-relaxed">{displayDescription}</p>
+                <h1 
+                  className={`text-4xl font-bold text-white mb-2 ${
+                    getAnimationClass('transition-all duration-200')
+                  }`}
+                  style={getAnimationStyle({
+                    animation: `fadeInUp 0.4s ease-out 0.1s backwards`
+                  })}
+                >
+                  {displayName}
+                </h1>
+                <p 
+                  className={`text-lg text-dark-300 leading-relaxed ${
+                    getAnimationClass('transition-all duration-200')
+                  }`}
+                  style={getAnimationStyle({
+                    animation: `fadeInUp 0.4s ease-out 0.15s backwards`
+                  })}
+                >
+                  {displayDescription}
+                </p>
               </div>
-              <div className="flex-shrink-0">
+              <div 
+                className="flex-shrink-0"
+                style={getAnimationStyle({
+                  animation: `fadeInUp 0.4s ease-out 0.2s backwards`
+                })}
+              >
                 {getServerStatusBadge()}
               </div>
             </div>
@@ -217,14 +243,26 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
       <div className="container mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Mobile Actions First */}
-          <div className="lg:hidden">
+          <div 
+            className={`lg:hidden ${getAnimationClass('transition-all duration-200')}`}
+            style={getAnimationStyle({
+              animation: `fadeInUp 0.3s ease-out 0.1s backwards`
+            })}
+          >
             <ModpackActions modpack={modpack} state={liveState} />
           </div>
 
           {/* Left Column - Main Info */}
           <div className="lg:col-span-2 space-y-8">
             {/* Tab Navigation */}
-            <div className="flex space-x-1 bg-dark-800 p-1 rounded-lg">
+            <div 
+              className={`flex space-x-1 bg-dark-800 p-1 rounded-lg ${
+                getAnimationClass('transition-all duration-200')
+              }`}
+              style={getAnimationStyle({
+                animation: `fadeInUp 0.3s ease-out 0.1s backwards`
+              })}
+            >
               <button
                 onClick={() => setActiveTab('content')}
                 className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-all duration-200 ${
@@ -279,7 +317,12 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
 
           {/* Right Column - Desktop Actions */}
           <div className="hidden lg:block">
-            <div className="space-y-6">
+            <div 
+              className={`space-y-6 ${getAnimationClass('transition-all duration-200')}`}
+              style={getAnimationStyle({
+                animation: `fadeInUp 0.3s ease-out 0.2s backwards`
+              })}
+            >
               <ModpackActions modpack={modpack} state={liveState} />
               <ModpackInfo modpack={modpack} />
               <ModpackRequirements />

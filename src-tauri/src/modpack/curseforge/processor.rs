@@ -26,12 +26,21 @@ where
         return Err(anyhow!("Failed to create instance directory {}: {}", instance_dir.display(), e));
     }
     
-    // Create temp directory for extraction
-    let temp_dir = instance_dir.join("temp_extract");
-    if temp_dir.exists() {
-        fs::remove_dir_all(&temp_dir)?;
+    // Create temp directory for extraction with unique name to avoid conflicts
+    let temp_dir = instance_dir.join(format!("temp_extract_{}", chrono::Utc::now().timestamp_millis()));
+    
+    // Remove any existing temp directories from previous runs
+    if let Ok(entries) = fs::read_dir(instance_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() && path.file_name().unwrap_or_default().to_string_lossy().starts_with("temp_extract") {
+                let _ = fs::remove_dir_all(&path); // Best effort cleanup
+            }
+        }
     }
-    fs::create_dir_all(&temp_dir)?;
+    
+    fs::create_dir_all(&temp_dir)
+        .map_err(|e| anyhow!("Failed to create temp directory {}: {}", temp_dir.display(), e))?;
     
     emit_progress(
         "Extrayendo archivos del modpack".to_string(),
