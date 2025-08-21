@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Terminal } from 'lucide-react';
+import { useAnimation } from '../../../../contexts/AnimationContext';
 
 interface LogsSectionProps {
   logs: string[];
@@ -8,6 +9,7 @@ interface LogsSectionProps {
 
 const LogsSection: React.FC<LogsSectionProps> = ({ logs }) => {
   const { t } = useTranslation();
+  const { getAnimationClass, getAnimationStyle } = useAnimation();
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new logs arrive
@@ -18,7 +20,12 @@ const LogsSection: React.FC<LogsSectionProps> = ({ logs }) => {
   }, [logs]);
 
   return (
-    <div className="space-y-4">
+    <div 
+      className={`space-y-4 ${getAnimationClass('transition-all duration-200')}`}
+      style={getAnimationStyle({
+        animation: `fadeInUp 0.3s ease-out 0.1s backwards`
+      })}
+    >
       {logs.length === 0 ? (
         <div className="text-center py-12">
           <Terminal className="w-12 h-12 text-dark-400 mx-auto mb-4" />
