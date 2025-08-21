@@ -4,6 +4,7 @@
 use tauri::{Manager, Emitter};
 use serde::{Deserialize, Serialize};
 use anyhow::Result;
+use std::sync::{Arc, Mutex};
 
 mod launcher;
 mod meta;
@@ -23,12 +24,8 @@ pub struct Modpack {
     pub modloader: String,
     #[serde(rename = "modloaderVersion")]
     pub modloader_version: String,
-    #[serde(rename = "urlIcono")]
-    pub url_icono: String,
     #[serde(rename = "urlModpackZip")]
     pub url_modpack_zip: String,
-    
-    // Campos adicionales que aparecen en el TypeScript pero no estaban en Rust
     #[serde(default)]
     pub name: String,
     #[serde(default)]
@@ -82,8 +79,8 @@ pub struct UserSettings {
     pub username: String,
     #[serde(rename = "allocatedRam")]
     pub allocated_ram: u32,
-    #[serde(rename = "launcherDataUrl")]
-    pub launcher_data_url: String,
+    #[serde(default)]
+    pub language: String,
     #[serde(rename = "authMethod")]
     pub auth_method: String, // "offline" or "microsoft"
     #[serde(rename = "microsoftAccount")]
@@ -92,6 +89,8 @@ pub struct UserSettings {
     pub client_token: Option<String>,
     #[serde(rename = "enablePrereleases", default)]
     pub enable_prereleases: bool,
+    #[serde(rename = "enableAnimations", default)]
+    pub enable_animations: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -154,196 +153,7 @@ async fn install_modpack_with_minecraft(app: tauri::AppHandle, modpack: Modpack,
         let last_general_message = std::sync::Arc::new(std::sync::Mutex::new("progress.installing".to_string()));
         
         move |message: String, percentage: f32, step: String| {
-            // Determinar el mensaje general y detallado basado en el tipo de mensaje
-            let (general_message, detail_message) = if message.starts_with("Progress:") {
-                // Para líneas Progress, parsear para crear mensaje general útil
-                if let Some(parsed_general) = parse_progress_line(&message) {
-                    // Actualizar el último mensaje general válido
-                    if let Ok(mut last) = last_general_message.lock() {
-                        *last = parsed_general.clone();
-                    }
-                    
-                    // Mantener el último detailMessage válido en lugar de enviar vacío
-                    let preserved_detail = if let Ok(last) = last_detail_message.lock() {
-                        last.clone()
-                    } else {
-                        "".to_string()
-                    };
-                    
-                    (parsed_general, preserved_detail) // Mantener detalle anterior para Progress
-                } else {
-                    // Mantener el último mensaje general válido
-                    let preserved_general = if let Ok(last) = last_general_message.lock() {
-                        last.clone()
-                    } else {
-                        "progress.installing".to_string()
-                    };
-                    
-                    // Mantener el último detailMessage válido
-                    let preserved_detail = if let Ok(last) = last_detail_message.lock() {
-                        last.clone()
-                    } else {
-                        "".to_string()
-                    };
-                    
-                    (preserved_general, preserved_detail)
-                }
-            } else if message.starts_with("Descargando ") && step == "downloading_minecraft_file" {
-                // Para líneas de descarga individual de Minecraft, remover "Descargando " y determinar estado
-                let file_name = message.strip_prefix("Descargando ").unwrap_or(&message);
-                
-                // Determinar el estado del archivo basado en su contenido
-                let detail_msg = if file_name.contains("completado") || file_name.contains("✅") {
-                    format!("✅ {}", file_name.replace("completado", "").replace("✅", "").trim())
-                } else if file_name.contains("error") || file_name.contains("❌") {
-                    format!("❌ {}", file_name.replace("error", "").replace("❌", "").trim())
-                } else {
-                    // Archivo en proceso de descarga
-                    file_name.to_string()
-                };
-                
-                // Actualizar el último detailMessage válido
-                if let Ok(mut last) = last_detail_message.lock() {
-                    *last = detail_msg.clone();
-                }
-                
-                ("".to_string(), detail_msg)
-            } else if message.starts_with("downloading_modpack:") {
-                // Formato: "downloading_modpack:current:total" - mantener último detailMessage válido
-                let parts: Vec<&str> = message.split(':').collect();
-                if parts.len() >= 3 {
-                    let current = parts[1];
-                    let total = parts[2];
-                    let general_msg = format!("progress.downloadingModpack|{}/{}", current, total);
-                    
-                    // Mantener el último detailMessage válido en lugar de enviar vacío
-                    let preserved_detail = if let Ok(last) = last_detail_message.lock() {
-                        last.clone()
-                    } else {
-                        "".to_string()
-                    };
-                    
-                    (general_msg, preserved_detail)
-                } else {
-                    ("progress.downloadingMods".to_string(), "".to_string())
-                }
-            } else if message.starts_with("mod_name:") {
-                // Para archivos individuales de mods: "mod_name:filename"
-                let file_name = message.strip_prefix("mod_name:").unwrap_or(&message);
-                let detail_msg = format!("mod_name:{}", file_name);
-                
-                // Actualizar el último detailMessage válido
-                if let Ok(mut last) = last_detail_message.lock() {
-                    *last = detail_msg.clone();
-                }
-                
-                // Mantener el último mensaje general válido
-                let preserved_general = if let Ok(last) = last_general_message.lock() {
-                    last.clone()
-                } else {
-                    "progress.downloadingMods".to_string()
-                };
-                
-                (preserved_general, detail_msg)
-            } else if message.starts_with("mod_completed:") {
-                // Para mods completados: "mod_completed:filename"
-                let file_name = message.strip_prefix("mod_completed:").unwrap_or(&message);
-                let detail_msg = format!("mod_completed:{}", file_name);
-                
-                // Actualizar el último detailMessage válido
-                if let Ok(mut last) = last_detail_message.lock() {
-                    *last = detail_msg.clone();
-                }
-                
-                // Mantener el último mensaje general válido
-                let preserved_general = if let Ok(last) = last_general_message.lock() {
-                    last.clone()
-                } else {
-                    "progress.downloadingMods".to_string()
-                };
-                
-                (preserved_general, detail_msg)
-            } else if message.starts_with("mod_exists:") {
-                // Para mods que ya existen: "mod_exists:filename"
-                let file_name = message.strip_prefix("mod_exists:").unwrap_or(&message);
-                let detail_msg = format!("mod_exists:{}", file_name);
-                
-                // Actualizar el último detailMessage válido
-                if let Ok(mut last) = last_detail_message.lock() {
-                    *last = detail_msg.clone();
-                }
-                
-                // Mantener el último mensaje general válido
-                let preserved_general = if let Ok(last) = last_general_message.lock() {
-                    last.clone()
-                } else {
-                    "progress.downloadingMods".to_string()
-                };
-                
-                (preserved_general, detail_msg)
-            } else if message.starts_with("mod_unavailable:") {
-                // Para mods no disponibles: "mod_unavailable:filename"
-                let file_name = message.strip_prefix("mod_unavailable:").unwrap_or(&message);
-                let detail_msg = format!("mod_unavailable:{}", file_name);
-                
-                // Actualizar el último detailMessage válido
-                if let Ok(mut last) = last_detail_message.lock() {
-                    *last = detail_msg.clone();
-                }
-                
-                // Mantener el último mensaje general válido
-                let preserved_general = if let Ok(last) = last_general_message.lock() {
-                    last.clone()
-                } else {
-                    "progress.downloadingMods".to_string()
-                };
-                
-                (preserved_general, detail_msg)
-            } else if message.starts_with("mod_error:") || message.starts_with("mod_download_error:") {
-                // Para errores de mods: "mod_error:filename" o "mod_download_error:filename:error"
-                let error_parts: Vec<&str> = message.split(':').collect();
-                let file_name = if error_parts.len() >= 2 {
-                    error_parts[1]
-                } else {
-                    "archivo desconocido"
-                };
-                let detail_msg = format!("mod_error:{}", file_name);
-                
-                // Actualizar el último detailMessage válido
-                if let Ok(mut last) = last_detail_message.lock() {
-                    *last = detail_msg.clone();
-                }
-                
-                // Mantener el último mensaje general válido
-                let preserved_general = if let Ok(last) = last_general_message.lock() {
-                    last.clone()
-                } else {
-                    "progress.downloadingMods".to_string()
-                };
-                
-                (preserved_general, detail_msg)
-            } else if message == "preparing_mod_downloads" || step == "preparing_mod_downloads" {
-                // Let the frontend handle translation via step
-                ("".to_string(), "".to_string())
-            } else {
-                // Para otros mensajes, determinar basado en el step
-                let general = match step.as_str() {
-                    "preparing_installation" | "verifying_modpack_config" | "configuring_minecraft" => "progress.configuringMinecraft",
-                    "downloading_minecraft" | "installing_minecraft" => "progress.installingMinecraft",
-                    "downloading_modpack" | "processing_modpack" | "processing_curseforge" | "extracting_modpack" | "reading_manifest" | "processing_overrides" => "progress.processingCurseforge",
-                    "updating" | "downloading_update" | "processing_update" | "updating_curseforge_mods" | 
-                    "replacing_mods" | "updating_configs" | "removing_old_mods" | "copying_new_mods" |
-                    "backing_up_minecraft" | "extracting_new_version" | "restoring_minecraft" |
-                    "finalizing_update" => "progress.updating",
-                    "downloading_mods" | "downloading_modpack_file" | "downloading_mod_file" | "preparing_mod_downloads" | 
-                    "mod_already_exists" | "mod_unavailable" | "mod_downloaded_verified" | "mod_hash_mismatch" | "mod_download_error" => "progress.downloadingMods",
-                    "finalizing" | "completed" | "curseforge_completed" | "saving_instance_config" | "finalizing_installation" => "progress.finalizing",
-                    _ => "progress.installing",
-                };
-                (general.to_string(), "".to_string())
-            };
-            
-            // ETA será calculado en el frontend por ahora
+            let (general_message, detail_message) = handle_progress_message(&message, &step, &last_detail_message, &last_general_message);
             
             let _ = app.emit(&format!("modpack_progress_{}", modpack_id), serde_json::json!({
                 "message": message,
@@ -406,210 +216,7 @@ async fn install_modpack_with_failed_tracking(app: tauri::AppHandle, modpack: Mo
         let last_general_message = std::sync::Arc::new(std::sync::Mutex::new("progress.installing".to_string()));
         
         move |message: String, percentage: f32, step: String| {
-            // Determinar el mensaje general y detallado basado en el tipo de mensaje
-            let (general_message, detail_message) = if message.starts_with("Progress:") {
-                // Para líneas Progress, parsear para crear mensaje general útil
-                if let Some(parsed_general) = parse_progress_line(&message) {
-                    // Actualizar el último mensaje general válido
-                    if let Ok(mut last) = last_general_message.lock() {
-                        *last = parsed_general.clone();
-                    }
-                    
-                    // Mantener el último detailMessage válido en lugar de enviar vacío
-                    let preserved_detail = if let Ok(last) = last_detail_message.lock() {
-                        last.clone()
-                    } else {
-                        "".to_string()
-                    };
-                    
-                    (parsed_general, preserved_detail) // Mantener detalle anterior para Progress
-                } else {
-                    // Mantener el último mensaje general válido
-                    let preserved_general = if let Ok(last) = last_general_message.lock() {
-                        last.clone()
-                    } else {
-                        "progress.installing".to_string()
-                    };
-                    
-                    // Mantener el último detailMessage válido
-                    let preserved_detail = if let Ok(last) = last_detail_message.lock() {
-                        last.clone()
-                    } else {
-                        "".to_string()
-                    };
-                    
-                    (preserved_general, preserved_detail)
-                }
-            } else if message.starts_with("Descargando ") && step == "downloading_minecraft_file" {
-                // Para líneas de descarga individual de Minecraft, remover "Descargando " y determinar estado
-                let file_name = message.strip_prefix("Descargando ").unwrap_or(&message);
-                
-                // Determinar el estado del archivo basado en su contenido
-                let detail_msg = if file_name.contains("completado") || file_name.contains("✅") {
-                    format!("✅ {}", file_name.replace("completado", "").replace("✅", "").trim())
-                } else if file_name.contains("error") || file_name.contains("❌") {
-                    format!("❌ {}", file_name.replace("error", "").replace("❌", "").trim())
-                } else {
-                    file_name.to_string()
-                };
-                
-                // Actualizar el último detailMessage válido
-                if let Ok(mut last) = last_detail_message.lock() {
-                    *last = detail_msg.clone();
-                }
-                
-                // Mantener el último mensaje general válido
-                let preserved_general = if let Ok(last) = last_general_message.lock() {
-                    last.clone()
-                } else {
-                    "progress.installingMinecraft".to_string()
-                };
-                
-                (preserved_general, detail_msg)
-            } else if message.starts_with("downloading_modpack:") {
-                // Para contador de mods: "downloading_modpack:current:total"
-                let parts: Vec<&str> = message.split(':').collect();
-                if parts.len() == 3 {
-                    let current = parts[1];
-                    let total = parts[2];
-                    let general_msg = format!("progress.downloadingModpack|{}/{}", current, total);
-                    
-                    // Actualizar el último mensaje general válido
-                    if let Ok(mut last) = last_general_message.lock() {
-                        *last = general_msg.clone();
-                    }
-                    
-                    // Mantener el último detailMessage válido
-                    let preserved_detail = if let Ok(last) = last_detail_message.lock() {
-                        last.clone()
-                    } else {
-                        "".to_string()
-                    };
-                    
-                    (general_msg, preserved_detail)
-                } else {
-                    // Fallback - mantener mensajes anteriores
-                    let preserved_general = if let Ok(last) = last_general_message.lock() {
-                        last.clone()
-                    } else {
-                        "progress.downloadingModpackFiles".to_string()
-                    };
-                    
-                    let preserved_detail = if let Ok(last) = last_detail_message.lock() {
-                        last.clone()
-                    } else {
-                        "".to_string()
-                    };
-                    
-                    (preserved_general, preserved_detail)
-                }
-            } else if message.starts_with("mod_name:") {
-                // Para archivos individuales de mods: "mod_name:filename"
-                let file_name = message.strip_prefix("mod_name:").unwrap_or(&message);
-                let detail_msg = format!("mod_name:{}", file_name);
-                
-                // Actualizar el último detailMessage válido
-                if let Ok(mut last) = last_detail_message.lock() {
-                    *last = detail_msg.clone();
-                }
-                
-                // Mantener el último mensaje general válido
-                let preserved_general = if let Ok(last) = last_general_message.lock() {
-                    last.clone()
-                } else {
-                    "progress.downloadingMods".to_string()
-                };
-                
-                (preserved_general, detail_msg)
-            } else if message.starts_with("mod_completed:") {
-                // Para mods completados: "mod_completed:filename"
-                let file_name = message.strip_prefix("mod_completed:").unwrap_or(&message);
-                let detail_msg = format!("mod_completed:{}", file_name);
-                
-                // Actualizar el último detailMessage válido
-                if let Ok(mut last) = last_detail_message.lock() {
-                    *last = detail_msg.clone();
-                }
-                
-                // Mantener el último mensaje general válido
-                let preserved_general = if let Ok(last) = last_general_message.lock() {
-                    last.clone()
-                } else {
-                    "progress.downloadingMods".to_string()
-                };
-                
-                (preserved_general, detail_msg)
-            } else if message.starts_with("mod_exists:") {
-                // Para mods que ya existen: "mod_exists:filename"
-                let file_name = message.strip_prefix("mod_exists:").unwrap_or(&message);
-                let detail_msg = format!("mod_exists:{}", file_name);
-                
-                // Actualizar el último detailMessage válido
-                if let Ok(mut last) = last_detail_message.lock() {
-                    *last = detail_msg.clone();
-                }
-                
-                // Mantener el último mensaje general válido
-                let preserved_general = if let Ok(last) = last_general_message.lock() {
-                    last.clone()
-                } else {
-                    "progress.downloadingMods".to_string()
-                };
-                
-                (preserved_general, detail_msg)
-            } else if message.starts_with("mod_unavailable:") {
-                // Para mods no disponibles: "mod_unavailable:filename"
-                let file_name = message.strip_prefix("mod_unavailable:").unwrap_or(&message);
-                let detail_msg = format!("mod_unavailable:{}", file_name);
-                
-                // Actualizar el último detailMessage válido
-                if let Ok(mut last) = last_detail_message.lock() {
-                    *last = detail_msg.clone();
-                }
-                
-                // Mantener el último mensaje general válido
-                let preserved_general = if let Ok(last) = last_general_message.lock() {
-                    last.clone()
-                } else {
-                    "progress.downloadingMods".to_string()
-                };
-                
-                (preserved_general, detail_msg)
-            } else if message.starts_with("mod_error:") || message.starts_with("mod_download_error:") {
-                // Para errores de mods: "mod_error:filename" o "mod_download_error:filename:error"
-                let error_parts: Vec<&str> = message.split(':').collect();
-                let file_name = if error_parts.len() >= 2 {
-                    error_parts[1]
-                } else {
-                    "archivo desconocido"
-                };
-                let detail_msg = format!("mod_error:{}", file_name);
-                
-                // Actualizar el último detailMessage válido
-                if let Ok(mut last) = last_detail_message.lock() {
-                    *last = detail_msg.clone();
-                }
-                
-                // Mantener el último mensaje general válido
-                let preserved_general = if let Ok(last) = last_general_message.lock() {
-                    last.clone()
-                } else {
-                    "progress.downloadingMods".to_string()
-                };
-                
-                (preserved_general, detail_msg)
-            } else {
-                // Para otros mensajes, tratarlos como generales y actualizar tanto general como detalle
-                // Actualizar ambos mensajes
-                if let Ok(mut last_general) = last_general_message.lock() {
-                    *last_general = message.clone();
-                }
-                if let Ok(mut last_detail) = last_detail_message.lock() {
-                    *last_detail = "".to_string(); // Limpiar detalle para mensajes generales
-                }
-                
-                (message.clone(), "".to_string())
-            };
+            let (general_message, detail_message) = handle_progress_message(&message, &step, &last_detail_message, &last_general_message);
             
             // Emitir el evento con los mensajes determinados
             let _ = app.emit(&format!("modpack-progress-{}", modpack_id), serde_json::json!({
@@ -708,16 +315,13 @@ async fn check_curseforge_modpack(modpack_url: String) -> Result<bool, String> {
     
     let temp_file = temp_dir.join("temp_check_curseforge.zip");
     
-    // Descargar el archivo
-            match utils::downloader::download_file(&modpack_url, &temp_file).await {
+    match utils::downloader::download_file(&modpack_url, &temp_file).await {
         Ok(_) => {
-            // Verificar si contiene manifest.json usando lyceris
             let is_curseforge = match lyceris::util::extract::read_file_from_jar(&temp_file, "manifest.json") {
-                Ok(_) => true,  // Si se puede leer manifest.json, es un modpack de CurseForge
-                Err(_) => false, // Si no se encuentra, no es un modpack de CurseForge
+                Ok(_) => true,
+                Err(_) => false,
             };
             
-            // Limpiar el archivo temporal
             if temp_file.exists() {
                 let _ = fs::remove_file(&temp_file);
             }
@@ -914,23 +518,14 @@ async fn open_microsoft_auth_modal(app: tauri::AppHandle) -> Result<String, Stri
 
 #[tauri::command]
 async fn remove_modpack(modpack_id: String) -> Result<(), String> {
-    println!("🔧 Backend: Removing modpack with ID: {}", modpack_id);
     match filesystem::remove_modpack_completely(&modpack_id).await {
-        Ok(_) => {
-            println!("✅ Backend: Modpack {} removed successfully", modpack_id);
-            Ok(())
-        },
-        Err(e) => {
-            println!("❌ Backend: Failed to remove modpack {}: {}", modpack_id, e);
-            Err(format!("Failed to remove modpack: {}", e))
-        }
+        Ok(_) => Ok(()),
+        Err(e) => Err(format!("Failed to remove modpack: {}", e))
     }
 }
 
 #[tauri::command]
 async fn open_instance_folder(modpack_id: String) -> Result<(), String> {
-    println!("📂 Opening instance folder for: {}", modpack_id);
-    
     let app_data_dir = dirs::data_dir()
         .ok_or_else(|| "Failed to get app data directory".to_string())?;
     
@@ -943,7 +538,6 @@ async fn open_instance_folder(modpack_id: String) -> Result<(), String> {
         return Err("La instancia no existe".to_string());
     }
     
-    // Usar el comando apropiado según el sistema operativo
     let result = if cfg!(target_os = "windows") {
         std::process::Command::new("explorer")
             .arg(&instance_dir)
@@ -953,21 +547,14 @@ async fn open_instance_folder(modpack_id: String) -> Result<(), String> {
             .arg(&instance_dir)
             .spawn()
     } else {
-        // Linux y otros Unix
         std::process::Command::new("xdg-open")
             .arg(&instance_dir)
             .spawn()
     };
     
     match result {
-        Ok(_) => {
-            println!("✅ Instance folder opened successfully");
-            Ok(())
-        },
-        Err(e) => {
-            println!("❌ Failed to open instance folder: {}", e);
-            Err(format!("Error al abrir la carpeta: {}", e))
-        }
+        Ok(_) => Ok(()),
+        Err(e) => Err(format!("Error al abrir la carpeta: {}", e))
     }
 }
 
@@ -1028,6 +615,140 @@ async fn stop_instance(app: tauri::AppHandle, instance_id: String) -> Result<(),
         },
         Err(e) => Err(e.to_string()),
     }
+}
+
+/// Handle progress message parsing and return (general_message, detail_message)
+fn handle_progress_message(
+    message: &str,
+    step: &str,
+    last_detail_message: &Arc<Mutex<String>>,
+    last_general_message: &Arc<Mutex<String>>
+) -> (String, String) {
+    // Handle Minecraft file downloads
+    if step == "downloading_minecraft_file" || message.starts_with("progress.downloadingMinecraftFile|") {
+        let file_name = if message.starts_with("progress.downloadingMinecraftFile|") {
+            message.strip_prefix("progress.downloadingMinecraftFile|").unwrap_or(message)
+        } else {
+            message
+        };
+        
+        let clean_file_name = if let Some(dash_pos) = file_name.find(" - ") {
+            file_name[..dash_pos].trim()
+        } else {
+            file_name
+        };
+        
+        let detail_msg = clean_file_name.to_string();
+        
+        // Update last detail message
+        if let Ok(mut last) = last_detail_message.lock() {
+            *last = detail_msg.clone();
+        }
+        
+        // Keep the last general message for context
+        let preserved_general = if let Ok(last) = last_general_message.lock() {
+            last.clone()
+        } else {
+            "progress.downloadingMinecraft|Assets|".to_string()
+        };
+        
+        return (preserved_general, detail_msg);
+    }
+    
+    // Handle modpack downloads
+    if message.starts_with("downloading_modpack:") {
+        let parts: Vec<&str> = message.split(':').collect();
+        if parts.len() == 3 {
+            let current = parts[1];
+            let total = parts[2];
+            let general_msg = format!("progress.downloadingModpack|{}/{}", current, total);
+            
+            if let Ok(mut last) = last_general_message.lock() {
+                *last = general_msg.clone();
+            }
+            
+            let preserved_detail = if let Ok(last) = last_detail_message.lock() {
+                last.clone()
+            } else {
+                "".to_string()
+            };
+            
+            return (general_msg, preserved_detail);
+        }
+    }
+    
+    // Handle Progress: lines
+    if message.starts_with("Progress:") {
+        if let Some(parsed_general) = parse_progress_line(message) {
+            if let Ok(mut last) = last_general_message.lock() {
+                *last = parsed_general.clone();
+            }
+            
+            let preserved_detail = if let Ok(last) = last_detail_message.lock() {
+                last.clone()
+            } else {
+                "".to_string()
+            };
+            
+            return (parsed_general, preserved_detail);
+        }
+    }
+    
+    // Handle mod-specific messages (mod_name, mod_completed, etc.)
+    for prefix in ["mod_name:", "mod_completed:", "mod_exists:", "mod_unavailable:", "mod_error:", "mod_download_error:"] {
+        if message.starts_with(prefix) {
+            let file_name = message.strip_prefix(prefix).unwrap_or(message);
+            let detail_msg = format!("{}:{}", prefix.trim_end_matches(':'), file_name);
+            
+            if let Ok(mut last) = last_detail_message.lock() {
+                *last = detail_msg.clone();
+            }
+            
+            let preserved_general = if let Ok(last) = last_general_message.lock() {
+                last.clone()
+            } else {
+                "progress.downloadingMods".to_string()
+            };
+            
+            return (preserved_general, detail_msg);
+        }
+    }
+    
+    // Handle step-based messages when no specific message pattern matches
+    if message == "preparing_mod_downloads" || step == "preparing_mod_downloads" {
+        return ("".to_string(), "".to_string());
+    }
+    
+    // Step-based general messages
+    let general = match step {
+        "preparing_installation" | "verifying_modpack_config" | "configuring_minecraft" => "progress.configuringMinecraft",
+        "downloading_minecraft" | "installing_minecraft" => "progress.installingMinecraft",
+        "downloading_modpack" | "processing_modpack" | "processing_curseforge" | "extracting_modpack" | "reading_manifest" | "processing_overrides" => "progress.processingCurseforge",
+        "updating" | "downloading_update" | "processing_update" | "updating_curseforge_mods" | 
+        "replacing_mods" | "updating_configs" | "removing_old_mods" | "copying_new_mods" |
+        "backing_up_minecraft" | "extracting_new_version" | "restoring_minecraft" |
+        "finalizing_update" => "progress.updating",
+        "downloading_mods" | "downloading_modpack_file" | "downloading_mod_file" | "preparing_mod_downloads" | 
+        "mod_already_exists" | "mod_unavailable" | "mod_downloaded_verified" | "mod_hash_mismatch" | "mod_download_error" => "progress.downloadingMods",
+        "finalizing" | "completed" | "curseforge_completed" | "saving_instance_config" | "finalizing_installation" => "progress.finalizing",
+        _ => "progress.installing",
+    };
+    
+    // Default: use step-based or message as general
+    let general_msg = if general != "progress.installing" {
+        general.to_string()
+    } else {
+        message.to_string()
+    };
+    
+    if let Ok(mut last_general) = last_general_message.lock() {
+        *last_general = general_msg.clone();
+    }
+    if let Ok(mut last_detail) = last_detail_message.lock() {
+        *last_detail = "".to_string();
+    }
+    
+    (general_msg, "".to_string())
 }
 
 /// Parse "Progress:" messages to create useful general messages
@@ -1133,8 +854,6 @@ fn main() {
         }
     }
 
-    // Esta anotación permite que Rust ignore el "referenced_by" error que ocurre durante la compilación
-    #[allow(unused_variables, dead_code)]
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_fs::init())

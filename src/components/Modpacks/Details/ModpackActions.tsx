@@ -295,6 +295,16 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state }) => {
           </div>
         )}
 
+        {/* Error Message */}
+        {state.status === 'error' && state.error && (
+          <div className="p-3 bg-red-600/20 border border-red-600/30 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />
+              <span className="text-red-400 text-sm">{state.error}</span>
+            </div>
+          </div>
+        )}
+
         {/* Secondary Actions */}
         {['installed', 'outdated', 'error'].includes(state.status) && (
           <div className="flex gap-2">
