@@ -116,7 +116,7 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state }) => {
         return {
           icon: Wrench,
           label: t('modpacks.repair'),
-          bgColor: 'bg-red-600 hover:bg-red-700',
+          bgColor: 'bg-orange-600 hover:bg-orange-700',
           textColor: 'text-white',
           action: () => repairModpack(modpack.id)
         };
@@ -322,7 +322,7 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state }) => {
             </button>
             <button
               onClick={() => setShowRemoveDialog(true)}
-              className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2.5 rounded-lg bg-red-600/10 hover:bg-red-600/20 text-red-400 hover:text-red-300 transition-all duration-200 ${
+              className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white transition-all duration-200 ${
                 getAnimationClass('', 'hover:scale-[1.02]')
               } min-w-0 group`}
               style={getAnimationStyle({})}
