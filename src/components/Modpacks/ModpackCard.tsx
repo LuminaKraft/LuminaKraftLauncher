@@ -52,7 +52,6 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
     );
   };
 
-  const isVanillaServer = modpack.modloader === 'vanilla' || modpack.modloader === 'paper';
   const requiresModpack = !!modpack.urlModpackZip;
 
   const copyToClipboard = async (text: string) => {

@@ -24,7 +24,6 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state }) => {
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
 
-  const isVanillaServer = modpack.modloader === 'vanilla' || modpack.modloader === 'paper';
   const requiresModpack = !!modpack.urlModpackZip;
 
   const copyToClipboard = async (text: string) => {
