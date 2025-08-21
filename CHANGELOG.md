@@ -5,7 +5,7 @@ All notable changes to the LuminaKraft Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.0.9-alpha.4] - 2025-08-20
+## [0.0.9-alpha.4] - 2025-08-21
 
 ### ✨ Features
 - Add persistent cache for modpack details, unified cache clearing, and 15min TTL ([caddf0a])
@@ -28,6 +28,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Remove unused ModpackCard component and update translation keys ([c52b728])
 - Prevent language changes during active modpack operations ([d671c82])
 - Remove launcherDataUrl usage and hardcode API endpoint for modpack and curseforge services ([c8469b0])
+- Improve IP handling in ModpackCard and ModpackActions components ([acbfb7d])
+- Enhance animation effects in ModpackDetails, LogsSection, and ScreenshotsSection components ([b84c801])
+- Update ModpackActions styles and improve temp directory handling ([af4897e])
 
 ### 🐛 Bug Fixes
 - Fix authentication issues ([b78d3d1])
@@ -37,15 +40,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Update error messages for Tauri context and instance stopping ([210dcb5])
 - Correct command string handling in dependency checker ([23f59ed])
 - Resolve installation issues on Windows by implementing fallback for symlink creation ([b865991])
+- Resolve multiple installation and progress display issues ([3927f8c])
 
 ### 🧹 Cleanup & Maintenance
 - Remove unused fields and debug logging ([aebdd27], [ed60ddf])
 - Clean up tasks.txt by removing outdated entries ([6fef5f8])
 - Remove files and images no longer needed ([edaff75], [aec9b39], [92ec322])
-
-### 🔀 Merges
-- Merge remote-tracking branch 'origin/main' into dev ([19090dd], [aa3e157], [58f7582])
-- Merge pull requests #65, #64, #55, #54, #3, #2 ([37a7f37], [1659fe2], [03f9934], [222757a], [5b6592f], [5528981])
 
 ---
 
