@@ -42,11 +42,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Resolve installation issues on Windows by implementing fallback for symlink creation ([b865991])
 - Resolve multiple installation and progress display issues ([3927f8c])
 
-### 🧹 Cleanup & Maintenance
-- Remove unused fields and debug logging ([aebdd27], [ed60ddf])
-- Clean up tasks.txt by removing outdated entries ([6fef5f8])
-- Remove files and images no longer needed ([edaff75], [aec9b39], [92ec322])
-
 ---
 
 ## [0.0.9-alpha.3] - 2025-07-05
