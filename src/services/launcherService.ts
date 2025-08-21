@@ -51,7 +51,9 @@ class LauncherService {
             delete parsed.launcherDataUrl; // removed, endpoint is hardcoded
             localStorage.setItem('LuminaKraftLauncher_settings', JSON.stringify(parsed));
           }
-        } catch {}
+        } catch {
+          // Ignore JSON parsing errors for legacy settings
+        }
       }
     }
   }

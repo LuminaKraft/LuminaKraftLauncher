@@ -10,6 +10,7 @@ export interface Modpack {
   version: string;
   minecraftVersion: string;
   modloader: string;
+  modloaderVersion: string;
   logo: string;
   backgroundImage: string; // First image from images array
   banner?: string;
