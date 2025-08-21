@@ -36,20 +36,10 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state }) => {
   };
 
   const getStatusInfo = () => {
-    // Handle vanilla/paper servers with IP
-    if (isVanillaServer && modpack.ip) {
-      return {
-        icon: Globe,
-        label: `${t('modpacks.connect')} ${modpack.ip}`,
-        bgColor: 'bg-blue-600 hover:bg-blue-700',
-        textColor: 'text-white',
-        action: () => copyToClipboard(modpack.ip!),
-        disabled: false
-      };
-    }
-
-    // Handle servers without modpack and without IP
-    if (!requiresModpack && !modpack.ip) {
+    const hasValidIp = modpack.ip && modpack.ip.trim() !== '';
+    
+    // Handle servers without modpack and without IP (check this FIRST)
+    if (!requiresModpack && !hasValidIp) {
       return {
         icon: AlertTriangle,
         label: t('modpacks.notAvailable'),
@@ -57,6 +47,18 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state }) => {
         textColor: 'text-gray-400',
         action: () => {},
         disabled: true
+      };
+    }
+
+    // Handle any server with IP (vanilla or non-vanilla)
+    if (!requiresModpack && hasValidIp) {
+      return {
+        icon: Globe,
+        label: `${t('modpacks.connect')} ${modpack.ip}`,
+        bgColor: 'bg-blue-600 hover:bg-blue-700',
+        textColor: 'text-white',
+        action: () => copyToClipboard(modpack.ip!),
+        disabled: false
       };
     }
 
