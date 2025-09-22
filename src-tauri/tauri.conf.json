@@ -54,6 +54,12 @@
     }
   },
   "plugins": {
+    "http": {
+      "enable": true,
+      "scope": [
+        "https://api.luminakraft.com/**"
+      ]
+    },
     "fs": {
       "requireLiteralLeadingDot": false
     },
