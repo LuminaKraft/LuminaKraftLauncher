@@ -123,7 +123,18 @@ class LauncherService {
             console.log(`[LauncherService] ✅ Using offline token for request: ${url}`);
             console.log(`[LauncherService] Token preview: ${offlineToken.substring(0, 8)}...`);
           } else {
+            // CRITICAL: No auth token available - this should never happen
             console.error(`[LauncherService] ❌ No valid authentication token available for request: ${url}`);
+            console.error(`[LauncherService] msAccount: ${!!msAccount}, offlineToken: ${!!offlineToken}`);
+
+            // Emergency fallback: generate a temporary token if completely missing
+            if (!msAccount && !offlineToken) {
+              console.warn('🚨 Emergency: Generating temporary offline token for request');
+              const emergencyToken = this.generateClientToken();
+              this.userSettings.clientToken = emergencyToken;
+              this.saveUserSettings({ clientToken: emergencyToken });
+              config.headers['x-lk-token'] = emergencyToken;
+            }
           }
 
           config.headers['x-luminakraft-client'] = 'luminakraft-launcher';
@@ -168,22 +179,26 @@ class LauncherService {
   }
 
   private detectDefaultLanguage(): string {
-    // Check if user has manually set a language preference
-    const storedLanguage = localStorage.getItem('LuminaKraftLauncher-language');
-    if (storedLanguage && ['es', 'en'].includes(storedLanguage)) {
-      return storedLanguage;
-    }
-
-    // Detect browser language - same logic as i18n
-    const browserLanguage = navigator.language || (navigator as any).languages?.[0];
-    if (browserLanguage) {
-      // If any Spanish variant (es, es-ES, es-MX, es-AR, etc.), use Spanish
-      if (browserLanguage.toLowerCase().startsWith('es')) {
-        return 'es';
+    try {
+      // Check if user has manually set a language preference
+      const storedLanguage = localStorage.getItem('LuminaKraftLauncher-language');
+      if (storedLanguage && ['es', 'en'].includes(storedLanguage)) {
+        return storedLanguage;
       }
+
+      // Detect browser language - same logic as i18n
+      const browserLanguage = navigator.language || (navigator as any).languages?.[0];
+      if (browserLanguage) {
+        // If any Spanish variant (es, es-ES, es-MX, es-AR, etc.), use Spanish
+        if (browserLanguage.toLowerCase().startsWith('es')) {
+          return 'es';
+        }
+      }
+    } catch (error) {
+      console.error('Error detecting default language:', error);
     }
 
-    // Default to English for all other languages
+    // Default to English for all other languages or on error
     return 'en';
   }
 
@@ -193,30 +208,41 @@ class LauncherService {
       allocatedRam: 4,
       language: this.detectDefaultLanguage(),
       authMethod: 'offline',
-      clientToken: undefined
+      clientToken: this.generateClientToken() // Generate immediately, not undefined
     };
 
     try {
       const saved = localStorage.getItem('LuminaKraftLauncher_settings');
       if (saved) {
         const merged = { ...defaultSettings, ...JSON.parse(saved) } as UserSettings;
+
+        // CRITICAL: Always ensure we have a client token for offline auth
         if (!merged.clientToken) {
+          console.warn('⚠️ ClientToken missing in saved settings, generating new one');
           merged.clientToken = this.generateClientToken();
-          localStorage.setItem('LuminaKraftLauncher_settings', JSON.stringify(merged));
         }
+
+        // Save the merged settings with guaranteed clientToken
+        try {
+          localStorage.setItem('LuminaKraftLauncher_settings', JSON.stringify(merged));
+        } catch (saveError) {
+          console.error('Error saving merged settings to localStorage:', saveError);
+        }
+
         return merged;
       }
     } catch (error) {
       console.error('Error loading user settings:', error);
     }
 
-    // Ensure we have a client token for offline auth
-    defaultSettings.clientToken = this.generateClientToken();
+    // Fallback: return default settings (which already have a clientToken generated)
     try {
       localStorage.setItem('LuminaKraftLauncher_settings', JSON.stringify(defaultSettings));
-    } catch {
-      // Ignore localStorage errors in non-browser environments
+    } catch (saveError) {
+      console.error('Error saving default settings to localStorage:', saveError);
     }
+
+    console.log('✅ Using default settings with generated clientToken');
     return defaultSettings;
   }
 
