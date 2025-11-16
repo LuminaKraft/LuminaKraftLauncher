@@ -69,31 +69,102 @@ class LauncherService {
     axios.defaults.timeout = this.requestTimeout;
     // Note: User-Agent header cannot be set in browsers for security reasons
     // Only set other headers that are allowed
-    axios.interceptors.request.use((config) => {
+    axios.interceptors.request.use(async (config) => {
       try {
-        const msToken = this.userSettings?.microsoftAccount?.accessToken;
+        const msAccount = this.userSettings?.microsoftAccount;
+        let msToken = msAccount?.accessToken;
         const offlineToken = this.userSettings?.clientToken;
-  const baseUrl = this.API_BASE_URL;
-  const url = config.url || '';
-  // Attach auth header only for our API base URL
-  if (url.startsWith(baseUrl)) {
-          config.headers = config.headers || {};
-          if (msToken) {
-            (config.headers as any)['Authorization'] = `Bearer ${msToken}`;
-            console.log(`[LauncherService] Added Microsoft token to request: ${url}`);
-          } else if (offlineToken) {
-            (config.headers as any)['x-lk-token'] = offlineToken;
-            console.log(`[LauncherService] Added offline token to request: ${url}`);
+        const baseUrl = this.API_BASE_URL;
+        const url = config.url || '';
+
+        console.log(`[LauncherService] Interceptor - URL: ${url}, baseUrl: ${baseUrl}`);
+
+        // Attach auth header only for our API base URL
+        if (url.startsWith(baseUrl)) {
+          // Initialize headers if they don't exist
+          if (!config.headers) {
+            config.headers = {} as any;
           }
-          (config.headers as any)['x-luminakraft-client'] = 'luminakraft-launcher';
+
+          // Check if Microsoft token is expired
+          const isTokenExpired = msAccount && msAccount.exp < Math.floor(Date.now() / 1000);
+
+          // If user has Microsoft account and token is expired, try to refresh it
+          if (msAccount && isTokenExpired) {
+            console.log(`[LauncherService] 🔄 Microsoft token expired. Attempting to refresh...`);
+            try {
+              const AuthService = (await import('./authService')).default;
+              const authService = AuthService.getInstance();
+              const refreshedAccount = await authService.refreshMicrosoftToken(msAccount.refreshToken);
+
+              // Update user settings with refreshed token
+              this.userSettings.microsoftAccount = refreshedAccount;
+              this.saveUserSettings({ microsoftAccount: refreshedAccount });
+
+              msToken = refreshedAccount.accessToken;
+              console.log(`[LauncherService] ✅ Token refreshed successfully`);
+            } catch (refreshError) {
+              console.error(`[LauncherService] ❌ Failed to refresh Microsoft token:`, refreshError);
+              console.error(`[LauncherService] ⚠️ User needs to re-authenticate with Microsoft in Settings`);
+              // Don't fallback to offline token - let the request fail so user knows they need to re-auth
+              throw new Error('Microsoft token expired and refresh failed. Please re-authenticate in Settings.');
+            }
+          }
+
+          // Now set the appropriate auth header
+          if (msAccount && msToken) {
+            // User has Microsoft account, use Microsoft token
+            config.headers['Authorization'] = `Bearer ${msToken}`;
+            console.log(`[LauncherService] ✅ Using Microsoft token for request: ${url}`);
+            console.log(`[LauncherService] Token preview: ${msToken.substring(0, 20)}...`);
+          } else if (offlineToken && !msAccount) {
+            // User doesn't have Microsoft account, use offline token
+            config.headers['x-lk-token'] = offlineToken;
+            console.log(`[LauncherService] ✅ Using offline token for request: ${url}`);
+            console.log(`[LauncherService] Token preview: ${offlineToken.substring(0, 8)}...`);
+          } else {
+            console.error(`[LauncherService] ❌ No valid authentication token available for request: ${url}`);
+          }
+
+          config.headers['x-luminakraft-client'] = 'luminakraft-launcher';
+          console.log(`[LauncherService] Final headers (Authorization: ${!!config.headers['Authorization']}, x-lk-token: ${!!config.headers['x-lk-token']})`);
         } else {
           console.log(`[LauncherService] No auth headers added - URL ${url} doesn't match baseUrl ${baseUrl}`);
         }
-      } catch (_) {
-        // noop
+      } catch (error) {
+        console.error('[LauncherService] Error in request interceptor:', error);
+        throw error; // Propagate error to fail the request
       }
       return config;
     });
+
+    // Add response interceptor to handle auth errors
+    axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response?.status === 401) {
+          const url = error.config?.url || '';
+          const detail = error.response?.data?.detail || '';
+
+          console.error(`[LauncherService] 401 Unauthorized for ${url}`);
+          console.error(`[LauncherService] API Response: ${detail}`);
+
+          // Check if we sent a Microsoft token
+          const sentAuth = error.config?.headers?.['Authorization'];
+          const sentLKToken = error.config?.headers?.['x-lk-token'];
+
+          console.error(`[LauncherService] Sent Authorization header: ${!!sentAuth}`);
+          console.error(`[LauncherService] Sent x-lk-token header: ${!!sentLKToken}`);
+
+          if (sentAuth && detail.includes('Invalid Microsoft token')) {
+            console.error('[LauncherService] Microsoft token is invalid or expired. Please re-authenticate.');
+          } else if (!sentAuth && !sentLKToken) {
+            console.error('[LauncherService] No authentication headers were sent to the API');
+          }
+        }
+        return Promise.reject(error);
+      }
+    );
   }
 
   private detectDefaultLanguage(): string {
