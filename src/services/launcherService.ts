@@ -71,13 +71,13 @@ class LauncherService {
     // Only set other headers that are allowed
     axios.interceptors.request.use((config) => {
       try {
-        const msToken = this.userSettings?.microsoftAccount?.accessToken;
+        const msAccount = this.userSettings?.microsoftAccount;
+        const msToken = msAccount?.accessToken;
         const offlineToken = this.userSettings?.clientToken;
         const baseUrl = this.API_BASE_URL;
         const url = config.url || '';
 
         console.log(`[LauncherService] Interceptor - URL: ${url}, baseUrl: ${baseUrl}`);
-        console.log(`[LauncherService] Interceptor - msToken exists: ${!!msToken}, offlineToken exists: ${!!offlineToken}`);
 
         // Attach auth header only for our API base URL
         if (url.startsWith(baseUrl)) {
@@ -86,18 +86,27 @@ class LauncherService {
             config.headers = {} as any;
           }
 
-          if (msToken) {
+          // Check if Microsoft token is expired
+          const isTokenExpired = msAccount && msAccount.exp < Math.floor(Date.now() / 1000);
+
+          if (msToken && !isTokenExpired) {
             config.headers['Authorization'] = `Bearer ${msToken}`;
-            console.log(`[LauncherService] Added Microsoft token to request: ${url}`);
+            console.log(`[LauncherService] ✅ Using Microsoft token for request: ${url}`);
+            console.log(`[LauncherService] Token preview: ${msToken.substring(0, 20)}...`);
           } else if (offlineToken) {
             config.headers['x-lk-token'] = offlineToken;
-            console.log(`[LauncherService] Added offline token (${offlineToken.substring(0, 8)}...) to request: ${url}`);
+            console.log(`[LauncherService] ✅ Using offline token for request: ${url}`);
+            console.log(`[LauncherService] Token preview: ${offlineToken.substring(0, 8)}...`);
+
+            if (isTokenExpired) {
+              console.warn(`[LauncherService] ⚠️ Microsoft token is expired. Using offline token instead. Please refresh your Microsoft token in settings.`);
+            }
           } else {
-            console.warn(`[LauncherService] WARNING: No authentication token available for request: ${url}`);
+            console.error(`[LauncherService] ❌ No valid authentication token available for request: ${url}`);
           }
 
           config.headers['x-luminakraft-client'] = 'luminakraft-launcher';
-          console.log(`[LauncherService] Final headers:`, config.headers);
+          console.log(`[LauncherService] Final headers (Authorization: ${!!config.headers['Authorization']}, x-lk-token: ${!!config.headers['x-lk-token']})`);
         } else {
           console.log(`[LauncherService] No auth headers added - URL ${url} doesn't match baseUrl ${baseUrl}`);
         }
@@ -106,6 +115,34 @@ class LauncherService {
       }
       return config;
     });
+
+    // Add response interceptor to handle auth errors
+    axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response?.status === 401) {
+          const url = error.config?.url || '';
+          const detail = error.response?.data?.detail || '';
+
+          console.error(`[LauncherService] 401 Unauthorized for ${url}`);
+          console.error(`[LauncherService] API Response: ${detail}`);
+
+          // Check if we sent a Microsoft token
+          const sentAuth = error.config?.headers?.['Authorization'];
+          const sentLKToken = error.config?.headers?.['x-lk-token'];
+
+          console.error(`[LauncherService] Sent Authorization header: ${!!sentAuth}`);
+          console.error(`[LauncherService] Sent x-lk-token header: ${!!sentLKToken}`);
+
+          if (sentAuth && detail.includes('Invalid Microsoft token')) {
+            console.error('[LauncherService] Microsoft token is invalid or expired. Please re-authenticate.');
+          } else if (!sentAuth && !sentLKToken) {
+            console.error('[LauncherService] No authentication headers were sent to the API');
+          }
+        }
+        return Promise.reject(error);
+      }
+    );
   }
 
   private detectDefaultLanguage(): string {
