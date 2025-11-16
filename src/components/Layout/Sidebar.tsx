@@ -29,7 +29,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
   const hasUpdate = false;
   
   // Version is automatically updated by release.js
-  const currentVersion = "0.0.9-alpha.4";
+  const currentVersion = "0.0.9-alpha.5";
 
   const menuItems = [
     {
