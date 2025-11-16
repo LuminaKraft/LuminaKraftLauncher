@@ -5,6 +5,34 @@ All notable changes to the LuminaKraft Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.9-alpha.5] - 2025-08-21
+
+### 🐛 Bug Fixes
+- **API Authentication 401 Error Resolution**
+  - Fixed 401 Unauthorized errors when launcher sends expired Microsoft tokens to API
+  - Implemented automatic token refresh for Microsoft accounts before making API requests
+  - Added token expiration validation in axios request interceptor
+  - Enhanced error handling with detailed logging for authentication failures
+  - Prevented offline token fallback for Microsoft-authenticated users
+  - Added response interceptor to provide detailed 401 error diagnostics
+
+### ♻️ Refactors & Architecture
+- **Authentication Flow Improvements**
+  - Made axios request interceptor async to support token refresh operations
+  - Improved token selection logic: Microsoft users always use Microsoft auth, offline users use offline tokens
+  - Enhanced logging system with emojis and detailed token status information
+  - Added automatic user settings update when tokens are refreshed
+  - Improved error propagation to ensure users are notified when re-authentication is required
+
+### 🔧 Technical Improvements
+- **Enhanced Debugging**
+  - Added comprehensive logging for all authentication-related operations
+  - Token preview logging (first 8-20 characters) for security auditing
+  - Detailed header inspection in request/response interceptors
+  - Clear console warnings when authentication tokens are missing or expired
+
+---
+
 ## [0.0.9-alpha.4] - 2025-08-21 
 
 ### ✨ Features
