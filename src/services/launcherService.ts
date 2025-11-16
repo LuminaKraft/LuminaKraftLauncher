@@ -69,10 +69,10 @@ class LauncherService {
     axios.defaults.timeout = this.requestTimeout;
     // Note: User-Agent header cannot be set in browsers for security reasons
     // Only set other headers that are allowed
-    axios.interceptors.request.use((config) => {
+    axios.interceptors.request.use(async (config) => {
       try {
         const msAccount = this.userSettings?.microsoftAccount;
-        const msToken = msAccount?.accessToken;
+        let msToken = msAccount?.accessToken;
         const offlineToken = this.userSettings?.clientToken;
         const baseUrl = this.API_BASE_URL;
         const url = config.url || '';
@@ -89,18 +89,39 @@ class LauncherService {
           // Check if Microsoft token is expired
           const isTokenExpired = msAccount && msAccount.exp < Math.floor(Date.now() / 1000);
 
-          if (msToken && !isTokenExpired) {
+          // If user has Microsoft account and token is expired, try to refresh it
+          if (msAccount && isTokenExpired) {
+            console.log(`[LauncherService] 🔄 Microsoft token expired. Attempting to refresh...`);
+            try {
+              const AuthService = (await import('./authService')).default;
+              const authService = AuthService.getInstance();
+              const refreshedAccount = await authService.refreshMicrosoftToken(msAccount.refreshToken);
+
+              // Update user settings with refreshed token
+              this.userSettings.microsoftAccount = refreshedAccount;
+              this.saveUserSettings({ microsoftAccount: refreshedAccount });
+
+              msToken = refreshedAccount.accessToken;
+              console.log(`[LauncherService] ✅ Token refreshed successfully`);
+            } catch (refreshError) {
+              console.error(`[LauncherService] ❌ Failed to refresh Microsoft token:`, refreshError);
+              console.error(`[LauncherService] ⚠️ User needs to re-authenticate with Microsoft in Settings`);
+              // Don't fallback to offline token - let the request fail so user knows they need to re-auth
+              throw new Error('Microsoft token expired and refresh failed. Please re-authenticate in Settings.');
+            }
+          }
+
+          // Now set the appropriate auth header
+          if (msAccount && msToken) {
+            // User has Microsoft account, use Microsoft token
             config.headers['Authorization'] = `Bearer ${msToken}`;
             console.log(`[LauncherService] ✅ Using Microsoft token for request: ${url}`);
             console.log(`[LauncherService] Token preview: ${msToken.substring(0, 20)}...`);
-          } else if (offlineToken) {
+          } else if (offlineToken && !msAccount) {
+            // User doesn't have Microsoft account, use offline token
             config.headers['x-lk-token'] = offlineToken;
             console.log(`[LauncherService] ✅ Using offline token for request: ${url}`);
             console.log(`[LauncherService] Token preview: ${offlineToken.substring(0, 8)}...`);
-
-            if (isTokenExpired) {
-              console.warn(`[LauncherService] ⚠️ Microsoft token is expired. Using offline token instead. Please refresh your Microsoft token in settings.`);
-            }
           } else {
             console.error(`[LauncherService] ❌ No valid authentication token available for request: ${url}`);
           }
@@ -112,6 +133,7 @@ class LauncherService {
         }
       } catch (error) {
         console.error('[LauncherService] Error in request interceptor:', error);
+        throw error; // Propagate error to fail the request
       }
       return config;
     });
