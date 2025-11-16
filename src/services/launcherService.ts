@@ -86,54 +86,57 @@ class LauncherService {
             config.headers = {} as any;
           }
 
-          // Check if Microsoft token is expired
-          const isTokenExpired = msAccount && msAccount.exp < Math.floor(Date.now() / 1000);
+          // Determine which auth method to use based on user preference
+          const authMethod = this.userSettings.authMethod || 'offline';
 
-          // If user has Microsoft account and token is expired, try to refresh it
-          if (msAccount && isTokenExpired) {
-            console.log(`[LauncherService] 🔄 Microsoft token expired. Attempting to refresh...`);
-            try {
-              const AuthService = (await import('./authService')).default;
-              const authService = AuthService.getInstance();
-              const refreshedAccount = await authService.refreshMicrosoftToken(msAccount.refreshToken);
-
-              // Update user settings with refreshed token
-              this.userSettings.microsoftAccount = refreshedAccount;
-              this.saveUserSettings({ microsoftAccount: refreshedAccount });
-
-              msToken = refreshedAccount.accessToken;
-              console.log(`[LauncherService] ✅ Token refreshed successfully`);
-            } catch (refreshError) {
-              console.error(`[LauncherService] ❌ Failed to refresh Microsoft token:`, refreshError);
-              console.error(`[LauncherService] ⚠️ User needs to re-authenticate with Microsoft in Settings`);
-              // Don't fallback to offline token - let the request fail so user knows they need to re-auth
-              throw new Error('Microsoft token expired and refresh failed. Please re-authenticate in Settings.');
+          if (authMethod === 'microsoft') {
+            // User chose Microsoft authentication
+            if (!msAccount || !msToken) {
+              console.error(`[LauncherService] ❌ User chose Microsoft auth but no account/token available`);
+              throw new Error('Microsoft authentication selected but not configured. Please authenticate in Settings.');
             }
-          }
 
-          // Now set the appropriate auth header
-          if (msAccount && msToken) {
-            // User has Microsoft account, use Microsoft token
+            // Check if Microsoft token is expired
+            const isTokenExpired = msAccount.exp < Math.floor(Date.now() / 1000);
+
+            // If token is expired, try to refresh it
+            if (isTokenExpired) {
+              console.log(`[LauncherService] 🔄 Microsoft token expired. Attempting to refresh...`);
+              try {
+                const AuthService = (await import('./authService')).default;
+                const authService = AuthService.getInstance();
+                const refreshedAccount = await authService.refreshMicrosoftToken(msAccount.refreshToken);
+
+                // Update user settings with refreshed token
+                this.userSettings.microsoftAccount = refreshedAccount;
+                this.saveUserSettings({ microsoftAccount: refreshedAccount });
+
+                msToken = refreshedAccount.accessToken;
+                console.log(`[LauncherService] ✅ Token refreshed successfully`);
+              } catch (refreshError) {
+                console.error(`[LauncherService] ❌ Failed to refresh Microsoft token:`, refreshError);
+                console.error(`[LauncherService] ⚠️ User needs to re-authenticate with Microsoft in Settings`);
+                throw new Error('Microsoft token expired and refresh failed. Please re-authenticate in Settings.');
+              }
+            }
+
+            // Use Microsoft token
             config.headers['Authorization'] = `Bearer ${msToken}`;
             console.log(`[LauncherService] ✅ Using Microsoft token for request: ${url}`);
             console.log(`[LauncherService] Token preview: ${msToken.substring(0, 20)}...`);
-          } else if (offlineToken && !msAccount) {
-            // User doesn't have Microsoft account, use offline token
-            config.headers['x-lk-token'] = offlineToken;
-            console.log(`[LauncherService] ✅ Using offline token for request: ${url}`);
-            console.log(`[LauncherService] Token preview: ${offlineToken.substring(0, 8)}...`);
-          } else {
-            // CRITICAL: No auth token available - this should never happen
-            console.error(`[LauncherService] ❌ No valid authentication token available for request: ${url}`);
-            console.error(`[LauncherService] msAccount: ${!!msAccount}, offlineToken: ${!!offlineToken}`);
 
-            // Emergency fallback: generate a temporary token if completely missing
-            if (!msAccount && !offlineToken) {
-              console.warn('🚨 Emergency: Generating temporary offline token for request');
+          } else {
+            // User chose offline authentication (or default)
+            if (!offlineToken) {
+              console.warn('🚨 Emergency: No offline token available, generating new one');
               const emergencyToken = this.generateClientToken();
               this.userSettings.clientToken = emergencyToken;
               this.saveUserSettings({ clientToken: emergencyToken });
               config.headers['x-lk-token'] = emergencyToken;
+            } else {
+              config.headers['x-lk-token'] = offlineToken;
+              console.log(`[LauncherService] ✅ Using offline token for request: ${url}`);
+              console.log(`[LauncherService] Token preview: ${offlineToken.substring(0, 8)}...`);
             }
           }
 
