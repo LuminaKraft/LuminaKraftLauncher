@@ -73,24 +73,36 @@ class LauncherService {
       try {
         const msToken = this.userSettings?.microsoftAccount?.accessToken;
         const offlineToken = this.userSettings?.clientToken;
-  const baseUrl = this.API_BASE_URL;
-  const url = config.url || '';
-  // Attach auth header only for our API base URL
-  if (url.startsWith(baseUrl)) {
-          config.headers = config.headers || {};
+        const baseUrl = this.API_BASE_URL;
+        const url = config.url || '';
+
+        console.log(`[LauncherService] Interceptor - URL: ${url}, baseUrl: ${baseUrl}`);
+        console.log(`[LauncherService] Interceptor - msToken exists: ${!!msToken}, offlineToken exists: ${!!offlineToken}`);
+
+        // Attach auth header only for our API base URL
+        if (url.startsWith(baseUrl)) {
+          // Initialize headers if they don't exist
+          if (!config.headers) {
+            config.headers = {} as any;
+          }
+
           if (msToken) {
-            (config.headers as any)['Authorization'] = `Bearer ${msToken}`;
+            config.headers['Authorization'] = `Bearer ${msToken}`;
             console.log(`[LauncherService] Added Microsoft token to request: ${url}`);
           } else if (offlineToken) {
-            (config.headers as any)['x-lk-token'] = offlineToken;
-            console.log(`[LauncherService] Added offline token to request: ${url}`);
+            config.headers['x-lk-token'] = offlineToken;
+            console.log(`[LauncherService] Added offline token (${offlineToken.substring(0, 8)}...) to request: ${url}`);
+          } else {
+            console.warn(`[LauncherService] WARNING: No authentication token available for request: ${url}`);
           }
-          (config.headers as any)['x-luminakraft-client'] = 'luminakraft-launcher';
+
+          config.headers['x-luminakraft-client'] = 'luminakraft-launcher';
+          console.log(`[LauncherService] Final headers:`, config.headers);
         } else {
           console.log(`[LauncherService] No auth headers added - URL ${url} doesn't match baseUrl ${baseUrl}`);
         }
-      } catch (_) {
-        // noop
+      } catch (error) {
+        console.error('[LauncherService] Error in request interceptor:', error);
       }
       return config;
     });
