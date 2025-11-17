@@ -86,44 +86,58 @@ class LauncherService {
             config.headers = {} as any;
           }
 
-          // Check if Microsoft token is expired
-          const isTokenExpired = msAccount && msAccount.exp < Math.floor(Date.now() / 1000);
+          // Determine which auth method to use based on user preference
+          const authMethod = this.userSettings.authMethod || 'offline';
 
-          // If user has Microsoft account and token is expired, try to refresh it
-          if (msAccount && isTokenExpired) {
-            console.log(`[LauncherService] 🔄 Microsoft token expired. Attempting to refresh...`);
-            try {
-              const AuthService = (await import('./authService')).default;
-              const authService = AuthService.getInstance();
-              const refreshedAccount = await authService.refreshMicrosoftToken(msAccount.refreshToken);
-
-              // Update user settings with refreshed token
-              this.userSettings.microsoftAccount = refreshedAccount;
-              this.saveUserSettings({ microsoftAccount: refreshedAccount });
-
-              msToken = refreshedAccount.accessToken;
-              console.log(`[LauncherService] ✅ Token refreshed successfully`);
-            } catch (refreshError) {
-              console.error(`[LauncherService] ❌ Failed to refresh Microsoft token:`, refreshError);
-              console.error(`[LauncherService] ⚠️ User needs to re-authenticate with Microsoft in Settings`);
-              // Don't fallback to offline token - let the request fail so user knows they need to re-auth
-              throw new Error('Microsoft token expired and refresh failed. Please re-authenticate in Settings.');
+          if (authMethod === 'microsoft') {
+            // User chose Microsoft authentication
+            if (!msAccount || !msToken) {
+              console.error(`[LauncherService] ❌ User chose Microsoft auth but no account/token available`);
+              throw new Error('Microsoft authentication selected but not configured. Please authenticate in Settings.');
             }
-          }
 
-          // Now set the appropriate auth header
-          if (msAccount && msToken) {
-            // User has Microsoft account, use Microsoft token
+            // Check if Microsoft token is expired
+            const isTokenExpired = msAccount.exp < Math.floor(Date.now() / 1000);
+
+            // If token is expired, try to refresh it
+            if (isTokenExpired) {
+              console.log(`[LauncherService] 🔄 Microsoft token expired. Attempting to refresh...`);
+              try {
+                const AuthService = (await import('./authService')).default;
+                const authService = AuthService.getInstance();
+                const refreshedAccount = await authService.refreshMicrosoftToken(msAccount.refreshToken);
+
+                // Update user settings with refreshed token
+                this.userSettings.microsoftAccount = refreshedAccount;
+                this.saveUserSettings({ microsoftAccount: refreshedAccount });
+
+                msToken = refreshedAccount.accessToken;
+                console.log(`[LauncherService] ✅ Token refreshed successfully`);
+              } catch (refreshError) {
+                console.error(`[LauncherService] ❌ Failed to refresh Microsoft token:`, refreshError);
+                console.error(`[LauncherService] ⚠️ User needs to re-authenticate with Microsoft in Settings`);
+                throw new Error('Microsoft token expired and refresh failed. Please re-authenticate in Settings.');
+              }
+            }
+
+            // Use Microsoft token
             config.headers['Authorization'] = `Bearer ${msToken}`;
             console.log(`[LauncherService] ✅ Using Microsoft token for request: ${url}`);
             console.log(`[LauncherService] Token preview: ${msToken.substring(0, 20)}...`);
-          } else if (offlineToken && !msAccount) {
-            // User doesn't have Microsoft account, use offline token
-            config.headers['x-lk-token'] = offlineToken;
-            console.log(`[LauncherService] ✅ Using offline token for request: ${url}`);
-            console.log(`[LauncherService] Token preview: ${offlineToken.substring(0, 8)}...`);
+
           } else {
-            console.error(`[LauncherService] ❌ No valid authentication token available for request: ${url}`);
+            // User chose offline authentication (or default)
+            if (!offlineToken) {
+              console.warn('🚨 Emergency: No offline token available, generating new one');
+              const emergencyToken = this.generateClientToken();
+              this.userSettings.clientToken = emergencyToken;
+              this.saveUserSettings({ clientToken: emergencyToken });
+              config.headers['x-lk-token'] = emergencyToken;
+            } else {
+              config.headers['x-lk-token'] = offlineToken;
+              console.log(`[LauncherService] ✅ Using offline token for request: ${url}`);
+              console.log(`[LauncherService] Token preview: ${offlineToken.substring(0, 8)}...`);
+            }
           }
 
           config.headers['x-luminakraft-client'] = 'luminakraft-launcher';
@@ -168,22 +182,26 @@ class LauncherService {
   }
 
   private detectDefaultLanguage(): string {
-    // Check if user has manually set a language preference
-    const storedLanguage = localStorage.getItem('LuminaKraftLauncher-language');
-    if (storedLanguage && ['es', 'en'].includes(storedLanguage)) {
-      return storedLanguage;
-    }
-
-    // Detect browser language - same logic as i18n
-    const browserLanguage = navigator.language || (navigator as any).languages?.[0];
-    if (browserLanguage) {
-      // If any Spanish variant (es, es-ES, es-MX, es-AR, etc.), use Spanish
-      if (browserLanguage.toLowerCase().startsWith('es')) {
-        return 'es';
+    try {
+      // Check if user has manually set a language preference
+      const storedLanguage = localStorage.getItem('LuminaKraftLauncher-language');
+      if (storedLanguage && ['es', 'en'].includes(storedLanguage)) {
+        return storedLanguage;
       }
+
+      // Detect browser language - same logic as i18n
+      const browserLanguage = navigator.language || (navigator as any).languages?.[0];
+      if (browserLanguage) {
+        // If any Spanish variant (es, es-ES, es-MX, es-AR, etc.), use Spanish
+        if (browserLanguage.toLowerCase().startsWith('es')) {
+          return 'es';
+        }
+      }
+    } catch (error) {
+      console.error('Error detecting default language:', error);
     }
 
-    // Default to English for all other languages
+    // Default to English for all other languages or on error
     return 'en';
   }
 
@@ -193,30 +211,41 @@ class LauncherService {
       allocatedRam: 4,
       language: this.detectDefaultLanguage(),
       authMethod: 'offline',
-      clientToken: undefined
+      clientToken: this.generateClientToken() // Generate immediately, not undefined
     };
 
     try {
       const saved = localStorage.getItem('LuminaKraftLauncher_settings');
       if (saved) {
         const merged = { ...defaultSettings, ...JSON.parse(saved) } as UserSettings;
+
+        // CRITICAL: Always ensure we have a client token for offline auth
         if (!merged.clientToken) {
+          console.warn('⚠️ ClientToken missing in saved settings, generating new one');
           merged.clientToken = this.generateClientToken();
-          localStorage.setItem('LuminaKraftLauncher_settings', JSON.stringify(merged));
         }
+
+        // Save the merged settings with guaranteed clientToken
+        try {
+          localStorage.setItem('LuminaKraftLauncher_settings', JSON.stringify(merged));
+        } catch (saveError) {
+          console.error('Error saving merged settings to localStorage:', saveError);
+        }
+
         return merged;
       }
     } catch (error) {
       console.error('Error loading user settings:', error);
     }
 
-    // Ensure we have a client token for offline auth
-    defaultSettings.clientToken = this.generateClientToken();
+    // Fallback: return default settings (which already have a clientToken generated)
     try {
       localStorage.setItem('LuminaKraftLauncher_settings', JSON.stringify(defaultSettings));
-    } catch {
-      // Ignore localStorage errors in non-browser environments
+    } catch (saveError) {
+      console.error('Error saving default settings to localStorage:', saveError);
     }
+
+    console.log('✅ Using default settings with generated clientToken');
     return defaultSettings;
   }
 
