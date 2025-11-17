@@ -5,6 +5,45 @@ All notable changes to the LuminaKraft Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.9-alpha.6] - 2025-11-17
+
+### 🐛 Bug Fixes
+- **Windows Production Build API Authentication Fix**
+  - Fixed critical issue where modpacks failed to load with 400 Bad Request on fresh Windows installations
+  - Root cause: clientToken was not being generated on first launch, causing API requests to fail
+  - Enhanced clientToken generation to happen immediately during settings initialization
+  - Added try-catch around language detection to prevent initialization failures
+  - Implemented emergency fallback token generation in axios interceptor
+
+- **Authentication Method Respect**
+  - Fixed critical bug where authMethod preference was being ignored
+  - Previous behavior: If Microsoft account existed in storage, always used Microsoft token regardless of user selection
+  - New behavior: Correctly respects user's authMethod setting ('offline' or 'microsoft')
+  - Users can now have Microsoft account saved but still use offline mode
+  - Improved error messages when Microsoft auth is selected but not configured
+
+### 🔧 Technical Improvements
+- **Enhanced Token Management**
+  - Default settings now generate clientToken immediately instead of undefined
+  - Added comprehensive logging for token generation and usage
+  - Better error handling when saving settings to localStorage
+  - Improved debugging with detailed authentication flow logging
+
+- **Authentication Flow Improvements**
+  - Simplified authentication logic based on authMethod preference
+  - Clear separation between Microsoft and offline authentication paths
+  - Enhanced error context with specific authentication state information
+  - Better handling of edge cases in token generation and storage
+
+### 🔒 Security & Reliability
+- **Robust Token Generation**
+  - Guaranteed clientToken generation even if localStorage fails
+  - Multiple fallback layers to ensure authentication always works
+  - Protected against language detection failures breaking initialization
+  - Improved resilience to first-run scenarios on fresh installations
+
+---
+
 ## [0.0.9-alpha.5] - 2025-10-16
 
 ### 🐛 Bug Fixes
