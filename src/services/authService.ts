@@ -13,8 +13,8 @@ class AuthService {
   }
 
   /**
-   * Initialize anonymous session in Supabase
-   * This allows users to browse and download modpacks without logging in
+   * Initialize anonymous session in Supabase (DISABLED - using authenticated sessions only)
+   * Users will have authenticated sessions after Microsoft login
    */
   async initializeAnonymousSession(): Promise<boolean> {
     try {
@@ -26,18 +26,11 @@ class AuthService {
         return true;
       }
 
-      // Create anonymous session
-      const { data, error } = await supabase.auth.signInAnonymously();
-
-      if (error) {
-        console.error('❌ Failed to create anonymous session:', error);
-        return false;
-      }
-
-      console.log('✅ Anonymous Supabase session created');
+      // No session - this is OK, will get one after Microsoft login
+      console.log('ℹ️ No Supabase session yet - will be created after Microsoft login');
       return true;
     } catch (error) {
-      console.error('❌ Error initializing anonymous session:', error);
+      console.error('❌ Error checking session:', error);
       return false;
     }
   }
@@ -45,13 +38,13 @@ class AuthService {
   /**
    * Authenticate with Supabase using Microsoft account from Lyceris
    * This calls the auth-with-microsoft Edge Function to create/update user profile
-   * We maintain the anonymous Supabase session for API calls
+   * and establishes an authenticated Supabase session
    */
   async authenticateSupabaseWithMicrosoft(microsoftAccount: MicrosoftAccount): Promise<boolean> {
     try {
       console.log('🔗 Authenticating Microsoft account with Supabase...');
 
-      // Call Edge Function to create/update user
+      // Call Edge Function to create/update user and get session tokens
       const { data, error } = await supabase.functions.invoke('auth-with-microsoft', {
         body: {
           microsoft_id: microsoftAccount.xuid,
@@ -72,6 +65,23 @@ class AuthService {
         return false;
       }
 
+      // Set authenticated session with tokens from Edge Function
+      if (data.session && data.session.access_token && data.session.refresh_token) {
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token
+        });
+
+        if (sessionError) {
+          console.error('❌ Failed to set session:', sessionError);
+          return false;
+        }
+
+        console.log('✅ Authenticated Supabase session established');
+      } else {
+        console.warn('⚠️ No session tokens returned from Edge Function');
+      }
+
       console.log('✅ Microsoft account authenticated with Supabase');
       console.log(`   User ID: ${data.user.id}`);
       console.log(`   Role: ${data.user.role}`);
@@ -86,14 +96,12 @@ class AuthService {
 
 
   /**
-   * Sign out from Supabase and return to anonymous session
+   * Sign out from Supabase
    */
   async signOutSupabase(): Promise<void> {
     try {
       await supabase.auth.signOut();
-      // Re-initialize anonymous session
-      await this.initializeAnonymousSession();
-      console.log('✅ Signed out from Supabase, anonymous session restored');
+      console.log('✅ Signed out from Supabase');
     } catch (error) {
       console.error('❌ Error signing out from Supabase:', error);
     }

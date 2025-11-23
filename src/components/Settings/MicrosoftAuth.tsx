@@ -55,6 +55,10 @@ export default function MicrosoftAuth({
       // Sync with Supabase
       await authService.authenticateSupabaseWithMicrosoft(account);
 
+      // Update ModpackManagementService with Microsoft account
+      const { ModpackManagementService } = await import('../../services/modpackManagementService');
+      ModpackManagementService.getInstance().setMicrosoftAccount(account);
+
       onAuthSuccess(account);
 
     } catch (error) {
