@@ -151,6 +151,24 @@ await service.updateModpack(modpackId, {
 const myModpacks = await service.getUserModpacks();
 ```
 
+### User Roles and Permissions
+
+The launcher supports three user roles with different modpack creation permissions:
+
+| Role | Can Create | Category | Badge Color |
+|------|-----------|----------|-------------|
+| `admin` | Official modpacks | `official` | Purple |
+| `partner` | Partner modpacks | `partner` | Blue |
+| `community` | Community modpacks | `community` | Green |
+| anonymous/user | Cannot create | - | - |
+
+**How to get permissions:**
+1. **Admin role**: Requires database access to manually set `role = 'admin'` in the `users` table
+2. **Partner role**: Contact LuminaKraft team to request partner status
+3. **Community role**: Granted automatically to authenticated users via RLS policies
+
+**Category badges** are displayed on all modpack cards in the Home page to help users distinguish official, partner, and community content.
+
 ## UI Components
 
 ### CreateModpackForm Component
