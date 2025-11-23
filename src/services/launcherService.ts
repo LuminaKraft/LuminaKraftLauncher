@@ -1,9 +1,10 @@
 import { invoke } from '@tauri-apps/api/core';
 import axios from 'axios';
-import type { 
-  ModpacksData, 
-  InstanceMetadata, 
-  UserSettings, 
+import { supabase } from './supabaseClient';
+import type {
+  ModpacksData,
+  InstanceMetadata,
+  UserSettings,
   ModpackStatus,
   ProgressInfo
 } from '../types/launcher';
@@ -282,7 +283,8 @@ class LauncherService {
   }
 
   /**
-   * Fetches the lightweight modpacks data for browsing (new API: /v1/modpacks?lang=)
+   * Fetches the lightweight modpacks data for browsing from Supabase
+   * Uses the modpacks_i18n() function for automatic translation
    * Caches under 'modpacks_data' for clarity.
    */
   async fetchModpacksData(): Promise<ModpacksData> {
@@ -300,15 +302,47 @@ class LauncherService {
         this.cache.set(cacheKey, { data: persisted.data, timestamp: persisted.timestamp });
         return persisted.data;
       }
-      console.log('Fetching modpacks data from API...');
-      const urlWithLang = `${this.API_BASE_URL}/v1/modpacks?lang=${lang}`;
-      const response = await axios.get<{ count: number; modpacks: any[]; ui: any }>(urlWithLang, {
-        headers: {
-          'Accept': 'application/json',
-          'Cache-Control': 'no-cache'
-        }
+      console.log('Fetching modpacks data from Supabase...');
+
+      // Fetch modpacks using the i18n function
+      const { data, error } = await supabase.rpc('modpacks_i18n', {
+        p_language: lang
       });
-      this.modpacksData = { modpacks: response.data.modpacks };
+
+      if (error) {
+        console.error('Error fetching modpacks from Supabase:', error);
+        throw error;
+      }
+
+      // Transform Supabase data to match launcher format
+      const modpacks = data?.map((modpack: any) => ({
+        id: modpack.id,
+        slug: modpack.slug,
+        category: modpack.category,
+        name: modpack.name,
+        shortDescription: modpack.short_description,
+        description: modpack.description,
+        version: modpack.version,
+        minecraftVersion: modpack.minecraft_version,
+        modloader: modpack.modloader,
+        modloaderVersion: modpack.modloader_version,
+        gamemode: modpack.gamemode,
+        ip: modpack.server_ip,
+        logo: modpack.logo_url,
+        banner: modpack.banner_url,
+        backgroundImage: modpack.background_image_url,
+        urlModpackZip: modpack.modpack_file_url,
+        primaryColor: modpack.primary_color,
+        isNew: modpack.is_new,
+        isActive: modpack.is_active,
+        isComingSoon: modpack.is_coming_soon,
+        youtubeEmbed: modpack.youtube_embed,
+        tiktokEmbed: modpack.tiktok_embed,
+        partnerId: modpack.partner_id,
+        publishedAt: modpack.published_at,
+      })) || [];
+
+      this.modpacksData = { modpacks };
       this.cache.set(cacheKey, {
         data: this.modpacksData,
         timestamp: Date.now()
@@ -319,7 +353,7 @@ class LauncherService {
           console.warn('Failed to cache modpack images:', error);
         });
       }
-      console.log('Modpacks data loaded successfully');
+      console.log(`✅ Loaded ${modpacks.length} modpacks from Supabase`);
       return this.modpacksData;
     } catch (error) {
       console.error('Error fetching modpacks data:', error);
@@ -338,11 +372,12 @@ class LauncherService {
   }
 
   /**
-   * Fetches and caches full details for a specific modpack (with language)
+   * Fetches and caches full details for a specific modpack from Supabase
+   * Includes features, images, collaborators, and stats
    * @param modpackId string
    */
   async fetchModpackDetails(modpackId: string): Promise<any> {
-    const lang = this.userSettings.language || 'es';
+    const lang = this.userSettings.language || 'en';
     const cacheKey = `modpack_details_${modpackId}_${lang}`;
     const cached = this.cache.get(cacheKey);
     const persisted = this.readPersistentCache<any>(cacheKey);
@@ -353,20 +388,98 @@ class LauncherService {
       this.cache.set(cacheKey, { data: persisted.data, timestamp: persisted.timestamp });
       return persisted.data;
     }
-    const baseUrl = this.getBaseUrl();
-    const url = `${baseUrl}/v1/modpacks/${modpackId}?lang=${lang}`;
+
     try {
-      const response = await axios.get(url, {
-        headers: {
-          'Accept': 'application/json',
-          'Cache-Control': 'no-cache'
-        }
-      });
-      this.cache.set(cacheKey, { data: response.data, timestamp: Date.now() });
-      this.writePersistentCache(cacheKey, response.data);
-      return response.data;
+      // Fetch modpack basic info
+      const { data: modpackData, error: modpackError } = await supabase
+        .from('modpacks')
+        .select('*')
+        .eq('id', modpackId)
+        .eq('is_active', true)
+        .single();
+
+      if (modpackError || !modpackData) {
+        console.error('Error fetching modpack from Supabase:', modpackError);
+        if (persisted) return persisted.data;
+        return null;
+      }
+
+      // Fetch related data in parallel
+      const [featuresResult, imagesResult, collaboratorsResult, statsResult] = await Promise.all([
+        supabase
+          .from('modpack_features')
+          .select('*')
+          .eq('modpack_id', modpackId)
+          .order('sort_order'),
+        supabase
+          .from('modpack_images')
+          .select('*')
+          .eq('modpack_id', modpackId)
+          .order('sort_order'),
+        supabase
+          .from('modpack_collaborators')
+          .select('*')
+          .eq('modpack_id', modpackId)
+          .order('sort_order'),
+        supabase.rpc('get_modpack_aggregate_stats', { p_modpack_id: modpackId })
+      ]);
+
+      // Helper function to get translation
+      const getTranslation = (i18nField: Record<string, string> | null) => {
+        if (!i18nField) return '';
+        return i18nField[lang] || i18nField['en'] || '';
+      };
+
+      // Transform to launcher format
+      const details = {
+        id: modpackData.id,
+        slug: modpackData.slug,
+        category: modpackData.category,
+        name: getTranslation(modpackData.name_i18n),
+        shortDescription: getTranslation(modpackData.short_description_i18n),
+        description: getTranslation(modpackData.description_i18n),
+        version: modpackData.version,
+        minecraftVersion: modpackData.minecraft_version,
+        modloader: modpackData.modloader,
+        modloaderVersion: modpackData.modloader_version,
+        gamemode: modpackData.gamemode,
+        ip: modpackData.server_ip,
+        logo: modpackData.logo_url,
+        banner: modpackData.banner_url,
+        backgroundImage: modpackData.background_image_url,
+        urlModpackZip: modpackData.modpack_file_url,
+        primaryColor: modpackData.primary_color,
+        isNew: modpackData.is_new,
+        isActive: modpackData.is_active,
+        isComingSoon: modpackData.is_coming_soon,
+        youtubeEmbed: modpackData.youtube_embed,
+        tiktokEmbed: modpackData.tiktok_embed,
+        partnerId: modpackData.partner_id,
+        // Features
+        features: featuresResult.data?.map((feature: any) => ({
+          title: getTranslation(feature.title_i18n),
+          description: getTranslation(feature.description_i18n),
+          icon: feature.icon,
+        })) || [],
+        // Images/Screenshots
+        images: imagesResult.data?.map((image: any) => image.image_url) || [],
+        // Collaborators
+        collaborators: collaboratorsResult.data?.map((collab: any) => ({
+          name: collab.name,
+          role: collab.role,
+          avatar: collab.avatar,
+        })) || [],
+        // Stats
+        downloads: statsResult.data?.total_downloads || 0,
+        playTime: statsResult.data?.total_playtime_hours || 0,
+        rating: statsResult.data?.average_rating || null,
+      };
+
+      this.cache.set(cacheKey, { data: details, timestamp: Date.now() });
+      this.writePersistentCache(cacheKey, details);
+      return details;
     } catch (error) {
-      console.error('Error fetching modpack details:', error);
+      console.error('Error fetching modpack details from Supabase:', error);
       if (persisted) return persisted.data;
       return null;
     }
@@ -838,6 +951,196 @@ class LauncherService {
     } catch (error) {
       console.error('Error stopping instance:', error);
       throw new Error('Error stopping instance');
+    }
+  }
+
+  /**
+   * Track modpack download in Supabase stats
+   * Increments the download counter for the modpack
+   */
+  async trackDownload(modpackId: string): Promise<void> {
+    try {
+      // Get current user ID (anonymous or authenticated)
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id || null;
+
+      const { error } = await supabase.rpc('increment_downloads', {
+        p_modpack_id: modpackId,
+        p_user_id: userId
+      });
+
+      if (error) {
+        console.error('Error tracking download:', error);
+      } else {
+        console.log(`✅ Download tracked for modpack: ${modpackId}`);
+      }
+    } catch (error) {
+      console.error('Error tracking download:', error);
+      // Don't throw - stats tracking should not break the main flow
+    }
+  }
+
+  /**
+   * Update playtime for a modpack in Supabase stats
+   * @param modpackId The modpack ID
+   * @param hours Number of hours played
+   */
+  async updatePlaytime(modpackId: string, hours: number): Promise<void> {
+    try {
+      // Get current user ID (anonymous or authenticated)
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id || null;
+
+      if (!userId) {
+        console.warn('Cannot update playtime for anonymous user');
+        return;
+      }
+
+      const { error } = await supabase.rpc('update_playtime', {
+        p_modpack_id: modpackId,
+        p_user_id: userId,
+        p_hours: hours
+      });
+
+      if (error) {
+        console.error('Error updating playtime:', error);
+      } else {
+        console.log(`✅ Playtime updated for modpack: ${modpackId} (${hours}h)`);
+      }
+    } catch (error) {
+      console.error('Error updating playtime:', error);
+      // Don't throw - stats tracking should not break the main flow
+    }
+  }
+
+  /**
+   * Get aggregate stats for a modpack
+   */
+  async getModpackStats(modpackId: string): Promise<any> {
+    try {
+      const { data, error } = await supabase.rpc('get_modpack_aggregate_stats', {
+        p_modpack_id: modpackId
+      });
+
+      if (error) {
+        console.error('Error getting modpack stats:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error getting modpack stats:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Check if a modpack has updates available
+   * Returns the latest version info if an update is available
+   */
+  async checkForModpackUpdate(modpackId: string): Promise<{
+    hasUpdate: boolean;
+    currentVersion?: string;
+    latestVersion?: string;
+    changelog?: string;
+  }> {
+    try {
+      // Get current installed version
+      const metadata = await this.getInstanceMetadata(modpackId);
+      if (!metadata) {
+        return { hasUpdate: false };
+      }
+
+      // Get latest version from Supabase
+      const { data: modpackData, error } = await supabase
+        .from('modpacks')
+        .select('version')
+        .eq('id', modpackId)
+        .eq('is_active', true)
+        .single();
+
+      if (error || !modpackData) {
+        console.error('Error checking for modpack update:', error);
+        return { hasUpdate: false };
+      }
+
+      const hasUpdate = metadata.version !== modpackData.version;
+
+      if (hasUpdate) {
+        // Get changelog for the new version
+        const changelog = await this.getVersionChangelog(modpackId, modpackData.version);
+
+        return {
+          hasUpdate: true,
+          currentVersion: metadata.version,
+          latestVersion: modpackData.version,
+          changelog
+        };
+      }
+
+      return { hasUpdate: false };
+    } catch (error) {
+      console.error('Error checking for modpack update:', error);
+      return { hasUpdate: false };
+    }
+  }
+
+  /**
+   * Get changelog for a specific version
+   */
+  async getVersionChangelog(modpackId: string, version: string): Promise<string> {
+    try {
+      const lang = this.userSettings.language || 'en';
+
+      const { data, error } = await supabase
+        .from('modpack_versions')
+        .select('changelog_i18n')
+        .eq('modpack_id', modpackId)
+        .eq('version', version)
+        .single();
+
+      if (error || !data) {
+        return '';
+      }
+
+      // Get translation
+      const changelog = data.changelog_i18n;
+      return changelog?.[lang] || changelog?.['en'] || '';
+    } catch (error) {
+      console.error('Error getting version changelog:', error);
+      return '';
+    }
+  }
+
+  /**
+   * Get version history for a modpack
+   */
+  async getModpackVersionHistory(modpackId: string): Promise<any[]> {
+    try {
+      const lang = this.userSettings.language || 'en';
+
+      const { data, error } = await supabase
+        .from('modpack_versions')
+        .select('*')
+        .eq('modpack_id', modpackId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error getting version history:', error);
+        return [];
+      }
+
+      // Transform to include translated changelog
+      return data?.map((version: any) => ({
+        version: version.version,
+        changelog: version.changelog_i18n?.[lang] || version.changelog_i18n?.['en'] || '',
+        fileUrl: version.file_url,
+        fileSize: version.file_size,
+        createdAt: version.created_at,
+      })) || [];
+    } catch (error) {
+      console.error('Error getting version history:', error);
+      return [];
     }
   }
 

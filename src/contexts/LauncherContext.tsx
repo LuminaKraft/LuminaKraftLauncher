@@ -226,13 +226,22 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const initializeApp = async () => {
       try {
+        // Initialize Supabase anonymous session first
+        const authService = AuthService.getInstance();
+        await authService.initializeAnonymousSession();
+
         const settings = launcherService.getUserSettings();
         dispatch({ type: 'SET_USER_SETTINGS', payload: settings });
         dispatch({ type: 'SET_LANGUAGE', payload: settings.language });
-        
+
         // Synchronize language with react-i18next
         await i18n.changeLanguage(settings.language);
-        
+
+        // If user has Microsoft account, sync with Supabase
+        if (settings.authMethod === 'microsoft' && settings.microsoftAccount) {
+          await authService.authenticateSupabaseWithMicrosoft(settings.microsoftAccount);
+        }
+
         // Load initial data
         await refreshData();
       } catch (error) {
@@ -525,6 +534,8 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
             setFailedMods(failedModsResult);
             setShowFailedModsDialog(true);
           }
+          // Track download stats in Supabase
+          await launcherService.trackDownload(modpackId);
           break;
         case 'update':
           const updateFailedModsResult = await launcherService.updateModpack(modpackId, onProgress);

@@ -1,15 +1,11 @@
-import axios from 'axios';
+import { supabase } from './supabaseClient';
 import { CurseForgeModInfo, ProxyResponse, CurseForgeFileInfo } from '../types/curseforge';
-
 
 export class CurseForgeService {
   private static instance: CurseForgeService;
 
-
   private constructor() {
-    // No need to instantiate launcherService, endpoint is hardcoded
-    // No need to setup axios defaults here since LauncherService already handles it
-    // this.setupAxiosDefaults();
+    // Supabase client handles authentication automatically
   }
 
   public static getInstance(): CurseForgeService {
@@ -19,11 +15,29 @@ export class CurseForgeService {
     return CurseForgeService.instance;
   }
 
+  /**
+   * Helper to invoke Supabase Edge Function for CurseForge proxy
+   */
+  private async invokeCurseForgeProxy(endpoint: string, method: 'GET' | 'POST' = 'GET', body?: any): Promise<any> {
+    try {
+      const { data, error } = await supabase.functions.invoke('curseforge-proxy', {
+        body: {
+          endpoint,
+          method,
+          body
+        }
+      });
 
-  private getProxyBaseUrl(): string {
-  // Use hardcoded API endpoint
-  const baseUrl = 'https://api.luminakraft.com';
-  return `${baseUrl}/v1/curseforge`;
+      if (error) {
+        console.error('[CurseForgeService] Edge Function error:', error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('[CurseForgeService] Error invoking CurseForge proxy:', error);
+      throw error;
+    }
   }
 
   /**
@@ -31,22 +45,17 @@ export class CurseForgeService {
    */
   async getModInfo(modId: number): Promise<CurseForgeModInfo | null> {
     try {
-      const url = `${this.getProxyBaseUrl()}/mods/${modId}`;
-      console.log(`[CurseForgeService] Making request to: ${url}`);
-      const response = await axios.get<ProxyResponse>(url);
-      
-      if (response.data.status === 200 && response.data.data) {
-        return response.data.data;
+      console.log(`[CurseForgeService] Fetching mod info for: ${modId}`);
+      const response = await this.invokeCurseForgeProxy(`/mods/${modId}`, 'GET');
+
+      if (response && response.data) {
+        return response.data;
       }
-      
-      console.error('Error fetching mod info:', response.data.message);
+
+      console.error('Error fetching mod info: No data returned');
       return null;
     } catch (error: any) {
       console.error('Error fetching mod info:', error);
-      if (error.response?.status === 401) {
-        console.error('[CurseForgeService] 401 Unauthorized - authentication headers may be missing');
-        console.error('[CurseForgeService] Request headers:', error.config?.headers);
-      }
       return null;
     }
   }
@@ -56,20 +65,19 @@ export class CurseForgeService {
    */
   async getModFileInfo(modId: number, fileId: number): Promise<CurseForgeFileInfo | null> {
     try {
-      const url = `${this.getProxyBaseUrl()}/mods/${modId}/files/${fileId}`;
-      const response = await axios.get<ProxyResponse>(url);
-      
-      if (response.data.status === 200 && response.data.data) {
-        const fileInfo = response.data.data;
-        
+      const response = await this.invokeCurseForgeProxy(`/mods/${modId}/files/${fileId}`, 'GET');
+
+      if (response && response.data) {
+        const fileInfo = response.data;
+
         // La API de CurseForge devuelve información completa incluyendo hashes
         // fileName, downloadUrl, y hashes están disponibles directamente
         console.log(`Información obtenida para archivo ${fileId}: ${fileInfo.fileName || fileInfo.displayName}`);
-        
+
         return fileInfo;
       }
-      
-      console.error('Error fetching mod file info:', response.data.message);
+
+      console.error('Error fetching mod file info: No data returned');
       return null;
     } catch (error) {
       console.error('Error fetching mod file info:', error);
@@ -82,14 +90,13 @@ export class CurseForgeService {
    */
   async getBatchModInfo(modIds: number[]): Promise<CurseForgeModInfo[]> {
     try {
-      const url = `${this.getProxyBaseUrl()}/mods`;
-      const response = await axios.post<ProxyResponse>(url, { modIds });
-      
-      if (response.data.status === 200 && Array.isArray(response.data.data)) {
-        return response.data.data;
+      const response = await this.invokeCurseForgeProxy('/mods', 'POST', { modIds, filterPcOnly: true });
+
+      if (response && Array.isArray(response.data)) {
+        return response.data;
       }
-      
-      console.error('Error fetching batch mod info:', response.data.message);
+
+      console.error('Error fetching batch mod info: No data returned');
       return [];
     } catch (error) {
       console.error('Error fetching batch mod info:', error);
@@ -102,14 +109,15 @@ export class CurseForgeService {
    */
   async getBatchFileInfo(modFiles: { modId: number, fileId: number }[]): Promise<CurseForgeFileInfo[]> {
     try {
-      const url = `${this.getProxyBaseUrl()}/mods/files`;
-      const response = await axios.post<ProxyResponse>(url, { fileIds: modFiles.map(mf => mf.fileId) });
-      
-      if (response.data.status === 200 && Array.isArray(response.data.data)) {
-        return response.data.data;
+      const response = await this.invokeCurseForgeProxy('/mods/files', 'POST', {
+        fileIds: modFiles.map(mf => mf.fileId)
+      });
+
+      if (response && Array.isArray(response.data)) {
+        return response.data;
       }
-      
-      console.error('Error fetching batch file info:', response.data.message);
+
+      console.error('Error fetching batch file info: No data returned');
       return [];
     } catch (error) {
       console.error('Error fetching batch file info:', error);
@@ -135,17 +143,13 @@ export class CurseForgeService {
    */
   async testAuthentication(): Promise<boolean> {
     try {
-      const url = `${this.getProxyBaseUrl()}/test`;
-      console.log(`[CurseForgeService] Testing authentication with: ${url}`);
-      const response = await axios.get(url);
-      console.log('[CurseForgeService] Authentication test successful:', response.data);
-      return true;
+      console.log('[CurseForgeService] Testing authentication with Supabase Edge Function');
+      // Try to fetch a known mod to test the proxy
+      const testMod = await this.getModInfo(32274); // JEI mod ID for testing
+      console.log('[CurseForgeService] Authentication test successful:', !!testMod);
+      return !!testMod;
     } catch (error: any) {
       console.error('[CurseForgeService] Authentication test failed:', error);
-      if (error.response?.status === 401) {
-        console.error('[CurseForgeService] 401 Unauthorized - authentication headers missing or invalid');
-        console.error('[CurseForgeService] Request headers:', error.config?.headers);
-      }
       return false;
     }
   }

@@ -48,11 +48,15 @@ export default function MicrosoftAuth({
     try {
       setIsAuthenticating(true);
       onAuthStart?.();
-      
+
       // Use the new modal-based authentication (like Modrinth)
       const account = await authService.authenticateWithMicrosoftModal();
+
+      // Sync with Supabase
+      await authService.authenticateSupabaseWithMicrosoft(account);
+
       onAuthSuccess(account);
-      
+
     } catch (error) {
       // Determine type of error and message
       let errorMessage = t('auth.authFailed');
@@ -120,11 +124,15 @@ export default function MicrosoftAuth({
       
       // Extract code from URL
       const code = await authService.extractCodeFromUrl(redirectUrl);
-      
+
       // Authenticate with the code
       const account = await authService.authenticateMicrosoft(code);
+
+      // Sync with Supabase
+      await authService.authenticateSupabaseWithMicrosoft(account);
+
       onAuthSuccess(account);
-      
+
       // Reset state
       setAuthStep('idle');
       setRedirectUrl('');
@@ -157,9 +165,13 @@ export default function MicrosoftAuth({
     }
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
     setAuthStep('idle');
     setRedirectUrl('');
+
+    // Sign out from Supabase and restore anonymous session
+    await authService.signOutSupabase();
+
     onAuthClear();
   };
 

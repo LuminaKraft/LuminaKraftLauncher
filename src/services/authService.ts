@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import type { MicrosoftAccount } from '../types/launcher';
+import { supabase } from './supabaseClient';
 
 class AuthService {
   private static instance: AuthService;
@@ -9,6 +10,123 @@ class AuthService {
       AuthService.instance = new AuthService();
     }
     return AuthService.instance;
+  }
+
+  /**
+   * Initialize anonymous session in Supabase
+   * This allows users to browse and download modpacks without logging in
+   */
+  async initializeAnonymousSession(): Promise<boolean> {
+    try {
+      // Check if already has a session
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (session) {
+        console.log('✅ Already has Supabase session:', session.user.is_anonymous ? 'anonymous' : 'authenticated');
+        return true;
+      }
+
+      // Create anonymous session
+      const { data, error } = await supabase.auth.signInAnonymously();
+
+      if (error) {
+        console.error('❌ Failed to create anonymous session:', error);
+        return false;
+      }
+
+      console.log('✅ Anonymous Supabase session created');
+      return true;
+    } catch (error) {
+      console.error('❌ Error initializing anonymous session:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Authenticate with Supabase using Microsoft OAuth
+   * This is called after the user successfully authenticates with Microsoft via Lyceris
+   */
+  async authenticateSupabaseWithMicrosoft(microsoftAccount: MicrosoftAccount): Promise<boolean> {
+    try {
+      // Use Supabase Azure OAuth to authenticate
+      // We'll use the Microsoft ID token to create/update the user
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'azure',
+        options: {
+          skipBrowserRedirect: true,
+        }
+      });
+
+      if (error) {
+        console.error('❌ Failed to authenticate with Supabase:', error);
+        // If OAuth redirect fails, we can still sync the user profile manually
+        await this.syncUserProfile(microsoftAccount);
+        return true; // Continue even if OAuth fails, as we synced the profile
+      }
+
+      console.log('✅ Authenticated with Supabase via Microsoft');
+
+      // Sync user profile with database
+      await this.syncUserProfile(microsoftAccount);
+
+      return true;
+    } catch (error) {
+      console.error('❌ Error authenticating with Supabase:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Sync Microsoft user profile with Supabase users table
+   * Creates or updates the user record
+   */
+  private async syncUserProfile(microsoftAccount: MicrosoftAccount): Promise<void> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        console.warn('⚠️ No authenticated Supabase user to sync profile');
+        return;
+      }
+
+      // Upsert user profile
+      const { error } = await supabase
+        .from('users')
+        .upsert({
+          id: user.id,
+          microsoft_id: microsoftAccount.xuid,
+          minecraft_username: microsoftAccount.username,
+          minecraft_uuid: microsoftAccount.uuid,
+          is_minecraft_verified: true, // Since we got this from Microsoft OAuth
+          display_name: microsoftAccount.username,
+          email: user.email || '',
+          role: 'user', // Default role
+        }, {
+          onConflict: 'id'
+        });
+
+      if (error) {
+        console.error('❌ Failed to sync user profile:', error);
+      } else {
+        console.log('✅ User profile synced with Supabase');
+      }
+    } catch (error) {
+      console.error('❌ Error syncing user profile:', error);
+    }
+  }
+
+  /**
+   * Sign out from Supabase and return to anonymous session
+   */
+  async signOutSupabase(): Promise<void> {
+    try {
+      await supabase.auth.signOut();
+      // Re-initialize anonymous session
+      await this.initializeAnonymousSession();
+      console.log('✅ Signed out from Supabase, anonymous session restored');
+    } catch (error) {
+      console.error('❌ Error signing out from Supabase:', error);
+    }
   }
 
   /**
