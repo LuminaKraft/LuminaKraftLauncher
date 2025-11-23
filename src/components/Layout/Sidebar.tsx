@@ -31,7 +31,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
   useEffect(() => {
     const checkPermissions = async () => {
       const service = ModpackManagementService.getInstance();
-      const { canManage } = await service.canManageModpacks();
+      const { canManage } = await service.canManageModpacks(userSettings.microsoftAccount);
       setCanManageModpacks(canManage);
     };
     checkPermissions();

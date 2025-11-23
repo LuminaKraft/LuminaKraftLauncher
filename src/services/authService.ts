@@ -45,75 +45,42 @@ class AuthService {
   /**
    * Authenticate with Supabase using Microsoft OAuth
    * This is called after the user successfully authenticates with Microsoft via Lyceris
+   * We maintain the anonymous Supabase session and link the Microsoft profile
    */
   async authenticateSupabaseWithMicrosoft(microsoftAccount: MicrosoftAccount): Promise<boolean> {
     try {
-      // Use Supabase Azure OAuth to authenticate
-      // We'll use the Microsoft ID token to create/update the user
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'azure',
-        options: {
-          skipBrowserRedirect: true,
-        }
-      });
+      console.log('🔗 Linking Microsoft account with Supabase...');
+
+      // Call RPC function to link Microsoft account
+      // This function has SECURITY DEFINER to bypass RLS policies
+      const { data, error } = await supabase
+        .rpc('link_microsoft_account', {
+          p_microsoft_id: microsoftAccount.xuid,
+          p_minecraft_username: microsoftAccount.username,
+          p_minecraft_uuid: microsoftAccount.uuid,
+          p_display_name: microsoftAccount.username
+        })
+        .single();
 
       if (error) {
-        console.error('❌ Failed to authenticate with Supabase:', error);
-        // If OAuth redirect fails, we can still sync the user profile manually
-        await this.syncUserProfile(microsoftAccount);
-        return true; // Continue even if OAuth fails, as we synced the profile
+        console.error('❌ Failed to link Microsoft account with Supabase:', error);
+        console.error('   Make sure you have executed the SQL function in Supabase:');
+        console.error('   supabase/functions/link_microsoft_account.sql');
+        return false;
       }
 
-      console.log('✅ Authenticated with Supabase via Microsoft');
-
-      // Sync user profile with database
-      await this.syncUserProfile(microsoftAccount);
+      console.log('✅ Microsoft account linked with Supabase');
+      console.log(`   User ID: ${data.user_id}`);
+      console.log(`   Role: ${data.user_role}`);
+      console.log(`   Display Name: ${data.user_display_name}`);
 
       return true;
     } catch (error) {
-      console.error('❌ Error authenticating with Supabase:', error);
+      console.error('❌ Error linking Microsoft account with Supabase:', error);
       return false;
     }
   }
 
-  /**
-   * Sync Microsoft user profile with Supabase users table
-   * Creates or updates the user record
-   */
-  private async syncUserProfile(microsoftAccount: MicrosoftAccount): Promise<void> {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        console.warn('⚠️ No authenticated Supabase user to sync profile');
-        return;
-      }
-
-      // Upsert user profile
-      const { error } = await supabase
-        .from('users')
-        .upsert({
-          id: user.id,
-          microsoft_id: microsoftAccount.xuid,
-          minecraft_username: microsoftAccount.username,
-          minecraft_uuid: microsoftAccount.uuid,
-          is_minecraft_verified: true, // Since we got this from Microsoft OAuth
-          display_name: microsoftAccount.username,
-          email: user.email || '',
-          role: 'user', // Default role
-        }, {
-          onConflict: 'id'
-        });
-
-      if (error) {
-        console.error('❌ Failed to sync user profile:', error);
-      } else {
-        console.log('✅ User profile synced with Supabase');
-      }
-    } catch (error) {
-      console.error('❌ Error syncing user profile:', error);
-    }
-  }
 
   /**
    * Sign out from Supabase and return to anonymous session

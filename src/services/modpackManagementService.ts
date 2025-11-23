@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import type { MicrosoftAccount } from '../types/launcher';
 
 /**
  * Service for managing modpack creation and updates
@@ -6,6 +7,7 @@ import { supabase } from './supabaseClient';
  */
 export class ModpackManagementService {
   private static instance: ModpackManagementService;
+  private microsoftAccount: MicrosoftAccount | null = null;
 
   public static getInstance(): ModpackManagementService {
     if (!ModpackManagementService.instance) {
@@ -15,29 +17,47 @@ export class ModpackManagementService {
   }
 
   /**
-   * Check if the current user can create/edit modpacks
+   * Set the Microsoft account for the current session
+   * This should be called after Microsoft authentication
    */
-  async canManageModpacks(): Promise<{
+  public setMicrosoftAccount(account: MicrosoftAccount | null): void {
+    this.microsoftAccount = account;
+  }
+
+  /**
+   * Check if the current user can create/edit modpacks
+   * Requires Microsoft authentication
+   */
+  async canManageModpacks(microsoftAccount?: MicrosoftAccount | null): Promise<{
     canManage: boolean;
     role: 'admin' | 'partner' | 'user' | null;
   }> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      // Use provided account or stored account
+      const account = microsoftAccount || this.microsoftAccount;
 
-      if (!user || user.is_anonymous) {
+      // User must be authenticated with Microsoft
+      if (!account) {
         return { canManage: false, role: null };
       }
 
+      // Look up user by microsoft_id
       const { data: profile } = await supabase
         .from('users')
         .select('role')
-        .eq('id', user.id)
+        .eq('microsoft_id', account.xuid)
         .single();
 
-      const role = profile?.role || null;
-      const canManage = ['admin', 'partner', 'user'].includes(role || '');
+      if (!profile) {
+        return { canManage: false, role: null };
+      }
 
-      return { canManage, role: role as 'admin' | 'partner' | 'user' };
+      const role = profile.role as 'admin' | 'partner' | 'user';
+
+      // Only admin, partner, and authenticated users (community) can manage
+      const canManage = ['admin', 'partner', 'user'].includes(role);
+
+      return { canManage, role };
     } catch (error) {
       console.error('Error checking user permissions:', error);
       return { canManage: false, role: null };
@@ -62,16 +82,25 @@ export class ModpackManagementService {
     primaryColor?: string;
   }): Promise<{ success: boolean; modpackId?: string; error?: string }> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        return { success: false, error: 'User not authenticated' };
+      if (!this.microsoftAccount) {
+        return { success: false, error: 'User not authenticated with Microsoft' };
       }
 
       // Check permissions
       const { canManage, role } = await this.canManageModpacks();
       if (!canManage) {
         return { success: false, error: 'Insufficient permissions' };
+      }
+
+      // Get user ID from users table
+      const { data: userData } = await supabase
+        .from('users')
+        .select('id')
+        .eq('microsoft_id', this.microsoftAccount.xuid)
+        .single();
+
+      if (!userData) {
+        return { success: false, error: 'User profile not found' };
       }
 
       // Determine category based on role if not specified
@@ -99,7 +128,7 @@ export class ModpackManagementService {
           gamemode: modpackData.gamemode || null,
           server_ip: modpackData.serverIp || null,
           primary_color: modpackData.primaryColor || null,
-          author_id: user.id,
+          author_id: userData.id,
           upload_status: 'pending',
           is_active: false, // Activate after uploading files
         })

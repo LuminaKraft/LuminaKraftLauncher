@@ -240,6 +240,10 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
         // If user has Microsoft account, sync with Supabase
         if (settings.authMethod === 'microsoft' && settings.microsoftAccount) {
           await authService.authenticateSupabaseWithMicrosoft(settings.microsoftAccount);
+
+          // Set Microsoft account in modpack management service
+          const ModpackManagementService = (await import('../services/modpackManagementService')).ModpackManagementService;
+          ModpackManagementService.getInstance().setMicrosoftAccount(settings.microsoftAccount);
         }
 
         // Load initial data
