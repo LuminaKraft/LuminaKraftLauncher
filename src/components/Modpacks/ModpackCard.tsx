@@ -23,6 +23,37 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
 
+  const getCategoryBadge = () => {
+    const categoryConfig = {
+      official: {
+        label: 'Official',
+        bg: 'bg-purple-600/40',
+        text: 'text-purple-300',
+        border: 'border-purple-600/60'
+      },
+      partner: {
+        label: 'Partner',
+        bg: 'bg-blue-600/40',
+        text: 'text-blue-300',
+        border: 'border-blue-600/60'
+      },
+      community: {
+        label: 'Community',
+        bg: 'bg-green-600/40',
+        text: 'text-green-300',
+        border: 'border-green-600/60'
+      }
+    };
+
+    const config = categoryConfig[modpack.category] || categoryConfig.community;
+
+    return (
+      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text} border ${config.border}`}>
+        {config.label}
+      </span>
+    );
+  };
+
   const getServerStatusBadge = () => {
     if (modpack.isNew) {
       return (
@@ -351,6 +382,11 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
               {displayDescription}
             </p>
             
+            {/* Category Badge */}
+            <div className="mb-2">
+              {getCategoryBadge()}
+            </div>
+
             <div className={`flex items-center space-x-3 text-xs text-dark-400 transition-colors duration-200 ${
               getAnimationClass('', 'group-hover:text-dark-300')
             }`}>

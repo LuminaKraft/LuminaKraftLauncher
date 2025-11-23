@@ -17,6 +17,7 @@ export interface Modpack {
   images?: string[]; // Array of screenshot URLs
   gamemode?: string;
   ip?: string;
+  category: 'official' | 'partner' | 'community'; // Modpack category
   isNew?: boolean;
   isActive?: boolean;
   isComingSoon?: boolean;
