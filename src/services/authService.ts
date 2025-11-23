@@ -43,40 +43,43 @@ class AuthService {
   }
 
   /**
-   * Authenticate with Supabase using Microsoft OAuth
-   * This is called after the user successfully authenticates with Microsoft via Lyceris
-   * We maintain the anonymous Supabase session and link the Microsoft profile
+   * Authenticate with Supabase using Microsoft account from Lyceris
+   * This calls the auth-with-microsoft Edge Function to create/update user profile
+   * We maintain the anonymous Supabase session for API calls
    */
   async authenticateSupabaseWithMicrosoft(microsoftAccount: MicrosoftAccount): Promise<boolean> {
     try {
-      console.log('🔗 Linking Microsoft account with Supabase...');
+      console.log('🔗 Authenticating Microsoft account with Supabase...');
 
-      // Call RPC function to link Microsoft account
-      // This function has SECURITY DEFINER to bypass RLS policies
-      const { data, error } = await supabase
-        .rpc('link_microsoft_account', {
-          p_microsoft_id: microsoftAccount.xuid,
-          p_minecraft_username: microsoftAccount.username,
-          p_minecraft_uuid: microsoftAccount.uuid,
-          p_display_name: microsoftAccount.username
-        })
-        .single();
+      // Call Edge Function to create/update user
+      const { data, error } = await supabase.functions.invoke('auth-with-microsoft', {
+        body: {
+          microsoft_id: microsoftAccount.xuid,
+          minecraft_username: microsoftAccount.username,
+          minecraft_uuid: microsoftAccount.uuid,
+          email: '', // Lyceris doesn't provide email
+          display_name: microsoftAccount.username
+        }
+      });
 
       if (error) {
-        console.error('❌ Failed to link Microsoft account with Supabase:', error);
-        console.error('   Make sure you have executed the SQL function in Supabase:');
-        console.error('   supabase/functions/link_microsoft_account.sql');
+        console.error('❌ Failed to authenticate Microsoft account with Supabase:', error);
         return false;
       }
 
-      console.log('✅ Microsoft account linked with Supabase');
-      console.log(`   User ID: ${data.user_id}`);
-      console.log(`   Role: ${data.user_role}`);
-      console.log(`   Display Name: ${data.user_display_name}`);
+      if (!data.success) {
+        console.error('❌ Authentication failed:', data.error);
+        return false;
+      }
+
+      console.log('✅ Microsoft account authenticated with Supabase');
+      console.log(`   User ID: ${data.user.id}`);
+      console.log(`   Role: ${data.user.role}`);
+      console.log(`   Display Name: ${data.user.display_name}`);
 
       return true;
     } catch (error) {
-      console.error('❌ Error linking Microsoft account with Supabase:', error);
+      console.error('❌ Error authenticating Microsoft account with Supabase:', error);
       return false;
     }
   }
