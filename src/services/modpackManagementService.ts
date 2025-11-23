@@ -288,6 +288,171 @@ export class ModpackManagementService {
   }
 
   /**
+   * Upload logo or banner image to R2
+   */
+  async uploadModpackImage(
+    modpackId: string,
+    file: File,
+    imageType: 'logo' | 'banner'
+  ): Promise<{ success: boolean; imageUrl?: string; error?: string }> {
+    try {
+      // Generate presigned URL for image
+      const { data: urlData, error: urlError } = await supabase.functions.invoke(
+        'generate-r2-upload-url',
+        {
+          body: {
+            modpackId,
+            fileName: `${imageType}-${file.name}`,
+            fileSize: file.size,
+            contentType: file.type
+          }
+        }
+      );
+
+      if (urlError || !urlData) {
+        console.error('Error generating image upload URL:', urlError);
+        return { success: false, error: 'Failed to generate upload URL' };
+      }
+
+      // Upload to R2
+      const response = await fetch(urlData.presignedUrl, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': file.type
+        },
+        body: file
+      });
+
+      if (!response.ok) {
+        return { success: false, error: 'Failed to upload image' };
+      }
+
+      // Update modpack with image URL
+      const imageUrlField = imageType === 'logo' ? 'logo_url' : 'banner_url';
+      const { error: updateError } = await supabase
+        .from('modpacks')
+        .update({ [imageUrlField]: urlData.publicUrl })
+        .eq('id', modpackId);
+
+      if (updateError) {
+        console.error('Error updating modpack with image URL:', updateError);
+        return { success: false, error: 'Failed to update modpack' };
+      }
+
+      return { success: true, imageUrl: urlData.publicUrl };
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      return { success: false, error: 'Upload failed' };
+    }
+  }
+
+  /**
+   * Create features for a modpack
+   */
+  async createModpackFeatures(
+    modpackId: string,
+    features: Array<{
+      title: Record<string, string>; // { en: "...", es: "..." }
+      description?: Record<string, string>;
+      icon?: string;
+    }>
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      if (features.length === 0) {
+        return { success: true };
+      }
+
+      const featureRecords = features.map((feature, index) => ({
+        modpack_id: modpackId,
+        title_i18n: feature.title,
+        description_i18n: feature.description || { en: '', es: '' },
+        icon: feature.icon || null,
+        sort_order: index
+      }));
+
+      const { error } = await supabase
+        .from('modpack_features')
+        .insert(featureRecords);
+
+      if (error) {
+        console.error('Error creating features:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error creating features:', error);
+      return { success: false, error: 'Failed to create features' };
+    }
+  }
+
+  /**
+   * Upload screenshots/images for a modpack
+   */
+  async uploadModpackScreenshots(
+    modpackId: string,
+    files: File[]
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      if (files.length === 0) {
+        return { success: true };
+      }
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+
+        // Generate presigned URL
+        const { data: urlData, error: urlError } = await supabase.functions.invoke(
+          'generate-r2-upload-url',
+          {
+            body: {
+              modpackId,
+              fileName: `screenshot-${i}-${file.name}`,
+              fileSize: file.size,
+              contentType: file.type
+            }
+          }
+        );
+
+        if (urlError || !urlData) {
+          console.error('Error generating screenshot upload URL:', urlError);
+          continue;
+        }
+
+        // Upload to R2
+        const response = await fetch(urlData.presignedUrl, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': file.type
+          },
+          body: file
+        });
+
+        if (!response.ok) {
+          console.error('Failed to upload screenshot');
+          continue;
+        }
+
+        // Insert into modpack_images
+        await supabase
+          .from('modpack_images')
+          .insert({
+            modpack_id: modpackId,
+            image_path: urlData.filePath,
+            image_url: urlData.publicUrl,
+            sort_order: i,
+            size_bytes: file.size
+          });
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error uploading screenshots:', error);
+      return { success: false, error: 'Failed to upload screenshots' };
+    }
+  }
+
+  /**
    * Get user's modpacks
    */
   async getUserModpacks(): Promise<any[]> {

@@ -1,7 +1,14 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+import { Plus, X } from 'lucide-react';
 import ModpackManagementService from '../../services/modpackManagementService';
+
+interface Feature {
+  title: { en: string; es: string };
+  description: { en: string; es: string };
+  icon: string;
+}
 
 interface FormData {
   name: { en: string; es: string };
@@ -14,6 +21,7 @@ interface FormData {
   gamemode?: string;
   serverIp?: string;
   primaryColor: string;
+  features: Feature[];
 }
 
 interface CreateModpackFormProps {
@@ -32,10 +40,14 @@ export function CreateModpackForm({ onNavigate }: CreateModpackFormProps) {
     minecraftVersion: '1.20.1',
     modloader: 'forge',
     modloaderVersion: '47.2.0',
-    primaryColor: '#3b82f6'
+    primaryColor: '#3b82f6',
+    features: []
   });
 
   const [zipFile, setZipFile] = useState<File | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [screenshotFiles, setScreenshotFiles] = useState<File[]>([]);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -47,6 +59,40 @@ export function CreateModpackForm({ onNavigate }: CreateModpackFormProps) {
     setFormData(prev => ({
       ...prev,
       [field]: { ...prev[field], [lang]: value }
+    }));
+  };
+
+  const addFeature = () => {
+    setFormData(prev => ({
+      ...prev,
+      features: [...prev.features, { title: { en: '', es: '' }, description: { en: '', es: '' }, icon: '' }]
+    }));
+  };
+
+  const removeFeature = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      features: prev.features.filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateFeature = (index: number, field: 'title' | 'description', lang: 'en' | 'es', value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      features: prev.features.map((feature, i) =>
+        i === index
+          ? { ...feature, [field]: { ...feature[field], [lang]: value } }
+          : feature
+      )
+    }));
+  };
+
+  const updateFeatureIcon = (index: number, icon: string) => {
+    setFormData(prev => ({
+      ...prev,
+      features: prev.features.map((feature, i) =>
+        i === index ? { ...feature, icon } : feature
+      )
     }));
   };
 
@@ -105,12 +151,49 @@ export function CreateModpackForm({ onNavigate }: CreateModpackFormProps) {
         return;
       }
 
-      // 2. Upload ZIP file
+      // 2. Upload logo if provided
+      if (logoFile) {
+        setUploadProgress(10);
+        const logoResult = await service.uploadModpackImage(modpackId, logoFile, 'logo');
+        if (!logoResult.success) {
+          console.warn('Failed to upload logo:', logoResult.error);
+        }
+      }
+
+      // 3. Upload banner if provided
+      if (bannerFile) {
+        setUploadProgress(20);
+        const bannerResult = await service.uploadModpackImage(modpackId, bannerFile, 'banner');
+        if (!bannerResult.success) {
+          console.warn('Failed to upload banner:', bannerResult.error);
+        }
+      }
+
+      // 4. Upload screenshots if provided
+      if (screenshotFiles.length > 0) {
+        setUploadProgress(30);
+        const screenshotsResult = await service.uploadModpackScreenshots(modpackId, screenshotFiles);
+        if (!screenshotsResult.success) {
+          console.warn('Failed to upload screenshots:', screenshotsResult.error);
+        }
+      }
+
+      // 5. Create features if provided
+      if (formData.features.length > 0) {
+        setUploadProgress(40);
+        const featuresResult = await service.createModpackFeatures(modpackId, formData.features);
+        if (!featuresResult.success) {
+          console.warn('Failed to create features:', featuresResult.error);
+        }
+      }
+
+      // 6. Upload ZIP file
       if (zipFile) {
+        setUploadProgress(50);
         const uploadResult = await service.uploadModpackFile(
           modpackId,
           zipFile,
-          setUploadProgress
+          (progress) => setUploadProgress(50 + (progress / 2)) // 50-100%
         );
 
         if (!uploadResult.success) {
@@ -118,7 +201,7 @@ export function CreateModpackForm({ onNavigate }: CreateModpackFormProps) {
           return;
         }
 
-        // 3. Activate modpack
+        // 7. Activate modpack
         await service.updateModpack(modpackId, { isActive: true });
       }
 
@@ -227,6 +310,70 @@ export function CreateModpackForm({ onNavigate }: CreateModpackFormProps) {
               className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 min-h-[100px]"
               placeholder="Descripción completa de tu modpack..."
             />
+          </div>
+        </div>
+
+        {/* Images Section */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
+          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+            Images
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Logo */}
+            <div>
+              <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
+                Logo (Optional)
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+              />
+              {logoFile && (
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                  {logoFile.name} ({(logoFile.size / 1024).toFixed(2)} KB)
+                </p>
+              )}
+            </div>
+
+            {/* Banner */}
+            <div>
+              <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
+                Banner (Optional)
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setBannerFile(e.target.files?.[0] || null)}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+              />
+              {bannerFile && (
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                  {bannerFile.name} ({(bannerFile.size / 1024).toFixed(2)} KB)
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Screenshots */}
+          <div className="mt-4">
+            <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
+              Screenshots (Optional)
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={(e) => setScreenshotFiles(Array.from(e.target.files || []))}
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+            />
+            {screenshotFiles.length > 0 && (
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                {screenshotFiles.length} screenshot(s) selected
+              </p>
+            )}
           </div>
         </div>
 
@@ -340,6 +487,116 @@ export function CreateModpackForm({ onNavigate }: CreateModpackFormProps) {
               />
             </div>
           </div>
+        </div>
+
+        {/* Features Section */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+              Features
+            </h2>
+            <button
+              type="button"
+              onClick={addFeature}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+            >
+              <Plus className="w-4 h-4" />
+              Add Feature
+            </button>
+          </div>
+
+          {formData.features.length === 0 ? (
+            <p className="text-gray-600 dark:text-gray-400 text-center py-4">
+              No features added yet. Click "Add Feature" to add one.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {formData.features.map((feature, index) => (
+                <div key={index} className="p-4 border border-gray-300 dark:border-gray-600 rounded-lg relative">
+                  <button
+                    type="button"
+                    onClick={() => removeFeature(index)}
+                    className="absolute top-2 right-2 p-1 text-red-600 hover:bg-red-100 dark:hover:bg-red-900 rounded transition-colors"
+                    title="Remove feature"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    {/* Title EN */}
+                    <div>
+                      <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300 text-sm">
+                        Title (English)
+                      </label>
+                      <input
+                        type="text"
+                        value={feature.title.en}
+                        onChange={(e) => updateFeature(index, 'title', 'en', e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                        placeholder="e.g., Custom Quests"
+                      />
+                    </div>
+
+                    {/* Title ES */}
+                    <div>
+                      <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300 text-sm">
+                        Título (Español)
+                      </label>
+                      <input
+                        type="text"
+                        value={feature.title.es}
+                        onChange={(e) => updateFeature(index, 'title', 'es', e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                        placeholder="ej., Misiones Personalizadas"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    {/* Description EN */}
+                    <div>
+                      <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300 text-sm">
+                        Description (English)
+                      </label>
+                      <textarea
+                        value={feature.description.en}
+                        onChange={(e) => updateFeature(index, 'description', 'en', e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 min-h-[60px]"
+                        placeholder="Brief description..."
+                      />
+                    </div>
+
+                    {/* Description ES */}
+                    <div>
+                      <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300 text-sm">
+                        Descripción (Español)
+                      </label>
+                      <textarea
+                        value={feature.description.es}
+                        onChange={(e) => updateFeature(index, 'description', 'es', e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 min-h-[60px]"
+                        placeholder="Breve descripción..."
+                      />
+                    </div>
+                  </div>
+
+                  {/* Icon */}
+                  <div>
+                    <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300 text-sm">
+                      Icon (Optional - Font Awesome class)
+                    </label>
+                    <input
+                      type="text"
+                      value={feature.icon}
+                      onChange={(e) => updateFeatureIcon(index, e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                      placeholder="e.g., fa-sword, fa-shield, fa-star"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* File Upload */}

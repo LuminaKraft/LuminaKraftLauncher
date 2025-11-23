@@ -188,11 +188,11 @@ function AppContent() {
         activeSection={activeSection} 
         onSectionChange={handleSectionChange} 
       />
-      <main className="flex-1 overflow-hidden">
-        <div 
+      <main className="flex-1 overflow-auto">
+        <div
           className={`h-full transition-all duration-300 ease-out ${
-            isTransitioning 
-              ? 'opacity-0 scale-95 translate-y-2' 
+            isTransitioning
+              ? 'opacity-0 scale-95 translate-y-2'
               : 'opacity-100 scale-100 translate-y-0'
           }`}
         >
