@@ -3,6 +3,9 @@ import { LauncherProvider, useLauncher } from './contexts/LauncherContext';
 import { AnimationProvider, useAnimation } from './contexts/AnimationContext';
 import Sidebar from './components/Layout/Sidebar';
 import ModpacksPage from './components/Modpacks/ModpacksPage';
+import CreateModpackForm from './components/Modpacks/CreateModpackForm';
+import EditModpackForm from './components/Modpacks/EditModpackForm';
+import MyModpacksPage from './components/Modpacks/MyModpacksPage';
 import SettingsPage from './components/Settings/SettingsPage';
 import AboutPage from './components/About/AboutPage';
 import UpdateDialog from './components/UpdateDialog';
@@ -15,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 
 function AppContent() {
   const [activeSection, setActiveSection] = useState('home');
+  const [selectedModpackId, setSelectedModpackId] = useState<string | null>(null); // For edit modpack
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
@@ -112,10 +116,27 @@ function AppContent() {
     }, 150);
   };
 
+  const handleModpackNavigation = (section: string, modpackId?: string) => {
+    if (section === 'edit-modpack' && modpackId) {
+      setSelectedModpackId(modpackId);
+    }
+    handleSectionChange(section);
+  };
+
   const renderContent = () => {
     switch (activeSection) {
       case 'home':
         return <ModpacksPage key={modpacksPageKey} />;
+      case 'my-modpacks':
+        return <MyModpacksPage onNavigate={handleModpackNavigation} />;
+      case 'create-modpack':
+        return <CreateModpackForm onNavigate={handleModpackNavigation} />;
+      case 'edit-modpack':
+        return selectedModpackId ? (
+          <EditModpackForm modpackId={selectedModpackId} onNavigate={handleModpackNavigation} />
+        ) : (
+          <MyModpacksPage onNavigate={handleModpackNavigation} />
+        );
       case 'settings':
         return <SettingsPage onNavigationBlocked={() => {}} />;
       case 'about':

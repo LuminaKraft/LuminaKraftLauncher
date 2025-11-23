@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Home, Settings, Info, AlertCircle, Pin, PinOff } from 'lucide-react';
+import { Home, Settings, Info, AlertCircle, Pin, PinOff, FolderOpen } from 'lucide-react';
 import { useLauncher } from '../../contexts/LauncherContext';
 import PlayerHeadLoader from '../PlayerHeadLoader';
+import ModpackManagementService from '../../services/modpackManagementService';
 
 interface SidebarProps {
   activeSection: string;
@@ -17,6 +18,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
     if (typeof window === 'undefined') return false;
     return localStorage.getItem('sidebarPinned') === '1';
   });
+  const [canManageModpacks, setCanManageModpacks] = useState(false);
 
   // Persist pin state
   useEffect(() => {
@@ -25,13 +27,23 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
     }
   }, [isPinned]);
 
+  // Check if user can manage modpacks
+  useEffect(() => {
+    const checkPermissions = async () => {
+      const service = ModpackManagementService.getInstance();
+      const { canManage } = await service.canManageModpacks();
+      setCanManageModpacks(canManage);
+    };
+    checkPermissions();
+  }, [userSettings.authMethod, userSettings.microsoftAccount]);
+
   // Temporalmente removemos hasUpdate hasta implementar la funcionalidad
   const hasUpdate = false;
   
   // Version is automatically updated by release.js
   const currentVersion = "0.0.9-alpha.6";
 
-  const menuItems = [
+  const baseMenuItems = [
     {
       id: 'home',
       label: t('navigation.modpacks'),
@@ -51,6 +63,20 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
       description: 'Información del launcher'
     }
   ];
+
+  // Add "My Modpacks" if user can manage
+  const menuItems = canManageModpacks
+    ? [
+        baseMenuItems[0], // Home
+        {
+          id: 'my-modpacks',
+          label: 'My Modpacks',
+          icon: FolderOpen,
+          description: 'Manage your modpacks'
+        },
+        ...baseMenuItems.slice(1) // Settings, About
+      ]
+    : baseMenuItems;
 
   const handleAvatarClick = () => {
     if (userSettings.authMethod === 'offline') {
