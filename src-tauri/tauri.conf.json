@@ -22,7 +22,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' https://api.luminakraft.com; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' https://api.luminakraft.com"
+      "csp": "default-src 'self' https://api.luminakraft.com https://iytnvsdsqvbdoqesyweo.supabase.co; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' https://api.luminakraft.com https://iytnvsdsqvbdoqesyweo.supabase.co https://cdn.luminakraft.com"
     },
     "trayIcon": null,
     "withGlobalTauri": true
