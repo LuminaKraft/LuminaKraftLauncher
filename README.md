@@ -287,12 +287,21 @@ LuminakraftLauncher/
 
 ### Architecture
 - **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS
-- **Backend**: Rust + Tauri 2.5.1
+- **Desktop**: Rust + Tauri 2.5.1 for native performance
+- **Backend Services**: Supabase (PostgreSQL + Edge Functions + Auth) + Cloudflare R2 (CDN)
 - **Build System**: GitHub Actions with cross-platform compilation
 - **Packaging**: Native installers (NSIS + MSI) + AppImage for Linux
 - **Minecraft Library**: Lyceris for authentication and game management
 - **UI Icons**: Lucide React for modern iconography
 - **HTTP Client**: Axios (frontend) + Reqwest (backend)
+
+### Modpack Distribution System
+LuminaKraft uses a modern cloud infrastructure for modpack delivery:
+- **Content Delivery**: Cloudflare R2 for global file distribution with zero egress fees
+- **Database**: PostgreSQL (via Supabase) for modpack metadata, user profiles, and stats
+- **Authentication**: Microsoft OAuth via Azure AD for premium Minecraft accounts
+- **API**: Serverless Edge Functions for secure upload URLs and CurseForge proxying
+- **Internationalization**: Full support for English and Spanish across all modpack content
 
 ### Key Libraries
 - **Lyceris**: Minecraft launcher core functionality
