@@ -379,25 +379,29 @@ pub async fn create_modpack_with_overrides(
     let mut output_zip = ZipWriter::new(output_file);
 
     // Copy all files from original ZIP to new ZIP
-    println!("📁 Copying files from original ZIP...");
+    println!("📁 Copying {} files from original ZIP...", original_archive.len());
     for i in 0..original_archive.len() {
         let mut file = original_archive.by_index(i)?;
         let file_name = file.name().to_string();
 
         // Skip if this is a directory
         if file.is_dir() {
+            println!("   Skipping directory: {}", file_name);
             continue;
         }
+
+        println!("   Copying file {}/{}: {}", i + 1, original_archive.len(), file_name);
 
         let options = SimpleFileOptions::default()
             .compression_method(file.compression());
 
         output_zip.start_file(&file_name, options)?;
 
-        let mut buffer = Vec::new();
-        file.read_to_end(&mut buffer)?;
-        output_zip.write_all(&buffer)?;
+        std::io::copy(&mut file, &mut output_zip)?;
+
+        println!("   ✓ Copied {}", file_name);
     }
+    println!("✅ Finished copying original files");
 
     // Add uploaded files to overrides folder
     println!("📁 Adding uploaded files to overrides...");
