@@ -263,14 +263,15 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
     if (!selectedModpack) return;
 
     try {
-      // TODO: Implement delete logic
+      await invoke('delete_instance', { modpackId: selectedModpack.id });
       toast.success('Modpack deleted successfully');
-      loadLocalModpacks();
+      await loadLocalModpacks();
     } catch (error) {
       console.error('Error deleting modpack:', error);
       toast.error('Failed to delete modpack');
     } finally {
       setSelectedModpack(null);
+      setShowDeleteDialog(false);
     }
   };
 
