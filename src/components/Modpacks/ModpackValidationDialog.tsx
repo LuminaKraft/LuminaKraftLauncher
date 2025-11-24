@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, AlertTriangle, CheckCircle, ExternalLink, FileArchive, Package } from 'lucide-react';
+import { invoke } from '@tauri-apps/api/core';
 import { ModFileInfo } from '../../services/modpackValidationService';
 import ModpackValidationService from '../../services/modpackValidationService';
 
@@ -26,6 +27,17 @@ export const ModpackValidationDialog: React.FC<ModpackValidationDialogProps> = (
   );
 
   const canContinue = missingMods.length === 0;
+
+  const handleOpenUrl = async (url: string) => {
+    try {
+      // Try using Tauri API to open external URLs
+      await invoke('open_url', { url });
+    } catch (error) {
+      // Fallback to regular window.open for web environment
+      console.warn('Tauri command not available, using fallback:', error);
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -133,15 +145,16 @@ export const ModpackValidationDialog: React.FC<ModpackValidationDialogProps> = (
                             {isInOverrides ? 'Found in overrides' : 'Missing from overrides'}
                           </p>
                         </div>
-                        <a
-                          href={curseforgeUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenUrl(curseforgeUrl);
+                          }}
                           className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors flex-shrink-0"
                         >
                           <ExternalLink className="w-3 h-3" />
                           Download
-                        </a>
+                        </button>
                       </div>
                     </div>
                   );
