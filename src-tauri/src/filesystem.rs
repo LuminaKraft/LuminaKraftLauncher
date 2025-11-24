@@ -1,9 +1,11 @@
 use std::path::PathBuf;
 use std::fs;
-use std::io::Write;
+use std::io::{Write, Read};
 use anyhow::{Result, anyhow};
 use chrono::{DateTime, Utc};
 use crate::InstanceMetadata;
+use zip::write::SimpleFileOptions;
+use zip::{ZipArchive, ZipWriter};
 
 /// Get the path to the launcher data directory
 pub fn get_launcher_data_dir() -> Result<PathBuf> {
@@ -340,5 +342,105 @@ pub async fn add_mods_to_instance(modpack_id: &str, file_paths: Vec<PathBuf>) ->
     }
 
     println!("✅ All files added successfully to instance: {}", modpack_id);
+    Ok(())
+}
+
+/// Create a new modpack ZIP with uploaded files added to overrides
+///
+/// This function takes an existing modpack ZIP file and creates a new ZIP
+/// with additional files added to the overrides/mods/ or overrides/resourcepacks/ folders.
+/// - .jar files are added to overrides/mods/
+/// - .zip files are added to overrides/resourcepacks/
+///
+/// # Arguments
+/// * `original_zip_path` - Path to the original modpack ZIP file
+/// * `uploaded_files` - Vector of paths to files to add to overrides
+/// * `output_zip_path` - Path where the new ZIP file will be created
+///
+/// # Returns
+/// * `Ok(())` if the ZIP was created successfully
+/// * `Err` if reading/writing fails
+pub async fn create_modpack_with_overrides(
+    original_zip_path: PathBuf,
+    uploaded_files: Vec<PathBuf>,
+    output_zip_path: PathBuf,
+) -> Result<()> {
+    println!("📦 Creating new modpack ZIP with overrides...");
+    println!("   Original: {:?}", original_zip_path);
+    println!("   Output: {:?}", output_zip_path);
+    println!("   Files to add: {}", uploaded_files.len());
+
+    // Open original ZIP for reading
+    let original_file = fs::File::open(&original_zip_path)?;
+    let mut original_archive = ZipArchive::new(original_file)?;
+
+    // Create new ZIP for writing
+    let output_file = fs::File::create(&output_zip_path)?;
+    let mut output_zip = ZipWriter::new(output_file);
+
+    // Copy all files from original ZIP to new ZIP
+    println!("📁 Copying files from original ZIP...");
+    for i in 0..original_archive.len() {
+        let mut file = original_archive.by_index(i)?;
+        let file_name = file.name().to_string();
+
+        // Skip if this is a directory
+        if file.is_dir() {
+            continue;
+        }
+
+        let options = SimpleFileOptions::default()
+            .compression_method(file.compression());
+
+        output_zip.start_file(&file_name, options)?;
+
+        let mut buffer = Vec::new();
+        file.read_to_end(&mut buffer)?;
+        output_zip.write_all(&buffer)?;
+    }
+
+    // Add uploaded files to overrides folder
+    println!("📁 Adding uploaded files to overrides...");
+    for file_path in uploaded_files {
+        if !file_path.exists() {
+            println!("⚠️ File does not exist, skipping: {:?}", file_path);
+            continue;
+        }
+
+        let file_name = file_path.file_name()
+            .ok_or_else(|| anyhow!("Invalid file path: {:?}", file_path))?
+            .to_str()
+            .ok_or_else(|| anyhow!("Invalid UTF-8 in file name: {:?}", file_path))?;
+
+        // Determine the target folder in overrides
+        let target_folder = if file_path.extension().and_then(|s| s.to_str()) == Some("jar") {
+            "overrides/mods"
+        } else if file_path.extension().and_then(|s| s.to_str()) == Some("zip") {
+            "overrides/resourcepacks"
+        } else {
+            println!("⚠️ Unknown file extension, skipping: {:?}", file_path);
+            continue;
+        };
+
+        let zip_path = format!("{}/{}", target_folder, file_name);
+        println!("   Adding {} to ZIP at {}", file_name, zip_path);
+
+        // Read file contents
+        let mut file_contents = Vec::new();
+        let mut file = fs::File::open(&file_path)?;
+        file.read_to_end(&mut file_contents)?;
+
+        // Add to ZIP
+        let options = SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated);
+
+        output_zip.start_file(&zip_path, options)?;
+        output_zip.write_all(&file_contents)?;
+    }
+
+    // Finalize the ZIP
+    output_zip.finish()?;
+
+    println!("✅ New modpack ZIP created successfully: {:?}", output_zip_path);
     Ok(())
 } 

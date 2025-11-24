@@ -822,6 +822,24 @@ async fn add_mods_to_instance(modpack_id: String, file_paths: Vec<String>) -> Re
     }
 }
 
+#[tauri::command]
+async fn create_modpack_with_overrides(
+    original_zip_path: String,
+    uploaded_file_paths: Vec<String>,
+    output_zip_path: String
+) -> Result<(), String> {
+    use std::path::PathBuf;
+
+    let original_path = PathBuf::from(original_zip_path);
+    let uploaded_paths: Vec<PathBuf> = uploaded_file_paths.into_iter().map(PathBuf::from).collect();
+    let output_path = PathBuf::from(output_zip_path);
+
+    match filesystem::create_modpack_with_overrides(original_path, uploaded_paths, output_path).await {
+        Ok(_) => Ok(()),
+        Err(e) => Err(format!("Failed to create modpack with overrides: {}", e)),
+    }
+}
+
 #[allow(unused_must_use)]
 fn main() {
     // Linux graphics/display server compatibility setup must run BEFORE Tauri/GTK init
@@ -907,6 +925,7 @@ fn main() {
             update_refreshed_microsoft_token,
             stop_instance,
             add_mods_to_instance,
+            create_modpack_with_overrides,
         ])
         .setup(|app| {
             // Initialize app data directory
