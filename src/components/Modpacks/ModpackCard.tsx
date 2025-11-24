@@ -235,6 +235,24 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
   const displayName = modpack.name;
   const displayDescription = modpack.shortDescription || modpack.description || t('modpacks.description');
 
+  // Parse general message format: "progress.key|counter" or just "progress.key"
+  const parseGeneralMessage = (message?: string): { translatedMessage: string; counter?: string } => {
+    if (!message) return { translatedMessage: '' };
+
+    const parts = message.split('|');
+    const key = parts[0];
+    const counter = parts[1]; // Could be "3/150" or undefined
+
+    // If the key starts with "progress.", translate it
+    if (key.startsWith('progress.')) {
+      const translationKey = key.substring('progress.'.length);
+      const translatedMessage = t(`progress.${translationKey}`, key);
+      return { translatedMessage, counter };
+    }
+
+    return { translatedMessage: message, counter };
+  };
+
   const getStepMessage = (step?: string): string => {
     if (!step) return '';
     
@@ -424,10 +442,21 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
           <div className="mt-4">
             <div className="flex justify-between text-sm text-dark-300 mb-1">
               <span className="truncate">
-                {state.progress.generalMessage || getStepMessage(state.progress.step) || buttonConfig.text}
-                {state.progress.downloaded !== undefined && state.progress.total !== undefined && state.progress.total > 0 && (
-                  <span className="ml-2 text-dark-400">({state.progress.downloaded}/{state.progress.total})</span>
-                )}
+                {(() => {
+                  const { translatedMessage, counter } = parseGeneralMessage(state.progress.generalMessage);
+                  const message = translatedMessage || getStepMessage(state.progress.step) || buttonConfig.text;
+                  const displayCounter = counter || (
+                    state.progress.downloaded !== undefined && state.progress.total !== undefined && state.progress.total > 0
+                      ? `${state.progress.downloaded}/${state.progress.total}`
+                      : null
+                  );
+                  return (
+                    <>
+                      {message}
+                      {displayCounter && <span className="ml-2 text-dark-400">({displayCounter})</span>}
+                    </>
+                  );
+                })()}
               </span>
               <span className="font-mono">{Math.round(displayedPercentage)}%</span>
             </div>
