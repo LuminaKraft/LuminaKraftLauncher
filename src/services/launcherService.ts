@@ -481,7 +481,11 @@ class LauncherService {
   }
 
   // Transform frontend UserSettings structure to backend-expected structure
-  private transformUserSettingsForBackend(settings: UserSettings) {
+  private async transformUserSettingsForBackend(settings: UserSettings) {
+    // Get the current Supabase access token
+    const authService = (await import('./authService')).default.getInstance();
+    const supabaseAccessToken = await authService.getSupabaseAccessToken();
+
     const transformed = {
       username: settings.username,
       allocatedRam: settings.allocatedRam, // Keep camelCase, backend should handle it
@@ -489,6 +493,7 @@ class LauncherService {
       authMethod: settings.authMethod,
       microsoftAccount: settings.microsoftAccount || null,
       clientToken: settings.clientToken || null,
+      supabaseAccessToken: supabaseAccessToken,
       enablePrereleases: settings.enablePrereleases || false,
       enableAnimations: settings.enableAnimations || true,
     };
@@ -540,8 +545,8 @@ class LauncherService {
     try {
       // Transform the modpack structure to match backend expectations
       const transformedModpack = this.transformModpackForBackend(modpack);
-      const transformedSettings = this.transformUserSettingsForBackend(this.userSettings);
-      
+      const transformedSettings = await this.transformUserSettingsForBackend(this.userSettings);
+
       await safeInvoke('install_modpack_with_minecraft', {
         modpack: transformedModpack,
         settings: transformedSettings
@@ -573,8 +578,8 @@ class LauncherService {
     try {
       // Transform the modpack structure to match backend expectations
       const transformedModpack = this.transformModpackForBackend(modpack);
-      const transformedSettings = this.transformUserSettingsForBackend(this.userSettings);
-      
+      const transformedSettings = await this.transformUserSettingsForBackend(this.userSettings);
+
       await safeInvoke('launch_modpack', {
         modpack: transformedModpack,
         settings: transformedSettings
@@ -817,8 +822,8 @@ class LauncherService {
     try {
       // Transform the modpack structure to match backend expectations
       const transformedModpack = this.transformModpackForBackend(modpack);
-      const transformedSettings = this.transformUserSettingsForBackend(this.userSettings);
-      
+      const transformedSettings = await this.transformUserSettingsForBackend(this.userSettings);
+
       const failedMods = await safeInvoke<any[]>('install_modpack_with_failed_tracking', {
         modpack: transformedModpack,
         settings: transformedSettings
@@ -1097,7 +1102,7 @@ class LauncherService {
       };
 
       // Transform settings
-      const transformedSettings = this.transformUserSettingsForBackend(this.userSettings);
+      const transformedSettings = await this.transformUserSettingsForBackend(this.userSettings);
 
       // Set up progress listener
       let unlistenProgress: (() => void) | null = null;

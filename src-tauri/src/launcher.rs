@@ -179,7 +179,10 @@ where
             emit_progress("progress.processingCurseforge".to_string(), 70.0, "processing_curseforge".to_string());
             
             // Prepare auth token for CurseForge API calls
-            let auth_token = if let Some(microsoft_account) = &settings.microsoft_account {
+            // Priority: Supabase token > Microsoft token > client token
+            let auth_token = if let Some(supabase_token) = &settings.supabase_access_token {
+                Some(format!("Bearer {}", supabase_token))
+            } else if let Some(microsoft_account) = &settings.microsoft_account {
                 Some(format!("Bearer {}", microsoft_account.access_token))
             } else {
                 settings.client_token.clone()

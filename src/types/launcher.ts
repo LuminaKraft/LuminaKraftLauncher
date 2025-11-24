@@ -104,6 +104,7 @@ export interface UserSettings {
   enablePrereleases?: boolean;
   enableAnimations?: boolean;
   clientToken?: string; // launcher-generated token to authenticate offline users
+  supabaseAccessToken?: string; // Supabase session token for anonymous/authenticated users
 }
 
 export interface ProgressInfo {

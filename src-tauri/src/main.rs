@@ -87,6 +87,8 @@ pub struct UserSettings {
     pub microsoft_account: Option<MicrosoftAccount>,
     #[serde(rename = "clientToken")]
     pub client_token: Option<String>,
+    #[serde(rename = "supabaseAccessToken")]
+    pub supabase_access_token: Option<String>,
     #[serde(rename = "enablePrereleases", default)]
     pub enable_prereleases: bool,
     #[serde(rename = "enableAnimations", default)]

@@ -111,6 +111,20 @@ class AuthService {
 
 
   /**
+   * Get the current Supabase session access token
+   * Returns null if no session exists
+   */
+  async getSupabaseAccessToken(): Promise<string | null> {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      return session?.access_token || null;
+    } catch (error) {
+      console.error('❌ Error getting Supabase access token:', error);
+      return null;
+    }
+  }
+
+  /**
    * Sign out from Supabase and return to anonymous session
    */
   async signOutSupabase(): Promise<void> {
