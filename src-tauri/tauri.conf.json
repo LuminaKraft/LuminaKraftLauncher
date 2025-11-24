@@ -18,11 +18,12 @@
         "minWidth": 1000,
         "minHeight": 700,
         "center": true,
-        "resizable": true
+        "resizable": true,
+        "fileDropEnabled": true
       }
     ],
     "security": {
-      "csp": "default-src 'self' https://api.luminakraft.com https://iytnvsdsqvbdoqesyweo.supabase.co; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' https://api.luminakraft.com https://iytnvsdsqvbdoqesyweo.supabase.co https://cdn.luminakraft.com"
+      "csp": "default-src 'self' https://api.luminakraft.com https://iytnvsdsqvbdoqesyweo.supabase.co; img-src 'self' data: https: file:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' https://api.luminakraft.com https://iytnvsdsqvbdoqesyweo.supabase.co https://cdn.luminakraft.com file:"
     },
     "trayIcon": null,
     "withGlobalTauri": true

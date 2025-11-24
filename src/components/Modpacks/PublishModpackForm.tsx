@@ -1,8 +1,9 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { Plus, X, Upload, FileArchive } from 'lucide-react';
 import ModpackManagementService from '../../services/modpackManagementService';
+import { listen } from '@tauri-apps/api/event';
 
 interface Feature {
   title: { en: string; es: string };
@@ -55,6 +56,50 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
   const [manifestParsed, setManifestParsed] = useState(false);
   const [currentLang, setCurrentLang] = useState<'en' | 'es'>('en');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Listen for Tauri file drop events
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+
+    const setupListener = async () => {
+      try {
+        unlisten = await listen<{ paths: string[] }>('tauri://drop', async (event) => {
+          const paths = event.payload.paths;
+          if (paths && paths.length > 0) {
+            const filePath = paths[0];
+
+            // Check if it's a ZIP file
+            if (filePath.toLowerCase().endsWith('.zip')) {
+              try {
+                // Fetch file using file:// protocol
+                const response = await fetch(`file://${filePath}`);
+                const blob = await response.blob();
+                const fileName = filePath.split('/').pop() || filePath.split('\\').pop() || 'modpack.zip';
+                const file = new File([blob], fileName, { type: 'application/zip' });
+
+                await handleZipFile(file);
+              } catch (error) {
+                console.error('Error reading dropped file:', error);
+                toast.error('Failed to read dropped file');
+              }
+            } else {
+              toast.error('Please drop a ZIP file');
+            }
+          }
+        });
+      } catch (error) {
+        console.error('Error setting up file drop listener:', error);
+      }
+    };
+
+    setupListener();
+
+    return () => {
+      if (unlisten) {
+        unlisten();
+      }
+    };
+  }, []);
 
   const updateFormData = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
