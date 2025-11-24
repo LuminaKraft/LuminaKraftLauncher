@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import axios from 'axios';
 import { supabase } from './supabaseClient';
+import i18next from 'i18next';
 import type {
   ModpacksData,
   InstanceMetadata,
@@ -610,8 +611,8 @@ class LauncherService {
           downloadSpeed: '',
           eta: '',
           step: 'checking',
-          generalMessage: 'Iniciando reparación...',
-          detailMessage: 'Verificando estado del modpack'
+          generalMessage: i18next.t('progress.startingRepair'),
+          detailMessage: i18next.t('progress.verifyingModpackStatus')
         });
       }
       
