@@ -156,25 +156,14 @@ export class ModpackManagementService {
     onProgress?: (progress: number) => void
   ): Promise<{ success: boolean; fileUrl?: string; error?: string }> {
     try {
-      // Step 1: Generate presigned URL
-      const { data: urlData, error: urlError } = await supabase.functions.invoke(
-        'generate-r2-upload-url',
-        {
-          body: {
-            modpackId,
-            fileName: file.name,
-            fileSize: file.size,
-            contentType: 'application/zip'
-          }
-        }
-      );
+      console.log('📤 Starting file upload:', file.name, file.size, 'bytes');
 
-      if (urlError || !urlData) {
-        console.error('Error generating upload URL:', urlError);
-        return { success: false, error: 'Failed to generate upload URL' };
-      }
+      // Create FormData with file and modpackId
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('modpackId', modpackId);
 
-      // Step 2: Upload to R2
+      // Upload using Edge Function proxy
       const xhr = new XMLHttpRequest();
 
       return new Promise((resolve) => {
@@ -182,35 +171,28 @@ export class ModpackManagementService {
           if (e.lengthComputable && onProgress) {
             const percentComplete = (e.loaded / e.total) * 100;
             onProgress(percentComplete);
+            console.log(`📊 Upload progress: ${percentComplete.toFixed(1)}%`);
           }
         });
 
         xhr.addEventListener('load', async () => {
           console.log('Upload response status:', xhr.status);
-          console.log('Upload response text:', xhr.responseText);
+          console.log('Upload response:', xhr.responseText);
 
-          // S3 returns 200 or 204 on success
-          if (xhr.status === 200 || xhr.status === 204) {
-            // Step 3: Complete upload
-            const { data: completeData, error: completeError } = await supabase.functions.invoke(
-              'complete-modpack-upload',
-              {
-                body: {
-                  modpackId,
-                  sha256: await this.calculateSHA256(file),
-                  actualSize: file.size
-                }
+          if (xhr.status === 200) {
+            try {
+              const response = JSON.parse(xhr.responseText);
+              if (response.success) {
+                resolve({
+                  success: true,
+                  fileUrl: response.fileUrl
+                });
+              } else {
+                resolve({ success: false, error: response.error || 'Upload failed' });
               }
-            );
-
-            if (completeError) {
-              console.error('Error completing upload:', completeError);
-              resolve({ success: false, error: 'Failed to complete upload' });
-            } else {
-              resolve({
-                success: true,
-                fileUrl: completeData.downloadUrl
-              });
+            } catch (parseError) {
+              console.error('Error parsing response:', parseError);
+              resolve({ success: false, error: 'Invalid response from server' });
             }
           } else {
             console.error('Upload failed with status:', xhr.status, xhr.statusText);
@@ -223,10 +205,15 @@ export class ModpackManagementService {
           resolve({ success: false, error: 'Upload failed - network error' });
         });
 
-        console.log('Starting upload to presigned URL:', urlData.presignedUrl);
-        xhr.open('PUT', urlData.presignedUrl);
-        xhr.setRequestHeader('Content-Type', 'application/zip');
-        xhr.send(file);
+        // Get Supabase session for authorization
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          const functionUrl = `${supabase.supabaseUrl}/functions/v1/upload-modpack-file`;
+          console.log('📡 Uploading to:', functionUrl);
+
+          xhr.open('POST', functionUrl);
+          xhr.setRequestHeader('Authorization', `Bearer ${session?.access_token}`);
+          xhr.send(formData);
+        });
       });
     } catch (error) {
       console.error('Error uploading modpack file:', error);
@@ -303,42 +290,44 @@ export class ModpackManagementService {
     imageType: 'logo' | 'banner'
   ): Promise<{ success: boolean; imageUrl?: string; error?: string }> {
     try {
-      // Generate presigned URL for image
-      const { data: urlData, error: urlError } = await supabase.functions.invoke(
-        'generate-r2-upload-url',
-        {
-          body: {
-            modpackId,
-            fileName: `${imageType}-${file.name}`,
-            fileSize: file.size,
-            contentType: file.type
-          }
-        }
-      );
+      console.log(`📤 Uploading ${imageType}:`, file.name, file.size, 'bytes');
 
-      if (urlError || !urlData) {
-        console.error('Error generating image upload URL:', urlError);
-        return { success: false, error: 'Failed to generate upload URL' };
-      }
+      // Create FormData with file and modpackId
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('modpackId', modpackId);
+      formData.append('fileType', imageType); // Tell backend this is an image
 
-      // Upload to R2
-      const response = await fetch(urlData.presignedUrl, {
-        method: 'PUT',
+      // Get session for authorization
+      const { data: { session } } = await supabase.auth.getSession();
+      const functionUrl = `${supabase.supabaseUrl}/functions/v1/upload-modpack-file`;
+
+      // Upload using Edge Function
+      const response = await fetch(functionUrl, {
+        method: 'POST',
         headers: {
-          'Content-Type': file.type
+          'Authorization': `Bearer ${session?.access_token}`
         },
-        body: file
+        body: formData
       });
 
       if (!response.ok) {
-        return { success: false, error: 'Failed to upload image' };
+        const errorData = await response.json();
+        console.error('Upload failed:', errorData);
+        return { success: false, error: errorData.error || 'Failed to upload image' };
+      }
+
+      const result = await response.json();
+
+      if (!result.success) {
+        return { success: false, error: result.error || 'Upload failed' };
       }
 
       // Update modpack with image URL
       const imageUrlField = imageType === 'logo' ? 'logo_url' : 'banner_url';
       const { error: updateError } = await supabase
         .from('modpacks')
-        .update({ [imageUrlField]: urlData.publicUrl })
+        .update({ [imageUrlField]: result.fileUrl })
         .eq('id', modpackId);
 
       if (updateError) {
@@ -346,7 +335,7 @@ export class ModpackManagementService {
         return { success: false, error: 'Failed to update modpack' };
       }
 
-      return { success: true, imageUrl: urlData.publicUrl };
+      return { success: true, imageUrl: result.fileUrl };
     } catch (error) {
       console.error('Error uploading image:', error);
       return { success: false, error: 'Upload failed' };
@@ -405,38 +394,40 @@ export class ModpackManagementService {
         return { success: true };
       }
 
+      // Get session for authorization
+      const { data: { session } } = await supabase.auth.getSession();
+      const functionUrl = `${supabase.supabaseUrl}/functions/v1/upload-modpack-file`;
+
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
 
-        // Generate presigned URL
-        const { data: urlData, error: urlError } = await supabase.functions.invoke(
-          'generate-r2-upload-url',
-          {
-            body: {
-              modpackId,
-              fileName: `screenshot-${i}-${file.name}`,
-              fileSize: file.size,
-              contentType: file.type
-            }
-          }
-        );
+        console.log(`📤 Uploading screenshot ${i + 1}/${files.length}:`, file.name);
 
-        if (urlError || !urlData) {
-          console.error('Error generating screenshot upload URL:', urlError);
-          continue;
-        }
+        // Create FormData
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('modpackId', modpackId);
+        formData.append('fileType', 'screenshot');
+        formData.append('sortOrder', i.toString());
 
-        // Upload to R2
-        const response = await fetch(urlData.presignedUrl, {
-          method: 'PUT',
+        // Upload using Edge Function
+        const response = await fetch(functionUrl, {
+          method: 'POST',
           headers: {
-            'Content-Type': file.type
+            'Authorization': `Bearer ${session?.access_token}`
           },
-          body: file
+          body: formData
         });
 
         if (!response.ok) {
           console.error('Failed to upload screenshot');
+          continue;
+        }
+
+        const result = await response.json();
+
+        if (!result.success) {
+          console.error('Screenshot upload failed:', result.error);
           continue;
         }
 
@@ -445,8 +436,8 @@ export class ModpackManagementService {
           .from('modpack_images')
           .insert({
             modpack_id: modpackId,
-            image_path: urlData.filePath,
-            image_url: urlData.publicUrl,
+            image_path: result.filePath,
+            image_url: result.fileUrl,
             sort_order: i,
             size_bytes: file.size
           });
