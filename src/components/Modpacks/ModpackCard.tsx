@@ -425,6 +425,9 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
             <div className="flex justify-between text-sm text-dark-300 mb-1">
               <span className="truncate">
                 {state.progress.generalMessage || getStepMessage(state.progress.step) || buttonConfig.text}
+                {state.progress.downloaded !== undefined && state.progress.total !== undefined && state.progress.total > 0 && (
+                  <span className="ml-2 text-dark-400">({state.progress.downloaded}/{state.progress.total})</span>
+                )}
               </span>
               <span className="font-mono">{Math.round(displayedPercentage)}%</span>
             </div>
