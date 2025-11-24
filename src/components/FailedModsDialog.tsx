@@ -39,6 +39,7 @@ export const FailedModsDialog: React.FC<FailedModsDialogProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
   const [uploadedFiles, setUploadedFiles] = useState<Map<number, File>>(new Map()); // Map projectId to File
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     if (isOpen && failedMods.length > 0) {
@@ -106,10 +107,72 @@ export const FailedModsDialog: React.FC<FailedModsDialogProps> = ({
     toast.success(`${file.name} uploaded`);
   };
 
+  const handleBulkFileUpload = (files: FileList | File[]) => {
+    const fileArray = Array.from(files);
+    const validFiles = fileArray.filter(f => f.name.endsWith('.jar') || f.name.endsWith('.zip'));
+
+    if (validFiles.length === 0) {
+      toast.error('No valid .jar or .zip files found');
+      return;
+    }
+
+    const newFiles = new Map(uploadedFiles);
+    let matchedCount = 0;
+
+    // Try to match each file with a failed mod by filename
+    validFiles.forEach(file => {
+      const matchingMod = failedMods.find(mod => {
+        // Try exact match with fileName if available
+        if (mod.fileName && mod.fileName.toLowerCase() === file.name.toLowerCase()) return true;
+        // Try without extension
+        if (mod.fileName) {
+          const modNameWithoutExt = mod.fileName.replace(/\.(jar|zip)$/i, '');
+          const fileNameWithoutExt = file.name.replace(/\.(jar|zip)$/i, '');
+          return modNameWithoutExt.toLowerCase() === fileNameWithoutExt.toLowerCase();
+        }
+        return false;
+      });
+
+      if (matchingMod) {
+        newFiles.set(matchingMod.projectId, file);
+        matchedCount++;
+      }
+    });
+
+    setUploadedFiles(newFiles);
+
+    if (matchedCount > 0) {
+      toast.success(`${matchedCount} file(s) matched and uploaded`);
+    }
+    if (validFiles.length > matchedCount) {
+      toast.warning(`${validFiles.length - matchedCount} file(s) could not be matched`);
+    }
+  };
+
   const handleRemoveFile = (projectId: number) => {
     const newFiles = new Map(uploadedFiles);
     newFiles.delete(projectId);
     setUploadedFiles(newFiles);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      handleBulkFileUpload(files);
+    }
   };
 
   const handleInstallUploadedMods = async () => {
@@ -175,6 +238,45 @@ export const FailedModsDialog: React.FC<FailedModsDialogProps> = ({
 
           {!loading && !error && (
             <>
+              {/* Bulk Upload / Drag & Drop Zone */}
+              {failedMods.length > 0 && failedMods.some(mod => !uploadedFiles.has(mod.projectId)) && (
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`mb-4 border-2 border-dashed rounded-lg p-4 text-center transition-all ${
+                    isDragging
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                      : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500'
+                  }`}
+                >
+                  <div className="flex flex-col items-center gap-2">
+                    <Upload className="w-8 h-8 text-gray-400" />
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      Drop all files here or click to browse
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-500">
+                      Files will be automatically matched by name ({failedMods.length - uploadedFiles.size} remaining)
+                    </p>
+                    <label className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors cursor-pointer">
+                      Select Multiple Files
+                      <input
+                        type="file"
+                        multiple
+                        accept=".jar,.zip"
+                        className="hidden"
+                        onChange={(e) => {
+                          if (e.target.files) {
+                            handleBulkFileUpload(e.target.files);
+                            e.target.value = ''; // Reset input
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-3 max-h-60 overflow-y-auto mb-4">
                 {failedMods.map((failedMod, index) => {
                   const modInfo = getModInfo(failedMod.projectId);
