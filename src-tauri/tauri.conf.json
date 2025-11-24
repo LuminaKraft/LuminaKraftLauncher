@@ -56,7 +56,13 @@
   },
   "plugins": {
     "fs": {
-      "requireLiteralLeadingDot": false
+      "requireLiteralLeadingDot": false,
+      "scope": [
+        "$APPDATA/**",
+        "$APPDATA/temp/**",
+        "$APPDATA/temp/uploaded_mods/**",
+        "$APPDATA/temp/modpack_merge/**"
+      ]
     },
     "shell": {
       "open": true
