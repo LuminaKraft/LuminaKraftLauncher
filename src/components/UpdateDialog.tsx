@@ -135,10 +135,10 @@ const UpdateDialog: React.FC<UpdateDialogProps> = ({
                     <span className="text-sm mr-2">
                       {Math.round((downloadProgress.current / downloadProgress.total) * 100)}%
                     </span>
-                    <span>Instalando...</span>
+                    <span>{t('progress.installing')}</span>
                   </>
                 ) : (
-                  <span>Preparando...</span>
+                  <span>{t('progress.preparing', 'Preparando...')}</span>
                 )}
               </>
             ) : (

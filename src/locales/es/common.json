@@ -227,7 +227,8 @@
     "installationCompleted": "Instalación completada",
     "completed": "Completado",
     "startingRepair": "Iniciando reparación...",
-    "verifyingModpackStatus": "Verificando estado del modpack"
+    "verifyingModpackStatus": "Verificando estado del modpack",
+    "installing": "Instalando..."
   },
   "settings": {
     "title": "Ajustes",

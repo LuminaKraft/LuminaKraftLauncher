@@ -181,7 +181,7 @@ const AboutPage: React.FC = () => {
                           {Math.round((downloadProgress.current / downloadProgress.total) * 100)}%
                         </span>
                       )}
-                      <span className="ml-2">Instalando...</span>
+                      <span className="ml-2">{t('progress.installing')}</span>
                     </>
                   ) : (
                     <>

@@ -275,7 +275,6 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
   const handleOpenFolder = async (modpack: LocalModpack) => {
     try {
       await invoke('open_instance_folder', { modpackId: modpack.id });
-      toast.success(`Opened folder for ${modpack.name}`);
     } catch (error) {
       console.error('Error opening folder:', error);
       toast.error('Failed to open folder');
