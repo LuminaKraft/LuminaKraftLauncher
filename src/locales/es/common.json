@@ -228,7 +228,10 @@
     "completed": "Completado",
     "startingRepair": "Iniciando reparación...",
     "verifyingModpackStatus": "Verificando estado del modpack",
-    "installing": "Instalando..."
+    "installing": "Instalando...",
+    "active": "Activo",
+    "inactive": "Inactivo",
+    "new": "Nuevo"
   },
   "settings": {
     "title": "Ajustes",

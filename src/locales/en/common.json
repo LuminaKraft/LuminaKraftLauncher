@@ -229,7 +229,10 @@
     "completed": "Completed",
     "startingRepair": "Starting repair...",
     "verifyingModpackStatus": "Verifying modpack status",
-    "installing": "Installing..."
+    "installing": "Installing...",
+    "active": "Active",
+    "inactive": "Inactive",
+    "new": "New"
   },
   "settings": {
     "title": "Settings",

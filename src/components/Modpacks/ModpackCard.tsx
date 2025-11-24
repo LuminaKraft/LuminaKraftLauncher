@@ -65,20 +65,20 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
     if (modpack.isActive) {
       return (
         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-600/40 text-green-300 border border-green-600/60">
-          {'Activo'}
+          {t('progress.active')}
         </span>
       );
     }
     if (modpack.isComingSoon) {
       return (
         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-600/40 text-blue-300 border border-blue-600/60">
-          {'Próximamente'}
+          {t('modpack.comingSoon', 'Próximamente')}
         </span>
       );
     }
     return (
       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-600/40 text-gray-300 border border-gray-600/60">
-        {'Inactivo'}
+        {t('progress.inactive')}
       </span>
     );
   };
