@@ -186,7 +186,11 @@ export class ModpackManagementService {
         });
 
         xhr.addEventListener('load', async () => {
-          if (xhr.status === 200) {
+          console.log('Upload response status:', xhr.status);
+          console.log('Upload response text:', xhr.responseText);
+
+          // S3 returns 200 or 204 on success
+          if (xhr.status === 200 || xhr.status === 204) {
             // Step 3: Complete upload
             const { data: completeData, error: completeError } = await supabase.functions.invoke(
               'complete-modpack-upload',
@@ -209,14 +213,17 @@ export class ModpackManagementService {
               });
             }
           } else {
-            resolve({ success: false, error: `Upload failed with status ${xhr.status}` });
+            console.error('Upload failed with status:', xhr.status, xhr.statusText);
+            resolve({ success: false, error: `Upload failed with status ${xhr.status}: ${xhr.statusText}` });
           }
         });
 
-        xhr.addEventListener('error', () => {
-          resolve({ success: false, error: 'Upload failed' });
+        xhr.addEventListener('error', (e) => {
+          console.error('XHR error event:', e);
+          resolve({ success: false, error: 'Upload failed - network error' });
         });
 
+        console.log('Starting upload to presigned URL:', urlData.presignedUrl);
         xhr.open('PUT', urlData.presignedUrl);
         xhr.setRequestHeader('Content-Type', 'application/zip');
         xhr.send(file);
