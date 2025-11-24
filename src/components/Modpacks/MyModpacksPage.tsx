@@ -61,7 +61,7 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
       // Map instances to LocalModpack format
       const modpacks: LocalModpack[] = instances.map((instance: any) => ({
         id: instance.id,
-        name: instance.id, // Use ID as name for now, could be improved
+        name: instance.name || instance.id, // Use name from metadata, fallback to ID
         version: instance.version,
         minecraftVersion: instance.minecraft_version,
         modloader: instance.modloader,

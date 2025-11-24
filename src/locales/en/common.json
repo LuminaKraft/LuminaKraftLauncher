@@ -184,7 +184,13 @@
     "processingAdditionalFiles": "Processing additional files...",
     "additionalFilesCompleted": "Additional files processed successfully",
     "fetchingModInfo": "Fetching mod information...",
-    "curseforgeApiError": "CurseForge API Error: {{error}}"
+    "curseforgeApiError": "CurseForge API Error: {{error}}",
+    "initializing": "Initializing...",
+    "checking": "Checking for updates...",
+    "copyingModpack": "Copying local modpack...",
+    "savingInstanceConfig": "Saving instance configuration...",
+    "finalizingInstallation": "Finalizing installation...",
+    "installationCompleted": "Installation completed"
   },
   "settings": {
     "title": "Settings",

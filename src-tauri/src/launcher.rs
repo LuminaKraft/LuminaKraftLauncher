@@ -39,6 +39,7 @@ pub async fn install_modpack(modpack: Modpack) -> Result<()> {
     // Create instance metadata
     let metadata = InstanceMetadata {
         id: modpack.id.clone(),
+        name: modpack.name.clone(),
         version: modpack.version.clone(),
         installed_at: chrono::Utc::now().to_rfc3339(),
         modloader: modpack.modloader.clone(),
@@ -104,13 +105,13 @@ where
     let meta_dirs = MetaDirectories::init().await?;
     let instance_dirs = InstanceDirectories::new(&modpack.id)?;
 
-    emit_progress("Inicializando...".to_string(), 5.0, "initializing".to_string());
+    emit_progress("progress.initializing".to_string(), 5.0, "initializing".to_string());
 
     // Check if instance already exists
     let is_update = instance_dirs.instance_dir.exists();
-    
+
     if is_update {
-        emit_progress("Verificando actualización...".to_string(), 10.0, "checking".to_string());
+        emit_progress("progress.checking".to_string(), 10.0, "checking".to_string());
         
         if let Ok(Some(existing_metadata)) = filesystem::get_instance_metadata(&modpack.id).await {
             if !minecraft::check_instance_needs_update(&modpack, &existing_metadata).await {
@@ -161,7 +162,7 @@ where
 
         if is_local_file {
             // It's a local file, just copy it
-            emit_progress("Copiando modpack local...".to_string(), 75.0, "copying_modpack".to_string());
+            emit_progress("progress.copyingModpack".to_string(), 75.0, "copying_modpack".to_string());
             std::fs::copy(&modpack.url_modpack_zip, &temp_zip_path)?;
         } else {
             // It's a remote URL, download it
@@ -206,7 +207,7 @@ where
             failed_mods
         } else {
             // Regular ZIP modpack
-            emit_progress("Extrayendo modpack...".to_string(), 85.0, "extracting_modpack".to_string());
+            emit_progress("progress.extractingModpack".to_string(), 85.0, "extracting_modpack".to_string());
             extract_zip(&temp_zip_path, &instance_dirs.instance_dir)?;
             cleanup_temp_file(&temp_zip_path);
             Vec::new()
@@ -216,11 +217,12 @@ where
     };
 
     // Finalization steps after modpack processing
-    emit_progress("Guardando configuración de la instancia...".to_string(), 96.0, "saving_instance_config".to_string());
+    emit_progress("progress.savingInstanceConfig".to_string(), 96.0, "saving_instance_config".to_string());
 
     // Save instance metadata
     let metadata = InstanceMetadata {
         id: modpack.id.clone(),
+        name: modpack.name.clone(),
         version: modpack.version.clone(),
         installed_at: chrono::Utc::now().to_rfc3339(),
         modloader: modpack.modloader.clone(),
@@ -229,10 +231,10 @@ where
     };
     
     filesystem::save_instance_metadata(&metadata).await?;
-    
-    emit_progress("Finalizando instalación...".to_string(), 98.0, "finalizing_installation".to_string());
-    
-    emit_progress("Instalación completada".to_string(), 100.0, "completed".to_string());
+
+    emit_progress("progress.finalizingInstallation".to_string(), 98.0, "finalizing_installation".to_string());
+
+    emit_progress("progress.installationCompleted".to_string(), 100.0, "completed".to_string());
     println!("✅ Instance installation completed successfully!");
     
     Ok(failed_mods)

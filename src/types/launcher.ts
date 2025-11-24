@@ -77,6 +77,7 @@ export interface AvailableLanguages {
 
 export interface InstanceMetadata {
   id: string;
+  name: string;
   version: string;
   installedAt: string;
   modloader: string;

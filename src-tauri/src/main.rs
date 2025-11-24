@@ -98,6 +98,7 @@ pub struct UserSettings {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct InstanceMetadata {
     pub id: String,
+    pub name: String,
     pub version: String,
     #[serde(rename = "installedAt")]
     pub installed_at: String,
