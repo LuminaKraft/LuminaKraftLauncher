@@ -113,7 +113,9 @@ export const ModpackValidationDialog: React.FC<ModpackValidationDialogProps> = (
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {modsWithoutUrl.map((mod, index) => {
                   const isInOverrides = modsInOverrides.includes(mod.fileName);
-                  const curseforgeUrl = `https://www.curseforge.com/minecraft/mc-mods/${mod.id}/files`;
+                  const curseforgeUrl = mod.modWebsiteUrl
+                    ? `${mod.modWebsiteUrl}/files/${mod.id}`
+                    : `https://www.curseforge.com/minecraft/mc-mods/search?search=${encodeURIComponent(mod.fileName)}`;
 
                   return (
                     <div

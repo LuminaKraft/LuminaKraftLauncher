@@ -17,11 +17,14 @@ export interface ModpackManifest {
 
 export interface ModFileInfo {
   id: number;
+  modId: number;
   displayName: string;
   fileName: string;
   downloadUrl: string | null;
   fileStatus: number;
   isAvailable: boolean;
+  modSlug?: string;
+  modWebsiteUrl?: string;
 }
 
 export interface ValidationResult {
@@ -101,9 +104,9 @@ class ModpackValidationService {
    */
   private async fetchModsInfo(fileIds: number[]): Promise<ModFileInfo[]> {
     const BATCH_SIZE = 50;
-    const allMods: ModFileInfo[] = [];
+    const allModFiles: ModFileInfo[] = [];
 
-    // Process in batches
+    // Step 1: Fetch file information
     for (let i = 0; i < fileIds.length; i += BATCH_SIZE) {
       const batch = fileIds.slice(i, i + BATCH_SIZE);
 
@@ -124,14 +127,58 @@ class ModpackValidationService {
         }
 
         if (data?.data) {
-          allMods.push(...data.data);
+          allModFiles.push(...data.data);
         }
       } catch (error) {
         console.error('Error in batch fetch:', error);
       }
     }
 
-    return allMods;
+    // Step 2: Get unique mod IDs and fetch mod information
+    const uniqueModIds = [...new Set(allModFiles.map(file => file.modId))];
+    const modInfoMap = new Map<number, { slug: string; websiteUrl: string }>();
+
+    for (let i = 0; i < uniqueModIds.length; i += BATCH_SIZE) {
+      const batch = uniqueModIds.slice(i, i + BATCH_SIZE);
+
+      try {
+        const { data, error } = await supabase.functions.invoke('curseforge-proxy', {
+          body: {
+            endpoint: '/mods',
+            method: 'POST',
+            body: {
+              modIds: batch
+            }
+          }
+        });
+
+        if (error) {
+          console.error('Error fetching mod info:', error);
+          continue;
+        }
+
+        if (data?.data) {
+          for (const mod of data.data) {
+            modInfoMap.set(mod.id, {
+              slug: mod.slug,
+              websiteUrl: mod.links?.websiteUrl || ''
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching mod info:', error);
+      }
+    }
+
+    // Step 3: Enrich file info with mod info
+    return allModFiles.map(file => {
+      const modInfo = modInfoMap.get(file.modId);
+      return {
+        ...file,
+        modSlug: modInfo?.slug,
+        modWebsiteUrl: modInfo?.websiteUrl
+      };
+    });
   }
 
   /**
