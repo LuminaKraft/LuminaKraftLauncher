@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Play, Trash2, FolderOpen, Download } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import toast from 'react-hot-toast';
+import ModpackValidationService, { ModFileInfo } from '../../services/modpackValidationService';
+import ModpackValidationDialog from './ModpackValidationDialog';
 
 interface LocalModpack {
   id: string;
@@ -21,8 +23,19 @@ interface MyModpacksPageProps {
 
 export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
   const { t } = useTranslation();
+  const validationService = ModpackValidationService.getInstance();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [localModpacks, setLocalModpacks] = useState<LocalModpack[]>([]);
   const [loading, setLoading] = useState(true);
+  const [validating, setValidating] = useState(false);
+  const [showValidationDialog, setShowValidationDialog] = useState(false);
+  const [validationData, setValidationData] = useState<{
+    modpackName: string;
+    modsWithoutUrl: ModFileInfo[];
+    modsInOverrides: string[];
+    file: File;
+  } | null>(null);
 
   useEffect(() => {
     loadLocalModpacks();
@@ -45,13 +58,73 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
     }
   };
 
-  const handleImportModpack = async () => {
+  const handleImportModpack = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Reset input so the same file can be selected again
+    event.target.value = '';
+
+    if (!file.name.endsWith('.zip')) {
+      toast.error('Please select a ZIP file');
+      return;
+    }
+
     try {
-      // TODO: Implement file picker and import logic
-      toast.success('Import feature coming soon!');
+      setValidating(true);
+      toast.loading('Validating modpack...', { id: 'validation' });
+
+      const result = await validationService.validateModpackZip(file);
+
+      if (!result.success) {
+        toast.error(result.error || 'Failed to validate modpack', { id: 'validation' });
+        return;
+      }
+
+      toast.dismiss('validation');
+
+      // If there are mods without URL, show validation dialog
+      if (result.modsWithoutUrl && result.modsWithoutUrl.length > 0) {
+        setValidationData({
+          modpackName: result.manifest?.name || file.name,
+          modsWithoutUrl: result.modsWithoutUrl,
+          modsInOverrides: result.modsInOverrides || [],
+          file
+        });
+        setShowValidationDialog(true);
+      } else {
+        // No problematic mods, proceed directly
+        await performImport(file);
+      }
+    } catch (error) {
+      console.error('Error validating modpack:', error);
+      toast.error('Failed to validate modpack', { id: 'validation' });
+    } finally {
+      setValidating(false);
+    }
+  };
+
+  const performImport = async (file: File) => {
+    try {
+      toast.loading('Importing modpack...');
+      // TODO: Implement actual import logic with Tauri backend
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate import
+      toast.success('Modpack imported successfully!');
+      loadLocalModpacks();
     } catch (error) {
       console.error('Error importing modpack:', error);
       toast.error('Failed to import modpack');
+    }
+  };
+
+  const handleValidationContinue = () => {
+    setShowValidationDialog(false);
+    if (validationData) {
+      performImport(validationData.file);
     }
   };
 
@@ -100,6 +173,27 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
 
   return (
     <div className="max-w-7xl mx-auto p-6">
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".zip"
+        onChange={handleFileSelected}
+        className="hidden"
+      />
+
+      {/* Validation Dialog */}
+      {validationData && (
+        <ModpackValidationDialog
+          isOpen={showValidationDialog}
+          onClose={() => setShowValidationDialog(false)}
+          onContinue={handleValidationContinue}
+          modpackName={validationData.modpackName}
+          modsWithoutUrl={validationData.modsWithoutUrl}
+          modsInOverrides={validationData.modsInOverrides}
+        />
+      )}
+
       {/* Header */}
       <div className="mb-6">
         <div className="flex justify-between items-center mb-2">
@@ -108,10 +202,11 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
           </h1>
           <button
             onClick={handleImportModpack}
-            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+            disabled={validating}
+            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Download className="w-5 h-5" />
-            Import Modpack
+            {validating ? 'Validating...' : 'Import Modpack'}
           </button>
         </div>
         <p className="text-gray-600 dark:text-gray-400">

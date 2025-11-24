@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { Plus, X, Upload, FileArchive } from 'lucide-react';
 import ModpackManagementService from '../../services/modpackManagementService';
+import ModpackValidationService, { ModFileInfo } from '../../services/modpackValidationService';
+import ModpackValidationDialog from './ModpackValidationDialog';
 import { listen } from '@tauri-apps/api/event';
 
 interface Feature {
@@ -32,6 +34,7 @@ interface PublishModpackFormProps {
 export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
   const { t } = useTranslation();
   const service = ModpackManagementService.getInstance();
+  const validationService = ModpackValidationService.getInstance();
 
   const [formData, setFormData] = useState<FormData>({
     name: { en: '', es: '' },
@@ -56,6 +59,14 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
   const [manifestParsed, setManifestParsed] = useState(false);
   const [currentLang, setCurrentLang] = useState<'en' | 'es'>('en');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Validation state
+  const [showValidationDialog, setShowValidationDialog] = useState(false);
+  const [validationData, setValidationData] = useState<{
+    modpackName: string;
+    modsWithoutUrl: ModFileInfo[];
+    modsInOverrides: string[];
+  } | null>(null);
 
   // Listen for Tauri file drop events
   useEffect(() => {
@@ -155,21 +166,40 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
     setZipFile(file);
     setManifestParsed(false);
 
-    // Automatically parse manifest
-    await parseManifest(file);
+    // Validate and parse manifest
+    await validateAndParseManifest(file);
   };
 
-  const parseManifest = async (file: File) => {
+  const validateAndParseManifest = async (file: File) => {
     setIsParsing(true);
     try {
-      const result = await service.parseManifestFromZip(file);
+      // First, validate the modpack
+      const validationResult = await validationService.validateModpackZip(file);
 
-      if (!result.success || !result.data) {
-        toast.error(result.error || 'Failed to parse manifest.json');
+      if (!validationResult.success) {
+        toast.error(validationResult.error || 'Failed to validate modpack');
         return;
       }
 
-      const data = result.data;
+      // Check if there are mods without URL
+      if (validationResult.modsWithoutUrl && validationResult.modsWithoutUrl.length > 0) {
+        setValidationData({
+          modpackName: validationResult.manifest?.name || file.name,
+          modsWithoutUrl: validationResult.modsWithoutUrl,
+          modsInOverrides: validationResult.modsInOverrides || []
+        });
+        setShowValidationDialog(true);
+      }
+
+      // Parse manifest for form data (using existing service)
+      const parseResult = await service.parseManifestFromZip(file);
+
+      if (!parseResult.success || !parseResult.data) {
+        toast.error(parseResult.error || 'Failed to parse manifest.json');
+        return;
+      }
+
+      const data = parseResult.data;
 
       // Auto-fill form with parsed data
       setFormData(prev => ({
@@ -185,10 +215,24 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
       }));
 
       setManifestParsed(true);
-      toast.success('Manifest parsed! Form auto-filled with modpack data.');
+
+      // Show different message based on validation
+      if (validationResult.modsWithoutUrl && validationResult.modsWithoutUrl.length > 0) {
+        const missingCount = validationResult.modsWithoutUrl.filter(
+          mod => !validationResult.modsInOverrides?.includes(mod.fileName)
+        ).length;
+
+        if (missingCount > 0) {
+          toast.warning(`Manifest parsed, but ${missingCount} mod(s) require manual download.`);
+        } else {
+          toast.success('Manifest parsed! All required mods are in overrides.');
+        }
+      } else {
+        toast.success('Manifest parsed! Form auto-filled with modpack data.');
+      }
     } catch (error) {
-      console.error('Error parsing manifest:', error);
-      toast.error('Failed to parse manifest');
+      console.error('Error validating manifest:', error);
+      toast.error('Failed to validate modpack');
     } finally {
       setIsParsing(false);
     }
@@ -339,6 +383,18 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
 
   return (
     <div className="max-w-4xl mx-auto p-6">
+      {/* Validation Dialog */}
+      {validationData && (
+        <ModpackValidationDialog
+          isOpen={showValidationDialog}
+          onClose={() => setShowValidationDialog(false)}
+          onContinue={() => setShowValidationDialog(false)}
+          modpackName={validationData.modpackName}
+          modsWithoutUrl={validationData.modsWithoutUrl}
+          modsInOverrides={validationData.modsInOverrides}
+        />
+      )}
+
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
           Publish Modpack
