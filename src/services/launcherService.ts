@@ -144,15 +144,25 @@ class LauncherService {
     return { ...this.userSettings };
   }
 
+  /**
+   * Check if Supabase connection is healthy
+   */
   async checkAPIHealth(): Promise<boolean> {
     try {
-      const baseUrl = this.getBaseUrl();
-      const response = await axios.get(`${baseUrl}/health`, {
-        timeout: 5000
-      });
-      return response.data.status === 'ok';
+      // Test Supabase connection by making a simple query
+      const { data, error } = await supabase
+        .from('modpacks')
+        .select('id')
+        .limit(1);
+
+      if (error) {
+        console.error('Supabase health check failed:', error);
+        return false;
+      }
+
+      return true;
     } catch (error) {
-      console.error('API health check failed:', error);
+      console.error('Supabase health check failed:', error);
       return false;
     }
   }
@@ -692,15 +702,29 @@ class LauncherService {
     return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   }
 
-  // Método para obtener información de la API
+  /**
+   * Get backend information (Supabase status)
+   * This replaces the old API info endpoint
+   */
   async getAPIInfo(): Promise<any> {
     try {
-      const baseUrl = this.getBaseUrl();
-      const response = await axios.get(`${baseUrl}/v1/info`);
-      return response.data;
+      // Check if Supabase is available
+      const isHealthy = await this.checkAPIHealth();
+
+      return {
+        backend: 'Supabase',
+        status: isHealthy ? 'online' : 'offline',
+        version: '1.0.0',
+        features: ['modpacks', 'authentication', 'statistics', 'file-storage']
+      };
     } catch (error) {
-      console.error('Error getting API info:', error);
-      return null;
+      console.error('Error getting backend info:', error);
+      return {
+        backend: 'Supabase',
+        status: 'offline',
+        version: '1.0.0',
+        features: []
+      };
     }
   }
 

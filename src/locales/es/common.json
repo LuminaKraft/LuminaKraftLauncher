@@ -197,7 +197,7 @@
     "animationsEnabled": "Las animaciones están habilitadas",
     "animationsDisabled": "Las animaciones están deshabilitadas",
     "java": "Java",
-    "api": "Estado de la API",
+    "api": "Estado del Backend",
     "language": "Idioma",
     "selectLanguage": "Seleccionar idioma",
     "currentLanguage": "Idioma actual: {{language}}",
