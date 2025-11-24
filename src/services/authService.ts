@@ -72,21 +72,29 @@ class AuthService {
         return false;
       }
 
-      // Set authenticated session with tokens from Edge Function
-      if (data.session && data.session.access_token && data.session.refresh_token) {
-        const { error: sessionError } = await supabase.auth.setSession({
-          access_token: data.session.access_token,
-          refresh_token: data.session.refresh_token
+      // Exchange hashed_token for authenticated session
+      if (data.hashed_token) {
+        const { data: sessionData, error: sessionError } = await supabase.auth.verifyOtp({
+          token_hash: data.hashed_token,
+          type: 'recovery'
         });
 
         if (sessionError) {
-          console.error('❌ Failed to set session:', sessionError);
+          console.error('❌ Failed to verify OTP token:', sessionError);
           return false;
         }
 
         console.log('✅ Authenticated Supabase session established');
+        console.log('   Session user ID:', sessionData.session?.user.id);
+        console.log('   Is anonymous:', sessionData.session?.user.is_anonymous);
+
+        // Verify the session is now authenticated
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('   Current session role:', session?.user.role);
+        console.log('   Current session aud:', session?.user.aud);
       } else {
-        console.warn('⚠️ No session tokens returned from Edge Function');
+        console.warn('⚠️ No hashed_token returned from Edge Function');
+        console.log('   Response data:', data);
       }
 
       console.log('✅ Microsoft account authenticated with Supabase');
