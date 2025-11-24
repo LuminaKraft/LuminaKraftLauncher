@@ -805,8 +805,21 @@ async fn update_refreshed_microsoft_token(app: tauri::AppHandle, refreshed_accou
         "refreshToken": refreshed_account.refresh_token,
         "clientId": refreshed_account.client_id
     }));
-    
+
     Ok(())
+}
+
+#[tauri::command]
+async fn add_mods_to_instance(modpack_id: String, file_paths: Vec<String>) -> Result<(), String> {
+    use std::path::PathBuf;
+
+    // Convert String paths to PathBuf
+    let paths: Vec<PathBuf> = file_paths.into_iter().map(PathBuf::from).collect();
+
+    match filesystem::add_mods_to_instance(&modpack_id, paths).await {
+        Ok(_) => Ok(()),
+        Err(e) => Err(format!("Failed to add mods to instance: {}", e)),
+    }
 }
 
 #[allow(unused_must_use)]
@@ -893,6 +906,7 @@ fn main() {
             list_minecraft_versions,
             update_refreshed_microsoft_token,
             stop_instance,
+            add_mods_to_instance,
         ])
         .setup(|app| {
             // Initialize app data directory

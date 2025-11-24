@@ -264,14 +264,81 @@ pub async fn instance_exists(modpack_id: &str) -> bool {
 pub async fn get_instance_last_modified(modpack_id: &str) -> Result<Option<DateTime<Utc>>> {
     let instance_dir = get_instance_dir(modpack_id)?;
     let metadata_path = instance_dir.join("instance.json");
-    
+
     if !metadata_path.exists() {
         return Ok(None);
     }
-    
+
     let metadata = fs::metadata(metadata_path)?;
     let modified = metadata.modified()?;
     let datetime: DateTime<Utc> = modified.into();
-    
+
     Ok(Some(datetime))
+}
+
+/// Add mod and resourcepack files to an existing instance
+///
+/// This function copies files from a temporary location to the instance's appropriate folder:
+/// - .jar files go to mods/ folder (mods)
+/// - .zip files go to resourcepacks/ folder (texture packs/resource packs)
+///
+/// # Arguments
+/// * `modpack_id` - The ID of the modpack instance
+/// * `file_paths` - Vector of paths to the files to copy
+///
+/// # Returns
+/// * `Ok(())` if all files were copied successfully
+/// * `Err` if the instance doesn't exist or copying fails
+pub async fn add_mods_to_instance(modpack_id: &str, file_paths: Vec<PathBuf>) -> Result<()> {
+    let instance_dir = get_instance_dir(modpack_id)?;
+
+    if !instance_dir.exists() {
+        return Err(anyhow!("Instance directory does not exist: {}", modpack_id));
+    }
+
+    // Get or create the mods and resourcepacks folders
+    let mods_dir = instance_dir.join(".minecraft").join("mods");
+    let resourcepacks_dir = instance_dir.join(".minecraft").join("resourcepacks");
+    fs::create_dir_all(&mods_dir)?;
+    fs::create_dir_all(&resourcepacks_dir)?;
+
+    println!("📦 Adding {} file(s) to instance: {}", file_paths.len(), modpack_id);
+
+    // Copy each file to the appropriate directory based on extension
+    for file_path in file_paths {
+        if !file_path.exists() {
+            println!("⚠️ File does not exist, skipping: {:?}", file_path);
+            continue;
+        }
+
+        let file_name = file_path.file_name()
+            .ok_or_else(|| anyhow!("Invalid file path: {:?}", file_path))?;
+
+        // Determine destination based on file extension
+        let dest_dir = if file_path.extension().and_then(|s| s.to_str()) == Some("jar") {
+            &mods_dir
+        } else if file_path.extension().and_then(|s| s.to_str()) == Some("zip") {
+            &resourcepacks_dir
+        } else {
+            println!("⚠️ Unknown file extension, skipping: {:?}", file_path);
+            continue;
+        };
+
+        let dest_path = dest_dir.join(file_name);
+
+        println!("📁 Copying {:?} to {:?}", file_path, dest_path);
+
+        match fs::copy(&file_path, &dest_path) {
+            Ok(bytes) => {
+                println!("✅ Copied {} bytes successfully", bytes);
+            }
+            Err(e) => {
+                println!("❌ Failed to copy file: {}", e);
+                return Err(anyhow!("Failed to copy file {:?}: {}", file_name, e));
+            }
+        }
+    }
+
+    println!("✅ All files added successfully to instance: {}", modpack_id);
+    Ok(())
 } 

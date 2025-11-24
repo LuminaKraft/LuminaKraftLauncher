@@ -178,19 +178,41 @@ export const FailedModsDialog: React.FC<FailedModsDialogProps> = ({
   const handleInstallUploadedMods = async () => {
     if (!instancePath || uploadedFiles.size === 0) return;
 
-    toast.loading('Installing uploaded mods...');
+    const loadingToast = toast.loading('Installing uploaded mods...');
     try {
-      // TODO: Implement Tauri command to copy files to instance mods folder
-      console.log('Installing to:', instancePath);
-      console.log('Files:', Array.from(uploadedFiles.entries()));
+      // Write files to temporary directory first, then call Tauri command
+      const { writeFile } = await import('@tauri-apps/plugin-fs');
+      const { appDataDir, join } = await import('@tauri-apps/api/path');
 
-      toast.dismiss();
-      toast.success(`${uploadedFiles.size} file(s) installed successfully!`);
+      const tempDir = await join(await appDataDir(), 'temp', 'uploaded_mods');
+      const filePaths: string[] = [];
+
+      // Write each file to temp directory
+      for (const [projectId, file] of uploadedFiles.entries()) {
+        const buffer = await file.arrayBuffer();
+        const uint8Array = new Uint8Array(buffer);
+        const tempFilePath = await join(tempDir, file.name);
+
+        await writeFile(tempFilePath, uint8Array);
+        filePaths.push(tempFilePath);
+      }
+
+      // Extract modpack ID from instancePath (format: .../instances/{modpackId}/.minecraft)
+      const pathParts = instancePath.split('/');
+      const instancesIndex = pathParts.indexOf('instances');
+      const modpackId = pathParts[instancesIndex + 1];
+
+      // Call Tauri command to copy files to instance
+      await invoke('add_mods_to_instance', {
+        modpackId,
+        filePaths
+      });
+
+      toast.success(`${uploadedFiles.size} file(s) installed successfully!`, { id: loadingToast });
       onClose();
     } catch (error) {
       console.error('Error installing mods:', error);
-      toast.dismiss();
-      toast.error('Failed to install mods');
+      toast.error('Failed to install mods', { id: loadingToast });
     }
   };
 
