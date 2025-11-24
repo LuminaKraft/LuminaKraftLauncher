@@ -8,6 +8,7 @@ import ModpackValidationService, { ModFileInfo } from '../../services/modpackVal
 import ModpackValidationDialog from './ModpackValidationDialog';
 import ModpackCard from './ModpackCard';
 import { useLauncher } from '../../contexts/LauncherContext';
+import { ConfirmDialog } from '../Common/ConfirmDialog';
 import type { Modpack } from '../../types/launcher';
 
 interface LocalModpack {
@@ -47,6 +48,10 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
     stage: string;
     message: string;
   } | null>(null);
+  const [showDownloadDialog, setShowDownloadDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [selectedModpack, setSelectedModpack] = useState<LocalModpack | null>(null);
+  const [pendingUploadedFiles, setPendingUploadedFiles] = useState<Map<string, File> | null>(null);
 
   useEffect(() => {
     loadLocalModpacks();
@@ -155,13 +160,18 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
     if (validationData) {
       if (uploadedFiles && uploadedFiles.size > 0) {
         // Ask user if they want to download an updated ZIP with the files in overrides
-        const downloadUpdated = confirm(
-          `You've uploaded ${uploadedFiles.size} file(s) that were missing from this modpack.\n\n` +
-          `Would you like to download an updated version of the ZIP file with these files included in the overrides folder?\n\n` +
-          `This way you can use the updated ZIP for publishing or sharing.`
-        );
+        setPendingUploadedFiles(uploadedFiles);
+        setShowDownloadDialog(true);
+      } else {
+        // No files uploaded, just import
+        await performImport(validationData.file);
+      }
+    }
+  };
 
-        if (downloadUpdated) {
+  const handleDownloadDialogConfirm = async () => {
+    if (validationData && pendingUploadedFiles) {
+        const uploadedFiles = pendingUploadedFiles;
           const loadingToast = toast.loading('Preparing files...');
 
           try {
@@ -216,11 +226,18 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
             setZipProgress(null);
             toast.error('Failed to create updated modpack', { id: loadingToast });
           }
-        }
-      }
 
       // Now import the modpack (either original or with uploaded files in memory)
       await performImport(validationData.file);
+      setPendingUploadedFiles(null);
+    }
+  };
+
+  const handleDownloadDialogCancel = async () => {
+    // Just import without creating updated ZIP
+    if (validationData) {
+      await performImport(validationData.file);
+      setPendingUploadedFiles(null);
     }
   };
 
@@ -235,10 +252,13 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
     }
   };
 
-  const handleDeleteModpack = async (modpack: LocalModpack) => {
-    if (!confirm(`Are you sure you want to delete "${modpack.name}"? This will remove all files.`)) {
-      return;
-    }
+  const handleDeleteModpack = (modpack: LocalModpack) => {
+    setSelectedModpack(modpack);
+    setShowDeleteDialog(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedModpack) return;
 
     try {
       // TODO: Implement delete logic
@@ -247,6 +267,8 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
     } catch (error) {
       console.error('Error deleting modpack:', error);
       toast.error('Failed to delete modpack');
+    } finally {
+      setSelectedModpack(null);
     }
   };
 
@@ -460,6 +482,33 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
           </div>
         );
       })()}
+
+      {/* Download Updated ZIP Dialog */}
+      <ConfirmDialog
+        isOpen={showDownloadDialog}
+        onClose={() => setShowDownloadDialog(false)}
+        onConfirm={handleDownloadDialogConfirm}
+        title="Download Updated Modpack?"
+        message={`You've uploaded ${pendingUploadedFiles?.size || 0} file(s) that were missing from this modpack. Would you like to download an updated version of the ZIP file with these files included in the overrides folder? This way you can use the updated ZIP for publishing or sharing.`}
+        confirmText="Download Updated ZIP"
+        cancelText="Skip Download"
+        variant="info"
+      />
+
+      {/* Delete Modpack Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showDeleteDialog}
+        onClose={() => {
+          setShowDeleteDialog(false);
+          setSelectedModpack(null);
+        }}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Modpack?"
+        message={`Are you sure you want to delete "${selectedModpack?.name}"? This will remove all files and cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+      />
     </div>
   );
 }

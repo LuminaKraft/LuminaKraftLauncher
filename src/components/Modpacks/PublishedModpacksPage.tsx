@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { Plus, Edit, Trash2, Eye, EyeOff, Download, TrendingUp, Cloud, Lock } from 'lucide-react';
 import ModpackManagementService from '../../services/modpackManagementService';
 import { useLauncher } from '../../contexts/LauncherContext';
+import { ConfirmDialog } from '../Common/ConfirmDialog';
 
 interface Modpack {
   id: string;
@@ -33,6 +34,8 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
   const [modpacks, setModpacks] = useState<Modpack[]>([]);
   const [loading, setLoading] = useState(true);
   const [canManage, setCanManage] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [selectedModpack, setSelectedModpack] = useState<Modpack | null>(null);
 
   useEffect(() => {
     loadData();
@@ -77,15 +80,18 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
     }
   };
 
-  const handleDelete = async (modpackId: string, modpackName: string) => {
-    if (!confirm(`Are you sure you want to delete "${modpackName}"? This action cannot be undone.`)) {
-      return;
-    }
+  const handleDelete = (modpack: Modpack) => {
+    setSelectedModpack(modpack);
+    setShowDeleteDialog(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedModpack) return;
 
     try {
       const toastId = toast.loading('Deleting modpack...');
 
-      const { success, error } = await service.deleteModpack(modpackId);
+      const { success, error } = await service.deleteModpack(selectedModpack.id);
 
       if (success) {
         toast.success('Modpack deleted successfully', { id: toastId });
@@ -96,6 +102,8 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
     } catch (error) {
       console.error('Error deleting modpack:', error);
       toast.error('Failed to delete modpack');
+    } finally {
+      setSelectedModpack(null);
     }
   };
 
@@ -365,7 +373,7 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
                   </div>
 
                   <button
-                    onClick={() => handleDelete(modpack.id, getTranslatedName(modpack.name_i18n))}
+                    onClick={() => handleDelete(modpack)}
                     className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -377,6 +385,21 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
           ))}
         </div>
       )}
+
+      {/* Delete Modpack Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showDeleteDialog}
+        onClose={() => {
+          setShowDeleteDialog(false);
+          setSelectedModpack(null);
+        }}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Modpack?"
+        message={`Are you sure you want to delete "${selectedModpack ? getTranslatedName(selectedModpack.name_i18n) : ''}"? This action cannot be undone and will remove the modpack from the platform.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+      />
     </div>
   );
 }

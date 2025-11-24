@@ -7,6 +7,7 @@ import { listen } from '@tauri-apps/api/event';
 import ModpackManagementService from '../../services/modpackManagementService';
 import ModpackValidationService, { ModFileInfo } from '../../services/modpackValidationService';
 import ModpackValidationDialog from './ModpackValidationDialog';
+import { ConfirmDialog } from '../Common/ConfirmDialog';
 
 interface Feature {
   title: { en: string; es: string };
@@ -69,6 +70,10 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
     modsInOverrides: string[];
   } | null>(null);
 
+  // Download confirmation state
+  const [showDownloadDialog, setShowDownloadDialog] = useState(false);
+  const [pendingUploadedFiles, setPendingUploadedFiles] = useState<Map<string, File> | null>(null);
+
   const updateFormData = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -125,6 +130,70 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
 
     // Validate and parse manifest
     await validateAndParseManifest(file);
+  };
+
+  const handleDownloadUpdatedZip = async () => {
+    if (!pendingUploadedFiles || !zipFile) return;
+
+    const loadingToast = toast.loading('Preparing files...');
+
+    try {
+      const { downloadDir } = await import('@tauri-apps/api/path');
+
+      // Set up progress listener first
+      const unlisten = await listen<{current: number, total: number, stage: string, message: string}>('zip-progress', (event) => {
+        const { current, total, stage, message } = event.payload;
+        const percentage = Math.round((current / total) * 100);
+
+        if (stage === 'complete') {
+          toast.dismiss(loadingToast);
+        } else {
+          toast.loading(`${message} (${percentage}%)`, { id: loadingToast });
+        }
+      });
+
+      // Read original ZIP as bytes
+      const originalZipBuffer = await zipFile.arrayBuffer();
+      const originalZipBytes = Array.from(new Uint8Array(originalZipBuffer));
+
+      // Read uploaded files as bytes
+      const uploadedFilesData: [string, number[]][] = [];
+      for (const [fileName, file] of pendingUploadedFiles.entries()) {
+        const buffer = await file.arrayBuffer();
+        const bytes = Array.from(new Uint8Array(buffer));
+        uploadedFilesData.push([file.name, bytes]);
+      }
+
+      // Create output ZIP path in Downloads folder
+      const downloadsFolder = await downloadDir();
+      const outputFileName = zipFile.name.replace('.zip', '_updated.zip');
+      const outputZipPath = `${downloadsFolder}/${outputFileName}`;
+
+      toast.loading('Creating updated modpack ZIP...', { id: loadingToast });
+
+      // Call Tauri command with bytes directly
+      await invoke('create_modpack_with_overrides', {
+        originalZipBytes: originalZipBytes,
+        originalZipName: zipFile.name,
+        uploadedFiles: uploadedFilesData,
+        outputZipPath: outputZipPath
+      });
+
+      unlisten();
+      toast.success(`Updated modpack saved to Downloads: ${outputFileName}`, { id: loadingToast, duration: 5000 });
+    } catch (error) {
+      console.error('Error creating modpack with overrides:', error);
+      toast.error('Failed to create updated modpack', { id: loadingToast });
+    } finally {
+      setPendingUploadedFiles(null);
+    }
+  };
+
+  const handleSkipDownload = () => {
+    if (pendingUploadedFiles) {
+      toast.success(`Modpack validated with ${pendingUploadedFiles.size} additional file(s)`);
+      setPendingUploadedFiles(null);
+    }
   };
 
   const validateAndParseManifest = async (file: File) => {
@@ -349,69 +418,8 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
             setShowValidationDialog(false);
             if (uploadedFiles && uploadedFiles.size > 0) {
               // Ask user if they want to download an updated ZIP with the files in overrides
-              const downloadUpdated = confirm(
-                `You've uploaded ${uploadedFiles.size} file(s) that were missing from this modpack.\n\n` +
-                `Would you like to download an updated version of the ZIP file with these files included in the overrides folder?\n\n` +
-                `You can then use this updated ZIP to publish your modpack.`
-              );
-
-              if (downloadUpdated) {
-                const loadingToast = toast.loading('Preparing files...');
-
-                try {
-                  const { downloadDir } = await import('@tauri-apps/api/path');
-
-                  // Set up progress listener first
-                  const unlisten = await listen<{current: number, total: number, stage: string, message: string}>('zip-progress', (event) => {
-                    const { current, total, stage, message } = event.payload;
-                    const percentage = Math.round((current / total) * 100);
-
-                    if (stage === 'complete') {
-                      toast.dismiss(loadingToast);
-                    } else {
-                      toast.loading(`${message} (${percentage}%)`, { id: loadingToast });
-                    }
-                  });
-
-                  // Write original ZIP
-                  if (zipFile) {
-                    // Read original ZIP as bytes
-                    const originalZipBuffer = await zipFile.arrayBuffer();
-                    const originalZipBytes = Array.from(new Uint8Array(originalZipBuffer));
-
-                    // Read uploaded files as bytes
-                    const uploadedFilesData: [string, number[]][] = [];
-                    for (const [fileName, file] of uploadedFiles.entries()) {
-                      const buffer = await file.arrayBuffer();
-                      const bytes = Array.from(new Uint8Array(buffer));
-                      uploadedFilesData.push([file.name, bytes]);
-                    }
-
-                    // Create output ZIP path in Downloads folder
-                    const downloadsFolder = await downloadDir();
-                    const outputFileName = zipFile.name.replace('.zip', '_updated.zip');
-                    const outputZipPath = `${downloadsFolder}/${outputFileName}`;
-
-                    toast.loading('Creating updated modpack ZIP...', { id: loadingToast });
-
-                    // Call Tauri command with bytes directly
-                    await invoke('create_modpack_with_overrides', {
-                      originalZipBytes: originalZipBytes,
-                      originalZipName: zipFile.name,
-                      uploadedFiles: uploadedFilesData,
-                      outputZipPath: outputZipPath
-                    });
-
-                    unlisten();
-                    toast.success(`Updated modpack saved to Downloads: ${outputFileName}`, { id: loadingToast, duration: 5000 });
-                  }
-                } catch (error) {
-                  console.error('Error creating modpack with overrides:', error);
-                  toast.error('Failed to create updated modpack', { id: loadingToast });
-                }
-              } else {
-                toast.success(`Modpack validated with ${uploadedFiles.size} additional file(s)`);
-              }
+              setPendingUploadedFiles(uploadedFiles);
+              setShowDownloadDialog(true);
             }
           }}
           modpackName={validationData.modpackName}
@@ -916,6 +924,24 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
           </button>
         </div>
       </form>
+
+      {/* Download Updated Modpack Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showDownloadDialog}
+        onClose={() => {
+          setShowDownloadDialog(false);
+          handleSkipDownload();
+        }}
+        onConfirm={async () => {
+          setShowDownloadDialog(false);
+          await handleDownloadUpdatedZip();
+        }}
+        title="Download Updated Modpack?"
+        message={`You've uploaded ${pendingUploadedFiles?.size || 0} file(s) that were missing from this modpack.\n\nWould you like to download an updated version of the ZIP file with these files included in the overrides folder?\n\nYou can then use this updated ZIP to publish your modpack.`}
+        confirmText="Download Updated ZIP"
+        cancelText="Skip Download"
+        variant="info"
+      />
     </div>
   );
 }

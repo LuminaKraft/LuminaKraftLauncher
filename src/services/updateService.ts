@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { check, Update } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
+import toast from 'react-hot-toast';
 
 export interface UpdateInfo {
   hasUpdate: boolean;
@@ -403,7 +404,9 @@ class UpdateService {
           await relaunch();
         } catch (error) {
           console.error('Failed to relaunch application:', error);
-          alert('Update installed successfully! Please restart the application manually.');
+          toast.error('Update installed successfully! Please restart the application manually.', {
+            duration: 10000
+          });
         }
       }, 1000);
 
