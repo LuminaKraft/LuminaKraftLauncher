@@ -173,8 +173,8 @@ export const ModpackValidationDialog: React.FC<ModpackValidationDialogProps> = (
                     : 'text-yellow-800 dark:text-yellow-200'
                 }`}>
                   {canContinue
-                    ? `All ${modsWithoutUrl.length} mods that cannot be auto-downloaded are present in overrides/mods/.`
-                    : `${missingMods.length} mod(s) cannot be auto-downloaded and are missing from overrides/mods/.`
+                    ? `All ${modsWithoutUrl.length} file(s) (mods/resourcepacks) that cannot be auto-downloaded are present in overrides/.`
+                    : `${missingMods.length} file(s) (mods/resourcepacks) cannot be auto-downloaded and are missing from overrides/.`
                   }
                 </p>
               </div>

@@ -836,21 +836,130 @@ async fn add_mods_to_instance(modpack_id: String, file_paths: Vec<String>) -> Re
 }
 
 #[tauri::command]
+async fn install_modpack_from_local_zip(
+    app: tauri::AppHandle,
+    zip_bytes: Vec<u8>,
+    zip_name: String,
+    modpack: Modpack,
+    settings: UserSettings
+) -> Result<(), String> {
+    use std::fs;
+    use std::io::Write;
+
+    tokio::task::spawn_blocking(move || {
+        tokio::runtime::Handle::current().block_on(async {
+            use anyhow::anyhow;
+
+            // Write ZIP to temp directory
+            let temp_dir = dirs::cache_dir()
+                .ok_or_else(|| anyhow!("Could not get cache directory"))?
+                .join("LKLauncher")
+                .join("temp")
+                .join("import");
+
+            fs::create_dir_all(&temp_dir)?;
+
+            let zip_path = temp_dir.join(&zip_name);
+            let mut file = fs::File::create(&zip_path)?;
+            file.write_all(&zip_bytes)?;
+
+            // Update modpack with local ZIP path
+            let mut local_modpack = modpack;
+            local_modpack.url_modpack_zip = zip_path.to_str().unwrap().to_string();
+
+            // Validate modpack before installation
+            if let Err(e) = launcher::validate_modpack(&local_modpack) {
+                return Err(anyhow!("Invalid modpack configuration: {}", e));
+            }
+
+            // Create progress emission closure following the same pattern as install_modpack_with_minecraft
+            let emit_progress = {
+                let app = app.clone();
+                let modpack_id = local_modpack.id.clone();
+
+                // Estado para mantener el último detailMessage válido
+                let last_detail_message = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
+                let last_general_message = std::sync::Arc::new(std::sync::Mutex::new("progress.installing".to_string()));
+
+                move |message: String, percentage: f32, step: String| {
+                    let (general_message, detail_message) = handle_progress_message(&message, &step, &last_detail_message, &last_general_message);
+
+                    let _ = app.emit(&format!("modpack_progress_{}", modpack_id), serde_json::json!({
+                        "message": message,
+                        "percentage": percentage,
+                        "step": step,
+                        "generalMessage": general_message,
+                        "detailMessage": detail_message,
+                        "eta": ""
+                    }));
+                }
+            };
+
+            // Use existing install logic with progress
+            launcher::install_modpack_with_shared_storage(local_modpack, settings, emit_progress).await?;
+            Ok(())
+        })
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
+    .map_err(|e: anyhow::Error| format!("Failed to install modpack from local ZIP: {}", e))
+}
+
+#[tauri::command]
 async fn create_modpack_with_overrides(
-    original_zip_path: String,
-    uploaded_file_paths: Vec<String>,
-    output_zip_path: String
+    original_zip_bytes: Vec<u8>,
+    original_zip_name: String,
+    uploaded_files: Vec<(String, Vec<u8>)>, // (filename, bytes)
+    output_zip_path: String,
+    app_handle: tauri::AppHandle
 ) -> Result<(), String> {
     use std::path::PathBuf;
+    use std::fs;
+    use std::io::Write;
 
-    let original_path = PathBuf::from(original_zip_path);
-    let uploaded_paths: Vec<PathBuf> = uploaded_file_paths.into_iter().map(PathBuf::from).collect();
-    let output_path = PathBuf::from(output_zip_path);
+    // Run in a blocking task to avoid blocking the main thread
+    tokio::task::spawn_blocking(move || {
+        // Use a runtime handle for the async operation
+        tokio::runtime::Handle::current().block_on(async {
+            use anyhow::anyhow;
 
-    match filesystem::create_modpack_with_overrides(original_path, uploaded_paths, output_path).await {
-        Ok(_) => Ok(()),
-        Err(e) => Err(format!("Failed to create modpack with overrides: {}", e)),
-    }
+            // Write files to temp directory
+            let temp_dir = dirs::cache_dir()
+                .ok_or_else(|| anyhow!("Could not get cache directory"))?
+                .join("LKLauncher")
+                .join("temp")
+                .join("modpack_merge");
+
+            fs::create_dir_all(&temp_dir)?;
+
+            // Write original ZIP
+            let original_zip_path = temp_dir.join(&original_zip_name);
+            let mut original_file = fs::File::create(&original_zip_path)?;
+            original_file.write_all(&original_zip_bytes)?;
+
+            // Write uploaded files
+            let mut uploaded_paths = Vec::new();
+            for (filename, bytes) in uploaded_files {
+                let file_path = temp_dir.join(&filename);
+                let mut file = fs::File::create(&file_path)?;
+                file.write_all(&bytes)?;
+                uploaded_paths.push(file_path);
+            }
+
+            let output_path = PathBuf::from(output_zip_path);
+
+            // Create the modpack with overrides
+            filesystem::create_modpack_with_overrides(
+                original_zip_path,
+                uploaded_paths,
+                output_path,
+                Some(app_handle)
+            ).await
+        })
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
+    .map_err(|e| format!("Failed to create modpack with overrides: {}", e))
 }
 
 #[allow(unused_must_use)]
@@ -940,6 +1049,7 @@ fn main() {
             stop_instance,
             add_mods_to_instance,
             create_modpack_with_overrides,
+            install_modpack_from_local_zip,
         ])
         .setup(|app| {
             // Initialize app data directory

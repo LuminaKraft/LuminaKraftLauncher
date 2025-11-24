@@ -36,6 +36,7 @@ interface LauncherContextType {
   updateUserSettings: (_settings: Partial<UserSettings>) => void;
   refreshData: () => Promise<void>;
   installModpack: (_id: string) => Promise<void>;
+  installModpackFromZip: (_file: File) => Promise<void>;
   updateModpack: (_id: string) => Promise<void>;
   launchModpack: (_id: string) => Promise<void>;
   repairModpack: (_id: string) => Promise<void>;
@@ -877,6 +878,89 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     (modpackState: ModpackState) => ['installing', 'updating', 'launching', 'stopping'].includes(modpackState.status)
   );
 
+  const installModpackFromZip = async (file: File) => {
+    try {
+      // Extract manifest to create a temporary modpack object
+      const JSZip = (await import('jszip')).default;
+      const zip = await JSZip.loadAsync(file);
+      const manifestFile = zip.file('manifest.json');
+
+      if (!manifestFile) {
+        throw new Error('No manifest.json found in ZIP file');
+      }
+
+      const manifestText = await manifestFile.async('text');
+      const manifest = JSON.parse(manifestText);
+
+      // Create a safe ID for event names (alphanumeric, -, /, :, _ only)
+      const safeName = (manifest.name || file.name.replace('.zip', ''))
+        .replace(/[^a-zA-Z0-9\-/:_]/g, '_')
+        .replace(/_{2,}/g, '_')
+        .toLowerCase();
+
+      // Set initial installing state
+      dispatch({
+        type: 'SET_MODPACK_STATE',
+        payload: {
+          id: safeName,
+          state: createModpackState('installing', {
+            progress: {
+              percentage: 0,
+              currentFile: 'Preparing import...',
+              downloadSpeed: '',
+              eta: '',
+              step: 'initializing',
+              generalMessage: 'Preparing import...',
+              detailMessage: ''
+            }
+          })
+        }
+      });
+
+      // Create progress callback
+      const onProgress = (progress: ProgressInfo) => {
+        const generalMessage = translateBackendMessage(progress.generalMessage || '');
+
+        dispatch({
+          type: 'UPDATE_MODPACK_PROGRESS',
+          payload: {
+            id: safeName,
+            progress: {
+              percentage: progress.percentage,
+              currentFile: progress.currentFile,
+              downloadSpeed: progress.downloadSpeed,
+              eta: progress.eta,
+              step: progress.step,
+              generalMessage: generalMessage,
+              detailMessage: progress.detailMessage
+            }
+          },
+        });
+      };
+
+      // Install the modpack
+      await launcherService.installModpackFromZip(file, onProgress);
+
+      // Update state to installed
+      dispatch({
+        type: 'SET_MODPACK_STATE',
+        payload: {
+          id: safeName,
+          state: createModpackState('installed')
+        }
+      });
+
+      // Track download stats in Supabase
+      await launcherService.trackDownload(safeName);
+
+      // Reload instance states to reflect the new installation
+      await loadModpackStates();
+    } catch (error) {
+      console.error('Error installing modpack from ZIP:', error);
+      throw error;
+    }
+  };
+
   const contextValue: LauncherContextType = {
     modpacksData: state.modpacksData,
     modpackStates: state.modpackStates,
@@ -890,6 +974,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     updateUserSettings,
     refreshData,
     installModpack,
+    installModpackFromZip,
     updateModpack,
     launchModpack,
     repairModpack,

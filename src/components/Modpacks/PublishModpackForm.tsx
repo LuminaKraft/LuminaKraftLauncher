@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { Plus, X, Upload, FileArchive } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import ModpackManagementService from '../../services/modpackManagementService';
 import ModpackValidationService, { ModFileInfo } from '../../services/modpackValidationService';
 import ModpackValidationDialog from './ModpackValidationDialog';
@@ -355,47 +356,53 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
               );
 
               if (downloadUpdated) {
-                const loadingToast = toast.loading('Creating updated modpack ZIP...');
+                const loadingToast = toast.loading('Preparing files...');
 
                 try {
-                  const { writeFile, mkdir, exists } = await import('@tauri-apps/plugin-fs');
-                  const { appDataDir, join, downloadDir } = await import('@tauri-apps/api/path');
+                  const { downloadDir } = await import('@tauri-apps/api/path');
 
-                  // Write original ZIP and uploaded files to temp directory
-                  const tempDir = await join(await appDataDir(), 'temp', 'modpack_merge');
+                  // Set up progress listener first
+                  const unlisten = await listen<{current: number, total: number, stage: string, message: string}>('zip-progress', (event) => {
+                    const { current, total, stage, message } = event.payload;
+                    const percentage = Math.round((current / total) * 100);
 
-                  // Create directory if it doesn't exist
-                  if (!(await exists(tempDir))) {
-                    await mkdir(tempDir, { recursive: true });
-                  }
+                    if (stage === 'complete') {
+                      toast.dismiss(loadingToast);
+                    } else {
+                      toast.loading(`${message} (${percentage}%)`, { id: loadingToast });
+                    }
+                  });
 
                   // Write original ZIP
                   if (zipFile) {
+                    // Read original ZIP as bytes
                     const originalZipBuffer = await zipFile.arrayBuffer();
-                    const originalZipPath = await join(tempDir, zipFile.name);
-                    await writeFile(originalZipPath, new Uint8Array(originalZipBuffer));
+                    const originalZipBytes = Array.from(new Uint8Array(originalZipBuffer));
 
-                    // Write uploaded files
-                    const uploadedFilePaths: string[] = [];
+                    // Read uploaded files as bytes
+                    const uploadedFilesData: [string, number[]][] = [];
                     for (const [fileName, file] of uploadedFiles.entries()) {
                       const buffer = await file.arrayBuffer();
-                      const tempFilePath = await join(tempDir, file.name);
-                      await writeFile(tempFilePath, new Uint8Array(buffer));
-                      uploadedFilePaths.push(tempFilePath);
+                      const bytes = Array.from(new Uint8Array(buffer));
+                      uploadedFilesData.push([file.name, bytes]);
                     }
 
                     // Create output ZIP path in Downloads folder
                     const downloadsFolder = await downloadDir();
                     const outputFileName = zipFile.name.replace('.zip', '_updated.zip');
-                    const outputZipPath = await join(downloadsFolder, outputFileName);
+                    const outputZipPath = `${downloadsFolder}/${outputFileName}`;
 
-                    // Call Tauri command to merge files
+                    toast.loading('Creating updated modpack ZIP...', { id: loadingToast });
+
+                    // Call Tauri command with bytes directly
                     await invoke('create_modpack_with_overrides', {
-                      originalZipPath: originalZipPath,
-                      uploadedFilePaths: uploadedFilePaths,
+                      originalZipBytes: originalZipBytes,
+                      originalZipName: zipFile.name,
+                      uploadedFiles: uploadedFilesData,
                       outputZipPath: outputZipPath
                     });
 
+                    unlisten();
                     toast.success(`Updated modpack saved to Downloads: ${outputFileName}`, { id: loadingToast, duration: 5000 });
                   }
                 } catch (error) {

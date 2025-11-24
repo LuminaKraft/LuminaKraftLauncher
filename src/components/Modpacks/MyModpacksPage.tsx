@@ -2,9 +2,13 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Play, Trash2, FolderOpen, Download } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import toast from 'react-hot-toast';
 import ModpackValidationService, { ModFileInfo } from '../../services/modpackValidationService';
 import ModpackValidationDialog from './ModpackValidationDialog';
+import ModpackCard from './ModpackCard';
+import { useLauncher } from '../../contexts/LauncherContext';
+import type { Modpack } from '../../types/launcher';
 
 interface LocalModpack {
   id: string;
@@ -24,6 +28,7 @@ interface MyModpacksPageProps {
 export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
   const { t } = useTranslation();
   const validationService = ModpackValidationService.getInstance();
+  const { installModpackFromZip, modpackStates } = useLauncher();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [localModpacks, setLocalModpacks] = useState<LocalModpack[]>([]);
@@ -35,6 +40,12 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
     modsWithoutUrl: ModFileInfo[];
     modsInOverrides: string[];
     file: File;
+  } | null>(null);
+  const [zipProgress, setZipProgress] = useState<{
+    current: number;
+    total: number;
+    stage: string;
+    message: string;
   } | null>(null);
 
   useEffect(() => {
@@ -97,8 +108,14 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
 
       toast.dismiss('validation');
 
-      // If there are mods without URL, show validation dialog
-      if (result.modsWithoutUrl && result.modsWithoutUrl.length > 0) {
+      // Check if there are missing mods (mods without URL that are NOT in overrides)
+      const missingMods = result.modsWithoutUrl.filter(
+        mod => !result.modsInOverrides?.includes(mod.fileName)
+      );
+
+      // If there are mods without URL but they're all in overrides, proceed directly
+      if (result.modsWithoutUrl && result.modsWithoutUrl.length > 0 && missingMods.length > 0) {
+        // Some files are missing - show validation dialog
         setValidationData({
           modpackName: result.manifest?.name || file.name,
           modsWithoutUrl: result.modsWithoutUrl,
@@ -107,7 +124,7 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
         });
         setShowValidationDialog(true);
       } else {
-        // No problematic mods, proceed directly
+        // No missing files (either no restricted files or all are in overrides), proceed directly
         await performImport(file);
       }
     } catch (error) {
@@ -120,14 +137,16 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
 
   const performImport = async (file: File) => {
     try {
-      toast.loading('Importing modpack...');
-      // TODO: Implement actual import logic with Tauri backend
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate import
-      toast.success('Modpack imported successfully!');
-      loadLocalModpacks();
+      // Use the context function which handles all state management
+      await installModpackFromZip(file);
+
+      toast.success('Modpack installed successfully!');
+
+      // Reload the list to show the newly installed modpack
+      await loadLocalModpacks();
     } catch (error) {
-      console.error('Error importing modpack:', error);
-      toast.error('Failed to import modpack');
+      console.error('Error installing modpack from ZIP:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to install modpack');
     }
   };
 
@@ -143,55 +162,64 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
         );
 
         if (downloadUpdated) {
-          const loadingToast = toast.loading('Creating updated modpack ZIP...');
+          const loadingToast = toast.loading('Preparing files...');
 
           try {
-            const { writeFile, mkdir, exists } = await import('@tauri-apps/plugin-fs');
-            const { appDataDir, join, downloadDir } = await import('@tauri-apps/api/path');
+            const { downloadDir } = await import('@tauri-apps/api/path');
 
-            // Write original ZIP and uploaded files to temp directory
-            const tempDir = await join(await appDataDir(), 'temp', 'modpack_merge');
+            // Set up progress listener first
+            const unlisten = await listen<{current: number, total: number, stage: string, message: string}>('zip-progress', (event) => {
+              const { current, total, stage, message } = event.payload;
+              setZipProgress({ current, total, stage, message });
 
-            // Create directory if it doesn't exist
-            if (!(await exists(tempDir))) {
-              await mkdir(tempDir, { recursive: true });
-            }
+              const percentage = Math.round((current / total) * 100);
 
-            // Write original ZIP
+              if (stage === 'complete') {
+                toast.dismiss(loadingToast);
+              } else {
+                toast.loading(`${message} (${percentage}%)`, { id: loadingToast });
+              }
+            });
+
+            // Read original ZIP as bytes
             const originalZipBuffer = await validationData.file.arrayBuffer();
-            const originalZipPath = await join(tempDir, validationData.file.name);
-            await writeFile(originalZipPath, new Uint8Array(originalZipBuffer));
+            const originalZipBytes = Array.from(new Uint8Array(originalZipBuffer));
 
-            // Write uploaded files
-            const uploadedFilePaths: string[] = [];
+            // Read uploaded files as bytes
+            const uploadedFilesData: [string, number[]][] = [];
             for (const [fileName, file] of uploadedFiles.entries()) {
               const buffer = await file.arrayBuffer();
-              const tempFilePath = await join(tempDir, file.name);
-              await writeFile(tempFilePath, new Uint8Array(buffer));
-              uploadedFilePaths.push(tempFilePath);
+              const bytes = Array.from(new Uint8Array(buffer));
+              uploadedFilesData.push([file.name, bytes]);
             }
 
             // Create output ZIP path in Downloads folder
             const downloadsFolder = await downloadDir();
             const outputFileName = validationData.file.name.replace('.zip', '_updated.zip');
-            const outputZipPath = await join(downloadsFolder, outputFileName);
+            const outputZipPath = `${downloadsFolder}/${outputFileName}`;
 
-            // Call Tauri command to merge files
+            toast.loading('Creating updated modpack ZIP...', { id: loadingToast });
+
+            // Call Tauri command with bytes directly
             await invoke('create_modpack_with_overrides', {
-              originalZipPath: originalZipPath,
-              uploadedFilePaths: uploadedFilePaths,
+              originalZipBytes: originalZipBytes,
+              originalZipName: validationData.file.name,
+              uploadedFiles: uploadedFilesData,
               outputZipPath: outputZipPath
             });
 
+            unlisten();
+            setZipProgress(null);
             toast.success(`Updated modpack saved to Downloads: ${outputFileName}`, { id: loadingToast, duration: 5000 });
           } catch (error) {
             console.error('Error creating modpack with overrides:', error);
+            setZipProgress(null);
             toast.error('Failed to create updated modpack', { id: loadingToast });
           }
         }
       }
 
-      // Continue with import of original file
+      // Now import the modpack (either original or with uploaded files in memory)
       await performImport(validationData.file);
     }
   };
@@ -302,25 +330,75 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
       </div>
 
       {/* Modpacks List */}
-      {localModpacks.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-12 shadow-md text-center">
-          <FolderOpen className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-            No local modpacks yet
-          </h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Import a CurseForge or Modrinth modpack to get started
-          </p>
-          <button
-            onClick={handleImportModpack}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors inline-block"
-          >
-            Import Your First Modpack
-          </button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {localModpacks.map((modpack) => (
+      {(() => {
+        // Get importing modpacks from context (those with 'installing' status that aren't in localModpacks)
+        const importingModpackIds = Object.entries(modpackStates)
+          .filter(([id, state]) => state.status === 'installing' && !localModpacks.some(m => m.id === id))
+          .map(([id]) => id);
+
+        const hasImporting = importingModpackIds.length > 0;
+
+        if (localModpacks.length === 0 && !hasImporting) {
+          return (
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-12 shadow-md text-center">
+              <FolderOpen className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                No local modpacks yet
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400 mb-6">
+                Import a CurseForge or Modrinth modpack to get started
+              </p>
+              <button
+                onClick={handleImportModpack}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors inline-block"
+              >
+                Import Your First Modpack
+              </button>
+            </div>
+          );
+        }
+
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Importing Modpacks */}
+            {importingModpackIds.map((id, index) => {
+              const state = modpackStates[id];
+              // Create a temporary modpack object for display
+              const tempModpack: Modpack = {
+                id,
+                name: id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                nombre: id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                description: 'Importing modpack...',
+                descripcion: 'Importing modpack...',
+                shortDescription: 'Imported from local ZIP file',
+                version: '1.0.0',
+                minecraftVersion: '1.20.1',
+                modloader: 'forge',
+                modloaderVersion: '47.0.0',
+                logo: '',
+                backgroundImage: '',
+                urlModpackZip: '',
+                category: 'community',
+                isActive: false,
+                isNew: false,
+                isComingSoon: false,
+                gamemode: undefined,
+                ip: undefined
+              };
+
+              return (
+                <ModpackCard
+                  key={`importing-${id}`}
+                  modpack={tempModpack}
+                  state={state}
+                  onSelect={() => {}}
+                  index={index}
+                />
+              );
+            })}
+
+            {/* Installed Modpacks */}
+            {localModpacks.map((modpack, index) => (
             <div
               key={modpack.id}
               className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
@@ -378,8 +456,9 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
               </div>
             </div>
           ))}
-        </div>
-      )}
+          </div>
+        );
+      })()}
     </div>
   );
 }

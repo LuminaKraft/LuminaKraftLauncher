@@ -182,26 +182,39 @@ class ModpackValidationService {
   }
 
   /**
-   * Check which mods are present in overrides/mods/ folder
+   * Check which mods/resourcepacks are present in overrides/ folders
    */
   private async checkModsInOverrides(zip: JSZip, modsWithoutUrl: ModFileInfo[]): Promise<string[]> {
     const overrideModsPath = 'overrides/mods/';
+    const overrideResourcepacksPath = 'overrides/resourcepacks/';
     const modsInOverrides: string[] = [];
 
-    // Get all files in overrides/mods/
-    const overrideFiles = Object.keys(zip.files).filter(path =>
+    // Get all files in overrides/mods/ (JAR files)
+    const overrideModFiles = Object.keys(zip.files).filter(path =>
       path.startsWith(overrideModsPath) && path.endsWith('.jar')
     );
 
-    // Extract just the filename from the full path
-    const overrideFileNames = overrideFiles.map(path =>
+    // Get all files in overrides/resourcepacks/ (ZIP files)
+    const overrideResourcepackFiles = Object.keys(zip.files).filter(path =>
+      path.startsWith(overrideResourcepacksPath) && path.endsWith('.zip')
+    );
+
+    // Extract just the filenames from the full paths
+    const overrideModFileNames = overrideModFiles.map(path =>
       path.substring(overrideModsPath.length).toLowerCase()
     );
+
+    const overrideResourcepackFileNames = overrideResourcepackFiles.map(path =>
+      path.substring(overrideResourcepacksPath.length).toLowerCase()
+    );
+
+    // Combine all override filenames
+    const allOverrideFileNames = [...overrideModFileNames, ...overrideResourcepackFileNames];
 
     // Check if each mod without URL is in overrides
     for (const mod of modsWithoutUrl) {
       const modFileName = mod.fileName.toLowerCase();
-      if (overrideFileNames.includes(modFileName)) {
+      if (allOverrideFileNames.includes(modFileName)) {
         modsInOverrides.push(mod.fileName);
       }
     }

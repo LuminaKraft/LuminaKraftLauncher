@@ -1,11 +1,12 @@
 use std::path::PathBuf;
 use std::fs;
-use std::io::{Write, Read};
+use std::io::Write;
 use anyhow::{Result, anyhow};
 use chrono::{DateTime, Utc};
 use crate::InstanceMetadata;
 use zip::write::SimpleFileOptions;
 use zip::{ZipArchive, ZipWriter};
+use tauri::Emitter;
 
 /// Get the path to the launcher data directory
 pub fn get_launcher_data_dir() -> Result<PathBuf> {
@@ -364,8 +365,29 @@ pub async fn create_modpack_with_overrides(
     original_zip_path: PathBuf,
     uploaded_files: Vec<PathBuf>,
     output_zip_path: PathBuf,
+    app_handle: Option<tauri::AppHandle>,
 ) -> Result<()> {
     use std::io::BufReader;
+    use serde::Serialize;
+
+    #[derive(Clone, Serialize)]
+    struct ZipProgress {
+        current: usize,
+        total: usize,
+        stage: String,
+        message: String,
+    }
+
+    let emit_progress = |stage: &str, message: &str, current: usize, total: usize| {
+        if let Some(ref handle) = app_handle {
+            let _ = handle.emit("zip-progress", ZipProgress {
+                current,
+                total,
+                stage: stage.to_string(),
+                message: message.to_string(),
+            });
+        }
+    };
 
     println!("📦 Creating new modpack ZIP with overrides...");
     println!("   Original: {:?}", original_zip_path);
@@ -384,6 +406,9 @@ pub async fn create_modpack_with_overrides(
 
     // Copy all files from original ZIP to new ZIP using raw copy (faster)
     let total_files = original_archive.len();
+    let total_steps = total_files + uploaded_files.len() + 1; // +1 for finalization
+
+    emit_progress("copying", &format!("Copying {} files from original ZIP", total_files), 0, total_steps);
     println!("📁 Copying {} entries from original ZIP...", total_files);
 
     for i in 0..total_files {
@@ -395,17 +420,24 @@ pub async fn create_modpack_with_overrides(
             continue;
         }
 
-        // Use stored (no compression) for faster copying, will recompress at end if needed
+        // Use stored (no compression) for faster copying
         let options = SimpleFileOptions::default()
             .compression_method(zip::CompressionMethod::Stored);
 
         output_zip.start_file(&file_name, options)?;
         std::io::copy(&mut file, &mut output_zip)?;
+
+        // Emit progress every 10 files or on last file
+        if i % 10 == 0 || i == total_files - 1 {
+            emit_progress("copying", &format!("Copying files... ({}/{})", i + 1, total_files), i + 1, total_steps);
+        }
     }
     println!("✅ Finished copying original files");
 
     // Add uploaded files to overrides folder
+    emit_progress("adding", &format!("Adding {} uploaded files to overrides", uploaded_files.len()), total_files, total_steps);
     println!("📁 Adding {} uploaded files to overrides...", uploaded_files.len());
+
     for (idx, file_path) in uploaded_files.iter().enumerate() {
         if !file_path.exists() {
             println!("⚠️ File does not exist, skipping: {:?}", file_path);
@@ -428,7 +460,7 @@ pub async fn create_modpack_with_overrides(
         };
 
         let zip_path = format!("{}/{}", target_folder, file_name);
-        println!("   [{}/{}] Adding {}", idx + 1, uploaded_files.len(), file_name);
+        emit_progress("adding", &format!("Adding {} ({}/{})", file_name, idx + 1, uploaded_files.len()), total_files + idx + 1, total_steps);
 
         // Use stored compression for user files too (faster)
         let options = SimpleFileOptions::default()
@@ -441,9 +473,11 @@ pub async fn create_modpack_with_overrides(
     }
 
     // Finalize the ZIP
+    emit_progress("finalizing", "Finalizing ZIP file...", total_steps - 1, total_steps);
     println!("📁 Finalizing ZIP file...");
     output_zip.finish()?;
 
+    emit_progress("complete", "ZIP file created successfully!", total_steps, total_steps);
     println!("✅ New modpack ZIP created successfully: {:?}", output_zip_path);
     Ok(())
 } 

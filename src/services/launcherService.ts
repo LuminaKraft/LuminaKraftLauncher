@@ -1025,6 +1025,104 @@ class LauncherService {
     }
   }
 
+  /**
+   * Install a modpack from a local ZIP file
+   * Extracts manifest, creates temporary modpack object, and installs
+   */
+  async installModpackFromZip(file: File, onProgress?: (progress: ProgressInfo) => void): Promise<void> {
+    if (!isTauriContext()) {
+      throw new Error('Esta función requiere ejecutar la aplicación con Tauri.');
+    }
+
+    try {
+      // Read the ZIP file as bytes
+      const arrayBuffer = await file.arrayBuffer();
+      const zipBytes = Array.from(new Uint8Array(arrayBuffer));
+
+      // Extract and parse manifest from ZIP using JSZip
+      const JSZip = (await import('jszip')).default;
+      const zip = await JSZip.loadAsync(file);
+      const manifestFile = zip.file('manifest.json');
+
+      if (!manifestFile) {
+        throw new Error('No manifest.json found in ZIP file');
+      }
+
+      const manifestText = await manifestFile.async('text');
+      const manifest = JSON.parse(manifestText);
+
+      // Create a safe ID for event names (alphanumeric, -, /, :, _ only)
+      const safeName = (manifest.name || file.name.replace('.zip', ''))
+        .replace(/[^a-zA-Z0-9\-/:_]/g, '_')
+        .replace(/_{2,}/g, '_')
+        .toLowerCase();
+
+      // Create a temporary modpack object from manifest
+      const tempModpack = {
+        id: safeName,
+        nombre: manifest.name || file.name.replace('.zip', ''),
+        descripcion: manifest.description || '',
+        version: manifest.version || '1.0.0',
+        minecraftVersion: manifest.minecraft?.version || manifest.minecraftVersion || '1.20.1',
+        modloader: manifest.minecraft?.modLoaders?.[0]?.id?.split('-')[0] || 'forge',
+        modloaderVersion: manifest.minecraft?.modLoaders?.[0]?.id?.split('-')[1] || '47.0.0',
+        logo: '',
+        urlModpackZip: '', // Will be set by backend from temp file
+      };
+
+      // Transform settings
+      const transformedSettings = this.transformUserSettingsForBackend(this.userSettings);
+
+      // Set up progress listener
+      let unlistenProgress: (() => void) | null = null;
+
+      if (onProgress) {
+        const { listen } = await import('@tauri-apps/api/event');
+        unlistenProgress = await listen(
+          `modpack_progress_${tempModpack.id}`,
+          (event: any) => {
+            const data = event.payload;
+            if (data) {
+              let currentFile = '';
+              if (data.detailMessage) {
+                currentFile = data.detailMessage;
+              } else if (data.message && !data.message.startsWith('downloading_modpack:')) {
+                currentFile = data.message;
+              }
+
+              onProgress({
+                percentage: data.percentage || 0,
+                currentFile: currentFile,
+                downloadSpeed: data.downloadSpeed || '',
+                eta: data.eta || '',
+                step: data.step || '',
+                generalMessage: data.generalMessage || '',
+                detailMessage: data.detailMessage || ''
+              });
+            }
+          }
+        );
+      }
+
+      try {
+        // Call the backend command to install from local ZIP
+        await safeInvoke('install_modpack_from_local_zip', {
+          zipBytes: zipBytes,
+          zipName: file.name,
+          modpack: tempModpack,
+          settings: transformedSettings
+        });
+      } finally {
+        if (unlistenProgress) {
+          unlistenProgress();
+        }
+      }
+    } catch (error) {
+      console.error('Error installing modpack from ZIP:', error);
+      throw error;
+    }
+  }
+
   // Java-specific helper methods removed – Lyceris handles runtimes automatically.
 }
 

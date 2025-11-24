@@ -95,29 +95,8 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
 
   const getButtonConfig = () => {
     const hasValidIp = modpack.ip && modpack.ip.trim() !== '';
-    
-    // Handle servers without modpack and without IP (not available)
-    if (!requiresModpack && !hasValidIp) {
-      return {
-        text: t('modpacks.notAvailable'),
-        icon: AlertTriangle,
-        onClick: () => {},
-        className: 'btn-secondary',
-        disabled: true
-      };
-    }
 
-    // Handle any server with IP (vanilla or non-vanilla)
-    if (!requiresModpack && hasValidIp) {
-      return {
-        text: `${t('modpacks.connect')} ${modpack.ip}`,
-        icon: Globe,
-        onClick: () => copyToClipboard(modpack.ip!),
-        className: 'btn-secondary',
-        disabled: false
-      };
-    }
-
+    // First check state status - this takes priority
     switch (state.status) {
       case 'not_installed':
         return {
@@ -185,6 +164,29 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
           disabled: false
         };
       default:
+        // Handle servers without modpack and without IP (not available)
+        if (!requiresModpack && !hasValidIp) {
+          return {
+            text: t('modpacks.notAvailable'),
+            icon: AlertTriangle,
+            onClick: () => {},
+            className: 'btn-secondary',
+            disabled: true
+          };
+        }
+
+        // Handle any server with IP (vanilla or non-vanilla)
+        if (!requiresModpack && hasValidIp) {
+          return {
+            text: `${t('modpacks.connect')} ${modpack.ip}`,
+            icon: Globe,
+            onClick: () => copyToClipboard(modpack.ip!),
+            className: 'btn-secondary',
+            disabled: false
+          };
+        }
+
+        // Default: show install button for modpacks
         return {
           text: t('modpacks.install'),
           icon: Download,
