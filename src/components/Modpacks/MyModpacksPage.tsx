@@ -17,6 +17,7 @@ interface LocalModpack {
   version: string;
   minecraftVersion: string;
   modloader: string;
+  modloaderVersion: string;
   path: string;
   createdAt: string;
   lastPlayed?: string;
@@ -29,7 +30,7 @@ interface MyModpacksPageProps {
 export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
   const { t } = useTranslation();
   const validationService = ModpackValidationService.getInstance();
-  const { installModpackFromZip, modpackStates, launchModpack } = useLauncher();
+  const { installModpackFromZip, modpackStates, launchModpack, userSettings } = useLauncher();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [localModpacks, setLocalModpacks] = useState<LocalModpack[]>([]);
@@ -70,6 +71,7 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
         version: instance.version,
         minecraftVersion: instance.minecraftVersion, // Backend uses camelCase via serde rename
         modloader: instance.modloader,
+        modloaderVersion: instance.modloaderVersion, // Backend uses camelCase via serde rename
         path: '', // Path is not returned by backend, but we know it's in instances/{id}
         createdAt: instance.installedAt, // Backend uses camelCase via serde rename
         lastPlayed: undefined // We don't track last played yet
@@ -246,7 +248,29 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
   const handlePlayModpack = async (modpack: LocalModpack) => {
     try {
       toast.loading(`Launching ${modpack.name}...`, { id: `launch-${modpack.id}` });
-      await launchModpack(modpack.id);
+
+      // Construct a Modpack object for the backend
+      // Local modpacks don't have urlModpackZip since they're already installed
+      const modpackData: Modpack = {
+        id: modpack.id,
+        name: modpack.name,
+        description: '',
+        version: modpack.version,
+        minecraftVersion: modpack.minecraftVersion,
+        modloader: modpack.modloader,
+        modloaderVersion: modpack.modloaderVersion,
+        logo: '',
+        backgroundImage: '',
+        category: 'community',
+        urlModpackZip: '', // Empty since it's already installed
+      };
+
+      // Call the backend launch command directly
+      await invoke('launch_modpack', {
+        modpack: modpackData,
+        settings: userSettings
+      });
+
       toast.success(`${modpack.name} launched successfully!`, { id: `launch-${modpack.id}` });
     } catch (error) {
       console.error('Error launching modpack:', error);
