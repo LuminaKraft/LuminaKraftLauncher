@@ -18,6 +18,7 @@ pub async fn fetch_mod_files_batch(file_ids: &[i64], auth_token: Option<&str>) -
         .pool_max_idle_per_host(10)
         .build()?;
     
+    // DEPRECATED: Old API system, should migrate to Supabase Edge Functions
     let proxy_base_url = "https://api.luminakraft.com/v1/curseforge";
     const BATCH_SIZE: usize = 50;
     let mut all_file_infos = Vec::new();

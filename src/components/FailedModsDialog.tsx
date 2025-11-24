@@ -47,7 +47,7 @@ export const FailedModsDialog: React.FC<FailedModsDialogProps> = ({
     setError('');
     try {
       const modIds = failedMods.map(mod => mod.projectId);
-      // Use hardcoded API endpoint
+      // DEPRECATED: Old API system, should migrate to Supabase Edge Functions
       const baseUrl = 'https://api.luminakraft.com';
       const response = await axios.post(`${baseUrl}/v1/curseforge/mods`, {
         modIds: modIds,

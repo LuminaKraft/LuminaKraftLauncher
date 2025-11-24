@@ -91,7 +91,6 @@ tauri signer generate --write-keys ~/.tauri/luminakraft-signing-key
   "plugins": {
     "updater": {
       "endpoints": [
-        "https://api.luminakraft.com/v1/launcher_data.json",
         "https://raw.githubusercontent.com/LuminaKraft/LuminakraftLauncher/main/latest.json"
       ],
       "pubkey": "YOUR_PUBLIC_KEY_HERE"

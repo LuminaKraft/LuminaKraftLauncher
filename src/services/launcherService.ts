@@ -33,6 +33,7 @@ class LauncherService {
   private modpacksData: ModpacksData | null = null;
   // uiTranslations removed (deprecated)
   private userSettings: UserSettings;
+  // DEPRECATED: Old API system, being migrated to Supabase
   private readonly API_BASE_URL = 'https://api.luminakraft.com';
   private cache: Map<string, CacheEntry> = new Map();
   private readonly cacheTTL = 15 * 60 * 1000; // 15 minutes for all modpack data
