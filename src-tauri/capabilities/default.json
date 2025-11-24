@@ -11,6 +11,7 @@
     "updater:default",
     "fs:allow-appdata-write-recursive",
     "fs:allow-appdata-read-recursive",
+    "fs:allow-download-write-recursive",
     "fs:allow-mkdir",
     "fs:allow-exists"
   ]

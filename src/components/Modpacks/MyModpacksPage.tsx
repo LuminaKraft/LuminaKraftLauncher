@@ -124,62 +124,65 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
   const handleValidationContinue = async (uploadedFiles?: Map<string, File>) => {
     setShowValidationDialog(false);
     if (validationData) {
-      let fileToImport = validationData.file;
-
       if (uploadedFiles && uploadedFiles.size > 0) {
-        // User uploaded files - need to create a new ZIP with these files in overrides
-        const loadingToast = toast.loading('Creating modpack with uploaded files...');
+        // Ask user if they want to download an updated ZIP with the files in overrides
+        const downloadUpdated = confirm(
+          `You've uploaded ${uploadedFiles.size} file(s) that were missing from this modpack.\n\n` +
+          `Would you like to download an updated version of the ZIP file with these files included in the overrides folder?\n\n` +
+          `This way you can use the updated ZIP for publishing or sharing.`
+        );
 
-        try {
-          const { writeFile, mkdir, exists } = await import('@tauri-apps/plugin-fs');
-          const { appDataDir, join } = await import('@tauri-apps/api/path');
+        if (downloadUpdated) {
+          const loadingToast = toast.loading('Creating updated modpack ZIP...');
 
-          // Write original ZIP and uploaded files to temp directory
-          const tempDir = await join(await appDataDir(), 'temp', 'modpack_merge');
+          try {
+            const { writeFile, mkdir, exists } = await import('@tauri-apps/plugin-fs');
+            const { appDataDir, join, downloadDir } = await import('@tauri-apps/api/path');
 
-          // Create directory if it doesn't exist
-          if (!(await exists(tempDir))) {
-            await mkdir(tempDir, { recursive: true });
+            // Write original ZIP and uploaded files to temp directory
+            const tempDir = await join(await appDataDir(), 'temp', 'modpack_merge');
+
+            // Create directory if it doesn't exist
+            if (!(await exists(tempDir))) {
+              await mkdir(tempDir, { recursive: true });
+            }
+
+            // Write original ZIP
+            const originalZipBuffer = await validationData.file.arrayBuffer();
+            const originalZipPath = await join(tempDir, validationData.file.name);
+            await writeFile(originalZipPath, new Uint8Array(originalZipBuffer));
+
+            // Write uploaded files
+            const uploadedFilePaths: string[] = [];
+            for (const [fileName, file] of uploadedFiles.entries()) {
+              const buffer = await file.arrayBuffer();
+              const tempFilePath = await join(tempDir, file.name);
+              await writeFile(tempFilePath, new Uint8Array(buffer));
+              uploadedFilePaths.push(tempFilePath);
+            }
+
+            // Create output ZIP path in Downloads folder
+            const downloadsFolder = await downloadDir();
+            const outputFileName = validationData.file.name.replace('.zip', '_updated.zip');
+            const outputZipPath = await join(downloadsFolder, outputFileName);
+
+            // Call Tauri command to merge files
+            await invoke('create_modpack_with_overrides', {
+              originalZipPath: originalZipPath,
+              uploadedFilePaths: uploadedFilePaths,
+              outputZipPath: outputZipPath
+            });
+
+            toast.success(`Updated modpack saved to Downloads: ${outputFileName}`, { id: loadingToast, duration: 5000 });
+          } catch (error) {
+            console.error('Error creating modpack with overrides:', error);
+            toast.error('Failed to create updated modpack', { id: loadingToast });
           }
-
-          // Write original ZIP
-          const originalZipBuffer = await validationData.file.arrayBuffer();
-          const originalZipPath = await join(tempDir, validationData.file.name);
-          await writeFile(originalZipPath, new Uint8Array(originalZipBuffer));
-
-          // Write uploaded files
-          const uploadedFilePaths: string[] = [];
-          for (const [fileName, file] of uploadedFiles.entries()) {
-            const buffer = await file.arrayBuffer();
-            const tempFilePath = await join(tempDir, file.name);
-            await writeFile(tempFilePath, new Uint8Array(buffer));
-            uploadedFilePaths.push(tempFilePath);
-          }
-
-          // Create output ZIP path
-          const outputZipPath = await join(tempDir, `${validationData.modpackName}_with_overrides.zip`);
-
-          // Call Tauri command to merge files
-          await invoke('create_modpack_with_overrides', {
-            originalZipPath: originalZipPath,
-            uploadedFilePaths: uploadedFilePaths,
-            outputZipPath: outputZipPath
-          });
-
-          toast.success(`Modpack ready with ${uploadedFiles.size} additional file(s)!`, { id: loadingToast });
-
-          // Create a new File object from the output ZIP to import
-          // We'll need to read it back from disk
-          // For now, just use the original file since the backend command will be used during publish
-          // The actual import flow might need adjustment
-        } catch (error) {
-          console.error('Error creating modpack with overrides:', error);
-          toast.error('Failed to create modpack with overrides', { id: loadingToast });
-          return;
         }
       }
 
-      await performImport(fileToImport);
+      // Continue with import of original file
+      await performImport(validationData.file);
     }
   };
 
