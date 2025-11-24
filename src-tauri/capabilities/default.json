@@ -10,6 +10,8 @@
     "dialog:allow-open",
     "updater:default",
     "fs:allow-appdata-write-recursive",
-    "fs:allow-appdata-read-recursive"
+    "fs:allow-appdata-read-recursive",
+    "fs:allow-mkdir",
+    "fs:allow-exists"
   ]
 }

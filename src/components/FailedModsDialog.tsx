@@ -181,10 +181,16 @@ export const FailedModsDialog: React.FC<FailedModsDialogProps> = ({
     const loadingToast = toast.loading('Installing uploaded mods...');
     try {
       // Write files to temporary directory first, then call Tauri command
-      const { writeFile } = await import('@tauri-apps/plugin-fs');
+      const { writeFile, mkdir, exists } = await import('@tauri-apps/plugin-fs');
       const { appDataDir, join } = await import('@tauri-apps/api/path');
 
       const tempDir = await join(await appDataDir(), 'temp', 'uploaded_mods');
+
+      // Create directory if it doesn't exist
+      if (!(await exists(tempDir))) {
+        await mkdir(tempDir, { recursive: true });
+      }
+
       const filePaths: string[] = [];
 
       // Write each file to temp directory

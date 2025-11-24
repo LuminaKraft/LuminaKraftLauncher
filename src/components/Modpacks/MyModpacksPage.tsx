@@ -131,11 +131,16 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
         const loadingToast = toast.loading('Creating modpack with uploaded files...');
 
         try {
-          const { writeFile } = await import('@tauri-apps/plugin-fs');
+          const { writeFile, mkdir, exists } = await import('@tauri-apps/plugin-fs');
           const { appDataDir, join } = await import('@tauri-apps/api/path');
 
           // Write original ZIP and uploaded files to temp directory
           const tempDir = await join(await appDataDir(), 'temp', 'modpack_merge');
+
+          // Create directory if it doesn't exist
+          if (!(await exists(tempDir))) {
+            await mkdir(tempDir, { recursive: true });
+          }
 
           // Write original ZIP
           const originalZipBuffer = await validationData.file.arrayBuffer();
