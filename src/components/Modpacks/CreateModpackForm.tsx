@@ -53,6 +53,7 @@ export function CreateModpackForm({ onNavigate }: CreateModpackFormProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
   const [manifestParsed, setManifestParsed] = useState(false);
+  const [currentLang, setCurrentLang] = useState<'en' | 'es'>('en');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const updateFormData = (field: string, value: any) => {
@@ -298,101 +299,192 @@ export function CreateModpackForm({ onNavigate }: CreateModpackFormProps) {
       </h1>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Name Section */}
+        {/* Step 1: Upload ZIP File */}
         <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
           <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-            Basic Information
+            Step 1: Upload Modpack ZIP
           </h2>
 
-          {/* Name EN */}
+          {/* Drag & Drop Zone */}
+          <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+            className={`
+              relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all
+              ${isDragging
+                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500'
+              }
+            `}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".zip"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleZipFile(file);
+              }}
+              className="hidden"
+              required
+            />
+
+            <div className="flex flex-col items-center gap-4">
+              {isParsing ? (
+                <>
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                  <p className="text-gray-600 dark:text-gray-400">Parsing manifest.json...</p>
+                </>
+              ) : zipFile ? (
+                <>
+                  <FileArchive className="w-12 h-12 text-green-600" />
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {zipFile.name}
+                    </p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {(zipFile.size / 1024 / 1024).toFixed(2)} MB
+                    </p>
+                    {manifestParsed && (
+                      <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+                        ✓ Manifest parsed - form auto-filled
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setZipFile(null);
+                      setManifestParsed(false);
+                      if (fileInputRef.current) fileInputRef.current.value = '';
+                    }}
+                    className="text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                  >
+                    Remove file
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Upload className="w-12 h-12 text-gray-400" />
+                  <div>
+                    <p className="text-lg font-medium text-gray-900 dark:text-white">
+                      Drop your CurseForge/Modrinth modpack ZIP here
+                    </p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      or click to browse
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
+                      The manifest.json will be automatically parsed
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Upload Progress */}
+          {isUploading && (
+            <div className="mt-4">
+              <div className="flex justify-between mb-1">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Uploading...
+                </span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {Math.round(uploadProgress)}%
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4">
+                <div
+                  className="bg-blue-600 h-4 rounded-full transition-all"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Step 2: Basic Information with Language Tabs */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
+          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+            Step 2: Basic Information
+          </h2>
+
+          {/* Language Tabs */}
+          <div className="flex gap-2 mb-4 border-b border-gray-200 dark:border-gray-700">
+            <button
+              type="button"
+              onClick={() => setCurrentLang('en')}
+              className={`px-4 py-2 font-medium transition-colors ${
+                currentLang === 'en'
+                  ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+              }`}
+            >
+              English
+            </button>
+            <button
+              type="button"
+              onClick={() => setCurrentLang('es')}
+              className={`px-4 py-2 font-medium transition-colors ${
+                currentLang === 'es'
+                  ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+              }`}
+            >
+              Español
+            </button>
+          </div>
+
+          {/* Name */}
           <div className="mb-4">
             <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-              Name (English) *
+              Name *
             </label>
             <input
               type="text"
-              value={formData.name.en}
-              onChange={(e) => updateI18nField('name', 'en', e.target.value)}
+              value={formData.name[currentLang]}
+              onChange={(e) => updateI18nField('name', currentLang, e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
               required
-              placeholder="My Awesome Modpack"
+              placeholder={currentLang === 'en' ? 'My Awesome Modpack' : 'Mi Increíble Modpack'}
             />
           </div>
 
-          {/* Name ES */}
+          {/* Short Description */}
           <div className="mb-4">
             <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-              Nombre (Español) *
+              Short Description
             </label>
             <input
               type="text"
-              value={formData.name.es}
-              onChange={(e) => updateI18nField('name', 'es', e.target.value)}
+              value={formData.shortDescription[currentLang]}
+              onChange={(e) => updateI18nField('shortDescription', currentLang, e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-              required
-              placeholder="Mi Increíble Modpack"
+              placeholder={currentLang === 'en' ? 'A brief description...' : 'Una breve descripción...'}
             />
           </div>
 
-          {/* Short Description EN */}
+          {/* Description */}
           <div className="mb-4">
             <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-              Short Description (English)
-            </label>
-            <input
-              type="text"
-              value={formData.shortDescription.en}
-              onChange={(e) => updateI18nField('shortDescription', 'en', e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-              placeholder="A brief description of your modpack"
-            />
-          </div>
-
-          {/* Short Description ES */}
-          <div className="mb-4">
-            <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-              Descripción Corta (Español)
-            </label>
-            <input
-              type="text"
-              value={formData.shortDescription.es}
-              onChange={(e) => updateI18nField('shortDescription', 'es', e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-              placeholder="Una breve descripción de tu modpack"
-            />
-          </div>
-
-          {/* Description EN */}
-          <div className="mb-4">
-            <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-              Description (English)
+              Description
             </label>
             <textarea
-              value={formData.description.en}
-              onChange={(e) => updateI18nField('description', 'en', e.target.value)}
+              value={formData.description[currentLang]}
+              onChange={(e) => updateI18nField('description', currentLang, e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 min-h-[100px]"
-              placeholder="Full description of your modpack..."
-            />
-          </div>
-
-          {/* Description ES */}
-          <div className="mb-4">
-            <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-              Descripción (Español)
-            </label>
-            <textarea
-              value={formData.description.es}
-              onChange={(e) => updateI18nField('description', 'es', e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 min-h-[100px]"
-              placeholder="Descripción completa de tu modpack..."
+              placeholder={currentLang === 'en' ? 'Full description...' : 'Descripción completa...'}
             />
           </div>
         </div>
 
-        {/* Images Section */}
+        {/* Step 3: Images Section */}
         <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
           <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-            Images
+            Step 3: Images (Optional)
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -453,11 +545,14 @@ export function CreateModpackForm({ onNavigate }: CreateModpackFormProps) {
           </div>
         </div>
 
-        {/* Technical Details */}
+        {/* Step 4: Technical Details */}
         <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
           <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-            Technical Details
+            Step 4: Technical Details
           </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            {manifestParsed ? '✓ Auto-filled from manifest.json' : 'These will be auto-filled when you upload a ZIP'}
+          </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Version */}
@@ -565,11 +660,11 @@ export function CreateModpackForm({ onNavigate }: CreateModpackFormProps) {
           </div>
         </div>
 
-        {/* Features Section */}
+        {/* Step 5: Features Section (Optional) */}
         <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-              Features
+              Step 5: Features (Optional)
             </h2>
             <button
               type="button"
@@ -598,62 +693,57 @@ export function CreateModpackForm({ onNavigate }: CreateModpackFormProps) {
                     <X className="w-5 h-5" />
                   </button>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    {/* Title EN */}
-                    <div>
-                      <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300 text-sm">
-                        Title (English)
-                      </label>
-                      <input
-                        type="text"
-                        value={feature.title.en}
-                        onChange={(e) => updateFeature(index, 'title', 'en', e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                        placeholder="e.g., Custom Quests"
-                      />
-                    </div>
-
-                    {/* Title ES */}
-                    <div>
-                      <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300 text-sm">
-                        Título (Español)
-                      </label>
-                      <input
-                        type="text"
-                        value={feature.title.es}
-                        onChange={(e) => updateFeature(index, 'title', 'es', e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                        placeholder="ej., Misiones Personalizadas"
-                      />
-                    </div>
+                  {/* Language Tabs for Feature */}
+                  <div className="flex gap-2 mb-4 border-b border-gray-200 dark:border-gray-700">
+                    <button
+                      type="button"
+                      onClick={() => setCurrentLang('en')}
+                      className={`px-3 py-1 text-sm font-medium transition-colors ${
+                        currentLang === 'en'
+                          ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+                          : 'text-gray-600 dark:text-gray-400'
+                      }`}
+                    >
+                      EN
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentLang('es')}
+                      className={`px-3 py-1 text-sm font-medium transition-colors ${
+                        currentLang === 'es'
+                          ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+                          : 'text-gray-600 dark:text-gray-400'
+                      }`}
+                    >
+                      ES
+                    </button>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    {/* Description EN */}
-                    <div>
-                      <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300 text-sm">
-                        Description (English)
-                      </label>
-                      <textarea
-                        value={feature.description.en}
-                        onChange={(e) => updateFeature(index, 'description', 'en', e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 min-h-[60px]"
-                        placeholder="Brief description..."
-                      />
-                    </div>
+                  {/* Title */}
+                  <div className="mb-4">
+                    <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300 text-sm">
+                      Title
+                    </label>
+                    <input
+                      type="text"
+                      value={feature.title[currentLang]}
+                      onChange={(e) => updateFeature(index, 'title', currentLang, e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                      placeholder={currentLang === 'en' ? 'e.g., Custom Quests' : 'ej., Misiones Personalizadas'}
+                    />
+                  </div>
 
-                    {/* Description ES */}
-                    <div>
-                      <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300 text-sm">
-                        Descripción (Español)
-                      </label>
-                      <textarea
-                        value={feature.description.es}
-                        onChange={(e) => updateFeature(index, 'description', 'es', e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 min-h-[60px]"
-                        placeholder="Breve descripción..."
-                      />
-                    </div>
+                  {/* Description */}
+                  <div className="mb-4">
+                    <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300 text-sm">
+                      Description
+                    </label>
+                    <textarea
+                      value={feature.description[currentLang]}
+                      onChange={(e) => updateFeature(index, 'description', currentLang, e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 min-h-[60px]"
+                      placeholder={currentLang === 'en' ? 'Brief description...' : 'Breve descripción...'}
+                    />
                   </div>
 
                   {/* Icon */}
@@ -671,124 +761,6 @@ export function CreateModpackForm({ onNavigate }: CreateModpackFormProps) {
                   </div>
                 </div>
               ))}
-            </div>
-          )}
-        </div>
-
-        {/* File Upload */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
-          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-            Modpack File
-          </h2>
-
-          {/* Drag & Drop Zone */}
-          <div
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-            className={`
-              relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all
-              ${isDragging
-                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500'
-              }
-            `}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".zip"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleZipFile(file);
-              }}
-              className="hidden"
-              required
-            />
-
-            <div className="flex flex-col items-center gap-4">
-              {isParsing ? (
-                <>
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                  <p className="text-gray-600 dark:text-gray-400">Parsing manifest.json...</p>
-                </>
-              ) : zipFile ? (
-                <>
-                  <FileArchive className="w-12 h-12 text-green-600" />
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      {zipFile.name}
-                    </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {(zipFile.size / 1024 / 1024).toFixed(2)} MB
-                    </p>
-                    {manifestParsed && (
-                      <p className="text-sm text-green-600 dark:text-green-400 mt-1">
-                        ✓ Manifest parsed successfully
-                      </p>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setZipFile(null);
-                      setManifestParsed(false);
-                      if (fileInputRef.current) fileInputRef.current.value = '';
-                    }}
-                    className="text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                  >
-                    Remove file
-                  </button>
-                </>
-              ) : (
-                <>
-                  <Upload className="w-12 h-12 text-gray-400" />
-                  <div>
-                    <p className="text-lg font-medium text-gray-900 dark:text-white">
-                      Drop your modpack ZIP here
-                    </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                      or click to browse
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
-                      The manifest.json will be automatically parsed to fill the form
-                    </p>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Manual Parse Button (if needed) */}
-          {zipFile && !manifestParsed && !isParsing && (
-            <button
-              type="button"
-              onClick={() => parseManifest(zipFile)}
-              className="mt-4 w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Parse Manifest
-            </button>
-          )}
-
-          {/* Upload Progress */}
-          {isUploading && (
-            <div className="mt-4">
-              <div className="flex justify-between mb-1">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Uploading...
-                </span>
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  {Math.round(uploadProgress)}%
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4">
-                <div
-                  className="bg-blue-600 h-4 rounded-full transition-all"
-                  style={{ width: `${uploadProgress}%` }}
-                />
-              </div>
             </div>
           )}
         </div>
