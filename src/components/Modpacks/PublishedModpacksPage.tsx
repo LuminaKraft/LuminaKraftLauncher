@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import { Plus, Edit, Trash2, Eye, EyeOff, Download, TrendingUp } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, EyeOff, Download, TrendingUp, Cloud, Lock } from 'lucide-react';
 import ModpackManagementService from '../../services/modpackManagementService';
+import { useLauncher } from '../../contexts/LauncherContext';
 
 interface Modpack {
   id: string;
@@ -27,6 +28,7 @@ interface PublishedModpacksPageProps {
 export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps) {
   const { t, i18n } = useTranslation();
   const service = ModpackManagementService.getInstance();
+  const { userSettings, handleMicrosoftLogin } = useLauncher();
 
   const [modpacks, setModpacks] = useState<Modpack[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,15 +46,11 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
       const { canManage: hasPermission } = await service.canManageModpacks();
       setCanManage(hasPermission);
 
-      if (!hasPermission) {
-        toast.error('You need to authenticate with Microsoft to publish modpacks');
-        onNavigate?.('home');
-        return;
+      if (hasPermission) {
+        // Load user's modpacks only if authenticated
+        const userModpacks = await service.getUserModpacks();
+        setModpacks(userModpacks);
       }
-
-      // Load user's modpacks
-      const userModpacks = await service.getUserModpacks();
-      setModpacks(userModpacks);
     } catch (error) {
       console.error('Error loading modpacks:', error);
       toast.error('Failed to load modpacks');
@@ -144,8 +142,89 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
     );
   }
 
+  // Show authentication required screen for non-authenticated users
   if (!canManage) {
-    return null;
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-12 text-center">
+          {/* Icon */}
+          <div className="relative inline-flex items-center justify-center mb-6">
+            <Cloud className="w-20 h-20 text-blue-500" />
+            <div className="absolute -bottom-1 -right-1 bg-yellow-500 rounded-full p-2">
+              <Lock className="w-6 h-6 text-white" />
+            </div>
+          </div>
+
+          {/* Title */}
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+            Public Modpacks
+          </h1>
+
+          {/* Description */}
+          <p className="text-lg text-gray-600 dark:text-gray-400 mb-6 max-w-2xl mx-auto">
+            Share your custom modpacks with the entire LuminaKraft community.
+            Publish, manage, and track your public modpacks all in one place.
+          </p>
+
+          {/* Authentication Required Message */}
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6 mb-8 max-w-2xl mx-auto">
+            <div className="flex items-start gap-4">
+              <Lock className="w-6 h-6 text-blue-600 dark:text-blue-400 mt-1 flex-shrink-0" />
+              <div className="text-left">
+                <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2 text-lg">
+                  Microsoft Account Required
+                </h3>
+                <p className="text-blue-800 dark:text-blue-200 mb-4">
+                  To publish and manage public modpacks, you need to authenticate with your Microsoft account.
+                  This ensures proper attribution and allows you to manage your published content.
+                </p>
+                <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-2">
+                  <li className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
+                    Publish modpacks to the community
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
+                    Track downloads and statistics
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
+                    Update and manage your content
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Button */}
+          <button
+            onClick={handleMicrosoftLogin}
+            className="px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors text-lg inline-flex items-center gap-3 shadow-lg hover:shadow-xl"
+          >
+            <svg className="w-6 h-6" viewBox="0 0 23 23" fill="none">
+              <path d="M0 0h11v11H0V0z" fill="#F25022"/>
+              <path d="M12 0h11v11H12V0z" fill="#7FBA00"/>
+              <path d="M0 12h11v11H0V12z" fill="#00A4EF"/>
+              <path d="M12 12h11v11H12V12z" fill="#FFB900"/>
+            </svg>
+            Sign in with Microsoft
+          </button>
+
+          {/* Local Modpacks Alternative */}
+          <div className="mt-8 pt-8 border-t border-gray-200 dark:border-gray-700">
+            <p className="text-gray-600 dark:text-gray-400 mb-3">
+              Just want to manage modpacks locally?
+            </p>
+            <button
+              onClick={() => onNavigate?.('my-modpacks')}
+              className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
+            >
+              Go to My Modpacks →
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -154,7 +233,7 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
       <div className="mb-6">
         <div className="flex justify-between items-center mb-2">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Published Modpacks
+            Public Modpacks
           </h1>
           <button
             onClick={() => onNavigate?.('publish-modpack')}
@@ -172,9 +251,9 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
       {/* Modpacks List */}
       {modpacks.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-lg p-12 shadow-md text-center">
-          <Plus className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+          <Cloud className="w-16 h-16 mx-auto mb-4 text-gray-400" />
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-            No published modpacks yet
+            No public modpacks yet
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
             Publish your first modpack to share it with the community

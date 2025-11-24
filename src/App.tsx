@@ -3,6 +3,7 @@ import { LauncherProvider, useLauncher } from './contexts/LauncherContext';
 import { AnimationProvider, useAnimation } from './contexts/AnimationContext';
 import Sidebar from './components/Layout/Sidebar';
 import ModpacksPage from './components/Modpacks/ModpacksPage';
+import MyModpacksPage from './components/Modpacks/MyModpacksPage';
 import PublishModpackForm from './components/Modpacks/PublishModpackForm';
 import EditModpackForm from './components/Modpacks/EditModpackForm';
 import PublishedModpacksPage from './components/Modpacks/PublishedModpacksPage';
@@ -127,6 +128,8 @@ function AppContent() {
     switch (activeSection) {
       case 'home':
         return <ModpacksPage key={modpacksPageKey} />;
+      case 'my-modpacks':
+        return <MyModpacksPage onNavigate={handleModpackNavigation} />;
       case 'published-modpacks':
         return <PublishedModpacksPage onNavigate={handleModpackNavigation} />;
       case 'publish-modpack':

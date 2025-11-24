@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Home, Settings, Info, AlertCircle, Pin, PinOff, FolderOpen } from 'lucide-react';
+import { Home, Settings, Info, AlertCircle, Pin, PinOff, FolderOpen, Cloud } from 'lucide-react';
 import { useLauncher } from '../../contexts/LauncherContext';
 import PlayerHeadLoader from '../PlayerHeadLoader';
 import ModpackManagementService from '../../services/modpackManagementService';
@@ -43,12 +43,24 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
   // Version is automatically updated by release.js
   const currentVersion = "0.0.9-alpha.6";
 
-  const baseMenuItems = [
+  const menuItems = [
     {
       id: 'home',
       label: t('navigation.modpacks'),
       icon: Home,
       description: 'Explora y gestiona tus modpacks'
+    },
+    {
+      id: 'my-modpacks',
+      label: 'My Modpacks',
+      icon: FolderOpen,
+      description: 'Manage your local modpack instances'
+    },
+    {
+      id: 'published-modpacks',
+      label: 'Public Modpacks',
+      icon: Cloud,
+      description: 'Manage your public modpacks'
     },
     {
       id: 'settings',
@@ -63,20 +75,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
       description: 'Información del launcher'
     }
   ];
-
-  // Add "Published Modpacks" if user can manage (authenticated)
-  const menuItems = canManageModpacks
-    ? [
-        baseMenuItems[0], // Home
-        {
-          id: 'published-modpacks',
-          label: 'Published Modpacks',
-          icon: FolderOpen,
-          description: 'Manage your published modpacks'
-        },
-        ...baseMenuItems.slice(1) // Settings, About
-      ]
-    : baseMenuItems;
 
   const handleAvatarClick = () => {
     if (userSettings.authMethod === 'offline') {
