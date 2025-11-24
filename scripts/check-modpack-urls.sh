@@ -24,8 +24,9 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Variables globales
-# DEPRECATED: Old API system, should migrate to Supabase Edge Functions
-API_BASE="https://api.luminakraft.com/v1/curseforge"
+# Note: This script is deprecated as we now use Supabase Edge Functions
+# Kept for historical reference only
+API_BASE="https://iytnvsdsqvbdoqesyweo.supabase.co/functions/v1/curseforge-proxy"
 TEMP_DIR=""
 MODPACK_ZIP=""
 MANIFEST_FILE=""

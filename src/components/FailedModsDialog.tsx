@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, ExternalLink, AlertTriangle } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
-import axios from 'axios';
+import { supabase } from '../services/supabaseClient';
 
 
 interface FailedMod {
@@ -47,18 +47,24 @@ export const FailedModsDialog: React.FC<FailedModsDialogProps> = ({
     setError('');
     try {
       const modIds = failedMods.map(mod => mod.projectId);
-      // DEPRECATED: Old API system, should migrate to Supabase Edge Functions
-      const baseUrl = 'https://api.luminakraft.com';
-      const response = await axios.post(`${baseUrl}/v1/curseforge/mods`, {
-        modIds: modIds,
-        filterPcOnly: true
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
+
+      // Use Supabase Edge Function for CurseForge proxy
+      const { data, error: invokeError } = await supabase.functions.invoke('curseforge-proxy', {
+        body: {
+          endpoint: '/mods',
+          method: 'POST',
+          body: {
+            modIds: modIds,
+            filterPcOnly: true
+          }
         }
       });
-      setModInfos(response.data.data || []);
+
+      if (invokeError) {
+        throw invokeError;
+      }
+
+      setModInfos(data?.data || []);
     } catch (err) {
       console.error('Error fetching mod information:', err);
       setError(t('failedMods.error'));

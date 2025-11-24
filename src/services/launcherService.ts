@@ -31,13 +31,9 @@ async function safeInvoke<T>(command: string, payload?: any): Promise<T> {
 class LauncherService {
   private static instance: LauncherService;
   private modpacksData: ModpacksData | null = null;
-  // uiTranslations removed (deprecated)
   private userSettings: UserSettings;
-  // DEPRECATED: Old API system, being migrated to Supabase
-  private readonly API_BASE_URL = 'https://api.luminakraft.com';
   private cache: Map<string, CacheEntry> = new Map();
   private readonly cacheTTL = 15 * 60 * 1000; // 15 minutes for all modpack data
-  // translationsTTL removed (deprecated)
   private readonly requestTimeout = 30000; // 30 seconds
 
   constructor() {
@@ -69,118 +65,6 @@ class LauncherService {
 
   private setupAxiosDefaults(): void {
     axios.defaults.timeout = this.requestTimeout;
-    // Note: User-Agent header cannot be set in browsers for security reasons
-    // Only set other headers that are allowed
-    axios.interceptors.request.use(async (config) => {
-      try {
-        const msAccount = this.userSettings?.microsoftAccount;
-        let msToken = msAccount?.accessToken;
-        const offlineToken = this.userSettings?.clientToken;
-        const baseUrl = this.API_BASE_URL;
-        const url = config.url || '';
-
-        console.log(`[LauncherService] Interceptor - URL: ${url}, baseUrl: ${baseUrl}`);
-
-        // Attach auth header only for our API base URL
-        if (url.startsWith(baseUrl)) {
-          // Initialize headers if they don't exist
-          if (!config.headers) {
-            config.headers = {} as any;
-          }
-
-          // Determine which auth method to use based on user preference
-          const authMethod = this.userSettings.authMethod || 'offline';
-
-          if (authMethod === 'microsoft') {
-            // User chose Microsoft authentication
-            if (!msAccount || !msToken) {
-              console.error(`[LauncherService] ❌ User chose Microsoft auth but no account/token available`);
-              throw new Error('Microsoft authentication selected but not configured. Please authenticate in Settings.');
-            }
-
-            // Check if Microsoft token is expired
-            const isTokenExpired = msAccount.exp < Math.floor(Date.now() / 1000);
-
-            // If token is expired, try to refresh it
-            if (isTokenExpired) {
-              console.log(`[LauncherService] 🔄 Microsoft token expired. Attempting to refresh...`);
-              try {
-                const AuthService = (await import('./authService')).default;
-                const authService = AuthService.getInstance();
-                const refreshedAccount = await authService.refreshMicrosoftToken(msAccount.refreshToken);
-
-                // Update user settings with refreshed token
-                this.userSettings.microsoftAccount = refreshedAccount;
-                this.saveUserSettings({ microsoftAccount: refreshedAccount });
-
-                msToken = refreshedAccount.accessToken;
-                console.log(`[LauncherService] ✅ Token refreshed successfully`);
-              } catch (refreshError) {
-                console.error(`[LauncherService] ❌ Failed to refresh Microsoft token:`, refreshError);
-                console.error(`[LauncherService] ⚠️ User needs to re-authenticate with Microsoft in Settings`);
-                throw new Error('Microsoft token expired and refresh failed. Please re-authenticate in Settings.');
-              }
-            }
-
-            // Use Microsoft token
-            config.headers['Authorization'] = `Bearer ${msToken}`;
-            console.log(`[LauncherService] ✅ Using Microsoft token for request: ${url}`);
-            console.log(`[LauncherService] Token preview: ${msToken.substring(0, 20)}...`);
-
-          } else {
-            // User chose offline authentication (or default)
-            if (!offlineToken) {
-              console.warn('🚨 Emergency: No offline token available, generating new one');
-              const emergencyToken = this.generateClientToken();
-              this.userSettings.clientToken = emergencyToken;
-              this.saveUserSettings({ clientToken: emergencyToken });
-              config.headers['x-lk-token'] = emergencyToken;
-            } else {
-              config.headers['x-lk-token'] = offlineToken;
-              console.log(`[LauncherService] ✅ Using offline token for request: ${url}`);
-              console.log(`[LauncherService] Token preview: ${offlineToken.substring(0, 8)}...`);
-            }
-          }
-
-          config.headers['x-luminakraft-client'] = 'luminakraft-launcher';
-          console.log(`[LauncherService] Final headers (Authorization: ${!!config.headers['Authorization']}, x-lk-token: ${!!config.headers['x-lk-token']})`);
-        } else {
-          console.log(`[LauncherService] No auth headers added - URL ${url} doesn't match baseUrl ${baseUrl}`);
-        }
-      } catch (error) {
-        console.error('[LauncherService] Error in request interceptor:', error);
-        throw error; // Propagate error to fail the request
-      }
-      return config;
-    });
-
-    // Add response interceptor to handle auth errors
-    axios.interceptors.response.use(
-      (response) => response,
-      (error) => {
-        if (error.response?.status === 401) {
-          const url = error.config?.url || '';
-          const detail = error.response?.data?.detail || '';
-
-          console.error(`[LauncherService] 401 Unauthorized for ${url}`);
-          console.error(`[LauncherService] API Response: ${detail}`);
-
-          // Check if we sent a Microsoft token
-          const sentAuth = error.config?.headers?.['Authorization'];
-          const sentLKToken = error.config?.headers?.['x-lk-token'];
-
-          console.error(`[LauncherService] Sent Authorization header: ${!!sentAuth}`);
-          console.error(`[LauncherService] Sent x-lk-token header: ${!!sentLKToken}`);
-
-          if (sentAuth && detail.includes('Invalid Microsoft token')) {
-            console.error('[LauncherService] Microsoft token is invalid or expired. Please re-authenticate.');
-          } else if (!sentAuth && !sentLKToken) {
-            console.error('[LauncherService] No authentication headers were sent to the API');
-          }
-        }
-        return Promise.reject(error);
-      }
-    );
   }
 
   private detectDefaultLanguage(): string {
@@ -271,10 +155,6 @@ class LauncherService {
       console.error('API health check failed:', error);
       return false;
     }
-  }
-
-  public getBaseUrl(): string {
-    return this.API_BASE_URL;
   }
 
   private getFallbackData(): ModpacksData {

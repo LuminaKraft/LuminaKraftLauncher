@@ -4,7 +4,7 @@ use std::fs;
 use reqwest::Client;
 use lyceris::util::hash::calculate_sha1;
 use crate::utils::downloader::download_file;
-use super::types::{CurseForgeManifest, ModFileInfo, ApiResponse, GetModFilesRequest, FileHash};
+use super::types::{CurseForgeManifest, ModFileInfo, ApiResponse, GetModFilesRequest, EdgeFunctionRequest, FileHash};
 
 
 
@@ -18,40 +18,38 @@ pub async fn fetch_mod_files_batch(file_ids: &[i64], auth_token: Option<&str>) -
         .pool_max_idle_per_host(10)
         .build()?;
     
-    // DEPRECATED: Old API system, should migrate to Supabase Edge Functions
-    let proxy_base_url = "https://api.luminakraft.com/v1/curseforge";
+    // Use Supabase Edge Function for CurseForge proxy
+    let proxy_base_url = "https://iytnvsdsqvbdoqesyweo.supabase.co/functions/v1/curseforge-proxy";
     const BATCH_SIZE: usize = 50;
     let mut all_file_infos = Vec::new();
     let mut last_error = None;
     
     for chunk in file_ids.chunks(BATCH_SIZE) {
-        let request_body = GetModFilesRequest {
-            file_ids: chunk.to_vec(),
+        // Wrap request in Edge Function format
+        let edge_request = EdgeFunctionRequest {
+            endpoint: "/mods/files".to_string(),
+            method: "POST".to_string(),
+            body: GetModFilesRequest {
+                file_ids: chunk.to_vec(),
+            },
         };
-        
+
         let max_retries = 3;
         let mut response = None;
         let mut batch_error = None;
-        
+
         for attempt in 1..=max_retries {
-            let batch_url = format!("{}/mods/files", proxy_base_url);
-            
             if attempt == 1 {
-                println!("🌐 Fetching mod info from CurseForge API: {} (batch size: {})", batch_url, chunk.len());
+                println!("🌐 Fetching mod info from Supabase Edge Function (batch size: {})", chunk.len());
             }
+
+            let mut request = client.post(proxy_base_url)
+                .json(&edge_request);
             
-            let mut request = client.post(&batch_url)
-                .json(&request_body);
-            
-            // Add authentication headers
+            // Add authentication header for Supabase
             if let Some(token) = auth_token {
-                if token.starts_with("Bearer ") {
-                    // Microsoft token - use Authorization header
-                    request = request.header("Authorization", token);
-                } else {
-                    // Offline launcher token - use x-lk-token header
-                    request = request.header("x-lk-token", token);
-                }
+                // Supabase expects Authorization header with Bearer token
+                request = request.header("Authorization", token);
             }
             
             match request.send().await {

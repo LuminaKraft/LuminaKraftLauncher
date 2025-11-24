@@ -80,4 +80,12 @@ pub struct ApiResponse<T> {
 pub struct GetModFilesRequest {
     #[serde(rename = "fileIds")]
     pub file_ids: Vec<i64>,
+}
+
+// Supabase Edge Function request format
+#[derive(serde::Serialize)]
+pub struct EdgeFunctionRequest {
+    pub endpoint: String,
+    pub method: String,
+    pub body: GetModFilesRequest,
 } 
