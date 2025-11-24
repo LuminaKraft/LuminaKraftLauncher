@@ -68,10 +68,10 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
         id: instance.id,
         name: instance.name || instance.id, // Use name from metadata, fallback to ID
         version: instance.version,
-        minecraftVersion: instance.minecraft_version,
+        minecraftVersion: instance.minecraftVersion, // Backend uses camelCase via serde rename
         modloader: instance.modloader,
         path: '', // Path is not returned by backend, but we know it's in instances/{id}
-        createdAt: instance.installed_at,
+        createdAt: instance.installedAt, // Backend uses camelCase via serde rename
         lastPlayed: undefined // We don't track last played yet
       }));
 
