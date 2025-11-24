@@ -13,8 +13,8 @@ class AuthService {
   }
 
   /**
-   * Initialize anonymous session in Supabase (DISABLED - using authenticated sessions only)
-   * Users will have authenticated sessions after Microsoft login
+   * Initialize anonymous session in Supabase
+   * This allows users to browse and download modpacks without logging in
    */
   async initializeAnonymousSession(): Promise<boolean> {
     try {
@@ -26,11 +26,18 @@ class AuthService {
         return true;
       }
 
-      // No session - this is OK, will get one after Microsoft login
-      console.log('ℹ️ No Supabase session yet - will be created after Microsoft login');
+      // Create anonymous session
+      const { data, error } = await supabase.auth.signInAnonymously();
+
+      if (error) {
+        console.error('❌ Failed to create anonymous session:', error);
+        return false;
+      }
+
+      console.log('✅ Anonymous Supabase session created');
       return true;
     } catch (error) {
-      console.error('❌ Error checking session:', error);
+      console.error('❌ Error initializing anonymous session:', error);
       return false;
     }
   }
@@ -96,12 +103,14 @@ class AuthService {
 
 
   /**
-   * Sign out from Supabase
+   * Sign out from Supabase and return to anonymous session
    */
   async signOutSupabase(): Promise<void> {
     try {
       await supabase.auth.signOut();
-      console.log('✅ Signed out from Supabase');
+      // Re-initialize anonymous session
+      await this.initializeAnonymousSession();
+      console.log('✅ Signed out from Supabase, anonymous session restored');
     } catch (error) {
       console.error('❌ Error signing out from Supabase:', error);
     }
