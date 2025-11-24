@@ -1082,9 +1082,11 @@ class LauncherService {
         .toLowerCase();
 
       // Create a temporary modpack object from manifest
+      const modpackName = manifest.name || file.name.replace('.zip', '');
       const tempModpack = {
         id: safeName,
-        nombre: manifest.name || file.name.replace('.zip', ''),
+        name: modpackName,  // Add the name field for Rust
+        nombre: modpackName,
         descripcion: manifest.description || '',
         version: manifest.version || '1.0.0',
         minecraftVersion: manifest.minecraft?.version || manifest.minecraftVersion || '1.20.1',
