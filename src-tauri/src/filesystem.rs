@@ -365,6 +365,8 @@ pub async fn create_modpack_with_overrides(
     uploaded_files: Vec<PathBuf>,
     output_zip_path: PathBuf,
 ) -> Result<()> {
+    use std::io::BufReader;
+
     println!("📦 Creating new modpack ZIP with overrides...");
     println!("   Original: {:?}", original_zip_path);
     println!("   Output: {:?}", output_zip_path);
@@ -372,41 +374,39 @@ pub async fn create_modpack_with_overrides(
 
     // Open original ZIP for reading
     let original_file = fs::File::open(&original_zip_path)?;
-    let mut original_archive = ZipArchive::new(original_file)?;
+    let original_file_buffered = BufReader::new(original_file);
+    let mut original_archive = ZipArchive::new(original_file_buffered)?;
 
-    // Create new ZIP for writing
+    // Create new ZIP for writing with buffered writer
     let output_file = fs::File::create(&output_zip_path)?;
-    let mut output_zip = ZipWriter::new(output_file);
+    let output_file_buffered = std::io::BufWriter::new(output_file);
+    let mut output_zip = ZipWriter::new(output_file_buffered);
 
-    // Copy all files from original ZIP to new ZIP
+    // Copy all files from original ZIP to new ZIP using raw copy (faster)
     let total_files = original_archive.len();
-    println!("📁 Copying {} files from original ZIP...", total_files);
+    println!("📁 Copying {} entries from original ZIP...", total_files);
+
     for i in 0..total_files {
         let mut file = original_archive.by_index(i)?;
         let file_name = file.name().to_string();
 
-        // Skip if this is a directory
+        // Skip directories
         if file.is_dir() {
-            println!("   Skipping directory: {}", file_name);
             continue;
         }
 
-        println!("   Copying file {}/{}: {}", i + 1, total_files, file_name);
-
+        // Use stored (no compression) for faster copying, will recompress at end if needed
         let options = SimpleFileOptions::default()
-            .compression_method(file.compression());
+            .compression_method(zip::CompressionMethod::Stored);
 
         output_zip.start_file(&file_name, options)?;
-
         std::io::copy(&mut file, &mut output_zip)?;
-
-        println!("   ✓ Copied {}", file_name);
     }
     println!("✅ Finished copying original files");
 
     // Add uploaded files to overrides folder
-    println!("📁 Adding uploaded files to overrides...");
-    for file_path in uploaded_files {
+    println!("📁 Adding {} uploaded files to overrides...", uploaded_files.len());
+    for (idx, file_path) in uploaded_files.iter().enumerate() {
         if !file_path.exists() {
             println!("⚠️ File does not exist, skipping: {:?}", file_path);
             continue;
@@ -428,22 +428,20 @@ pub async fn create_modpack_with_overrides(
         };
 
         let zip_path = format!("{}/{}", target_folder, file_name);
-        println!("   Adding {} to ZIP at {}", file_name, zip_path);
+        println!("   [{}/{}] Adding {}", idx + 1, uploaded_files.len(), file_name);
 
-        // Read file contents
-        let mut file_contents = Vec::new();
-        let mut file = fs::File::open(&file_path)?;
-        file.read_to_end(&mut file_contents)?;
-
-        // Add to ZIP
+        // Use stored compression for user files too (faster)
         let options = SimpleFileOptions::default()
-            .compression_method(zip::CompressionMethod::Deflated);
+            .compression_method(zip::CompressionMethod::Stored);
 
         output_zip.start_file(&zip_path, options)?;
-        output_zip.write_all(&file_contents)?;
+
+        let mut file = fs::File::open(&file_path)?;
+        std::io::copy(&mut file, &mut output_zip)?;
     }
 
     // Finalize the ZIP
+    println!("📁 Finalizing ZIP file...");
     output_zip.finish()?;
 
     println!("✅ New modpack ZIP created successfully: {:?}", output_zip_path);
