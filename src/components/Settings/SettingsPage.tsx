@@ -418,7 +418,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
                       {getStatusText()}
                     </p>
                     <p className="text-dark-400 text-sm">
-                      Supabase Backend
+                      Servicios de LuminaKraft
                     </p>
                   </div>
                 </div>

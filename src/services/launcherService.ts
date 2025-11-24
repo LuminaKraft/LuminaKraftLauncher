@@ -145,24 +145,24 @@ class LauncherService {
   }
 
   /**
-   * Check if Supabase connection is healthy
+   * Check if backend connection is healthy
    */
   async checkAPIHealth(): Promise<boolean> {
     try {
-      // Test Supabase connection by making a simple query
+      // Test backend connection by making a simple query
       const { data, error } = await supabase
         .from('modpacks')
         .select('id')
         .limit(1);
 
       if (error) {
-        console.error('Supabase health check failed:', error);
+        console.error('Backend health check failed:', error);
         return false;
       }
 
       return true;
     } catch (error) {
-      console.error('Supabase health check failed:', error);
+      console.error('Backend health check failed:', error);
       return false;
     }
   }
@@ -703,16 +703,16 @@ class LauncherService {
   }
 
   /**
-   * Get backend information (Supabase status)
+   * Get backend information
    * This replaces the old API info endpoint
    */
   async getAPIInfo(): Promise<any> {
     try {
-      // Check if Supabase is available
+      // Check if backend is available
       const isHealthy = await this.checkAPIHealth();
 
       return {
-        backend: 'Supabase',
+        backend: 'LuminaKraft Services',
         status: isHealthy ? 'online' : 'offline',
         version: '1.0.0',
         features: ['modpacks', 'authentication', 'statistics', 'file-storage']
@@ -720,7 +720,7 @@ class LauncherService {
     } catch (error) {
       console.error('Error getting backend info:', error);
       return {
-        backend: 'Supabase',
+        backend: 'LuminaKraft Services',
         status: 'offline',
         version: '1.0.0',
         features: []
