@@ -1097,11 +1097,11 @@ class LauncherService {
       const manifestText = await manifestFile.async('text');
       const manifest = JSON.parse(manifestText);
 
-      // Create a safe ID for event names (alphanumeric, -, /, :, _ only)
+      // Create a safe ID for event names and folder names
+      // Keep original case and replace only invalid filesystem characters with underscores
       const safeName = (manifest.name || file.name.replace('.zip', ''))
-        .replace(/[^a-zA-Z0-9\-/:_]/g, '_')
-        .replace(/_{2,}/g, '_')
-        .toLowerCase();
+        .replace(/[^a-zA-Z0-9\-_]/g, '_')
+        .replace(/_{2,}/g, '_');
 
       // Create a temporary modpack object from manifest
       const modpackName = manifest.name || file.name.replace('.zip', '');
