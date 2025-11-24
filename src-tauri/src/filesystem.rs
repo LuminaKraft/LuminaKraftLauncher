@@ -236,6 +236,7 @@ pub async fn list_instances() -> Result<Vec<InstanceMetadata>> {
 #[allow(dead_code)]
 pub fn create_instance_metadata(
     id: String,
+    name: String,
     version: String,
     modloader: String,
     modloader_version: String,
@@ -243,6 +244,7 @@ pub fn create_instance_metadata(
 ) -> InstanceMetadata {
     InstanceMetadata {
         id,
+        name,
         version,
         installed_at: Utc::now().to_rfc3339(),
         modloader,
