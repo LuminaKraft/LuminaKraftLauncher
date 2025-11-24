@@ -866,11 +866,27 @@ class LauncherService {
   }
 
   /**
+   * Check if a string is a valid UUID
+   */
+  private isValidUUID(str: string): boolean {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(str);
+  }
+
+  /**
    * Track modpack download in Supabase stats
    * Increments the download counter for the modpack
+   * Only tracks downloads for modpacks from the server (with valid UUID)
    */
   async trackDownload(modpackId: string): Promise<void> {
     try {
+      // Only track downloads for modpacks with valid UUIDs (from server)
+      // Imported modpacks use slugified names as IDs, skip tracking for those
+      if (!this.isValidUUID(modpackId)) {
+        console.log(`⏭️  Skipping download tracking for non-UUID modpack: ${modpackId}`);
+        return;
+      }
+
       // Get current user ID (anonymous or authenticated)
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id || null;
