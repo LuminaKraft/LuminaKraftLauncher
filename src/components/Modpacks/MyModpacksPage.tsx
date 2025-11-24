@@ -85,6 +85,8 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
   };
 
   const handleImportModpack = () => {
+    // Reset validating state in case it got stuck
+    setValidating(false);
     fileInputRef.current?.click();
   };
 
