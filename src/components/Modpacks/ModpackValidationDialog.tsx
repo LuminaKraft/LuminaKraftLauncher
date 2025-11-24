@@ -1,13 +1,14 @@
-import React from 'react';
-import { X, AlertTriangle, CheckCircle, ExternalLink, FileArchive, Package } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, AlertTriangle, CheckCircle, ExternalLink, FileArchive, Package, Upload } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
+import toast from 'react-hot-toast';
 import { ModFileInfo } from '../../services/modpackValidationService';
 import ModpackValidationService from '../../services/modpackValidationService';
 
 interface ModpackValidationDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onContinue: () => void;
+  onContinue: (uploadedFiles?: Map<string, File>) => void;
   modpackName: string;
   modsWithoutUrl: ModFileInfo[];
   modsInOverrides: string[];
@@ -22,11 +23,13 @@ export const ModpackValidationDialog: React.FC<ModpackValidationDialogProps> = (
   modsInOverrides
 }) => {
   const validationService = ModpackValidationService.getInstance();
+  const [uploadedFiles, setUploadedFiles] = useState<Map<string, File>>(new Map());
+
   const missingMods = modsWithoutUrl.filter(
     mod => !modsInOverrides.includes(mod.fileName)
   );
 
-  const canContinue = missingMods.length === 0;
+  const canContinue = missingMods.length === 0 || missingMods.every(mod => uploadedFiles.has(mod.fileName));
 
   const handleOpenUrl = async (url: string) => {
     try {
@@ -37,6 +40,25 @@ export const ModpackValidationDialog: React.FC<ModpackValidationDialogProps> = (
       console.warn('Tauri command not available, using fallback:', error);
       window.open(url, '_blank', 'noopener,noreferrer');
     }
+  };
+
+  const handleFileUpload = (mod: ModFileInfo, file: File) => {
+    // Validate it's a JAR or ZIP file
+    if (!file.name.endsWith('.jar') && !file.name.endsWith('.zip')) {
+      toast.error('Please upload a .jar or .zip file');
+      return;
+    }
+
+    const newFiles = new Map(uploadedFiles);
+    newFiles.set(mod.fileName, file);
+    setUploadedFiles(newFiles);
+    toast.success(`${file.name} uploaded`);
+  };
+
+  const handleRemoveFile = (fileName: string) => {
+    const newFiles = new Map(uploadedFiles);
+    newFiles.delete(fileName);
+    setUploadedFiles(newFiles);
   };
 
   if (!isOpen) return null;
@@ -104,15 +126,17 @@ export const ModpackValidationDialog: React.FC<ModpackValidationDialogProps> = (
             <div className="mb-6">
               <h4 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
                 <FileArchive className="w-4 h-4" />
-                Mods Without Auto-Download ({modsWithoutUrl.length})
+                Files Without Auto-Download ({modsWithoutUrl.length})
               </h4>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                These mods cannot be downloaded automatically and must be included in the overrides/mods/ folder:
+                These files (mods/resourcepacks) cannot be downloaded automatically. You can upload them here or include them in the overrides folder:
               </p>
 
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {modsWithoutUrl.map((mod, index) => {
                   const isInOverrides = modsInOverrides.includes(mod.fileName);
+                  const uploadedFile = uploadedFiles.get(mod.fileName);
+                  const isResolved = isInOverrides || uploadedFile !== undefined;
                   const curseforgeUrl = mod.modWebsiteUrl
                     ? `${mod.modWebsiteUrl}/files/${mod.id}`
                     : `https://www.curseforge.com/minecraft/mc-mods/search?search=${encodeURIComponent(mod.fileName)}`;
@@ -121,7 +145,7 @@ export const ModpackValidationDialog: React.FC<ModpackValidationDialogProps> = (
                     <div
                       key={index}
                       className={`p-3 rounded-lg border ${
-                        isInOverrides
+                        isResolved
                           ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800'
                           : 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800'
                       }`}
@@ -129,7 +153,7 @@ export const ModpackValidationDialog: React.FC<ModpackValidationDialogProps> = (
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            {isInOverrides ? (
+                            {isResolved ? (
                               <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
                             ) : (
                               <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0" />
@@ -144,19 +168,54 @@ export const ModpackValidationDialog: React.FC<ModpackValidationDialogProps> = (
                           <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
                             Status: {validationService.getFileStatusText(mod.fileStatus)}
                             {' • '}
-                            {isInOverrides ? 'Found in overrides' : 'Missing from overrides'}
+                            {isInOverrides
+                              ? 'Found in overrides'
+                              : uploadedFile
+                                ? `Uploaded: ${uploadedFile.name}`
+                                : 'Missing from overrides'}
                           </p>
                         </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenUrl(curseforgeUrl);
-                          }}
-                          className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors flex-shrink-0"
-                        >
-                          <ExternalLink className="w-3 h-3" />
-                          Download
-                        </button>
+                        <div className="flex gap-2 flex-shrink-0">
+                          {!isInOverrides && !uploadedFile && (
+                            <>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenUrl(curseforgeUrl);
+                                }}
+                                className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                                Download
+                              </button>
+                              <label className="flex items-center gap-1 px-2 py-1 text-xs bg-green-600 hover:bg-green-700 text-white rounded transition-colors cursor-pointer">
+                                <Upload className="w-3 h-3" />
+                                Upload
+                                <input
+                                  type="file"
+                                  accept=".jar,.zip"
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                      handleFileUpload(mod, file);
+                                      e.target.value = ''; // Reset input
+                                    }
+                                  }}
+                                />
+                              </label>
+                            </>
+                          )}
+                          {uploadedFile && (
+                            <button
+                              onClick={() => handleRemoveFile(mod.fileName)}
+                              className="flex items-center gap-1 px-2 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
+                            >
+                              <X className="w-3 h-3" />
+                              Remove
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
@@ -165,18 +224,30 @@ export const ModpackValidationDialog: React.FC<ModpackValidationDialogProps> = (
             </div>
           )}
 
-          {/* Instructions for missing mods */}
-          {!canContinue && (
+          {/* Instructions for missing files */}
+          {missingMods.length > 0 && missingMods.some(mod => !uploadedFiles.has(mod.fileName)) && (
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
               <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
-                How to fix this:
+                Two ways to fix this:
               </h4>
-              <ol className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-decimal list-inside">
-                <li>Click "Download" next to each missing mod</li>
-                <li>Download the .jar file from CurseForge</li>
-                <li>Add the .jar file to the overrides/mods/ folder in your modpack ZIP</li>
-                <li>Re-import the modpack</li>
-              </ol>
+              <div className="text-sm text-blue-800 dark:text-blue-200 space-y-3">
+                <div>
+                  <p className="font-medium mb-1">Option 1: Upload files directly (Recommended)</p>
+                  <ol className="space-y-1 list-decimal list-inside ml-2">
+                    <li>Click "Download" to get each file from CurseForge</li>
+                    <li>Click "Upload" to attach the downloaded .jar or .zip file</li>
+                    <li>Continue with import once all files are uploaded</li>
+                  </ol>
+                </div>
+                <div>
+                  <p className="font-medium mb-1">Option 2: Add to modpack ZIP manually</p>
+                  <ol className="space-y-1 list-decimal list-inside ml-2">
+                    <li>Download the files from CurseForge</li>
+                    <li>Add them to overrides/mods/ or overrides/resourcepacks/ in your ZIP</li>
+                    <li>Re-import the modpack</li>
+                  </ol>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -190,7 +261,7 @@ export const ModpackValidationDialog: React.FC<ModpackValidationDialogProps> = (
             Cancel
           </button>
           <button
-            onClick={onContinue}
+            onClick={() => onContinue(uploadedFiles.size > 0 ? uploadedFiles : undefined)}
             disabled={!canContinue}
             className={`px-4 py-2 rounded-lg transition-colors ${
               canContinue
@@ -198,7 +269,7 @@ export const ModpackValidationDialog: React.FC<ModpackValidationDialogProps> = (
                 : 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
             }`}
           >
-            {canContinue ? 'Import Modpack' : 'Cannot Import Yet'}
+            {canContinue ? (uploadedFiles.size > 0 ? `Import with ${uploadedFiles.size} file(s)` : 'Import Modpack') : 'Cannot Import Yet'}
           </button>
         </div>
       </div>

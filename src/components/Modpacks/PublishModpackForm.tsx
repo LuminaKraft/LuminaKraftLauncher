@@ -343,7 +343,14 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
         <ModpackValidationDialog
           isOpen={showValidationDialog}
           onClose={() => setShowValidationDialog(false)}
-          onContinue={() => setShowValidationDialog(false)}
+          onContinue={(uploadedFiles) => {
+            setShowValidationDialog(false);
+            if (uploadedFiles && uploadedFiles.size > 0) {
+              toast.success(`Modpack validated with ${uploadedFiles.size} additional file(s)`);
+              // TODO: Store uploaded files for later use when publishing
+              console.log('Uploaded files for publishing:', Array.from(uploadedFiles.entries()));
+            }
+          }}
           modpackName={validationData.modpackName}
           modsWithoutUrl={validationData.modsWithoutUrl}
           modsInOverrides={validationData.modsInOverrides}

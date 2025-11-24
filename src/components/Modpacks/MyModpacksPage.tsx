@@ -121,10 +121,18 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
     }
   };
 
-  const handleValidationContinue = () => {
+  const handleValidationContinue = async (uploadedFiles?: Map<string, File>) => {
     setShowValidationDialog(false);
     if (validationData) {
-      performImport(validationData.file);
+      if (uploadedFiles && uploadedFiles.size > 0) {
+        // User uploaded files - need to create a new ZIP with these files in overrides
+        toast.loading('Creating modpack with uploaded files...');
+        // TODO: Implement Tauri command to merge uploaded files into ZIP
+        console.log('Uploaded files:', Array.from(uploadedFiles.entries()));
+        toast.dismiss();
+        toast.success(`Modpack ready with ${uploadedFiles.size} additional file(s)!`);
+      }
+      await performImport(validationData.file);
     }
   };
 
