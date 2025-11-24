@@ -441,7 +441,9 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
                   {modpack.name}
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  v{modpack.version} " {modpack.minecraftVersion} " {modpack.modloader}
+                  {modpack.version && `v${modpack.version}`}
+                  {modpack.minecraftVersion && ` • Minecraft ${modpack.minecraftVersion}`}
+                  {modpack.modloader && ` • ${modpack.modloader.charAt(0).toUpperCase() + modpack.modloader.slice(1)}`}
                 </p>
 
                 {modpack.lastPlayed && (
