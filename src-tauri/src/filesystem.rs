@@ -379,8 +379,9 @@ pub async fn create_modpack_with_overrides(
     let mut output_zip = ZipWriter::new(output_file);
 
     // Copy all files from original ZIP to new ZIP
-    println!("📁 Copying {} files from original ZIP...", original_archive.len());
-    for i in 0..original_archive.len() {
+    let total_files = original_archive.len();
+    println!("📁 Copying {} files from original ZIP...", total_files);
+    for i in 0..total_files {
         let mut file = original_archive.by_index(i)?;
         let file_name = file.name().to_string();
 
@@ -390,7 +391,7 @@ pub async fn create_modpack_with_overrides(
             continue;
         }
 
-        println!("   Copying file {}/{}: {}", i + 1, original_archive.len(), file_name);
+        println!("   Copying file {}/{}: {}", i + 1, total_files, file_name);
 
         let options = SimpleFileOptions::default()
             .compression_method(file.compression());
