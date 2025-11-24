@@ -44,12 +44,22 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
   const loadLocalModpacks = async () => {
     try {
       setLoading(true);
-      // TODO: Implement backend command to get local modpacks
-      // const modpacks = await invoke<LocalModpack[]>('get_local_modpacks');
-      // setLocalModpacks(modpacks);
+      const result = await invoke<string>('get_local_modpacks');
+      const instances = JSON.parse(result);
 
-      // Placeholder for now
-      setLocalModpacks([]);
+      // Map instances to LocalModpack format
+      const modpacks: LocalModpack[] = instances.map((instance: any) => ({
+        id: instance.id,
+        name: instance.id, // Use ID as name for now, could be improved
+        version: instance.version,
+        minecraftVersion: instance.minecraft_version,
+        modloader: instance.modloader,
+        path: '', // Path is not returned by backend, but we know it's in instances/{id}
+        createdAt: instance.installed_at,
+        lastPlayed: undefined // We don't track last played yet
+      }));
+
+      setLocalModpacks(modpacks);
     } catch (error) {
       console.error('Error loading local modpacks:', error);
       toast.error('Failed to load local modpacks');

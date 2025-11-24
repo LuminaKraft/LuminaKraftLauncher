@@ -124,6 +124,19 @@ async fn get_instance_metadata(modpack_id: String) -> Result<Option<String>, Str
 }
 
 #[tauri::command]
+async fn get_local_modpacks() -> Result<String, String> {
+    match filesystem::list_instances().await {
+        Ok(instances) => {
+            match serde_json::to_string(&instances) {
+                Ok(json) => Ok(json),
+                Err(e) => Err(format!("Failed to serialize instances: {}", e)),
+            }
+        }
+        Err(e) => Err(format!("Failed to list instances: {}", e)),
+    }
+}
+
+#[tauri::command]
 async fn install_modpack(modpack: Modpack) -> Result<(), String> {
     // Validate modpack before installation
     if let Err(e) = launcher::validate_modpack(&modpack) {
@@ -894,6 +907,7 @@ fn main() {
         .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![
             get_instance_metadata,
+            get_local_modpacks,
             install_modpack,
             install_modpack_with_minecraft,
             install_modpack_with_failed_tracking,
