@@ -154,9 +154,20 @@ where
         // Download and extract modpack
         let temp_zip_path = app_data_dir.join("temp").join(format!("{}.zip", modpack.id));
         std::fs::create_dir_all(temp_zip_path.parent().unwrap())?;
-        
-        emit_progress("progress.downloadingModpackFiles".to_string(), 75.0, "downloading_modpack".to_string());
-        download_file(&modpack.url_modpack_zip, &temp_zip_path).await?;
+
+        // Check if it's a local file path or remote URL
+        let is_local_file = !modpack.url_modpack_zip.starts_with("http://") &&
+                           !modpack.url_modpack_zip.starts_with("https://");
+
+        if is_local_file {
+            // It's a local file, just copy it
+            emit_progress("Copiando modpack local...".to_string(), 75.0, "copying_modpack".to_string());
+            std::fs::copy(&modpack.url_modpack_zip, &temp_zip_path)?;
+        } else {
+            // It's a remote URL, download it
+            emit_progress("progress.downloadingModpackFiles".to_string(), 75.0, "downloading_modpack".to_string());
+            download_file(&modpack.url_modpack_zip, &temp_zip_path).await?;
+        }
         
         // Check if it's a CurseForge modpack
         let is_curseforge_modpack = match lyceris::util::extract::read_file_from_jar(&temp_zip_path, "manifest.json") {
