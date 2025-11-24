@@ -64,15 +64,15 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
     }
   ];
 
-  // Add "My Modpacks" if user can manage
+  // Add "Published Modpacks" if user can manage (authenticated)
   const menuItems = canManageModpacks
     ? [
         baseMenuItems[0], // Home
         {
-          id: 'my-modpacks',
-          label: 'My Modpacks',
+          id: 'published-modpacks',
+          label: 'Published Modpacks',
           icon: FolderOpen,
-          description: 'Manage your modpacks'
+          description: 'Manage your published modpacks'
         },
         ...baseMenuItems.slice(1) // Settings, About
       ]

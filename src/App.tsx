@@ -3,9 +3,9 @@ import { LauncherProvider, useLauncher } from './contexts/LauncherContext';
 import { AnimationProvider, useAnimation } from './contexts/AnimationContext';
 import Sidebar from './components/Layout/Sidebar';
 import ModpacksPage from './components/Modpacks/ModpacksPage';
-import CreateModpackForm from './components/Modpacks/CreateModpackForm';
+import PublishModpackForm from './components/Modpacks/PublishModpackForm';
 import EditModpackForm from './components/Modpacks/EditModpackForm';
-import MyModpacksPage from './components/Modpacks/MyModpacksPage';
+import PublishedModpacksPage from './components/Modpacks/PublishedModpacksPage';
 import SettingsPage from './components/Settings/SettingsPage';
 import AboutPage from './components/About/AboutPage';
 import UpdateDialog from './components/UpdateDialog';
@@ -127,15 +127,15 @@ function AppContent() {
     switch (activeSection) {
       case 'home':
         return <ModpacksPage key={modpacksPageKey} />;
-      case 'my-modpacks':
-        return <MyModpacksPage onNavigate={handleModpackNavigation} />;
-      case 'create-modpack':
-        return <CreateModpackForm onNavigate={handleModpackNavigation} />;
+      case 'published-modpacks':
+        return <PublishedModpacksPage onNavigate={handleModpackNavigation} />;
+      case 'publish-modpack':
+        return <PublishModpackForm onNavigate={handleModpackNavigation} />;
       case 'edit-modpack':
         return selectedModpackId ? (
           <EditModpackForm modpackId={selectedModpackId} onNavigate={handleModpackNavigation} />
         ) : (
-          <MyModpacksPage onNavigate={handleModpackNavigation} />
+          <PublishedModpacksPage onNavigate={handleModpackNavigation} />
         );
       case 'settings':
         return <SettingsPage onNavigationBlocked={() => {}} />;

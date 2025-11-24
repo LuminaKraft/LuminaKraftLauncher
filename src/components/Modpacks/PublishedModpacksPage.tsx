@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import { Plus, Edit, Trash2, Eye, EyeOff } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, EyeOff, Download, TrendingUp } from 'lucide-react';
 import ModpackManagementService from '../../services/modpackManagementService';
 
 interface Modpack {
@@ -17,13 +17,14 @@ interface Modpack {
   logo_url: string | null;
   created_at: string;
   updated_at: string;
+  downloads?: number;
 }
 
-interface MyModpacksPageProps {
+interface PublishedModpacksPageProps {
   onNavigate?: (section: string, modpackId?: string) => void;
 }
 
-export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
+export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps) {
   const { t, i18n } = useTranslation();
   const service = ModpackManagementService.getInstance();
 
@@ -44,7 +45,7 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
       setCanManage(hasPermission);
 
       if (!hasPermission) {
-        toast.error('You do not have permission to manage modpacks');
+        toast.error('You need to authenticate with Microsoft to publish modpacks');
         onNavigate?.('home');
         return;
       }
@@ -150,30 +151,39 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
   return (
     <div className="max-w-7xl mx-auto p-6">
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-          My Modpacks
-        </h1>
-        <button
-          onClick={() => onNavigate?.('create-modpack')}
-          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
-        >
-          <Plus className="w-5 h-5" />
-          Create Modpack
-        </button>
+      <div className="mb-6">
+        <div className="flex justify-between items-center mb-2">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            Published Modpacks
+          </h1>
+          <button
+            onClick={() => onNavigate?.('publish-modpack')}
+            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            Publish New Modpack
+          </button>
+        </div>
+        <p className="text-gray-600 dark:text-gray-400">
+          Manage your publicly published modpacks on the platform
+        </p>
       </div>
 
       {/* Modpacks List */}
       {modpacks.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-lg p-12 shadow-md text-center">
-          <p className="text-gray-600 dark:text-gray-400 mb-4">
-            You haven't created any modpacks yet
+          <Plus className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+            No published modpacks yet
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            Publish your first modpack to share it with the community
           </p>
           <button
-            onClick={() => onNavigate?.('create-modpack')}
+            onClick={() => onNavigate?.('publish-modpack')}
             className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors inline-block"
           >
-            Create Your First Modpack
+            Publish Your First Modpack
           </button>
         </div>
       ) : (
@@ -227,10 +237,20 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
                 </div>
 
                 {/* Badges */}
-                <div className="flex gap-2 mb-4">
+                <div className="flex gap-2 mb-3">
                   {getCategoryBadge(modpack.category)}
                   {getStatusBadge(modpack.upload_status)}
                 </div>
+
+                {/* Stats */}
+                {modpack.downloads !== undefined && (
+                  <div className="flex items-center gap-4 mb-4 text-sm text-gray-600 dark:text-gray-400">
+                    <div className="flex items-center gap-1">
+                      <Download className="w-4 h-4" />
+                      <span>{modpack.downloads || 0}</span>
+                    </div>
+                  </div>
+                )}
 
                 {/* Actions */}
                 <div className="flex flex-col gap-2">
@@ -282,4 +302,4 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
   );
 }
 
-export default MyModpacksPage;
+export default PublishedModpacksPage;

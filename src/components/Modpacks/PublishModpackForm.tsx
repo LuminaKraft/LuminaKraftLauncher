@@ -24,11 +24,11 @@ interface FormData {
   features: Feature[];
 }
 
-interface CreateModpackFormProps {
+interface PublishModpackFormProps {
   onNavigate?: (section: string) => void;
 }
 
-export function CreateModpackForm({ onNavigate }: CreateModpackFormProps) {
+export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
   const { t } = useTranslation();
   const service = ModpackManagementService.getInstance();
 
@@ -282,8 +282,8 @@ export function CreateModpackForm({ onNavigate }: CreateModpackFormProps) {
         await service.updateModpack(modpackId, { isActive: true });
       }
 
-      toast.success('Modpack created successfully!');
-      onNavigate?.('my-modpacks');
+      toast.success('Modpack published successfully!');
+      onNavigate?.('published-modpacks');
     } catch (error) {
       console.error('Error creating modpack:', error);
       toast.error('Failed to create modpack');
@@ -294,9 +294,14 @@ export function CreateModpackForm({ onNavigate }: CreateModpackFormProps) {
 
   return (
     <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-white">
-        Create Modpack
-      </h1>
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+          Publish Modpack
+        </h1>
+        <p className="text-gray-600 dark:text-gray-400">
+          Share your modpack with the LuminaKraft community
+        </p>
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Step 1: Upload ZIP File */}
@@ -772,12 +777,12 @@ export function CreateModpackForm({ onNavigate }: CreateModpackFormProps) {
             disabled={isUploading}
             className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
           >
-            {isUploading ? `Uploading... ${Math.round(uploadProgress)}%` : 'Create Modpack'}
+            {isUploading ? `Publishing... ${Math.round(uploadProgress)}%` : 'Publish Modpack'}
           </button>
 
           <button
             type="button"
-            onClick={() => onNavigate?.('my-modpacks')}
+            onClick={() => onNavigate?.('published-modpacks')}
             disabled={isUploading}
             className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 font-medium transition-colors"
           >
@@ -789,4 +794,4 @@ export function CreateModpackForm({ onNavigate }: CreateModpackFormProps) {
   );
 }
 
-export default CreateModpackForm;
+export default PublishModpackForm;
