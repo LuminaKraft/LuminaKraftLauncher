@@ -24,6 +24,7 @@ export const ModpackValidationDialog: React.FC<ModpackValidationDialogProps> = (
 }) => {
   const validationService = ModpackValidationService.getInstance();
   const [uploadedFiles, setUploadedFiles] = useState<Map<string, File>>(new Map());
+  const [isDragging, setIsDragging] = useState(false);
 
   const missingMods = modsWithoutUrl.filter(
     mod => !modsInOverrides.includes(mod.fileName)
@@ -55,10 +56,69 @@ export const ModpackValidationDialog: React.FC<ModpackValidationDialogProps> = (
     toast.success(`${file.name} uploaded`);
   };
 
+  const handleBulkFileUpload = (files: FileList | File[]) => {
+    const fileArray = Array.from(files);
+    const validFiles = fileArray.filter(f => f.name.endsWith('.jar') || f.name.endsWith('.zip'));
+
+    if (validFiles.length === 0) {
+      toast.error('No valid .jar or .zip files found');
+      return;
+    }
+
+    const newFiles = new Map(uploadedFiles);
+    let matchedCount = 0;
+
+    // Try to match each file with a missing mod by filename
+    validFiles.forEach(file => {
+      const matchingMod = missingMods.find(mod => {
+        // Try exact match first
+        if (mod.fileName.toLowerCase() === file.name.toLowerCase()) return true;
+        // Try without extension
+        const modNameWithoutExt = mod.fileName.replace(/\.(jar|zip)$/i, '');
+        const fileNameWithoutExt = file.name.replace(/\.(jar|zip)$/i, '');
+        return modNameWithoutExt.toLowerCase() === fileNameWithoutExt.toLowerCase();
+      });
+
+      if (matchingMod) {
+        newFiles.set(matchingMod.fileName, file);
+        matchedCount++;
+      }
+    });
+
+    setUploadedFiles(newFiles);
+
+    if (matchedCount > 0) {
+      toast.success(`${matchedCount} file(s) matched and uploaded`);
+    }
+    if (validFiles.length > matchedCount) {
+      toast.warning(`${validFiles.length - matchedCount} file(s) could not be matched`);
+    }
+  };
+
   const handleRemoveFile = (fileName: string) => {
     const newFiles = new Map(uploadedFiles);
     newFiles.delete(fileName);
     setUploadedFiles(newFiles);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      handleBulkFileUpload(files);
+    }
   };
 
   if (!isOpen) return null;
@@ -131,6 +191,45 @@ export const ModpackValidationDialog: React.FC<ModpackValidationDialogProps> = (
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                 These files (mods/resourcepacks) cannot be downloaded automatically. You can upload them here or include them in the overrides folder:
               </p>
+
+              {/* Bulk Upload / Drag & Drop Zone */}
+              {missingMods.length > 0 && (
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`mb-4 border-2 border-dashed rounded-lg p-4 text-center transition-all ${
+                    isDragging
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                      : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500'
+                  }`}
+                >
+                  <div className="flex flex-col items-center gap-2">
+                    <Upload className="w-8 h-8 text-gray-400" />
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      Drop all files here or click to browse
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-500">
+                      Files will be automatically matched by name ({missingMods.length - uploadedFiles.size} remaining)
+                    </p>
+                    <label className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors cursor-pointer">
+                      Select Multiple Files
+                      <input
+                        type="file"
+                        multiple
+                        accept=".jar,.zip"
+                        className="hidden"
+                        onChange={(e) => {
+                          if (e.target.files) {
+                            handleBulkFileUpload(e.target.files);
+                            e.target.value = ''; // Reset input
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {modsWithoutUrl.map((mod, index) => {
