@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
-import type { MicrosoftAccount } from '../types/launcher';
+import type { MicrosoftAccount, CurseForgeManifest, ParsedModpackData } from '../types/launcher';
+import JSZip from 'jszip';
 
 /**
  * Service for managing modpack creation and updates
@@ -61,6 +62,62 @@ export class ModpackManagementService {
     } catch (error) {
       console.error('Error checking user permissions:', error);
       return { canManage: false, role: null };
+    }
+  }
+
+  /**
+   * Parse manifest.json from a CurseForge/Modrinth modpack ZIP
+   * Extracts metadata like version, modloader, etc.
+   */
+  async parseManifestFromZip(zipFile: File): Promise<{ success: boolean; data?: ParsedModpackData; error?: string }> {
+    try {
+      console.log('📦 Parsing manifest from ZIP:', zipFile.name);
+
+      // Load ZIP file
+      const zip = new JSZip();
+      const zipData = await zip.loadAsync(zipFile);
+
+      // Look for manifest.json
+      const manifestFile = zipData.file('manifest.json');
+      if (!manifestFile) {
+        return { success: false, error: 'No manifest.json found in ZIP' };
+      }
+
+      // Parse manifest
+      const manifestText = await manifestFile.async('text');
+      const manifest: CurseForgeManifest = JSON.parse(manifestText);
+
+      // Extract modloader info from ID (e.g., "forge-47.4.2")
+      const primaryModLoader = manifest.minecraft.modLoaders.find(ml => ml.primary);
+      if (!primaryModLoader) {
+        return { success: false, error: 'No primary modloader found in manifest' };
+      }
+
+      const modloaderParts = primaryModLoader.id.split('-');
+      if (modloaderParts.length < 2) {
+        return { success: false, error: 'Invalid modloader format in manifest' };
+      }
+
+      const modloader = modloaderParts[0].toLowerCase() as 'forge' | 'fabric' | 'neoforge' | 'quilt';
+      const modloaderVersion = modloaderParts.slice(1).join('-'); // Handle versions like "1.20.1-47.4.2"
+
+      // Build parsed data
+      const parsedData: ParsedModpackData = {
+        name: manifest.name,
+        version: manifest.version || '1.0.0',
+        author: manifest.author || '',
+        minecraftVersion: manifest.minecraft.version,
+        modloader,
+        modloaderVersion,
+        recommendedRam: manifest.minecraft.recommendedRam,
+        files: manifest.files
+      };
+
+      console.log('✅ Manifest parsed successfully:', parsedData);
+      return { success: true, data: parsedData };
+    } catch (error) {
+      console.error('❌ Error parsing manifest from ZIP:', error);
+      return { success: false, error: 'Failed to parse manifest from ZIP' };
     }
   }
 
@@ -476,6 +533,113 @@ export class ModpackManagementService {
     } catch (error) {
       console.error('Error getting user modpacks:', error);
       return [];
+    }
+  }
+
+  /**
+   * Delete a modpack and all its associated files from R2
+   */
+  async deleteModpack(modpackId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      console.log('🗑️ Deleting modpack:', modpackId);
+
+      if (!this.microsoftAccount) {
+        return { success: false, error: 'User not authenticated with Microsoft' };
+      }
+
+      // Get modpack details to verify ownership and get file paths
+      const { data: modpack, error: modpackError } = await supabase
+        .from('modpacks')
+        .select('id, author_id, modpack_file_path, logo_url, banner_url')
+        .eq('id', modpackId)
+        .single();
+
+      if (modpackError || !modpack) {
+        return { success: false, error: 'Modpack not found' };
+      }
+
+      // Get user ID
+      const { data: userData } = await supabase
+        .from('users')
+        .select('id, role')
+        .eq('microsoft_id', this.microsoftAccount.xuid)
+        .single();
+
+      if (!userData) {
+        return { success: false, error: 'User profile not found' };
+      }
+
+      // Check permissions (owner or admin)
+      if (modpack.author_id !== userData.id && userData.role !== 'admin') {
+        return { success: false, error: 'Insufficient permissions to delete this modpack' };
+      }
+
+      // Get all screenshot paths
+      const { data: images } = await supabase
+        .from('modpack_images')
+        .select('image_path')
+        .eq('modpack_id', modpackId);
+
+      // Collect all file paths to delete
+      const filePaths: string[] = [];
+      if (modpack.modpack_file_path) filePaths.push(modpack.modpack_file_path);
+      if (modpack.logo_url) {
+        // Extract path from URL
+        const logoPath = modpack.logo_url.split('/').slice(3).join('/');
+        filePaths.push(logoPath);
+      }
+      if (modpack.banner_url) {
+        // Extract path from URL
+        const bannerPath = modpack.banner_url.split('/').slice(3).join('/');
+        filePaths.push(bannerPath);
+      }
+      if (images) {
+        images.forEach(img => {
+          if (img.image_path) filePaths.push(img.image_path);
+        });
+      }
+
+      console.log('📁 Files to delete:', filePaths);
+
+      // Delete files from R2 using Edge Function
+      if (filePaths.length > 0) {
+        const { data: { session } } = await supabase.auth.getSession();
+        const functionUrl = `${supabase.supabaseUrl}/functions/v1/delete-modpack-files`;
+
+        const response = await fetch(functionUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session?.access_token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            modpackId,
+            filePaths
+          })
+        });
+
+        if (!response.ok) {
+          console.error('Failed to delete files from R2');
+          // Continue with database deletion even if R2 deletion fails
+        }
+      }
+
+      // Delete modpack from database (cascade will delete related records)
+      const { error: deleteError } = await supabase
+        .from('modpacks')
+        .delete()
+        .eq('id', modpackId);
+
+      if (deleteError) {
+        console.error('Error deleting modpack from database:', deleteError);
+        return { success: false, error: deleteError.message };
+      }
+
+      console.log('✅ Modpack deleted successfully');
+      return { success: true };
+    } catch (error) {
+      console.error('Error deleting modpack:', error);
+      return { success: false, error: 'Failed to delete modpack' };
     }
   }
 }

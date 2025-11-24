@@ -177,4 +177,45 @@ export interface FailedMod {
   projectId: number;
   fileId: number;
   fileName?: string;
+}
+
+/**
+ * CurseForge/Modrinth Manifest Types
+ * For parsing modpack ZIP files
+ */
+export interface CurseForgeManifest {
+  minecraft: {
+    version: string;
+    modLoaders: Array<{
+      id: string; // e.g., "forge-47.4.2"
+      primary: boolean;
+    }>;
+    recommendedRam?: number;
+  };
+  manifestType: string;
+  manifestVersion: number;
+  name: string;
+  version: string;
+  author: string;
+  files: Array<{
+    projectID: number;
+    fileID: number;
+    required: boolean;
+  }>;
+  overrides: string;
+}
+
+export interface ParsedModpackData {
+  name: string;
+  version: string;
+  author: string;
+  minecraftVersion: string;
+  modloader: 'forge' | 'fabric' | 'neoforge' | 'quilt';
+  modloaderVersion: string;
+  recommendedRam?: number;
+  files: Array<{
+    projectID: number;
+    fileID: number;
+    required: boolean;
+  }>;
 } 

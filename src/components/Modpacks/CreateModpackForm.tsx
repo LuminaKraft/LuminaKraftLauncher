@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, Upload, FileArchive } from 'lucide-react';
 import ModpackManagementService from '../../services/modpackManagementService';
 
 interface Feature {
@@ -50,6 +50,10 @@ export function CreateModpackForm({ onNavigate }: CreateModpackFormProps) {
   const [screenshotFiles, setScreenshotFiles] = useState<File[]>([]);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isParsing, setIsParsing] = useState(false);
+  const [manifestParsed, setManifestParsed] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const updateFormData = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -94,6 +98,78 @@ export function CreateModpackForm({ onNavigate }: CreateModpackFormProps) {
         i === index ? { ...feature, icon } : feature
       )
     }));
+  };
+
+  const handleZipFile = async (file: File) => {
+    if (!file.name.endsWith('.zip')) {
+      toast.error('Please select a ZIP file');
+      return;
+    }
+
+    setZipFile(file);
+    setManifestParsed(false);
+
+    // Automatically parse manifest
+    await parseManifest(file);
+  };
+
+  const parseManifest = async (file: File) => {
+    setIsParsing(true);
+    try {
+      const result = await service.parseManifestFromZip(file);
+
+      if (!result.success || !result.data) {
+        toast.error(result.error || 'Failed to parse manifest.json');
+        return;
+      }
+
+      const data = result.data;
+
+      // Auto-fill form with parsed data
+      setFormData(prev => ({
+        ...prev,
+        name: {
+          en: data.name || prev.name.en,
+          es: data.name || prev.name.es
+        },
+        version: data.version || prev.version,
+        minecraftVersion: data.minecraftVersion || prev.minecraftVersion,
+        modloader: data.modloader || prev.modloader,
+        modloaderVersion: data.modloaderVersion || prev.modloaderVersion
+      }));
+
+      setManifestParsed(true);
+      toast.success('Manifest parsed! Form auto-filled with modpack data.');
+    } catch (error) {
+      console.error('Error parsing manifest:', error);
+      toast.error('Failed to parse manifest');
+    } finally {
+      setIsParsing(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    const zipFile = files.find(f => f.name.endsWith('.zip'));
+
+    if (zipFile) {
+      await handleZipFile(zipFile);
+    } else {
+      toast.error('Please drop a ZIP file');
+    }
   };
 
   const validateForm = (): boolean => {
@@ -605,23 +681,96 @@ export function CreateModpackForm({ onNavigate }: CreateModpackFormProps) {
             Modpack File
           </h2>
 
-          <div>
-            <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-              Modpack ZIP File *
-            </label>
+          {/* Drag & Drop Zone */}
+          <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+            className={`
+              relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all
+              ${isDragging
+                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500'
+              }
+            `}
+          >
             <input
+              ref={fileInputRef}
               type="file"
               accept=".zip"
-              onChange={(e) => setZipFile(e.target.files?.[0] || null)}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleZipFile(file);
+              }}
+              className="hidden"
               required
             />
-            {zipFile && (
-              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                Selected: {zipFile.name} ({(zipFile.size / 1024 / 1024).toFixed(2)} MB)
-              </p>
-            )}
+
+            <div className="flex flex-col items-center gap-4">
+              {isParsing ? (
+                <>
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                  <p className="text-gray-600 dark:text-gray-400">Parsing manifest.json...</p>
+                </>
+              ) : zipFile ? (
+                <>
+                  <FileArchive className="w-12 h-12 text-green-600" />
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {zipFile.name}
+                    </p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {(zipFile.size / 1024 / 1024).toFixed(2)} MB
+                    </p>
+                    {manifestParsed && (
+                      <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+                        ✓ Manifest parsed successfully
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setZipFile(null);
+                      setManifestParsed(false);
+                      if (fileInputRef.current) fileInputRef.current.value = '';
+                    }}
+                    className="text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                  >
+                    Remove file
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Upload className="w-12 h-12 text-gray-400" />
+                  <div>
+                    <p className="text-lg font-medium text-gray-900 dark:text-white">
+                      Drop your modpack ZIP here
+                    </p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      or click to browse
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
+                      The manifest.json will be automatically parsed to fill the form
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
+
+          {/* Manual Parse Button (if needed) */}
+          {zipFile && !manifestParsed && !isParsing && (
+            <button
+              type="button"
+              onClick={() => parseManifest(zipFile)}
+              className="mt-4 w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Parse Manifest
+            </button>
+          )}
 
           {/* Upload Progress */}
           {isUploading && (

@@ -78,6 +78,28 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
     }
   };
 
+  const handleDelete = async (modpackId: string, modpackName: string) => {
+    if (!confirm(`Are you sure you want to delete "${modpackName}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const toastId = toast.loading('Deleting modpack...');
+
+      const { success, error } = await service.deleteModpack(modpackId);
+
+      if (success) {
+        toast.success('Modpack deleted successfully', { id: toastId });
+        loadData(); // Reload to reflect changes
+      } else {
+        toast.error(`Error: ${error}`, { id: toastId });
+      }
+    } catch (error) {
+      console.error('Error deleting modpack:', error);
+      toast.error('Failed to delete modpack');
+    }
+  };
+
   const getTranslatedName = (nameI18n: Record<string, string>) => {
     const lang = i18n.language;
     return nameI18n[lang] || nameI18n['en'] || 'Unnamed Modpack';
@@ -211,34 +233,44 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => onNavigate?.('edit-modpack', modpack.id)}
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                  >
-                    <Edit className="w-4 h-4" />
-                    Edit
-                  </button>
+                <div className="flex flex-col gap-2">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => onNavigate?.('edit-modpack', modpack.id)}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                    >
+                      <Edit className="w-4 h-4" />
+                      Edit
+                    </button>
+
+                    <button
+                      onClick={() => handleToggleActive(modpack.id, modpack.is_active)}
+                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm font-medium ${
+                        modpack.is_active
+                          ? 'bg-gray-600 text-white hover:bg-gray-700'
+                          : 'bg-green-600 text-white hover:bg-green-700'
+                      }`}
+                    >
+                      {modpack.is_active ? (
+                        <>
+                          <EyeOff className="w-4 h-4" />
+                          Hide
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="w-4 h-4" />
+                          Show
+                        </>
+                      )}
+                    </button>
+                  </div>
 
                   <button
-                    onClick={() => handleToggleActive(modpack.id, modpack.is_active)}
-                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm font-medium ${
-                      modpack.is_active
-                        ? 'bg-gray-600 text-white hover:bg-gray-700'
-                        : 'bg-green-600 text-white hover:bg-green-700'
-                    }`}
+                    onClick={() => handleDelete(modpack.id, getTranslatedName(modpack.name_i18n))}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
                   >
-                    {modpack.is_active ? (
-                      <>
-                        <EyeOff className="w-4 h-4" />
-                        Hide
-                      </>
-                    ) : (
-                      <>
-                        <Eye className="w-4 h-4" />
-                        Show
-                      </>
-                    )}
+                    <Trash2 className="w-4 h-4" />
+                    Delete
                   </button>
                 </div>
               </div>
