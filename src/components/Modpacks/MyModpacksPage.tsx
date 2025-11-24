@@ -28,7 +28,7 @@ interface MyModpacksPageProps {
 export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
   const { t } = useTranslation();
   const validationService = ModpackValidationService.getInstance();
-  const { installModpackFromZip, modpackStates } = useLauncher();
+  const { installModpackFromZip, modpackStates, launchModpack } = useLauncher();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [localModpacks, setLocalModpacks] = useState<LocalModpack[]>([]);
@@ -226,11 +226,12 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
 
   const handlePlayModpack = async (modpack: LocalModpack) => {
     try {
-      toast.success(`Launching ${modpack.name}...`);
-      // TODO: Implement launch logic
+      toast.loading(`Launching ${modpack.name}...`, { id: `launch-${modpack.id}` });
+      await launchModpack(modpack.id);
+      toast.success(`${modpack.name} launched successfully!`, { id: `launch-${modpack.id}` });
     } catch (error) {
       console.error('Error launching modpack:', error);
-      toast.error('Failed to launch modpack');
+      toast.error(`Failed to launch ${modpack.name}`, { id: `launch-${modpack.id}` });
     }
   };
 
@@ -251,8 +252,8 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
 
   const handleOpenFolder = async (modpack: LocalModpack) => {
     try {
-      // TODO: Implement open folder logic
-      toast.success('Opening folder...');
+      await invoke('open_instance_folder', { modpackId: modpack.id });
+      toast.success(`Opened folder for ${modpack.name}`);
     } catch (error) {
       console.error('Error opening folder:', error);
       toast.error('Failed to open folder');
