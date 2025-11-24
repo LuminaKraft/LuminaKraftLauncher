@@ -8,6 +8,8 @@
     "opener:default",
     "dialog:default",
     "dialog:allow-open",
-    "updater:default"
+    "updater:default",
+    "fs:allow-appdata-write-recursive",
+    "fs:allow-appdata-read-recursive"
   ]
 }
