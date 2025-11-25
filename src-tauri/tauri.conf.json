@@ -52,6 +52,14 @@
         "type": "downloadBootstrapper"
       },
       "allowDowngrades": true
+    },
+    "deeplink": {
+      "protocols": [
+        {
+          "scheme": "luminakraft",
+          "name": "LuminaKraft Protocol"
+        }
+      ]
     }
   },
   "plugins": {

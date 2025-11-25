@@ -216,26 +216,32 @@ class AuthService {
 
   /**
    * Link Discord account using OAuth
-   * This uses Supabase's built-in Discord provider
+   * Opens Discord OAuth in external browser with deep link callback
    */
   async linkDiscordAccount(): Promise<boolean> {
     try {
       console.log('🔗 Initiating Discord OAuth...');
 
+      // Get OAuth URL without automatic redirect
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'discord',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-          scopes: 'identify guilds guilds.members.read'
+          redirectTo: 'luminakraft://auth/callback',
+          scopes: 'identify guilds guilds.members.read',
+          skipBrowserRedirect: true
         }
       });
 
-      if (error) {
+      if (error || !data?.url) {
         console.error('❌ Discord OAuth error:', error);
         return false;
       }
 
-      console.log('✅ Discord OAuth initiated, redirecting to Discord...');
+      // Open OAuth URL in external browser using Tauri shell
+      const { open } = await import('@tauri-apps/plugin-shell');
+      await open(data.url);
+
+      console.log('✅ Discord OAuth opened in browser');
       return true;
     } catch (error) {
       console.error('❌ Error linking Discord account:', error);
@@ -245,14 +251,29 @@ class AuthService {
 
   /**
    * Handle Discord OAuth callback
-   * Called when user returns from Discord authorization
+   * Called when user returns from Discord authorization via deep link
    */
   async handleDiscordCallback(): Promise<boolean> {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      // Parse the OAuth tokens from URL hash
+      // Format: #access_token=...&expires_in=...&provider_token=...&refresh_token=...&token_type=bearer
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
 
-      if (!session) {
-        console.error('❌ No session after Discord OAuth');
+      if (!accessToken || !refreshToken) {
+        console.error('No OAuth tokens found in callback URL');
+        return false;
+      }
+
+      // Set the session with the tokens from the callback
+      const { data: { session }, error } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken
+      });
+
+      if (error || !session) {
+        console.error('Failed to set session from OAuth callback:', error);
         return false;
       }
 

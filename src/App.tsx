@@ -33,34 +33,60 @@ function AppContent() {
   const { t } = useTranslation();
   const launcherService = LauncherService.getInstance();
 
-  // Handle Discord OAuth callback
+  // Handle Discord OAuth callback via deep link
   useEffect(() => {
-    const handleDiscordOAuthCallback = async () => {
-      // Check if URL contains auth/callback (hash routing)
-      const hash = window.location.hash;
-      if (hash.includes('/auth/callback') || hash.includes('auth/callback')) {
-        console.log('🔗 Discord OAuth callback detected');
+    let unsubscribe: (() => void) | null = null;
 
-        const authService = AuthService.getInstance();
-        const success = await authService.handleDiscordCallback();
+    const setupDeepLinkListener = async () => {
+      try {
+        // Only setup in Tauri environment
+        if (launcherService.isTauriAvailable()) {
+          const { onOpenUrl } = await import('@tauri-apps/plugin-deep-link');
 
-        if (success) {
-          toast.success(t('auth.discordLinked'));
-          // Navigate to settings
-          setActiveSection('settings');
-          // Clean up URL
-          window.location.hash = '#/settings';
-        } else {
-          toast.error(t('auth.discordLinkFailed'));
-          // Navigate to home
-          setActiveSection('home');
-          window.location.hash = '#/';
+          // Listen for deep link events
+          unsubscribe = await onOpenUrl(async (urls) => {
+            console.log('🔗 Deep link received:', urls);
+
+            for (const url of urls) {
+              // Check if it's our auth callback
+              if (url.startsWith('luminakraft://auth/callback')) {
+                console.log('🔗 Discord OAuth callback detected via deep link');
+
+                // Extract tokens from URL and set to Supabase session
+                // The URL format is: luminakraft://auth/callback#access_token=...&refresh_token=...
+                const hashPart = url.split('#')[1];
+                if (hashPart) {
+                  // Set the hash so Supabase can parse it
+                  window.location.hash = hashPart;
+
+                  const authService = AuthService.getInstance();
+                  const success = await authService.handleDiscordCallback();
+
+                  if (success) {
+                    toast.success(t('auth.discordLinked'));
+                    setActiveSection('settings');
+                  } else {
+                    toast.error(t('auth.discordLinkFailed'));
+                  }
+                }
+              }
+            }
+          });
         }
+      } catch (error) {
+        console.error('Failed to setup deep link listener:', error);
       }
     };
 
-    handleDiscordOAuthCallback();
-  }, [t]);
+    setupDeepLinkListener();
+
+    // Cleanup on unmount
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [t, launcherService]);
 
   useEffect(() => {
     const checkForUpdatesOnStartup = async () => {
