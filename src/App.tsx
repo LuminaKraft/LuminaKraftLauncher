@@ -45,12 +45,12 @@ function AppContent() {
 
           // Listen for deep link events
           unsubscribe = await onOpenUrl(async (urls) => {
-            console.log('🔗 Deep link received:', urls);
+            console.log('Deep link received:', urls);
 
             for (const url of urls) {
               // Check if it's our auth callback
               if (url.startsWith('luminakraft://auth/callback')) {
-                console.log('🔗 Discord OAuth callback detected via deep link');
+                console.log('Discord OAuth callback detected via deep link');
 
                 // Extract tokens from URL and set to Supabase session
                 // The URL format is: luminakraft://auth/callback#access_token=...&refresh_token=...
