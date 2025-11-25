@@ -16,8 +16,10 @@ mod utils;
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Modpack {
     pub id: String,
-    pub nombre: String,
-    pub descripcion: String,
+    #[serde(alias = "nombre")] // Accept both "name" and "nombre" from JSON
+    pub name: String,
+    #[serde(alias = "descripcion")] // Accept both "description" and "descripcion" from JSON
+    pub description: String,
     pub version: String,
     #[serde(rename = "minecraftVersion")]
     pub minecraft_version: String,
@@ -26,8 +28,6 @@ pub struct Modpack {
     pub modloader_version: String,
     #[serde(rename = "urlModpackZip")]
     pub url_modpack_zip: String,
-    #[serde(default)]
-    pub name: String,
     #[serde(default)]
     pub gamemode: String,
     #[serde(rename = "isNew", default)]
