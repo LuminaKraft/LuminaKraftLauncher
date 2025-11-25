@@ -1,5 +1,4 @@
 import React, { useState, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { Plus, X, Upload, FileArchive } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';

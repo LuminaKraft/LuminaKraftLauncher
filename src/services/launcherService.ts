@@ -448,7 +448,7 @@ class LauncherService {
         } else {
           throw new Error('Modpack no encontrado');
         }
-      } catch (error) {
+      } catch {
         throw new Error('Modpack no encontrado');
       }
     }
@@ -1098,7 +1098,7 @@ class LauncherService {
    * Install a modpack from a local ZIP file
    * Extracts manifest, creates temporary modpack object, and installs
    */
-  async installModpackFromZip(file: File, onProgress?: (progress: ProgressInfo) => void): Promise<void> {
+  async installModpackFromZip(file: File, onProgress?: (_progress: ProgressInfo) => void): Promise<void> {
     if (!isTauriContext()) {
       throw new Error('Esta función requiere ejecutar la aplicación con Tauri.');
     }
