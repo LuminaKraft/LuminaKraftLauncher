@@ -20,11 +20,10 @@ interface FormData {
 
 interface EditModpackFormProps {
   modpackId: string;
-  onNavigate?: (section: string) => void;
+  onNavigate?: (_section: string) => void;
 }
 
 export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps) {
-  const { t } = useTranslation();
   const service = ModpackManagementService.getInstance();
 
   const [formData, setFormData] = useState<FormData | null>(null);

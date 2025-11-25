@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import { Plus, Edit, Trash2, Eye, EyeOff, Download, TrendingUp, Cloud, Lock } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, EyeOff, Download, Cloud, Lock } from 'lucide-react';
 import ModpackManagementService from '../../services/modpackManagementService';
 import { useLauncher } from '../../contexts/LauncherContext';
 import { ConfirmDialog } from '../Common/ConfirmDialog';
@@ -23,13 +23,13 @@ interface Modpack {
 }
 
 interface PublishedModpacksPageProps {
-  onNavigate?: (section: string, modpackId?: string) => void;
+  onNavigate?: (_section: string, _modpackId?: string) => void;
 }
 
 export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps) {
   const { t, i18n } = useTranslation();
   const service = ModpackManagementService.getInstance();
-  const { userSettings, handleMicrosoftLogin } = useLauncher();
+  const { handleMicrosoftLogin } = useLauncher();
 
   const [modpacks, setModpacks] = useState<Modpack[]>([]);
   const [loading, setLoading] = useState(true);

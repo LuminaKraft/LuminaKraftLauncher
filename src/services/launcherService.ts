@@ -151,7 +151,7 @@ class LauncherService {
   async checkAPIHealth(): Promise<boolean> {
     try {
       // Test backend connection by making a simple query
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('modpacks')
         .select('id')
         .limit(1);

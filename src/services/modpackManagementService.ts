@@ -210,7 +210,7 @@ export class ModpackManagementService {
   async uploadModpackFile(
     modpackId: string,
     file: File,
-    onProgress?: (progress: number) => void
+    onProgress?: (_progress: number) => void
   ): Promise<{ success: boolean; fileUrl?: string; error?: string }> {
     try {
       console.log('📤 Starting file upload:', file.name, file.size, 'bytes');

@@ -47,7 +47,7 @@ const ModpacksPage: React.FC = () => {
         const launcherService = (await import('../../services/launcherService')).default.getInstance();
         const details = await launcherService.fetchModpackDetails(modpack.id);
         setSelectedModpackDetails(details);
-      } catch (err) {
+      } catch {
         setSelectedModpackDetails(null);
       } finally {
         setDetailsLoading(false);

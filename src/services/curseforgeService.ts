@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient';
-import { CurseForgeModInfo, ProxyResponse, CurseForgeFileInfo } from '../types/curseforge';
+import { CurseForgeModInfo, CurseForgeFileInfo } from '../types/curseforge';
 
 export class CurseForgeService {
   private static instance: CurseForgeService;

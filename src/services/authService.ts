@@ -27,7 +27,7 @@ class AuthService {
       }
 
       // Create anonymous session
-      const { data, error } = await supabase.auth.signInAnonymously();
+      const { error } = await supabase.auth.signInAnonymously();
 
       if (error) {
         console.error('❌ Failed to create anonymous session:', error);

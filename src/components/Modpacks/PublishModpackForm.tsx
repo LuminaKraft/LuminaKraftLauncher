@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { Plus, X, Upload, FileArchive } from 'lucide-react';
@@ -30,11 +30,10 @@ interface FormData {
 }
 
 interface PublishModpackFormProps {
-  onNavigate?: (section: string) => void;
+  onNavigate?: (_section: string) => void;
 }
 
 export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
-  const { t } = useTranslation();
   const service = ModpackManagementService.getInstance();
   const validationService = ModpackValidationService.getInstance();
 
@@ -158,7 +157,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
 
       // Read uploaded files as bytes
       const uploadedFilesData: [string, number[]][] = [];
-      for (const [fileName, file] of pendingUploadedFiles.entries()) {
+      for (const file of pendingUploadedFiles.values()) {
         const buffer = await file.arrayBuffer();
         const bytes = Array.from(new Uint8Array(buffer));
         uploadedFilesData.push([file.name, bytes]);

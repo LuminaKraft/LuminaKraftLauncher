@@ -194,7 +194,7 @@ export const FailedModsDialog: React.FC<FailedModsDialogProps> = ({
       const filePaths: string[] = [];
 
       // Write each file to temp directory
-      for (const [projectId, file] of uploadedFiles.entries()) {
+      for (const file of uploadedFiles.values()) {
         const buffer = await file.arrayBuffer();
         const uint8Array = new Uint8Array(buffer);
         const tempFilePath = await join(tempDir, file.name);

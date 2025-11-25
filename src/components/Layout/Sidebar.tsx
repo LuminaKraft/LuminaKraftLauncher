@@ -18,7 +18,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
     if (typeof window === 'undefined') return false;
     return localStorage.getItem('sidebarPinned') === '1';
   });
-  const [canManageModpacks, setCanManageModpacks] = useState(false);
 
   // Persist pin state
   useEffect(() => {
@@ -26,16 +25,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
       localStorage.setItem('sidebarPinned', isPinned ? '1' : '0');
     }
   }, [isPinned]);
-
-  // Check if user can manage modpacks
-  useEffect(() => {
-    const checkPermissions = async () => {
-      const service = ModpackManagementService.getInstance();
-      const { canManage } = await service.canManageModpacks(userSettings.microsoftAccount);
-      setCanManageModpacks(canManage);
-    };
-    checkPermissions();
-  }, [userSettings.authMethod, userSettings.microsoftAccount]);
 
   // Temporalmente removemos hasUpdate hasta implementar la funcionalidad
   const hasUpdate = false;

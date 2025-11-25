@@ -8,7 +8,7 @@ import ModpackValidationService from '../../services/modpackValidationService';
 interface ModpackValidationDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onContinue: (uploadedFiles?: Map<string, File>) => void;
+  onContinue: (_uploadedFiles?: Map<string, File>) => void;
   modpackName: string;
   modsWithoutUrl: ModFileInfo[];
   modsInOverrides: string[];
