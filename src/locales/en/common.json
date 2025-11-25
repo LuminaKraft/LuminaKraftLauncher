@@ -491,14 +491,14 @@
     "auth": {
       "title": "Publish Modpacks",
       "description": "Share your custom modpacks with the entire LuminaKraft community. Publish, manage, and track your modpacks all in one place.",
-      "required": "Microsoft Account Required",
-      "requiredDesc": "To publish and manage modpacks, you need to authenticate with your Microsoft account. This ensures proper attribution and allows you to manage your published content.",
+      "required": "Discord Account Required",
+      "requiredDesc": "To publish and manage modpacks, you need to link your Discord account and join our Discord server. This ensures you're part of our community and allows you to manage your published content.",
       "benefits": {
         "publish": "Publish modpacks to the community",
         "track": "Track downloads and statistics",
         "manage": "Update and manage your content"
       },
-      "signIn": "Sign in with Microsoft",
+      "signIn": "Link Discord Account",
       "localAlternative": "Just want to manage modpacks locally?",
       "goToMyModpacks": "Go to My Modpacks →"
     },
