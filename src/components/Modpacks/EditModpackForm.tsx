@@ -50,7 +50,19 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
         .from('modpacks')
         .select('*')
         .eq('id', modpackId)
-        .single();
+        .single<{
+          name_i18n: { en: string; es: string };
+          short_description_i18n: { en: string; es: string };
+          description_i18n: { en: string; es: string };
+          version: string;
+          minecraft_version: string;
+          modloader: string;
+          modloader_version: string;
+          gamemode: string | null;
+          server_ip: string | null;
+          primary_color: string | null;
+          is_active: boolean;
+        }>();
 
       if (error || !data) {
         toast.error('Failed to load modpack');
@@ -157,7 +169,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
           version: newVersion,
           changelog_i18n: changelog,
           file_url: uploadResult.fileUrl
-        });
+        } as any);
 
       if (error) {
         console.error('Error creating version entry:', error);

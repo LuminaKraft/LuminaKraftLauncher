@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { Plus, Edit, Trash2, Eye, EyeOff, Download, Cloud, Lock } from 'lucide-react';
 import ModpackManagementService from '../../services/modpackManagementService';
-import { useLauncher } from '../../contexts/LauncherContext';
 import { ConfirmDialog } from '../Common/ConfirmDialog';
 
 interface Modpack {
@@ -29,7 +28,6 @@ interface PublishedModpacksPageProps {
 export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps) {
   const { t, i18n } = useTranslation();
   const service = ModpackManagementService.getInstance();
-  const { handleMicrosoftLogin } = useLauncher();
 
   const [modpacks, setModpacks] = useState<Modpack[]>([]);
   const [loading, setLoading] = useState(true);
@@ -206,7 +204,11 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
 
           {/* Action Button */}
           <button
-            onClick={handleMicrosoftLogin}
+            onClick={() => {
+              // Trigger Microsoft authentication via settings page
+              localStorage.setItem('triggerMicrosoftAuth', '1');
+              onNavigate?.('settings');
+            }}
             className="px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors text-lg inline-flex items-center gap-3 shadow-lg hover:shadow-xl"
           >
             <svg className="w-6 h-6" viewBox="0 0 23 23" fill="none">

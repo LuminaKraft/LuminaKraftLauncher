@@ -129,7 +129,7 @@ function AppContent() {
       case 'home':
         return <ModpacksPage key={modpacksPageKey} />;
       case 'my-modpacks':
-        return <MyModpacksPage onNavigate={handleModpackNavigation} />;
+        return <MyModpacksPage />;
       case 'published-modpacks':
         return <PublishedModpacksPage onNavigate={handleModpackNavigation} />;
       case 'publish-modpack':

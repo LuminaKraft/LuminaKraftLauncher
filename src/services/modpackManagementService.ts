@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient';
+import { supabase, supabaseUrl } from './supabaseClient';
 import type { MicrosoftAccount, CurseForgeManifest, ParsedModpackData } from '../types/launcher';
 import JSZip from 'jszip';
 
@@ -47,7 +47,7 @@ export class ModpackManagementService {
         .from('users')
         .select('role')
         .eq('microsoft_id', account.xuid)
-        .single();
+        .single() as { data: any };
 
       if (!profile) {
         return { canManage: false, role: null };
@@ -170,7 +170,7 @@ export class ModpackManagementService {
         category = 'community';
       }
 
-      const { data, error } = await supabase
+      const insertResult = await supabase
         .from('modpacks')
         .insert({
           slug: modpackData.slug,
@@ -188,16 +188,17 @@ export class ModpackManagementService {
           author_id: userData.id,
           upload_status: 'pending',
           is_active: false, // Activate after uploading files
-        })
+        } as any)
         .select('id')
         .single();
+      const { data, error } = insertResult as { data: { id: string } | null; error: any };
 
       if (error) {
         console.error('Error creating modpack:', error);
         return { success: false, error: error.message };
       }
 
-      return { success: true, modpackId: data.id };
+      return { success: true, modpackId: data?.id || '' };
     } catch (error) {
       console.error('Error creating modpack:', error);
       return { success: false, error: 'Failed to create modpack' };
@@ -264,7 +265,7 @@ export class ModpackManagementService {
 
         // Get Supabase session for authorization
         supabase.auth.getSession().then(({ data: { session } }) => {
-          const functionUrl = `${supabase.supabaseUrl}/functions/v1/upload-modpack-file`;
+          const functionUrl = `${supabaseUrl}/functions/v1/upload-modpack-file`;
           console.log('📡 Uploading to:', functionUrl);
 
           xhr.open('POST', functionUrl);
@@ -280,8 +281,10 @@ export class ModpackManagementService {
 
   /**
    * Calculate SHA256 hash of a file
+   * Currently unused but reserved for future integrity checking
    */
-  private async calculateSHA256(file: File): Promise<string> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private async _calculateSHA256(file: File): Promise<string> {
     const buffer = await file.arrayBuffer();
     const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
@@ -321,10 +324,11 @@ export class ModpackManagementService {
       if (updates.primaryColor !== undefined) updateData.primary_color = updates.primaryColor;
       if (updates.isActive !== undefined) updateData.is_active = updates.isActive;
 
-      const { error } = await supabase
+      const result = await supabase
         .from('modpacks')
-        .update(updateData)
+        .update(updateData as any)
         .eq('id', modpackId);
+      const { error } = result as { error: any };
 
       if (error) {
         console.error('Error updating modpack:', error);
@@ -357,7 +361,7 @@ export class ModpackManagementService {
 
       // Get session for authorization
       const { data: { session } } = await supabase.auth.getSession();
-      const functionUrl = `${supabase.supabaseUrl}/functions/v1/upload-modpack-file`;
+      const functionUrl = `${supabaseUrl}/functions/v1/upload-modpack-file`;
 
       // Upload using Edge Function
       const response = await fetch(functionUrl, {
@@ -382,10 +386,11 @@ export class ModpackManagementService {
 
       // Update modpack with image URL
       const imageUrlField = imageType === 'logo' ? 'logo_url' : 'banner_url';
-      const { error: updateError } = await supabase
+      const updateResult = await supabase
         .from('modpacks')
-        .update({ [imageUrlField]: result.fileUrl })
+        .update({ [imageUrlField]: result.fileUrl } as any)
         .eq('id', modpackId);
+      const { error: updateError } = updateResult as { error: any };
 
       if (updateError) {
         console.error('Error updating modpack with image URL:', updateError);
@@ -425,7 +430,7 @@ export class ModpackManagementService {
 
       const { error } = await supabase
         .from('modpack_features')
-        .insert(featureRecords);
+        .insert(featureRecords as any) as { error: any };
 
       if (error) {
         console.error('Error creating features:', error);
@@ -453,7 +458,7 @@ export class ModpackManagementService {
 
       // Get session for authorization
       const { data: { session } } = await supabase.auth.getSession();
-      const functionUrl = `${supabase.supabaseUrl}/functions/v1/upload-modpack-file`;
+      const functionUrl = `${supabaseUrl}/functions/v1/upload-modpack-file`;
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
@@ -497,7 +502,7 @@ export class ModpackManagementService {
             image_url: result.fileUrl,
             sort_order: i,
             size_bytes: file.size
-          });
+          } as any);
       }
 
       return { success: true };
@@ -523,7 +528,7 @@ export class ModpackManagementService {
         .from('users')
         .select('role, partner_id')
         .eq('supabase_id', user.id)
-        .single();
+        .single() as { data: any };
 
       if (!profile) {
         // Fallback to author_id filter if profile not found
@@ -587,7 +592,7 @@ export class ModpackManagementService {
         .from('modpacks')
         .select('id, author_id, modpack_file_path, logo_url, banner_url')
         .eq('id', modpackId)
-        .single();
+        .single() as { data: any; error: any };
 
       if (modpackError || !modpack) {
         return { success: false, error: 'Modpack not found' };
@@ -598,7 +603,7 @@ export class ModpackManagementService {
         .from('users')
         .select('id, role')
         .eq('microsoft_id', this.microsoftAccount.xuid)
-        .single();
+        .single() as { data: any };
 
       if (!userData) {
         return { success: false, error: 'User profile not found' };
@@ -613,7 +618,7 @@ export class ModpackManagementService {
       const { data: images } = await supabase
         .from('modpack_images')
         .select('image_path')
-        .eq('modpack_id', modpackId);
+        .eq('modpack_id', modpackId) as { data: any[] | null };
 
       // Collect all file paths to delete
       const filePaths: string[] = [];
@@ -639,7 +644,7 @@ export class ModpackManagementService {
       // Delete files from R2 using Edge Function
       if (filePaths.length > 0) {
         const { data: { session } } = await supabase.auth.getSession();
-        const functionUrl = `${supabase.supabaseUrl}/functions/v1/delete-modpack-files`;
+        const functionUrl = `${supabaseUrl}/functions/v1/delete-modpack-files`;
 
         const response = await fetch(functionUrl, {
           method: 'POST',

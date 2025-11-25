@@ -12,6 +12,11 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 /**
+ * Export Supabase URL for use in services
+ */
+export { supabaseUrl };
+
+/**
  * Supabase client singleton
  * This client is configured with the anon key and will use Row Level Security (RLS)
  * to enforce permissions based on the authenticated user or anonymous session.
@@ -58,7 +63,7 @@ export async function hasRole(role: 'admin' | 'partner' | 'user'): Promise<boole
     .from('users')
     .select('role')
     .eq('id', user.id)
-    .single();
+    .single() as { data: any };
 
   return profile?.role === role;
 }

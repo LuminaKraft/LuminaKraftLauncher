@@ -247,7 +247,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
         ).length;
 
         if (missingCount > 0) {
-          toast.warning(`Manifest parsed, but ${missingCount} mod(s) require manual download.`);
+          toast.error(`Manifest parsed, but ${missingCount} mod(s) require manual download.`);
         } else {
           toast.success('Manifest parsed! All required mods are in overrides.');
         }

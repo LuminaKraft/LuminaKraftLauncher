@@ -197,9 +197,10 @@ class LauncherService {
       console.log('Fetching modpacks data from Supabase...');
 
       // Fetch modpacks using the i18n function
-      const { data, error } = await supabase.rpc('modpacks_i18n', {
+      const result = await supabase.rpc('modpacks_i18n', {
         p_language: lang
-      });
+      } as any);
+      const { data, error } = result as { data: any[] | null; error: any };
 
       if (error) {
         console.error('Error fetching modpacks from Supabase:', error);
@@ -288,7 +289,7 @@ class LauncherService {
         .select('*')
         .eq('id', modpackId)
         .eq('is_active', true)
-        .single();
+        .single() as { data: any; error: any };
 
       if (modpackError || !modpackData) {
         console.error('Error fetching modpack from Supabase:', modpackError);
@@ -313,7 +314,10 @@ class LauncherService {
           .select('*')
           .eq('modpack_id', modpackId)
           .order('sort_order'),
-        supabase.rpc('get_modpack_aggregate_stats', { p_modpack_id: modpackId })
+        (async () => {
+          const result = await supabase.rpc('get_modpack_aggregate_stats', { p_modpack_id: modpackId } as any);
+          return result as { data: any; error: any };
+        })()
       ]);
 
       // Helper function to get translation
@@ -337,16 +341,16 @@ class LauncherService {
         gamemode: modpackData.gamemode,
         ip: modpackData.server_ip,
         logo: modpackData.logo_url,
-        banner: modpackData.banner_url,
+        banner: modpackData.banner_url || modpackData.background_image_url,
         backgroundImage: modpackData.background_image_url,
-        urlModpackZip: modpackData.modpack_file_url,
+        urlModpackZip: modpackData.file_url || modpackData.modpack_file_url,
         primaryColor: modpackData.primary_color,
-        isNew: modpackData.is_new,
-        isActive: modpackData.is_active,
-        isComingSoon: modpackData.is_coming_soon,
-        youtubeEmbed: modpackData.youtube_embed,
-        tiktokEmbed: modpackData.tiktok_embed,
-        partnerId: modpackData.partner_id,
+        isNew: modpackData.is_new || false,
+        isActive: modpackData.is_active !== false,
+        isComingSoon: modpackData.is_coming_soon || false,
+        youtubeEmbed: modpackData.youtube_embed || null,
+        tiktokEmbed: modpackData.tiktok_embed || null,
+        partnerId: modpackData.partner_id || null,
         // Features
         features: featuresResult.data?.map((feature: any) => ({
           title: getTranslation(feature.title_i18n),
@@ -444,6 +448,8 @@ class LauncherService {
             modloaderVersion: metadata.modloaderVersion,
             urlModpackZip: '', // Local modpacks don't need download URL
             category: 'community',
+            logo: '',
+            backgroundImage: '',
           };
         } else {
           throw new Error('Modpack no encontrado');
@@ -454,7 +460,7 @@ class LauncherService {
     }
 
     // Check if modpack has modloaderVersion, if not, try to refresh data
-    if (!modpack.modloaderVersion) {
+    if (!modpack || !modpack.modloaderVersion) {
       console.warn(`⚠️ Modpack ${modpackId} missing modloaderVersion, attempting to refresh data...`);
       try {
         // Clear cache and fetch fresh data
@@ -917,7 +923,7 @@ class LauncherService {
       const { error } = await supabase.rpc('increment_downloads', {
         p_modpack_id: modpackId,
         p_user_id: userId
-      });
+      } as any) as { error: any };
 
       if (error) {
         console.error('Error tracking download:', error);
@@ -950,7 +956,7 @@ class LauncherService {
         p_modpack_id: modpackId,
         p_user_id: userId,
         p_hours: hours
-      });
+      } as any) as { error: any };
 
       if (error) {
         console.error('Error updating playtime:', error);
@@ -970,7 +976,7 @@ class LauncherService {
     try {
       const { data, error } = await supabase.rpc('get_modpack_aggregate_stats', {
         p_modpack_id: modpackId
-      });
+      } as any) as { data: any; error: any };
 
       if (error) {
         console.error('Error getting modpack stats:', error);
@@ -1007,7 +1013,7 @@ class LauncherService {
         .select('version')
         .eq('id', modpackId)
         .eq('is_active', true)
-        .single();
+        .single() as { data: any; error: any };
 
       if (error || !modpackData) {
         console.error('Error checking for modpack update:', error);
@@ -1047,7 +1053,7 @@ class LauncherService {
         .select('changelog_i18n')
         .eq('modpack_id', modpackId)
         .eq('version', version)
-        .single();
+        .single() as { data: any; error: any };
 
       if (error || !data) {
         return '';
