@@ -4,8 +4,9 @@ import { User, HardDrive, Save, Wifi, WifiOff, RefreshCw, Trash2, Server, Langua
 import { useLauncher } from '../../contexts/LauncherContext';
 import LauncherService from '../../services/launcherService';
 import MicrosoftAuth from './MicrosoftAuth';
+import DiscordAuth from './DiscordAuth';
 import MetaStorageSettings from './MetaStorageSettings';
-import type { MicrosoftAccount } from '../../types/launcher';
+import type { MicrosoftAccount, DiscordAccount } from '../../types/launcher';
 import toast from 'react-hot-toast';
 
 interface SettingsPageProps {
@@ -160,6 +161,30 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
 
   const handleAuthStop = () => {
     setIsAuthenticating(false);
+  };
+
+  const handleDiscordAuthSuccess = (account: DiscordAccount) => {
+    setAuthError(null);
+    const newSettings = {
+      ...formData,
+      authMethod: (formData.microsoftAccount ? 'both' : 'discord') as const,
+      discordAccount: account
+    };
+    setFormData(newSettings);
+    updateUserSettings(newSettings);
+    toast.success(t('settings.saved'));
+  };
+
+  const handleDiscordAuthClear = () => {
+    setAuthError(null);
+    const newSettings = {
+      ...formData,
+      authMethod: (formData.microsoftAccount ? 'microsoft' : 'offline') as const,
+      discordAccount: undefined
+    };
+    setFormData(newSettings);
+    updateUserSettings(newSettings);
+    toast.success(t('settings.saved'));
   };
 
   const triggerShake = () => {
@@ -369,13 +394,14 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
               <Shield className="w-6 h-6 text-lumina-500" />
               <h2 className="text-white text-xl font-semibold">{t('auth.title')}</h2>
             </div>
-            
-            <div className="space-y-4">
+
+            <div className="space-y-6">
               <div>
+                <h3 className="text-white text-lg font-medium mb-2">{t('auth.microsoftTitle')}</h3>
                 <p className="text-dark-300 text-sm mb-4">
-                  {t('auth.description')}
+                  {t('auth.microsoftDescription')}
                 </p>
-                
+
                 <MicrosoftAuth
                   userSettings={formData}
                   onAuthSuccess={handleMicrosoftAuthSuccess}
@@ -383,6 +409,19 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
                   onError={handleAuthError}
                   onAuthStart={handleAuthStart}
                   onAuthStop={handleAuthStop}
+                />
+              </div>
+
+              <div className="border-t border-dark-700 pt-6">
+                <h3 className="text-white text-lg font-medium mb-2">{t('auth.discordTitle')}</h3>
+                <p className="text-dark-300 text-sm mb-4">
+                  {t('auth.discordDescription')}
+                </p>
+
+                <DiscordAuth
+                  onAuthSuccess={handleDiscordAuthSuccess}
+                  onAuthClear={handleDiscordAuthClear}
+                  onError={handleAuthError}
                 />
               </div>
             </div>
