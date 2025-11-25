@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Play, Trash2, FolderOpen, Download } from 'lucide-react';
+import { Plus, Download, FolderOpen } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import toast from 'react-hot-toast';
@@ -30,7 +30,7 @@ interface MyModpacksPageProps {
 export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
   const { t } = useTranslation();
   const validationService = ModpackValidationService.getInstance();
-  const { installModpackFromZip, modpackStates, launchModpack, userSettings } = useLauncher();
+  const { installModpackFromZip, modpackStates } = useLauncher();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [localModpacks, setLocalModpacks] = useState<LocalModpack[]>([]);
@@ -50,8 +50,6 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
     message: string;
   } | null>(null);
   const [showDownloadDialog, setShowDownloadDialog] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [selectedModpack, setSelectedModpack] = useState<LocalModpack | null>(null);
   const [pendingUploadedFiles, setPendingUploadedFiles] = useState<Map<string, File> | null>(null);
 
   useEffect(() => {
@@ -245,68 +243,6 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
     }
   };
 
-  const handlePlayModpack = async (modpack: LocalModpack) => {
-    try {
-      toast.loading(`Launching ${modpack.name}...`, { id: `launch-${modpack.id}` });
-
-      // Construct a Modpack object for the backend
-      // Local modpacks don't have urlModpackZip since they're already installed
-      const modpackData: Modpack = {
-        id: modpack.id,
-        name: modpack.name,
-        description: '',
-        version: modpack.version,
-        minecraftVersion: modpack.minecraftVersion,
-        modloader: modpack.modloader,
-        modloaderVersion: modpack.modloaderVersion,
-        logo: '',
-        backgroundImage: '',
-        category: 'community',
-        urlModpackZip: '', // Empty since it's already installed
-      };
-
-      // Call the backend launch command directly
-      await invoke('launch_modpack', {
-        modpack: modpackData,
-        settings: userSettings
-      });
-
-      toast.success(`${modpack.name} launched successfully!`, { id: `launch-${modpack.id}` });
-    } catch (error) {
-      console.error('Error launching modpack:', error);
-      toast.error(`Failed to launch ${modpack.name}`, { id: `launch-${modpack.id}` });
-    }
-  };
-
-  const handleDeleteModpack = (modpack: LocalModpack) => {
-    setSelectedModpack(modpack);
-    setShowDeleteDialog(true);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!selectedModpack) return;
-
-    try {
-      await invoke('delete_instance', { modpackId: selectedModpack.id });
-      toast.success('Modpack deleted successfully');
-      await loadLocalModpacks();
-    } catch (error) {
-      console.error('Error deleting modpack:', error);
-      toast.error('Failed to delete modpack');
-    } finally {
-      setSelectedModpack(null);
-      setShowDeleteDialog(false);
-    }
-  };
-
-  const handleOpenFolder = async (modpack: LocalModpack) => {
-    try {
-      await invoke('open_instance_folder', { modpackId: modpack.id });
-    } catch (error) {
-      console.error('Error opening folder:', error);
-      toast.error('Failed to open folder');
-    }
-  };
 
   if (loading) {
     return (
@@ -447,66 +383,44 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
             })}
 
             {/* Installed Modpacks */}
-            {localModpacks.map((modpack, index) => (
-            <div
-              key={modpack.id}
-              className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
-            >
-              {/* Modpack Header */}
-              <div className="h-32 bg-gradient-to-br from-blue-500 to-purple-600 relative flex items-center justify-center">
-                <div className="text-6xl font-bold text-white opacity-20">
-                  {modpack.name.charAt(0).toUpperCase()}
-                </div>
-              </div>
+            {localModpacks.map((localModpack, index) => {
+              // Convert LocalModpack to Modpack format for ModpackCard
+              const modpack: Modpack = {
+                id: localModpack.id,
+                name: localModpack.name,
+                description: '',
+                shortDescription: `Installed on ${new Date(localModpack.createdAt).toLocaleDateString()}`,
+                version: localModpack.version,
+                minecraftVersion: localModpack.minecraftVersion,
+                modloader: localModpack.modloader,
+                modloaderVersion: localModpack.modloaderVersion,
+                logo: '',
+                backgroundImage: '',
+                urlModpackZip: '', // Local modpacks don't need download URL
+                category: 'community',
+                isActive: true,
+                isNew: false,
+                isComingSoon: false,
+              };
 
-              {/* Modpack Info */}
-              <div className="p-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate mb-1">
-                  {modpack.name}
-                </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  {modpack.version && `v${modpack.version}`}
-                  {modpack.minecraftVersion && ` • Minecraft ${modpack.minecraftVersion}`}
-                  {modpack.modloader && ` • ${modpack.modloader.charAt(0).toUpperCase() + modpack.modloader.slice(1)}`}
-                </p>
+              // Get or create state for this modpack
+              const state = modpackStates[localModpack.id] || {
+                installed: true,
+                downloading: false,
+                progress: { percentage: 0 },
+                status: 'installed' as const,
+              };
 
-                {modpack.lastPlayed && (
-                  <p className="text-xs text-gray-500 dark:text-gray-500 mb-4">
-                    Last played: {new Date(modpack.lastPlayed).toLocaleDateString()}
-                  </p>
-                )}
-
-                {/* Actions */}
-                <div className="flex flex-col gap-2">
-                  <button
-                    onClick={() => handlePlayModpack(modpack)}
-                    className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-                  >
-                    <Play className="w-4 h-4" />
-                    Play
-                  </button>
-
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleOpenFolder(modpack)}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
-                    >
-                      <FolderOpen className="w-4 h-4" />
-                      Open
-                    </button>
-
-                    <button
-                      onClick={() => handleDeleteModpack(modpack)}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
+              return (
+                <ModpackCard
+                  key={localModpack.id}
+                  modpack={modpack}
+                  state={state}
+                  onSelect={() => {}}
+                  index={index + importingModpackIds.length}
+                />
+              );
+            })}
           </div>
         );
       })()}
@@ -523,20 +437,6 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
         variant="info"
       />
 
-      {/* Delete Modpack Confirmation Dialog */}
-      <ConfirmDialog
-        isOpen={showDeleteDialog}
-        onClose={() => {
-          setShowDeleteDialog(false);
-          setSelectedModpack(null);
-        }}
-        onConfirm={handleDeleteConfirm}
-        title="Delete Modpack?"
-        message={`Are you sure you want to delete "${selectedModpack?.name}"? This will remove all files and cannot be undone.`}
-        confirmText="Delete"
-        cancelText="Cancel"
-        variant="danger"
-      />
     </div>
   );
 }
