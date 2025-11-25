@@ -91,7 +91,7 @@ export const ModpackValidationDialog: React.FC<ModpackValidationDialogProps> = (
       toast.success(`${matchedCount} file(s) matched and uploaded`);
     }
     if (validFiles.length > matchedCount) {
-      toast.warning(`${validFiles.length - matchedCount} file(s) could not be matched`);
+      toast.error(`${validFiles.length - matchedCount} file(s) could not be matched`);
     }
   };
 

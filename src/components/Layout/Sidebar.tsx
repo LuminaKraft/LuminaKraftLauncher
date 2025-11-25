@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Home, Settings, Info, Pin, PinOff, FolderOpen, Cloud } from 'lucide-react';
+import { Home, Settings, Info, AlertCircle, Pin, PinOff, FolderOpen, Cloud } from 'lucide-react';
 import { useLauncher } from '../../contexts/LauncherContext';
 import PlayerHeadLoader from '../PlayerHeadLoader';
+import { check } from '@tauri-apps/plugin-updater';
 
 interface SidebarProps {
   activeSection: string;
@@ -17,6 +18,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
     if (typeof window === 'undefined') return false;
     return localStorage.getItem('sidebarPinned') === '1';
   });
+  const [hasUpdate, setHasUpdate] = useState(false);
+  const [latestVersion, setLatestVersion] = useState<string>('');
 
   // Persist pin state
   useEffect(() => {
@@ -24,6 +27,22 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
       localStorage.setItem('sidebarPinned', isPinned ? '1' : '0');
     }
   }, [isPinned]);
+
+  // Check for updates
+  useEffect(() => {
+    const checkUpdates = async () => {
+      try {
+        const update = await check();
+        if (update?.available) {
+          setHasUpdate(true);
+          setLatestVersion(update.version);
+        }
+      } catch (error) {
+        console.error('Error checking for updates:', error);
+      }
+    };
+    checkUpdates();
+  }, []);
 
   // Version is automatically updated by release.js
   const currentVersion = "0.0.9-alpha.6";
@@ -144,6 +163,21 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
           )}
         </div>
       </div>
+
+      {/* Update notification */}
+      {hasUpdate && isExpanded && (
+        <div className="m-4 p-3 bg-yellow-600/20 border border-yellow-600/30 rounded-lg">
+          <div className="flex items-center space-x-2">
+            <AlertCircle className="w-4 h-4 text-yellow-500" />
+            <span className="text-yellow-400 text-sm font-medium">
+              {t('notifications.updateAvailable')}
+            </span>
+          </div>
+          <p className="text-yellow-300 text-xs mt-1">
+            {t('about.updateAvailable', { version: latestVersion })}
+          </p>
+        </div>
+      )}
 
       {/* Navigation */}
       <nav className="flex-1 p-4">
