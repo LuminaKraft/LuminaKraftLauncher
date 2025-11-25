@@ -279,7 +279,7 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
       <div className="mb-6">
         <div className="flex justify-between items-center mb-2">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            My Modpacks
+            {t('myModpacks.title')}
           </h1>
           <button
             onClick={handleImportModpack}
@@ -287,11 +287,11 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
             className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Download className="w-5 h-5" />
-            {validating ? 'Validating...' : 'Import Modpack'}
+            {validating ? t('myModpacks.validating') : t('myModpacks.import')}
           </button>
         </div>
         <p className="text-gray-600 dark:text-gray-400">
-          Manage your local modpack instances - available for all users
+          {t('myModpacks.subtitle')}
         </p>
       </div>
 
@@ -301,14 +301,13 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
           <FolderOpen className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
           <div>
             <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
-              Local Modpack Management
+              {t('myModpacks.localManagement.title')}
             </h3>
             <p className="text-sm text-blue-800 dark:text-blue-200">
-              These are your local modpack instances. They are stored on your computer and available offline.
-              To share modpacks publicly, use <button
+              {t('myModpacks.localManagement.description')} <button
                 onClick={() => onNavigate?.('published-modpacks')}
                 className="underline hover:text-blue-600 dark:hover:text-blue-300"
-              >Published Modpacks</button>.
+              >{t('myModpacks.localManagement.publishedModpacksLink')}</button>.
             </p>
           </div>
         </div>
@@ -328,16 +327,16 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
             <div className="bg-white dark:bg-gray-800 rounded-lg p-12 shadow-md text-center">
               <FolderOpen className="w-16 h-16 mx-auto mb-4 text-gray-400" />
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                No local modpacks yet
+                {t('myModpacks.empty.title')}
               </h2>
               <p className="text-gray-600 dark:text-gray-400 mb-6">
-                Import a CurseForge or Modrinth modpack to get started
+                {t('myModpacks.empty.description')}
               </p>
               <button
                 onClick={handleImportModpack}
                 className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors inline-block"
               >
-                Import Your First Modpack
+                {t('myModpacks.empty.button')}
               </button>
             </div>
           );

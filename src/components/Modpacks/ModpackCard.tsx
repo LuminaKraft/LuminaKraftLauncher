@@ -26,19 +26,19 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
   const getCategoryBadge = () => {
     const categoryConfig = {
       official: {
-        label: 'Official',
+        translationKey: 'modpacks.category.official',
         bg: 'bg-purple-600/40',
         text: 'text-purple-300',
         border: 'border-purple-600/60'
       },
       partner: {
-        label: 'Partner',
+        translationKey: 'modpacks.category.partner',
         bg: 'bg-blue-600/40',
         text: 'text-blue-300',
         border: 'border-blue-600/60'
       },
       community: {
-        label: 'Community',
+        translationKey: 'modpacks.category.community',
         bg: 'bg-green-600/40',
         text: 'text-green-300',
         border: 'border-green-600/60'
@@ -49,7 +49,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
 
     return (
       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text} border ${config.border}`}>
-        {config.label}
+        {t(config.translationKey)}
       </span>
     );
   };
@@ -426,6 +426,11 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
             <div className={`flex items-center space-x-3 text-xs text-dark-400 transition-colors duration-200 ${
               getAnimationClass('', 'group-hover:text-dark-300')
             }`}>
+              <span className={`bg-dark-700/50 px-2 py-1 rounded-full transition-all duration-200 ${
+                getAnimationClass('', 'group-hover:bg-lumina-600/20')
+              }`}>
+                v{modpack.version}
+              </span>
               <span className={`bg-dark-700/50 px-2 py-1 rounded-full transition-all duration-200 ${
                 getAnimationClass('', 'group-hover:bg-lumina-600/20')
               }`}>
