@@ -26,8 +26,8 @@
     "home": "Home",
     "myModpacks": "My Modpacks",
     "myModpacksDesc": "Manage your local modpack instances",
-    "publishedModpacks": "Public Modpacks",
-    "publishedModpacksDesc": "Manage your published modpacks"
+    "publishedModpacks": "Publish Modpacks",
+    "publishedModpacksDesc": "Publish and manage your modpacks"
   },
   "sidebar": {
     "expand": "Expand sidebar",
@@ -475,15 +475,15 @@
     }
   },
   "publishedModpacks": {
-    "title": "Public Modpacks",
-    "subtitle": "Manage your publicly published modpacks on the platform",
+    "title": "Publish Modpacks",
+    "subtitle": "Publish and manage your modpacks on the platform",
     "publishNew": "Publish New Modpack",
     "loading": "Loading...",
     "auth": {
-      "title": "Public Modpacks",
-      "description": "Share your custom modpacks with the entire LuminaKraft community. Publish, manage, and track your public modpacks all in one place.",
+      "title": "Publish Modpacks",
+      "description": "Share your custom modpacks with the entire LuminaKraft community. Publish, manage, and track your modpacks all in one place.",
       "required": "Microsoft Account Required",
-      "requiredDesc": "To publish and manage public modpacks, you need to authenticate with your Microsoft account. This ensures proper attribution and allows you to manage your published content.",
+      "requiredDesc": "To publish and manage modpacks, you need to authenticate with your Microsoft account. This ensures proper attribution and allows you to manage your published content.",
       "benefits": {
         "publish": "Publish modpacks to the community",
         "track": "Track downloads and statistics",
@@ -494,7 +494,7 @@
       "goToMyModpacks": "Go to My Modpacks →"
     },
     "empty": {
-      "title": "No public modpacks yet",
+      "title": "No published modpacks yet",
       "description": "Publish your first modpack to share it with the community",
       "button": "Publish Your First Modpack"
     },

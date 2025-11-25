@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Home, Settings, Info, AlertCircle, Pin, PinOff, FolderOpen, Cloud } from 'lucide-react';
+import { Home, Settings, Info, AlertCircle, Pin, PinOff, FolderOpen, UploadCloud } from 'lucide-react';
 import { useLauncher } from '../../contexts/LauncherContext';
 import PlayerHeadLoader from '../PlayerHeadLoader';
 import { check } from '@tauri-apps/plugin-updater';
@@ -63,7 +63,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
     {
       id: 'published-modpacks',
       label: t('navigation.publishedModpacks'),
-      icon: Cloud,
+      icon: UploadCloud,
       description: t('navigation.publishedModpacksDesc')
     },
     {

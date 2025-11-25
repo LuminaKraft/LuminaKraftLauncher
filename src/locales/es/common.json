@@ -26,8 +26,8 @@
     "home": "Inicio",
     "myModpacks": "Mis Modpacks",
     "myModpacksDesc": "Gestiona tus instancias locales de modpacks",
-    "publishedModpacks": "Modpacks Públicos",
-    "publishedModpacksDesc": "Gestiona tus modpacks publicados"
+    "publishedModpacks": "Publicar Modpacks",
+    "publishedModpacksDesc": "Publica y gestiona tus modpacks"
   },
   "sidebar": {
     "expand": "Expandir barra lateral",
@@ -470,15 +470,15 @@
     }
   },
   "publishedModpacks": {
-    "title": "Modpacks Públicos",
-    "subtitle": "Gestiona tus modpacks publicados en la plataforma",
+    "title": "Publicar Modpacks",
+    "subtitle": "Publica y gestiona tus modpacks en la plataforma",
     "publishNew": "Publicar Nuevo Modpack",
     "loading": "Cargando...",
     "auth": {
-      "title": "Modpacks Públicos",
-      "description": "Comparte tus modpacks personalizados con toda la comunidad de LuminaKraft. Publica, gestiona y rastrea tus modpacks públicos en un solo lugar.",
+      "title": "Publicar Modpacks",
+      "description": "Comparte tus modpacks personalizados con toda la comunidad de LuminaKraft. Publica, gestiona y rastrea tus modpacks en un solo lugar.",
       "required": "Cuenta de Microsoft Requerida",
-      "requiredDesc": "Para publicar y gestionar modpacks públicos, necesitas autenticarte con tu cuenta de Microsoft. Esto asegura una atribución adecuada y te permite gestionar tu contenido publicado.",
+      "requiredDesc": "Para publicar y gestionar modpacks, necesitas autenticarte con tu cuenta de Microsoft. Esto asegura una atribución adecuada y te permite gestionar tu contenido publicado.",
       "benefits": {
         "publish": "Publicar modpacks a la comunidad",
         "track": "Rastrear descargas y estadísticas",
@@ -489,7 +489,7 @@
       "goToMyModpacks": "Ir a Mis Modpacks →"
     },
     "empty": {
-      "title": "Aún no hay modpacks públicos",
+      "title": "Aún no has publicado modpacks",
       "description": "Publica tu primer modpack para compartirlo con la comunidad",
       "button": "Publica Tu Primer Modpack"
     },
