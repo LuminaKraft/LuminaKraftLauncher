@@ -235,15 +235,6 @@ export function MyModpacksPage({ onNavigate: _onNavigate }: MyModpacksPageProps)
     }
   };
 
-  const _handleDownloadDialogCancel = async () => {
-    // Just import without creating updated ZIP
-    if (validationData) {
-      await performImport(validationData.file);
-      setPendingUploadedFiles(null);
-    }
-  };
-
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
