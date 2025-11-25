@@ -405,32 +405,6 @@ async fn validate_microsoft_token(exp: u64) -> Result<bool, String> {
 }
 
 #[tauri::command]
-async fn open_microsoft_auth_and_get_url() -> Result<String, String> {
-    // Create Microsoft auth URL and open it
-    let auth_url = match lyceris::auth::microsoft::create_link() {
-        Ok(url) => url,
-        Err(e) => return Err(format!("Failed to create auth URL: {}", e)),
-    };
-
-    Ok(auth_url)
-}
-
-#[tauri::command]
-async fn extract_code_from_redirect_url(url: String) -> Result<String, String> {
-    // Extract code from the URL
-    if let Some(code) = url.split("code=").nth(1).and_then(|s| s.split('&').next()) {
-        Ok(code.to_string())
-    } else if url.contains("error=") {
-        let error = url.split("error=").nth(1)
-            .and_then(|s| s.split('&').next())
-            .unwrap_or("Authentication failed");
-        Err(format!("Microsoft authentication error: {}", error))
-    } else {
-        Err("No authorization code found in URL".to_string())
-    }
-}
-
-#[tauri::command]
 async fn open_microsoft_auth_modal(app: tauri::AppHandle) -> Result<String, String> {
     use tauri::{WebviewWindowBuilder, WebviewUrl};
     use std::sync::{Arc, Mutex};
@@ -1037,8 +1011,6 @@ fn main() {
             authenticate_microsoft,
             refresh_microsoft_token,
             validate_microsoft_token,
-            open_microsoft_auth_and_get_url,
-            extract_code_from_redirect_url,
             open_microsoft_auth_modal,
             remove_modpack,
             open_instance_folder,

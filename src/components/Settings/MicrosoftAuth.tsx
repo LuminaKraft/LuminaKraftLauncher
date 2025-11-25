@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { UserIcon, ExternalLinkIcon, CheckCircleIcon, XCircleIcon } from 'lucide-react';
+import { UserIcon, CheckCircleIcon, XCircleIcon } from 'lucide-react';
 import AuthService from '../../services/authService';
 import type { MicrosoftAccount, UserSettings } from '../../types/launcher';
 
@@ -23,18 +23,8 @@ export default function MicrosoftAuth({
 }: MicrosoftAuthProps) {
   const { t } = useTranslation();
   const [isAuthenticating, setIsAuthenticating] = useState(false);
-  const [authStep, setAuthStep] = useState<'idle' | 'waiting_for_url'>('idle');
-  const [redirectUrl, setRedirectUrl] = useState('');
-  
-  const authService = AuthService.getInstance();
 
-  // If sidebar requested alternate flow
-  useEffect(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem('pendingMicrosoftAuth') === '1') {
-      localStorage.removeItem('pendingMicrosoftAuth');
-      setAuthStep('waiting_for_url');
-    }
-  }, []);
+  const authService = AuthService.getInstance();
 
   // Trigger automatic authentication when requested from sidebar
   useEffect(() => {
@@ -49,7 +39,7 @@ export default function MicrosoftAuth({
       setIsAuthenticating(true);
       onAuthStart?.();
 
-      // Use the new modal-based authentication (like Modrinth)
+      // Use the modal-based authentication (like Modrinth)
       const account = await authService.authenticateWithMicrosoftModal();
 
       // Sync with Supabase
@@ -64,7 +54,6 @@ export default function MicrosoftAuth({
     } catch (error) {
       // Determine type of error and message
       let errorMessage = t('auth.authFailed');
-      let isUserCanceled = false;
 
       if (error instanceof Error) {
         const msg = error.message.toLowerCase();
@@ -72,82 +61,18 @@ export default function MicrosoftAuth({
           errorMessage = t('auth.authTimeout');
         } else if (msg.includes('closed') || msg.includes('cancel')) {
           errorMessage = t('auth.authCanceled');
-          isUserCanceled = true;
         } else {
           errorMessage = error.message;
         }
       }
 
       onError(errorMessage);
-
-      // Fallback only if not canceled by user
-      if (!isUserCanceled) {
-        setTimeout(async () => {
-          try {
-            await authService.openMicrosoftAuthAndGetUrl();
-          } catch (fallbackErr) {
-            console.error('Failed to open Microsoft auth URL fallback:', fallbackErr);
-          }
-          setAuthStep('waiting_for_url');
-          // Clear the global overlay since we're switching to alternative method
-          onAuthStop?.();
-        }, 1000);
-      }
     } finally {
       setIsAuthenticating(false);
+      onAuthStop?.();
     }
   };
 
-  const startMicrosoftAuth = async () => {
-    try {
-      setIsAuthenticating(true);
-      // Don't call onAuthStart for alternative method - user needs to interact with launcher
-      
-      // Open browser and get auth URL
-      await authService.openMicrosoftAuthAndGetUrl();
-      
-      // Show URL input step
-      setAuthStep('waiting_for_url');
-      
-    } catch (error) {
-      console.error('Failed to start Microsoft authentication:', error);
-      onError(error instanceof Error ? error.message : t('auth.authFailed'));
-    } finally {
-      setIsAuthenticating(false);
-    }
-  };
-
-  const submitRedirectUrl = async () => {
-    if (!redirectUrl.trim()) {
-      onError(t('auth.enterUrl'));
-      return;
-    }
-
-    try {
-      setIsAuthenticating(true);
-      
-      // Extract code from URL
-      const code = await authService.extractCodeFromUrl(redirectUrl);
-
-      // Authenticate with the code
-      const account = await authService.authenticateMicrosoft(code);
-
-      // Sync with Supabase
-      await authService.authenticateSupabaseWithMicrosoft(account);
-
-      onAuthSuccess(account);
-
-      // Reset state
-      setAuthStep('idle');
-      setRedirectUrl('');
-      
-    } catch (error) {
-      console.error('Failed to authenticate with URL:', error);
-      onError(error instanceof Error ? error.message : t('auth.authFailed'));
-    } finally {
-      setIsAuthenticating(false);
-    }
-  };
 
   const handleRefreshToken = async () => {
     if (!userSettings.microsoftAccount) return;
@@ -170,19 +95,10 @@ export default function MicrosoftAuth({
   };
 
   const handleSignOut = async () => {
-    setAuthStep('idle');
-    setRedirectUrl('');
-
     // Sign out from Supabase and restore anonymous session
     await authService.signOutSupabase();
 
     onAuthClear();
-  };
-
-  const cancelAuth = () => {
-    setAuthStep('idle');
-    setRedirectUrl('');
-    setIsAuthenticating(false);
   };
 
   // If user is already authenticated with Microsoft
@@ -240,108 +156,28 @@ export default function MicrosoftAuth({
 
   return (
     <div className="space-y-4">
-      {authStep === 'idle' && (
-        <div className="space-y-4">
-          <div className="flex items-center space-x-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-            <UserIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            <div>
-              <p className="font-medium text-blue-800 dark:text-blue-200">
-                {t('auth.microsoftAuth')}
-              </p>
-              <p className="text-sm text-blue-600 dark:text-blue-400">
-                {t('auth.microsoftDescription')}
-              </p>
-            </div>
-          </div>
-          
-          <div className="space-y-3">
-            <button
-              onClick={startMicrosoftAuthModal}
-              disabled={isAuthenticating}
-              className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50"
-            >
-              <UserIcon className="w-4 h-4" />
-              <span>
-                {isAuthenticating ? t('auth.signing') : t('auth.signInMicrosoft')}
-              </span>
-            </button>
-            
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300 dark:border-gray-600" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400">
-                  {t('auth.or')}
-                </span>
-              </div>
-            </div>
-
-            <button
-              onClick={startMicrosoftAuth}
-              disabled={isAuthenticating}
-              className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors disabled:opacity-50"
-            >
-              <ExternalLinkIcon className="w-4 h-4" />
-              <span>
-                {t('auth.useAlternativeMethod')}
-              </span>
-            </button>
-          </div>
+      <div className="flex items-center space-x-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+        <UserIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+        <div>
+          <p className="font-medium text-blue-800 dark:text-blue-200">
+            {t('auth.microsoftAuth')}
+          </p>
+          <p className="text-sm text-blue-600 dark:text-blue-400">
+            {t('auth.microsoftDescription')}
+          </p>
         </div>
-      )}
+      </div>
 
-      {authStep === 'waiting_for_url' && (
-        <div className="space-y-4">
-          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-            <h3 className="font-medium text-blue-800 dark:text-blue-200 mb-2">
-              {t('auth.step2Title')}
-            </h3>
-            <p className="text-sm text-blue-600 dark:text-blue-400 mb-4">
-              {t('auth.step2DescriptionUrl')}
-            </p>
-            <div className="p-3 bg-blue-100 dark:bg-blue-800/30 rounded-lg mb-4">
-              <p className="text-sm text-blue-800 dark:text-blue-200 mb-2">
-                <strong>{t('app.note')}:</strong> {t('auth.blankPageExpected')}
-              </p>
-              <p className="text-sm text-blue-600 dark:text-blue-300">
-                {t('auth.copyFullUrl')}
-              </p>
-              <p className="text-xs text-blue-500 dark:text-blue-400 mt-1">
-                Ejemplo: https://login.live.com/oauth20_desktop.srf?code=...&state=...
-              </p>
-            </div>
-            
-            <div className="space-y-3">
-              <input
-                type="text"
-                value={redirectUrl}
-                onChange={(e) => setRedirectUrl(e.target.value)}
-                placeholder={t('auth.urlPlaceholder')}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              
-              <div className="flex space-x-2">
-                <button
-                  onClick={submitRedirectUrl}
-                  disabled={isAuthenticating || !redirectUrl.trim()}
-                  className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50"
-                >
-                  {isAuthenticating ? t('auth.verifying') : t('auth.verifyUrl')}
-                </button>
-                
-                <button
-                  onClick={cancelAuth}
-                  disabled={isAuthenticating}
-                  className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors disabled:opacity-50"
-                >
-                  {t('auth.cancel')}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <button
+        onClick={startMicrosoftAuthModal}
+        disabled={isAuthenticating}
+        className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50"
+      >
+        <UserIcon className="w-4 h-4" />
+        <span>
+          {isAuthenticating ? t('auth.signing') : t('auth.signInMicrosoft')}
+        </span>
+      </button>
     </div>
   );
 } 

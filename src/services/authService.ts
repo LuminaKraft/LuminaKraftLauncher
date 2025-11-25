@@ -204,33 +204,7 @@ class AuthService {
   }
 
   /**
-   * Opens Microsoft authentication and returns the auth URL
-   */
-  async openMicrosoftAuthAndGetUrl(): Promise<string> {
-    try {
-      const authUrl = await invoke<string>('open_microsoft_auth_and_get_url');
-      // Open URL in browser using Tauri's opener
-      await invoke('open_url', { url: authUrl });
-      return authUrl;
-    } catch (error) {
-      throw new Error(`Failed to open Microsoft authentication: ${error}`);
-    }
-  }
-
-  /**
-   * Extracts authorization code from a redirect URL
-   */
-  async extractCodeFromUrl(url: string): Promise<string> {
-    try {
-      return await invoke<string>('extract_code_from_redirect_url', { url });
-    } catch (error) {
-      throw new Error(`Failed to extract code: ${error}`);
-    }
-  }
-
-  /**
    * Opens Microsoft authentication in a modal window and completes the flow automatically
-   * (Similar to how Modrinth does it)
    */
   async authenticateWithMicrosoftModal(): Promise<MicrosoftAccount> {
     try {
