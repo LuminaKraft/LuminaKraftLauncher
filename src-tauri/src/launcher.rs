@@ -76,27 +76,28 @@ pub fn validate_modpack(modpack: &Modpack) -> Result<()> {
     if modpack.id.is_empty() {
         return Err(anyhow!("Modpack ID cannot be empty"));
     }
-    
+
     if modpack.minecraft_version.is_empty() {
         return Err(anyhow!("Minecraft version cannot be empty"));
     }
-    
-    if modpack.url_modpack_zip.is_empty() {
-        return Err(anyhow!("Modpack download URL cannot be empty"));
-    }
-    
+
     Ok(())
 }
 
 /// Install a modpack (always uses meta storage like Modrinth)
 pub async fn install_modpack_with_shared_storage<F>(
-    modpack: Modpack, 
+    modpack: Modpack,
     settings: UserSettings,
     emit_progress: F
-) -> Result<Vec<serde_json::Value>> 
+) -> Result<Vec<serde_json::Value>>
 where
     F: Fn(String, f32, String) + Send + Sync + 'static + Clone,
 {
+    // Validate URL is present for installation
+    if modpack.url_modpack_zip.is_empty() {
+        return Err(anyhow!("Modpack download URL cannot be empty for installation"));
+    }
+
     let app_data_dir = data_dir()
         .ok_or_else(|| anyhow!("Failed to get app data directory"))?
         .join("LKLauncher");
