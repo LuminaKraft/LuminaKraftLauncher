@@ -1331,30 +1331,35 @@ class LauncherService {
   }
 
   /**
-   * Add playtime for a modpack (hybrid: BD for authenticated, local for anonymous)
+   * Add playtime for a modpack (hybrid: BD for all, local as backup)
    * @param hoursPlayed - Hours played in this session (can be decimal, e.g., 0.5)
+   *
+   * Authenticated users: individual tracking with user_id
+   * Anonymous users: aggregated tracking with user_id = NULL
    */
   async addPlaytime(modpackId: string, hoursPlayed: number): Promise<void> {
     try {
       // Always save to localStorage first (for quick access and backup)
       this.saveLocalPlaytime(modpackId, hoursPlayed);
 
-      // If valid UUID and authenticated, also save to database
+      // If valid UUID, also save to database (both authenticated and anonymous)
       if (this.isValidUUID(modpackId)) {
         const { data: { user } } = await supabase.auth.getUser();
 
-        if (user && user.role === 'authenticated') {
-          const { error } = await supabase.rpc('add_playtime', {
-            p_modpack_id: modpackId,
-            p_user_id: user.id,
-            p_hours_played: hoursPlayed
-          } as any) as { error: any };
+        // Authenticated users: use their user_id
+        // Anonymous users: use NULL (aggregated stats)
+        const userId = (user && user.role === 'authenticated') ? user.id : null;
 
-          if (error) {
-            console.error('Error adding playtime to database:', error);
-          } else {
-            console.log(`Playtime added to database: ${hoursPlayed.toFixed(2)}h`);
-          }
+        const { error } = await supabase.rpc('add_playtime', {
+          p_modpack_id: modpackId,
+          p_user_id: userId,
+          p_hours_played: hoursPlayed
+        } as any) as { error: any };
+
+        if (error) {
+          console.error('Error adding playtime to database:', error);
+        } else {
+          console.log(`Playtime added to database: ${hoursPlayed.toFixed(2)}h (${userId ? 'authenticated' : 'anonymous'})`);
         }
       }
 
