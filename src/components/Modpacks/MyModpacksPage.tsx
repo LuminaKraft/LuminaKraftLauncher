@@ -23,11 +23,7 @@ interface LocalModpack {
   lastPlayed?: string;
 }
 
-interface MyModpacksPageProps {
-  onNavigate?: (_section: string) => void;
-}
-
-export function MyModpacksPage({ onNavigate: _onNavigate }: MyModpacksPageProps) {
+export function MyModpacksPage() {
   const { t } = useTranslation();
   const validationService = ModpackValidationService.getInstance();
   const { installModpackFromZip, modpackStates } = useLauncher();
@@ -199,7 +195,7 @@ export function MyModpacksPage({ onNavigate: _onNavigate }: MyModpacksPageProps)
 
             // Read uploaded files as bytes
             const uploadedFilesData: [string, number[]][] = [];
-            for (const [_fileName, file] of uploadedFiles.entries()) {
+            for (const file of uploadedFiles.values()) {
               const buffer = await file.arrayBuffer();
               const bytes = Array.from(new Uint8Array(buffer));
               uploadedFilesData.push([file.name, bytes]);
