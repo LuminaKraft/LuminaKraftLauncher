@@ -290,27 +290,6 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
             {validating ? t('myModpacks.validating') : t('myModpacks.import')}
           </button>
         </div>
-        <p className="text-gray-600 dark:text-gray-400">
-          {t('myModpacks.subtitle')}
-        </p>
-      </div>
-
-      {/* Info Banner */}
-      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
-        <div className="flex items-start gap-3">
-          <FolderOpen className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-          <div>
-            <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
-              {t('myModpacks.localManagement.title')}
-            </h3>
-            <p className="text-sm text-blue-800 dark:text-blue-200">
-              {t('myModpacks.localManagement.description')} <button
-                onClick={() => onNavigate?.('published-modpacks')}
-                className="underline hover:text-blue-600 dark:hover:text-blue-300"
-              >{t('myModpacks.localManagement.publishedModpacksLink')}</button>.
-            </p>
-          </div>
-        </div>
       </div>
 
       {/* Modpacks List */}
@@ -388,7 +367,7 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
                 id: localModpack.id,
                 name: localModpack.name,
                 description: '',
-                shortDescription: `Installed on ${new Date(localModpack.createdAt).toLocaleDateString()}`,
+                shortDescription: `${t('myModpacks.installedOn')} ${new Date(localModpack.createdAt).toLocaleDateString()}`,
                 version: localModpack.version,
                 minecraftVersion: localModpack.minecraftVersion,
                 modloader: localModpack.modloader,
@@ -417,6 +396,7 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
                   state={state}
                   onSelect={() => {}}
                   index={index + importingModpackIds.length}
+                  hideServerBadges={true}
                 />
               );
             })}

@@ -14,9 +14,10 @@ interface ModpackCardProps {
   };
   onSelect: () => void;
   index?: number;
+  hideServerBadges?: boolean; // Hide category and status badges for local modpacks
 }
 
-const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, index = 0 }) => {
+const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, index = 0, hideServerBadges = false }) => {
   const { t } = useTranslation();
   const { getAnimationClass, getAnimationStyle } = useAnimation();
   const { installModpack, updateModpack, launchModpack, repairModpack, removeModpack, stopInstance } = useLauncher();
@@ -351,9 +352,11 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
       }}
     >
       {/* Status Badge - Top right corner of entire card */}
-      <div className="absolute top-2 right-2 z-20 transition-all duration-200">
-        {getServerStatusBadge()}
-      </div>
+      {!hideServerBadges && (
+        <div className="absolute top-2 right-2 z-20 transition-all duration-200">
+          {getServerStatusBadge()}
+        </div>
+      )}
 
       {/* Coming Soon Glow Effect */}
       {isComingSoon && (
@@ -419,9 +422,11 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
             </p>
             
             {/* Category Badge */}
-            <div className="mb-2">
-              {getCategoryBadge()}
-            </div>
+            {!hideServerBadges && (
+              <div className="mb-2">
+                {getCategoryBadge()}
+              </div>
+            )}
 
             <div className={`flex items-center space-x-3 text-xs text-dark-400 transition-colors duration-200 ${
               getAnimationClass('', 'group-hover:text-dark-300')

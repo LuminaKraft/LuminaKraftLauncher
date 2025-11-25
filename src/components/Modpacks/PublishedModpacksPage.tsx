@@ -56,7 +56,7 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
       }
     } catch (error) {
       console.error('Error loading modpacks:', error);
-      toast.error('Failed to load modpacks');
+      toast.error(t('publishedModpacks.toast.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -69,14 +69,14 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
       });
 
       if (success) {
-        toast.success(`Modpack ${!currentState ? 'activated' : 'deactivated'}`);
+        toast.success(t(!currentState ? 'publishedModpacks.toast.activated' : 'publishedModpacks.toast.deactivated'));
         loadData(); // Reload to reflect changes
       } else {
-        toast.error(`Error: ${error}`);
+        toast.error(t('publishedModpacks.toast.updateError', { error }));
       }
     } catch (error) {
       console.error('Error toggling modpack status:', error);
-      toast.error('Failed to update modpack');
+      toast.error(t('publishedModpacks.toast.updateFailed'));
     }
   };
 
@@ -89,19 +89,19 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
     if (!selectedModpack) return;
 
     try {
-      const toastId = toast.loading('Deleting modpack...');
+      const toastId = toast.loading(t('publishedModpacks.toast.deleting'));
 
       const { success, error } = await service.deleteModpack(selectedModpack.id);
 
       if (success) {
-        toast.success('Modpack deleted successfully', { id: toastId });
+        toast.success(t('publishedModpacks.toast.deleteSuccess'), { id: toastId });
         loadData(); // Reload to reflect changes
       } else {
-        toast.error(`Error: ${error}`, { id: toastId });
+        toast.error(t('publishedModpacks.toast.deleteError', { error }), { id: toastId });
       }
     } catch (error) {
       console.error('Error deleting modpack:', error);
-      toast.error('Failed to delete modpack');
+      toast.error(t('publishedModpacks.toast.deleteFailed'));
     } finally {
       setSelectedModpack(null);
     }
@@ -121,9 +121,10 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
       failed: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
     };
 
+    const statusKey = `publishedModpacks.uploadStatus.${status}` as const;
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[status] || statusColors.pending}`}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+        {t(statusKey)}
       </span>
     );
   };
@@ -135,9 +136,10 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
       community: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
     };
 
+    const categoryKey = `modpacks.category.${category}` as const;
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${categoryColors[category] || categoryColors.community}`}>
-        {category.charAt(0).toUpperCase() + category.slice(1)}
+        {t(categoryKey)}
       </span>
     );
   };
@@ -145,7 +147,7 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-xl text-gray-600 dark:text-gray-400">Loading...</div>
+        <div className="text-xl text-gray-600 dark:text-gray-400">{t('publishedModpacks.loading')}</div>
       </div>
     );
   }
@@ -165,13 +167,12 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
 
           {/* Title */}
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-            Public Modpacks
+            {t('publishedModpacks.auth.title')}
           </h1>
 
           {/* Description */}
           <p className="text-lg text-gray-600 dark:text-gray-400 mb-6 max-w-2xl mx-auto">
-            Share your custom modpacks with the entire LuminaKraft community.
-            Publish, manage, and track your public modpacks all in one place.
+            {t('publishedModpacks.auth.description')}
           </p>
 
           {/* Authentication Required Message */}
@@ -180,24 +181,23 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
               <Lock className="w-6 h-6 text-blue-600 dark:text-blue-400 mt-1 flex-shrink-0" />
               <div className="text-left">
                 <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2 text-lg">
-                  Microsoft Account Required
+                  {t('publishedModpacks.auth.required')}
                 </h3>
                 <p className="text-blue-800 dark:text-blue-200 mb-4">
-                  To publish and manage public modpacks, you need to authenticate with your Microsoft account.
-                  This ensures proper attribution and allows you to manage your published content.
+                  {t('publishedModpacks.auth.requiredDesc')}
                 </p>
                 <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-2">
                   <li className="flex items-center gap-2">
                     <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
-                    Publish modpacks to the community
+                    {t('publishedModpacks.auth.benefits.publish')}
                   </li>
                   <li className="flex items-center gap-2">
                     <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
-                    Track downloads and statistics
+                    {t('publishedModpacks.auth.benefits.track')}
                   </li>
                   <li className="flex items-center gap-2">
                     <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
-                    Update and manage your content
+                    {t('publishedModpacks.auth.benefits.manage')}
                   </li>
                 </ul>
               </div>
@@ -215,19 +215,19 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
               <path d="M0 12h11v11H0V12z" fill="#00A4EF"/>
               <path d="M12 12h11v11H12V12z" fill="#FFB900"/>
             </svg>
-            Sign in with Microsoft
+            {t('publishedModpacks.auth.signIn')}
           </button>
 
           {/* Local Modpacks Alternative */}
           <div className="mt-8 pt-8 border-t border-gray-200 dark:border-gray-700">
             <p className="text-gray-600 dark:text-gray-400 mb-3">
-              Just want to manage modpacks locally?
+              {t('publishedModpacks.auth.localAlternative')}
             </p>
             <button
               onClick={() => onNavigate?.('my-modpacks')}
               className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
             >
-              Go to My Modpacks →
+              {t('publishedModpacks.auth.goToMyModpacks')}
             </button>
           </div>
         </div>
@@ -241,18 +241,18 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
       <div className="mb-6">
         <div className="flex justify-between items-center mb-2">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Public Modpacks
+            {t('publishedModpacks.title')}
           </h1>
           <button
             onClick={() => onNavigate?.('publish-modpack')}
             className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
           >
             <Plus className="w-5 h-5" />
-            Publish New Modpack
+            {t('publishedModpacks.publishNew')}
           </button>
         </div>
         <p className="text-gray-600 dark:text-gray-400">
-          Manage your publicly published modpacks on the platform
+          {t('publishedModpacks.subtitle')}
         </p>
       </div>
 
@@ -261,16 +261,16 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
         <div className="bg-white dark:bg-gray-800 rounded-lg p-12 shadow-md text-center">
           <Cloud className="w-16 h-16 mx-auto mb-4 text-gray-400" />
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-            No public modpacks yet
+            {t('publishedModpacks.empty.title')}
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Publish your first modpack to share it with the community
+            {t('publishedModpacks.empty.description')}
           </p>
           <button
             onClick={() => onNavigate?.('publish-modpack')}
             className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors inline-block"
           >
-            Publish Your First Modpack
+            {t('publishedModpacks.empty.button')}
           </button>
         </div>
       ) : (
@@ -301,12 +301,12 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
                   {modpack.is_active ? (
                     <div className="bg-green-500 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
                       <Eye className="w-3 h-3" />
-                      Active
+                      {t('publishedModpacks.status.active')}
                     </div>
                   ) : (
                     <div className="bg-gray-500 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
                       <EyeOff className="w-3 h-3" />
-                      Inactive
+                      {t('publishedModpacks.status.inactive')}
                     </div>
                   )}
                 </div>
@@ -347,7 +347,7 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
                       className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
                     >
                       <Edit className="w-4 h-4" />
-                      Edit
+                      {t('publishedModpacks.actions.edit')}
                     </button>
 
                     <button
@@ -361,12 +361,12 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
                       {modpack.is_active ? (
                         <>
                           <EyeOff className="w-4 h-4" />
-                          Hide
+                          {t('publishedModpacks.actions.hide')}
                         </>
                       ) : (
                         <>
                           <Eye className="w-4 h-4" />
-                          Show
+                          {t('publishedModpacks.actions.show')}
                         </>
                       )}
                     </button>
@@ -377,7 +377,7 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
                     className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
                   >
                     <Trash2 className="w-4 h-4" />
-                    Delete
+                    {t('publishedModpacks.actions.delete')}
                   </button>
                 </div>
               </div>
@@ -394,10 +394,10 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
           setSelectedModpack(null);
         }}
         onConfirm={handleDeleteConfirm}
-        title="Delete Modpack?"
-        message={`Are you sure you want to delete "${selectedModpack ? getTranslatedName(selectedModpack.name_i18n) : ''}"? This action cannot be undone and will remove the modpack from the platform.`}
-        confirmText="Delete"
-        cancelText="Cancel"
+        title={t('publishedModpacks.deleteDialog.title')}
+        message={t('publishedModpacks.deleteDialog.message', { name: selectedModpack ? getTranslatedName(selectedModpack.name_i18n) : '' })}
+        confirmText={t('publishedModpacks.deleteDialog.confirm')}
+        cancelText={t('publishedModpacks.deleteDialog.cancel')}
         variant="danger"
       />
     </div>

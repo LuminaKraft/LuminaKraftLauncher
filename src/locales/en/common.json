@@ -23,7 +23,11 @@
     "settings": "Settings",
     "about": "About",
     "backToList": "Back to List",
-    "home": "Home"
+    "home": "Home",
+    "myModpacks": "My Modpacks",
+    "myModpacksDesc": "Manage your local modpack instances",
+    "publishedModpacks": "Published Modpacks",
+    "publishedModpacksDesc": "Manage your published modpacks"
   },
   "sidebar": {
     "expand": "Expand sidebar",
@@ -472,6 +476,66 @@
       "title": "No local modpacks yet",
       "description": "Import a CurseForge or Modrinth modpack to get started",
       "button": "Import Your First Modpack"
+    },
+    "installedOn": "Installed on"
+  },
+  "publishedModpacks": {
+    "title": "Public Modpacks",
+    "subtitle": "Manage your publicly published modpacks on the platform",
+    "publishNew": "Publish New Modpack",
+    "loading": "Loading...",
+    "auth": {
+      "title": "Public Modpacks",
+      "description": "Share your custom modpacks with the entire LuminaKraft community. Publish, manage, and track your public modpacks all in one place.",
+      "required": "Microsoft Account Required",
+      "requiredDesc": "To publish and manage public modpacks, you need to authenticate with your Microsoft account. This ensures proper attribution and allows you to manage your published content.",
+      "benefits": {
+        "publish": "Publish modpacks to the community",
+        "track": "Track downloads and statistics",
+        "manage": "Update and manage your content"
+      },
+      "signIn": "Sign in with Microsoft",
+      "localAlternative": "Just want to manage modpacks locally?",
+      "goToMyModpacks": "Go to My Modpacks →"
+    },
+    "empty": {
+      "title": "No public modpacks yet",
+      "description": "Publish your first modpack to share it with the community",
+      "button": "Publish Your First Modpack"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "uploadStatus": {
+      "pending": "Pending",
+      "uploading": "Uploading",
+      "processing": "Processing",
+      "completed": "Completed",
+      "failed": "Failed"
+    },
+    "actions": {
+      "edit": "Edit",
+      "hide": "Hide",
+      "show": "Show",
+      "delete": "Delete"
+    },
+    "deleteDialog": {
+      "title": "Delete Modpack?",
+      "message": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone and will remove the modpack from the platform.",
+      "confirm": "Delete",
+      "cancel": "Cancel"
+    },
+    "toast": {
+      "activated": "Modpack activated",
+      "deactivated": "Modpack deactivated",
+      "updateError": "Error: {{error}}",
+      "updateFailed": "Failed to update modpack",
+      "deleting": "Deleting modpack...",
+      "deleteSuccess": "Modpack deleted successfully",
+      "deleteError": "Error: {{error}}",
+      "deleteFailed": "Failed to delete modpack",
+      "loadFailed": "Failed to load modpacks"
     }
   }
 }

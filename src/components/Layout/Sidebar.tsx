@@ -52,15 +52,15 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
     },
     {
       id: 'my-modpacks',
-      label: 'My Modpacks',
+      label: t('navigation.myModpacks'),
       icon: FolderOpen,
-      description: 'Manage your local modpack instances'
+      description: t('navigation.myModpacksDesc')
     },
     {
       id: 'published-modpacks',
-      label: 'Public Modpacks',
+      label: t('navigation.publishedModpacks'),
       icon: Cloud,
-      description: 'Manage your public modpacks'
+      description: t('navigation.publishedModpacksDesc')
     },
     {
       id: 'settings',

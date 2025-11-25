@@ -23,7 +23,11 @@
     "settings": "Ajustes",
     "about": "Acerca de",
     "backToList": "Volver a la Lista",
-    "home": "Inicio"
+    "home": "Inicio",
+    "myModpacks": "Mis Modpacks",
+    "myModpacksDesc": "Gestiona tus instancias locales de modpacks",
+    "publishedModpacks": "Modpacks Publicados",
+    "publishedModpacksDesc": "Gestiona tus modpacks publicados"
   },
   "sidebar": {
     "expand": "Expandir barra lateral",
@@ -458,6 +462,7 @@
     "subtitle": "Gestiona tus instancias locales de modpacks - disponible para todos los usuarios",
     "import": "Importar Modpack",
     "validating": "Validando...",
+    "installedOn": "Instalado el",
     "localManagement": {
       "title": "Gestión de Modpacks Locales",
       "description": "Estas son tus instancias locales de modpacks. Se almacenan en tu computadora y están disponibles sin conexión. Para compartir modpacks públicamente, usa",
@@ -467,6 +472,65 @@
       "title": "Aún no hay modpacks locales",
       "description": "Importa un modpack de CurseForge o Modrinth para comenzar",
       "button": "Importa Tu Primer Modpack"
+    }
+  },
+  "publishedModpacks": {
+    "title": "Modpacks Públicos",
+    "subtitle": "Gestiona tus modpacks publicados en la plataforma",
+    "publishNew": "Publicar Nuevo Modpack",
+    "loading": "Cargando...",
+    "auth": {
+      "title": "Modpacks Públicos",
+      "description": "Comparte tus modpacks personalizados con toda la comunidad de LuminaKraft. Publica, gestiona y rastrea tus modpacks públicos en un solo lugar.",
+      "required": "Cuenta de Microsoft Requerida",
+      "requiredDesc": "Para publicar y gestionar modpacks públicos, necesitas autenticarte con tu cuenta de Microsoft. Esto asegura una atribución adecuada y te permite gestionar tu contenido publicado.",
+      "benefits": {
+        "publish": "Publicar modpacks a la comunidad",
+        "track": "Rastrear descargas y estadísticas",
+        "manage": "Actualizar y gestionar tu contenido"
+      },
+      "signIn": "Iniciar sesión con Microsoft",
+      "localAlternative": "¿Solo quieres gestionar modpacks localmente?",
+      "goToMyModpacks": "Ir a Mis Modpacks →"
+    },
+    "empty": {
+      "title": "Aún no hay modpacks públicos",
+      "description": "Publica tu primer modpack para compartirlo con la comunidad",
+      "button": "Publica Tu Primer Modpack"
+    },
+    "status": {
+      "active": "Activo",
+      "inactive": "Inactivo"
+    },
+    "uploadStatus": {
+      "pending": "Pendiente",
+      "uploading": "Subiendo",
+      "processing": "Procesando",
+      "completed": "Completado",
+      "failed": "Fallido"
+    },
+    "actions": {
+      "edit": "Editar",
+      "hide": "Ocultar",
+      "show": "Mostrar",
+      "delete": "Eliminar"
+    },
+    "deleteDialog": {
+      "title": "¿Eliminar Modpack?",
+      "message": "¿Estás seguro de que quieres eliminar \"{{name}}\"? Esta acción no se puede deshacer y removerá el modpack de la plataforma.",
+      "confirm": "Eliminar",
+      "cancel": "Cancelar"
+    },
+    "toast": {
+      "activated": "Modpack activado",
+      "deactivated": "Modpack desactivado",
+      "updateError": "Error: {{error}}",
+      "updateFailed": "Error al actualizar modpack",
+      "deleting": "Eliminando modpack...",
+      "deleteSuccess": "Modpack eliminado exitosamente",
+      "deleteError": "Error: {{error}}",
+      "deleteFailed": "Error al eliminar modpack",
+      "loadFailed": "Error al cargar modpacks"
     }
   }
 }
