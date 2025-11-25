@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Download, FolderOpen } from 'lucide-react';
+import { Download, FolderOpen } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import toast from 'react-hot-toast';
@@ -24,10 +24,10 @@ interface LocalModpack {
 }
 
 interface MyModpacksPageProps {
-  onNavigate?: (section: string) => void;
+  onNavigate?: (_section: string) => void;
 }
 
-export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
+export function MyModpacksPage({ onNavigate: _onNavigate }: MyModpacksPageProps) {
   const { t } = useTranslation();
   const validationService = ModpackValidationService.getInstance();
   const { installModpackFromZip, modpackStates } = useLauncher();
@@ -43,7 +43,7 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
     modsInOverrides: string[];
     file: File;
   } | null>(null);
-  const [zipProgress, setZipProgress] = useState<{
+  const [_zipProgress, setZipProgress] = useState<{
     current: number;
     total: number;
     stage: string;
@@ -199,7 +199,7 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
 
             // Read uploaded files as bytes
             const uploadedFilesData: [string, number[]][] = [];
-            for (const [fileName, file] of uploadedFiles.entries()) {
+            for (const [_fileName, file] of uploadedFiles.entries()) {
               const buffer = await file.arrayBuffer();
               const bytes = Array.from(new Uint8Array(buffer));
               uploadedFilesData.push([file.name, bytes]);
@@ -235,7 +235,7 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
     }
   };
 
-  const handleDownloadDialogCancel = async () => {
+  const _handleDownloadDialogCancel = async () => {
     // Just import without creating updated ZIP
     if (validationData) {
       await performImport(validationData.file);
@@ -333,9 +333,7 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
               const tempModpack: Modpack = {
                 id,
                 name: id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-                nombre: id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
                 description: 'Importing modpack...',
-                descripcion: 'Importing modpack...',
                 shortDescription: 'Imported from local ZIP file',
                 version: '1.0.0',
                 minecraftVersion: '1.20.1',
@@ -370,7 +368,7 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
                 id: localModpack.id,
                 name: localModpack.name,
                 description: '',
-                shortDescription: `${t('myModpacks.installedOn')} ${new Date(localModpack.createdAt).toLocaleDateString()}`,
+                shortDescription: `${t('myModpacks.importedOn')} ${new Date(localModpack.createdAt).toLocaleDateString()}`,
                 version: localModpack.version,
                 minecraftVersion: localModpack.minecraftVersion,
                 modloader: localModpack.modloader,
