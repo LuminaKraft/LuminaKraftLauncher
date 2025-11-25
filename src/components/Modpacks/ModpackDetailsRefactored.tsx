@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Download, Clock, Users, Terminal, Info, Image } from 'lucide-react';
 import LogsSection from './Details/Sections/LogsSection';
@@ -6,6 +6,7 @@ import ScreenshotsSection from './Details/Sections/ScreenshotsSection';
 import type { Modpack, ModpackState, ProgressInfo } from '../../types/launcher';
 import { useLauncher } from '../../contexts/LauncherContext';
 import { useAnimation } from '../../contexts/AnimationContext';
+import LauncherService from '../../services/launcherService';
 
 import ModpackActions from './Details/ModpackActions';
 import ModpackInfo from './Details/ModpackInfo';
@@ -26,12 +27,48 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
   const { t } = useTranslation();
   const { modpackStates } = useLauncher();
   const { getAnimationClass, getAnimationStyle } = useAnimation();
+  const launcherService = LauncherService.getInstance();
 
   const liveState = modpackStates[modpack.id] || state;
 
   // Logs state
   const [logs, setLogs] = React.useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<'content' | 'logs' | 'screenshots'>('content');
+
+  // Stats state
+  const [stats, setStats] = useState({
+    totalDownloads: 0,
+    totalPlaytime: 0,
+    activePlayers: 0,
+    userPlaytime: 0
+  });
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+
+  // Load stats from database
+  useEffect(() => {
+    const loadStats = async () => {
+      setIsLoadingStats(true);
+      try {
+        const [modpackStats, userStats] = await Promise.all([
+          launcherService.getModpackStats(modpack.id),
+          launcherService.getUserModpackStats(modpack.id)
+        ]);
+
+        setStats({
+          totalDownloads: modpackStats?.totalDownloads || 0,
+          totalPlaytime: modpackStats?.totalPlaytime || 0,
+          activePlayers: modpackStats?.activePlayers || 0,
+          userPlaytime: userStats?.playtimeHours || 0
+        });
+      } catch (error) {
+        console.error('Error loading stats:', error);
+      } finally {
+        setIsLoadingStats(false);
+      }
+    };
+
+    loadStats();
+  }, [modpack.id]);
 
   React.useEffect(() => {
     let unlisten: (() => void) | null = null;
@@ -104,17 +141,37 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
       </span>
     );
   };
-  const stats = [
-    { icon: Download, value: modpack.downloads || 0, label: t('modpacks.downloads') },
-    { icon: Clock, value: modpack.playTime || 0, label: t('modpacks.playTime') },
-    { icon: Users, value: modpack.players || 0, label: t('modpacks.activePlayers') },
+
+  // Format playtime for display
+  const formatPlaytime = (hours: number): string => {
+    if (hours === 0) return '0h';
+    if (hours < 1) return `${Math.round(hours * 60)}m`;
+    return `${hours.toFixed(1)}h`;
+  };
+
+  const statsDisplay = [
+    {
+      icon: Download,
+      value: isLoadingStats ? '...' : stats.totalDownloads.toString(),
+      label: t('modpacks.downloads')
+    },
+    {
+      icon: Clock,
+      value: isLoadingStats ? '...' : formatPlaytime(stats.userPlaytime),
+      label: t('modpacks.playTime')
+    },
+    {
+      icon: Users,
+      value: isLoadingStats ? '...' : stats.activePlayers.toString(),
+      label: t('modpacks.activePlayers')
+    },
   ];
 
   const renderContentTab = () => (
     <>
       {/* Quick Stats */}
       <div className="grid grid-cols-3 gap-4 mb-8">
-        {stats.map((stat, index) => (
+        {statsDisplay.map((stat, index) => (
           <div 
             key={index} 
             className={`bg-dark-800 rounded-xl p-4 border border-dark-700 group ${

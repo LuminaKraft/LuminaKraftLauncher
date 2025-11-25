@@ -597,9 +597,15 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
 
           let unlistenStart: (() => void) | null = null;
           let unlistenExit: (() => void) | null = null;
+          let startTime: number | null = null;
+          let activeStatusInterval: NodeJS.Timeout | null = null;
 
           try {
             unlistenStart = await listen(startEvent, () => {
+              // Record start time
+              startTime = Date.now();
+
+              // Update state
               dispatch({
                 type: 'SET_MODPACK_STATE',
                 payload: {
@@ -610,9 +616,32 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
                   },
                 },
               });
+
+              // Update active status immediately
+              launcherService.updateActiveStatus(modpackId);
+
+              // Update active status every 2 minutes while playing
+              activeStatusInterval = setInterval(() => {
+                launcherService.updateActiveStatus(modpackId);
+              }, 2 * 60 * 1000); // 2 minutes
             });
 
             unlistenExit = await listen(exitEvent, () => {
+              // Clear active status interval
+              if (activeStatusInterval) {
+                clearInterval(activeStatusInterval);
+                activeStatusInterval = null;
+              }
+
+              // Calculate and save playtime
+              if (startTime) {
+                const endTime = Date.now();
+                const hoursPlayed = (endTime - startTime) / (1000 * 60 * 60); // Convert ms to hours
+                launcherService.addPlaytime(modpackId, hoursPlayed);
+                console.log(`Session ended. Playtime: ${hoursPlayed.toFixed(2)} hours`);
+              }
+
+              // Update state
               dispatch({
                 type: 'SET_MODPACK_STATE',
                 payload: {

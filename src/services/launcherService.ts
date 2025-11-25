@@ -1218,6 +1218,199 @@ class LauncherService {
   }
 
   // Java-specific helper methods removed – Lyceris handles runtimes automatically.
+
+  // ============================================================================
+  // STATISTICS AND PLAYTIME TRACKING
+  // ============================================================================
+
+  /**
+   * Get comprehensive statistics for a modpack
+   */
+  async getModpackStats(modpackId: string): Promise<{
+    totalDownloads: number;
+    totalPlaytime: number;
+    activePlayers: number;
+    uniquePlayers: number;
+    averageRating: number | null;
+  } | null> {
+    try {
+      if (!this.isValidUUID(modpackId)) {
+        return null;
+      }
+
+      const { data, error } = await supabase.rpc('get_modpack_stats', {
+        p_modpack_id: modpackId
+      } as any) as { data: any; error: any };
+
+      if (error) {
+        console.error('Error getting modpack stats:', error);
+        return null;
+      }
+
+      return {
+        totalDownloads: data.total_downloads || 0,
+        totalPlaytime: data.total_playtime || 0,
+        activePlayers: data.active_players || 0,
+        uniquePlayers: data.unique_players || 0,
+        averageRating: data.average_rating
+      };
+    } catch (error) {
+      console.error('Error getting modpack stats:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get personal statistics for current user and modpack
+   */
+  async getUserModpackStats(modpackId: string): Promise<{
+    downloads: number;
+    playtimeHours: number;
+    lastPlayed: string | null;
+    rating: number | null;
+  } | null> {
+    try {
+      if (!this.isValidUUID(modpackId)) {
+        // For local modpacks, get from localStorage
+        return this.getLocalPlaytime(modpackId);
+      }
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        // Anonymous user - get from localStorage
+        return this.getLocalPlaytime(modpackId);
+      }
+
+      const { data, error } = await supabase.rpc('get_user_modpack_stats', {
+        p_modpack_id: modpackId,
+        p_user_id: user.id
+      } as any) as { data: any; error: any };
+
+      if (error) {
+        console.error('Error getting user modpack stats:', error);
+        return null;
+      }
+
+      return {
+        downloads: data.downloads || 0,
+        playtimeHours: data.playtime_hours || 0,
+        lastPlayed: data.last_played,
+        rating: data.rating
+      };
+    } catch (error) {
+      console.error('Error getting user modpack stats:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Update active status (called every 2 minutes while Minecraft is running)
+   */
+  async updateActiveStatus(modpackId: string): Promise<void> {
+    try {
+      if (!this.isValidUUID(modpackId)) {
+        return;
+      }
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return; // Anonymous users don't track active status
+      }
+
+      const { error } = await supabase.rpc('update_active_status', {
+        p_modpack_id: modpackId,
+        p_user_id: user.id
+      } as any) as { error: any };
+
+      if (error) {
+        console.error('Error updating active status:', error);
+      }
+    } catch (error) {
+      console.error('Error updating active status:', error);
+    }
+  }
+
+  /**
+   * Add playtime for a modpack (hybrid: BD for authenticated, local for anonymous)
+   * @param hoursPlayed - Hours played in this session (can be decimal, e.g., 0.5)
+   */
+  async addPlaytime(modpackId: string, hoursPlayed: number): Promise<void> {
+    try {
+      // Always save to localStorage first (for quick access and backup)
+      this.saveLocalPlaytime(modpackId, hoursPlayed);
+
+      // If valid UUID and authenticated, also save to database
+      if (this.isValidUUID(modpackId)) {
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user && user.role === 'authenticated') {
+          const { error } = await supabase.rpc('add_playtime', {
+            p_modpack_id: modpackId,
+            p_user_id: user.id,
+            p_hours_played: hoursPlayed
+          } as any) as { error: any };
+
+          if (error) {
+            console.error('Error adding playtime to database:', error);
+          } else {
+            console.log(`Playtime added to database: ${hoursPlayed.toFixed(2)}h`);
+          }
+        }
+      }
+
+      console.log(`Playtime tracked: ${hoursPlayed.toFixed(2)}h for ${modpackId}`);
+    } catch (error) {
+      console.error('Error adding playtime:', error);
+    }
+  }
+
+  /**
+   * Get local playtime from localStorage
+   */
+  private getLocalPlaytime(modpackId: string): {
+    downloads: number;
+    playtimeHours: number;
+    lastPlayed: string | null;
+    rating: number | null;
+  } {
+    try {
+      const key = `playtime_${modpackId}`;
+      const data = localStorage.getItem(key);
+      if (data) {
+        return JSON.parse(data);
+      }
+    } catch (error) {
+      console.error('Error getting local playtime:', error);
+    }
+
+    return {
+      downloads: 0,
+      playtimeHours: 0,
+      lastPlayed: null,
+      rating: null
+    };
+  }
+
+  /**
+   * Save playtime to localStorage
+   */
+  private saveLocalPlaytime(modpackId: string, hoursPlayed: number): void {
+    try {
+      const key = `playtime_${modpackId}`;
+      const existing = this.getLocalPlaytime(modpackId);
+
+      const updated = {
+        downloads: existing.downloads,
+        playtimeHours: existing.playtimeHours + hoursPlayed,
+        lastPlayed: new Date().toISOString(),
+        rating: existing.rating
+      };
+
+      localStorage.setItem(key, JSON.stringify(updated));
+    } catch (error) {
+      console.error('Error saving local playtime:', error);
+    }
+  }
 }
 
 export default LauncherService; 
