@@ -13,54 +13,22 @@ class AuthService {
   }
 
   /**
-   * Initialize anonymous session in Supabase
-   * This allows users to browse and download modpacks without logging in
-   * @param minecraftUsername - Optional username to save for anonymous users
+   * Check if user has an active Supabase session
+   * Returns session info if exists
    */
-  async initializeAnonymousSession(minecraftUsername?: string): Promise<boolean> {
+  async checkSession(): Promise<boolean> {
     try {
-      // Check if already has a session
       const { data: { session } } = await supabase.auth.getSession();
 
       if (session) {
-        console.log('✅ Already has Supabase session:', session.user.is_anonymous ? 'anonymous' : 'authenticated');
-
-        // Update minecraft username if provided and user exists in users table
-        if (minecraftUsername && session.user.id) {
-          await this.updateMinecraftUsername(minecraftUsername);
-        }
-
+        console.log('Active Supabase session:', session.user.is_anonymous ? 'anonymous' : 'authenticated');
         return true;
       }
 
-      // Create anonymous session
-      const { data: authData, error } = await supabase.auth.signInAnonymously();
-
-      if (error) {
-        console.error('❌ Failed to create anonymous session:', error);
-        return false;
-      }
-
-      console.log('✅ Anonymous Supabase session created');
-
-      // Create user record with minecraft username if provided
-      if (authData.user && minecraftUsername) {
-        const { error: insertError } = await supabase.from('users').insert({
-          id: authData.user.id,
-          minecraft_username: minecraftUsername,
-          was_anonymous: true
-        });
-
-        if (insertError) {
-          console.error('❌ Failed to create user record:', insertError);
-        } else {
-          console.log('✅ User record created with minecraft username:', minecraftUsername);
-        }
-      }
-
-      return true;
+      console.log('No active Supabase session');
+      return false;
     } catch (error) {
-      console.error('❌ Error initializing anonymous session:', error);
+      console.error('Error checking session:', error);
       return false;
     }
   }
@@ -148,16 +116,14 @@ class AuthService {
   }
 
   /**
-   * Sign out from Supabase and return to anonymous session
+   * Sign out from Supabase
    */
   async signOutSupabase(): Promise<void> {
     try {
       await supabase.auth.signOut();
-      // Re-initialize anonymous session
-      await this.initializeAnonymousSession();
-      console.log('✅ Signed out from Supabase, anonymous session restored');
+      console.log('Signed out from Supabase');
     } catch (error) {
-      console.error('❌ Error signing out from Supabase:', error);
+      console.error('Error signing out from Supabase:', error);
     }
   }
 
@@ -478,15 +444,20 @@ class AuthService {
 
   /**
    * Update Minecraft username in database
-   * For anonymous users: only updates minecraft_username field
-   * For authenticated users: updates field AND adds to history
+   * Only works for authenticated users (Microsoft/Discord)
+   * Maintains history of username changes with timestamps
    */
   async updateMinecraftUsername(newUsername: string): Promise<boolean> {
     try {
       const { data: { session } } = await supabase.auth.getSession();
 
       if (!session) {
-        console.error('❌ No session, cannot update username');
+        console.error('No session, cannot update username');
+        return false;
+      }
+
+      if (session.user.is_anonymous) {
+        console.log('Anonymous users cannot update username in database');
         return false;
       }
 
@@ -499,79 +470,60 @@ class AuthService {
 
       // If username hasn't changed, skip update
       if (currentUser?.minecraft_username === newUsername) {
-        console.log('⏭️ Username unchanged, skipping update');
+        console.log('Username unchanged, skipping update');
         return true;
       }
 
-      const isAuthenticated = !session.user.is_anonymous;
       const now = new Date().toISOString();
+      const history = currentUser?.minecraft_username_history || [];
 
-      if (isAuthenticated) {
-        // For authenticated users: update field + add to history
-        const history = currentUser?.minecraft_username_history || [];
+      // Close previous entry if exists
+      if (currentUser?.minecraft_username) {
+        const updatedHistory = history.map((entry: any) =>
+          entry.to === null
+            ? { ...entry, to: now }
+            : entry
+        );
 
-        // Close previous entry if exists
-        if (currentUser?.minecraft_username) {
-          const updatedHistory = history.map((entry: any) =>
-            entry.to === null
-              ? { ...entry, to: now }
-              : entry
-          );
+        // Add new entry
+        updatedHistory.push({
+          username: newUsername,
+          from: now,
+          to: null
+        });
 
-          // Add new entry
-          updatedHistory.push({
-            username: newUsername,
-            from: now,
-            to: null
-          });
-
-          const { error } = await supabase.from('users').update({
-            minecraft_username: newUsername,
-            minecraft_username_history: updatedHistory,
-            updated_at: now
-          }).eq('id', session.user.id);
-
-          if (error) {
-            console.error('❌ Failed to update username with history:', error);
-            return false;
-          }
-        } else {
-          // First username for authenticated user
-          const { error } = await supabase.from('users').update({
-            minecraft_username: newUsername,
-            minecraft_username_history: [{
-              username: newUsername,
-              from: now,
-              to: null
-            }],
-            updated_at: now
-          }).eq('id', session.user.id);
-
-          if (error) {
-            console.error('❌ Failed to set initial username:', error);
-            return false;
-          }
-        }
-
-        console.log('✅ Minecraft username updated with history:', newUsername);
-      } else {
-        // For anonymous users: only update the field
         const { error } = await supabase.from('users').update({
           minecraft_username: newUsername,
+          minecraft_username_history: updatedHistory,
           updated_at: now
         }).eq('id', session.user.id);
 
         if (error) {
-          console.error('❌ Failed to update username:', error);
+          console.error('Failed to update username with history:', error);
           return false;
         }
+      } else {
+        // First username for authenticated user
+        const { error } = await supabase.from('users').update({
+          minecraft_username: newUsername,
+          minecraft_username_history: [{
+            username: newUsername,
+            from: now,
+            to: null
+          }],
+          updated_at: now
+        }).eq('id', session.user.id);
 
-        console.log('✅ Minecraft username updated (anonymous):', newUsername);
+        if (error) {
+          console.error('Failed to set initial username:', error);
+          return false;
+        }
       }
 
+      console.log('Minecraft username updated with history:', newUsername);
       return true;
     } catch (error) {
-      console.error('❌ Error updating Minecraft username:', error);
+      console.error('Error updating Minecraft username:', error);
       return false;
     }
   }

@@ -478,6 +478,20 @@
       "button": "Importa Tu Primer Modpack"
     }
   },
+  "rateLimit": {
+    "exceeded": "Límite de Descargas Alcanzado",
+    "warning": "Advertencia de Límite de Descargas",
+    "limit": "Límite por Hora",
+    "remaining": "Restantes",
+    "resetIn": "Se reinicia en",
+    "linkDiscordTitle": "Obtén 5x Más Descargas",
+    "linkDiscordDesc": "Vincula tu cuenta de Discord para aumentar tu límite de descargas de 10 a 50 por hora",
+    "linkDiscordAuthDesc": "Inicia sesión y vincula tu cuenta de Discord para obtener 50 descargas por hora en lugar de solo 3",
+    "benefit1": "50 descargas por hora (vs 3 para anónimos)",
+    "benefit2": "Publica tus propios modpacks",
+    "benefit3": "Únete a nuestra comunidad y obtén soporte",
+    "goToSettings": "Ir a Configuración"
+  },
   "publishedModpacks": {
     "title": "Publicar Modpacks",
     "subtitle": "Publica y gestiona tus modpacks en la plataforma",

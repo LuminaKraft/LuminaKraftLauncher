@@ -228,10 +228,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     const initializeApp = async () => {
       try {
         const settings = launcherService.getUserSettings();
-
-        // Initialize Supabase anonymous session with minecraft username
         const authService = AuthService.getInstance();
-        await authService.initializeAnonymousSession(settings.username);
 
         dispatch({ type: 'SET_USER_SETTINGS', payload: settings });
         dispatch({ type: 'SET_LANGUAGE', payload: settings.language });
@@ -426,10 +423,12 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     launcherService.saveUserSettings(settings);
     dispatch({ type: 'SET_USER_SETTINGS', payload: newSettings });
 
-    // If username changed, sync with Supabase
+    // If username changed and user is authenticated, sync with Supabase
     if (settings.username && settings.username !== state.userSettings.username) {
-      const authService = AuthService.getInstance();
-      await authService.updateMinecraftUsername(settings.username);
+      if (state.userSettings.authMethod === 'microsoft' || state.userSettings.authMethod === 'discord' || state.userSettings.authMethod === 'both') {
+        const authService = AuthService.getInstance();
+        await authService.updateMinecraftUsername(settings.username);
+      }
     }
   };
 
@@ -552,13 +551,33 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
 
       switch (action) {
         case 'install':
+          // Check rate limit before installing
+          try {
+            const rateLimitCheck = await launcherService.checkDownloadRateLimit(modpackId);
+
+            if (!rateLimitCheck.allowed) {
+              // Rate limit exceeded
+              dispatch({
+                type: 'SET_MODPACK_STATE',
+                payload: {
+                  id: modpackId,
+                  state: createModpackState('error', {
+                    error: rateLimitCheck.message
+                  }),
+                },
+              });
+              return;
+            }
+          } catch (error) {
+            console.error('Error checking rate limit:', error);
+            // Continue with installation even if rate limit check fails
+          }
+
           const failedModsResult = await launcherService.installModpackWithFailedTracking(modpackId, onProgress);
           if (failedModsResult && failedModsResult.length > 0) {
             setFailedMods(failedModsResult);
             setShowFailedModsDialog(true);
           }
-          // Track download stats in Supabase
-          await launcherService.trackDownload(modpackId);
           break;
         case 'update':
           const updateFailedModsResult = await launcherService.updateModpack(modpackId, onProgress);

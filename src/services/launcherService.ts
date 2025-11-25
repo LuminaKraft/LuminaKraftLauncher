@@ -903,37 +903,54 @@ class LauncherService {
   }
 
   /**
-   * Track modpack download in Supabase stats
-   * Increments the download counter for the modpack
-   * Only tracks downloads for modpacks from the server (with valid UUID)
+   * Check rate limit before download and track if allowed
+   * Returns rate limit info including whether download is allowed
+   * @throws Error if rate limit exceeded
    */
-  async trackDownload(modpackId: string): Promise<void> {
-    try {
-      // Only track downloads for modpacks with valid UUIDs (from server)
-      // Imported modpacks use slugified names as IDs, skip tracking for those
-      if (!this.isValidUUID(modpackId)) {
-        console.log(`⏭️  Skipping download tracking for non-UUID modpack: ${modpackId}`);
-        return;
-      }
-
-      // Get current user ID (anonymous or authenticated)
-      const { data: { user } } = await supabase.auth.getUser();
-      const userId = user?.id || null;
-
-      const { error } = await supabase.rpc('increment_downloads', {
-        p_modpack_id: modpackId,
-        p_user_id: userId
-      } as any) as { error: any };
-
-      if (error) {
-        console.error('Error tracking download:', error);
-      } else {
-        console.log(`✅ Download tracked for modpack: ${modpackId}`);
-      }
-    } catch (error) {
-      console.error('Error tracking download:', error);
-      // Don't throw - stats tracking should not break the main flow
+  async checkDownloadRateLimit(modpackId: string): Promise<{
+    allowed: boolean;
+    limit: number;
+    remaining: number;
+    resetAt: string;
+    isAuthenticated: boolean;
+    isDiscordMember: boolean;
+    message: string;
+  }> {
+    // Only check for modpacks with valid UUIDs (from server)
+    if (!this.isValidUUID(modpackId)) {
+      console.log(`Skipping rate limit check for non-UUID modpack: ${modpackId}`);
+      return {
+        allowed: true,
+        limit: 999,
+        remaining: 999,
+        resetAt: new Date(Date.now() + 3600000).toISOString(),
+        isAuthenticated: false,
+        isDiscordMember: false,
+        message: 'Local modpack'
+      };
     }
+
+    const { data, error } = await supabase.rpc('track_download_with_limit', {
+      p_modpack_id: modpackId
+    } as any) as { data: any; error: any };
+
+    if (error) {
+      console.error('Error checking download rate limit:', error);
+      throw new Error('Failed to check download rate limit');
+    }
+
+    const result = {
+      allowed: data.allowed,
+      limit: data.limit,
+      remaining: data.remaining,
+      resetAt: data.reset_at,
+      isAuthenticated: data.is_authenticated,
+      isDiscordMember: data.is_discord_member,
+      message: data.message
+    };
+
+    console.log('Rate limit check:', result.message);
+    return result;
   }
 
   /**
