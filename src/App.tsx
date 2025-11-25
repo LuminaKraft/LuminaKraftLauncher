@@ -16,6 +16,8 @@ import { updateService, UpdateInfo } from './services/updateService';
 import './App.css';
 import { Toaster } from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
+import AuthService from './services/authService';
+import toast from 'react-hot-toast';
 
 function AppContent() {
   const [activeSection, setActiveSection] = useState('home');
@@ -31,6 +33,34 @@ function AppContent() {
   const { t } = useTranslation();
   const launcherService = LauncherService.getInstance();
 
+  // Handle Discord OAuth callback
+  useEffect(() => {
+    const handleDiscordOAuthCallback = async () => {
+      // Check if URL contains auth/callback (hash routing)
+      const hash = window.location.hash;
+      if (hash.includes('/auth/callback') || hash.includes('auth/callback')) {
+        console.log('🔗 Discord OAuth callback detected');
+
+        const authService = AuthService.getInstance();
+        const success = await authService.handleDiscordCallback();
+
+        if (success) {
+          toast.success(t('auth.discordLinked'));
+          // Navigate to settings
+          setActiveSection('settings');
+          // Clean up URL
+          window.location.hash = '#/settings';
+        } else {
+          toast.error(t('auth.discordLinkFailed'));
+          // Navigate to home
+          setActiveSection('home');
+          window.location.hash = '#/';
+        }
+      }
+    };
+
+    handleDiscordOAuthCallback();
+  }, [t]);
 
   useEffect(() => {
     const checkForUpdatesOnStartup = async () => {

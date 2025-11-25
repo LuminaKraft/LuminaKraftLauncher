@@ -247,6 +247,13 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
           ModpackManagementService.getInstance().setMicrosoftAccount(settings.microsoftAccount);
         }
 
+        // Sync Discord roles if needed (last sync > 6 hours ago)
+        const shouldSyncDiscord = await authService.shouldSyncDiscordRoles();
+        if (shouldSyncDiscord) {
+          console.log('🔄 Syncing Discord roles on app launch...');
+          await authService.syncDiscordRoles();
+        }
+
         // Load initial data
         await refreshData();
       } catch (error) {
