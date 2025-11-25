@@ -467,7 +467,7 @@
     "subtitle": "Manage your local modpack instances",
     "import": "Import Modpack",
     "validating": "Validating...",
-    "installedOn": "Installed on",
+    "importedOn": "Imported on",
     "empty": {
       "title": "No local modpacks yet",
       "description": "Import a CurseForge or Modrinth modpack to get started",
