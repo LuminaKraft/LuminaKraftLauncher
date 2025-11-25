@@ -212,14 +212,20 @@ export class ModpackManagementService {
     modpackId: string,
     file: File,
     onProgress?: (_progress: number) => void
-  ): Promise<{ success: boolean; fileUrl?: string; error?: string }> {
+  ): Promise<{ success: boolean; fileUrl?: string; filePath?: string; sha256?: string; error?: string }> {
     try {
       console.log('📤 Starting file upload:', file.name, file.size, 'bytes');
+
+      // Calculate SHA256 hash for integrity verification
+      console.log('🔐 Calculating SHA256 hash...');
+      const sha256 = await this.calculateSHA256(file);
+      console.log('✅ SHA256:', sha256);
 
       // Create FormData with file and modpackId
       const formData = new FormData();
       formData.append('file', file);
       formData.append('modpackId', modpackId);
+      formData.append('sha256', sha256);
 
       // Upload using Edge Function proxy
       const xhr = new XMLHttpRequest();
@@ -243,7 +249,9 @@ export class ModpackManagementService {
               if (response.success) {
                 resolve({
                   success: true,
-                  fileUrl: response.fileUrl
+                  fileUrl: response.fileUrl,
+                  filePath: response.filePath,
+                  sha256: sha256
                 });
               } else {
                 resolve({ success: false, error: response.error || 'Upload failed' });
@@ -281,11 +289,8 @@ export class ModpackManagementService {
 
   /**
    * Calculate SHA256 hash of a file
-   * Currently unused but reserved for future integrity checking
    */
-  // @ts-ignore - Reserved for future file integrity verification
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  private async _calculateSHA256(file: File): Promise<string> {
+  private async calculateSHA256(file: File): Promise<string> {
     const buffer = await file.arrayBuffer();
     const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
