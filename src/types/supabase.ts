@@ -10,18 +10,39 @@ export interface Database {
         Row: {
           id: string;
           microsoft_id: string | null;
+          // Discord Authentication
+          discord_id: string | null;
+          discord_username: string | null;
+          discord_discriminator: string | null;
+          discord_global_name: string | null;
+          discord_avatar: string | null;
+          // Profile
           email: string;
           display_name: string | null;
           avatar_url: string | null;
+          // Minecraft
           minecraft_username: string | null;
           minecraft_uuid: string | null;
           is_minecraft_verified: boolean;
+          // Discord Server Membership
+          is_discord_member: boolean;
+          discord_member_since: string | null;
+          last_discord_sync: string | null;
+          // Discord Roles
+          discord_roles: string[];
+          has_partner_role: boolean;
+          partner_role_id: string | null;
+          // Roles
           role: 'admin' | 'partner' | 'user';
           partner_id: string | null;
           partner_name: string | null;
           partner_logo: string | null;
           partner_website: string | null;
           partner_discord: string | null;
+          // Account Linking
+          linked_at: string | null;
+          was_anonymous: boolean;
+          // Metadata
           is_active: boolean;
           is_verified: boolean;
           created_at: string;
@@ -30,35 +51,61 @@ export interface Database {
         Insert: {
           id: string;
           microsoft_id?: string | null;
+          discord_id?: string | null;
+          discord_username?: string | null;
+          discord_discriminator?: string | null;
+          discord_global_name?: string | null;
+          discord_avatar?: string | null;
           email: string;
           display_name?: string | null;
           avatar_url?: string | null;
           minecraft_username?: string | null;
           minecraft_uuid?: string | null;
           is_minecraft_verified?: boolean;
+          is_discord_member?: boolean;
+          discord_member_since?: string | null;
+          last_discord_sync?: string | null;
+          discord_roles?: string[];
+          has_partner_role?: boolean;
+          partner_role_id?: string | null;
           role?: 'admin' | 'partner' | 'user';
           partner_id?: string | null;
           partner_name?: string | null;
           partner_logo?: string | null;
           partner_website?: string | null;
           partner_discord?: string | null;
+          linked_at?: string | null;
+          was_anonymous?: boolean;
           is_active?: boolean;
           is_verified?: boolean;
         };
         Update: {
           microsoft_id?: string | null;
+          discord_id?: string | null;
+          discord_username?: string | null;
+          discord_discriminator?: string | null;
+          discord_global_name?: string | null;
+          discord_avatar?: string | null;
           email?: string;
           display_name?: string | null;
           avatar_url?: string | null;
           minecraft_username?: string | null;
           minecraft_uuid?: string | null;
           is_minecraft_verified?: boolean;
+          is_discord_member?: boolean;
+          discord_member_since?: string | null;
+          last_discord_sync?: string | null;
+          discord_roles?: string[];
+          has_partner_role?: boolean;
+          partner_role_id?: string | null;
           role?: 'admin' | 'partner' | 'user';
           partner_id?: string | null;
           partner_name?: string | null;
           partner_logo?: string | null;
           partner_website?: string | null;
           partner_discord?: string | null;
+          linked_at?: string | null;
+          was_anonymous?: boolean;
           is_active?: boolean;
           is_verified?: boolean;
         };

@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import type { MicrosoftAccount } from '../types/launcher';
+import type { MicrosoftAccount, DiscordAccount } from '../types/launcher';
 import { supabase } from './supabaseClient';
 
 class AuthService {
@@ -210,14 +210,242 @@ class AuthService {
     try {
       // Step 1: Open modal window and wait for auth code
       const authCode = await invoke<string>('open_microsoft_auth_modal');
-      
+
       // Step 2: Complete authentication with the code
       const account = await invoke<MicrosoftAccount>('authenticate_microsoft', { code: authCode });
-      
+
       return account;
     } catch (error) {
       console.error('Error during Microsoft authentication:', error);
       throw new Error(`Authentication failed: ${error}`);
+    }
+  }
+
+  // ============================================================================
+  // DISCORD AUTHENTICATION METHODS
+  // ============================================================================
+
+  /**
+   * Link Discord account using OAuth
+   * This uses Supabase's built-in Discord provider
+   */
+  async linkDiscordAccount(): Promise<boolean> {
+    try {
+      console.log('🔗 Initiating Discord OAuth...');
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'discord',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          scopes: 'identify guilds guilds.members.read'
+        }
+      });
+
+      if (error) {
+        console.error('❌ Discord OAuth error:', error);
+        return false;
+      }
+
+      console.log('✅ Discord OAuth initiated, redirecting to Discord...');
+      return true;
+    } catch (error) {
+      console.error('❌ Error linking Discord account:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Handle Discord OAuth callback
+   * Called when user returns from Discord authorization
+   */
+  async handleDiscordCallback(): Promise<boolean> {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        console.error('❌ No session after Discord OAuth');
+        return false;
+      }
+
+      // Extract Discord user data from session
+      const discordUser = session.user.user_metadata;
+      console.log('Discord user data:', discordUser);
+
+      // Update users table with Discord data
+      const { error: updateError } = await supabase.from('users').update({
+        discord_id: discordUser.provider_id,
+        discord_username: discordUser.custom_claims?.global_name || discordUser.name,
+        discord_global_name: discordUser.custom_claims?.global_name,
+        discord_discriminator: discordUser.custom_claims?.discriminator || '0',
+        discord_avatar: discordUser.avatar_url,
+        linked_at: new Date().toISOString()
+      }).eq('id', session.user.id);
+
+      if (updateError) {
+        console.error('❌ Failed to update user with Discord data:', updateError);
+        return false;
+      }
+
+      // Trigger role sync
+      await this.syncDiscordRoles();
+
+      console.log('✅ Discord account linked successfully');
+      return true;
+    } catch (error) {
+      console.error('❌ Error handling Discord callback:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Sync Discord roles from server
+   * Calls sync-discord-roles Edge Function
+   */
+  async syncDiscordRoles(): Promise<boolean> {
+    try {
+      console.log('🔄 Syncing Discord roles...');
+
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        console.error('❌ No session, cannot sync roles');
+        return false;
+      }
+
+      // Get Discord access token from session
+      const discordAccessToken = session.provider_token; // Discord OAuth token
+
+      if (!discordAccessToken) {
+        console.error('❌ No Discord access token in session');
+        return false;
+      }
+
+      // Call Edge Function
+      const { data, error } = await supabase.functions.invoke('sync-discord-roles', {
+        body: {
+          userId: session.user.id,
+          discordAccessToken
+        }
+      });
+
+      if (error) {
+        console.error('❌ Failed to sync Discord roles:', error);
+        return false;
+      }
+
+      console.log('✅ Discord roles synced:', data);
+      return data.success;
+    } catch (error) {
+      console.error('❌ Error syncing Discord roles:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Check if Discord roles need refresh
+   * Returns true if last sync was more than 6 hours ago
+   */
+  async shouldSyncDiscordRoles(): Promise<boolean> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) return false;
+
+      const { data: profile } = await supabase
+        .from('users')
+        .select('last_discord_sync, discord_id')
+        .eq('id', user.id)
+        .single();
+
+      if (!profile || !profile.discord_id) {
+        return false; // No Discord linked
+      }
+
+      if (!profile.last_discord_sync) {
+        return true; // Never synced
+      }
+
+      const lastSync = new Date(profile.last_discord_sync);
+      const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000);
+
+      return lastSync < sixHoursAgo;
+    } catch (error) {
+      console.error('Error checking sync status:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Get Discord account info from database
+   */
+  async getDiscordAccount(): Promise<DiscordAccount | null> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) return null;
+
+      const { data: profile } = await supabase
+        .from('users')
+        .select('discord_id, discord_username, discord_global_name, discord_discriminator, discord_avatar, is_discord_member, has_partner_role, partner_role_id, discord_roles, last_discord_sync')
+        .eq('id', user.id)
+        .single();
+
+      if (!profile || !profile.discord_id) {
+        return null;
+      }
+
+      return {
+        id: profile.discord_id,
+        username: profile.discord_username || '',
+        globalName: profile.discord_global_name,
+        discriminator: profile.discord_discriminator || '0',
+        avatar: profile.discord_avatar,
+        isMember: profile.is_discord_member || false,
+        hasPartnerRole: profile.has_partner_role || false,
+        partnerRoleId: profile.partner_role_id,
+        roles: profile.discord_roles || [],
+        lastSync: profile.last_discord_sync
+      };
+    } catch (error) {
+      console.error('Error getting Discord account:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Unlink Discord account
+   */
+  async unlinkDiscordAccount(): Promise<boolean> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) return false;
+
+      const { error } = await supabase.from('users').update({
+        discord_id: null,
+        discord_username: null,
+        discord_global_name: null,
+        discord_discriminator: null,
+        discord_avatar: null,
+        is_discord_member: false,
+        discord_member_since: null,
+        last_discord_sync: null,
+        discord_roles: [],
+        has_partner_role: false,
+        partner_role_id: null,
+        linked_at: null
+      }).eq('id', user.id);
+
+      if (error) {
+        console.error('❌ Failed to unlink Discord account:', error);
+        return false;
+      }
+
+      console.log('✅ Discord account unlinked');
+      return true;
+    } catch (error) {
+      console.error('❌ Error unlinking Discord account:', error);
+      return false;
     }
   }
 }

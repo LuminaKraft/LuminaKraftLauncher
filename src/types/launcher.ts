@@ -95,13 +95,27 @@ export interface MicrosoftAccount {
   clientId: string;
 }
 
+export interface DiscordAccount {
+  id: string;                     // Discord user ID (snowflake)
+  username: string;               // Discord username
+  globalName: string | null;      // Display name (new Discord field)
+  discriminator: string;          // Deprecated but may exist (0000 for new users)
+  avatar: string | null;          // Avatar hash
+  isMember: boolean;              // Member of LuminaKraft Discord server
+  hasPartnerRole: boolean;        // Has Partner role (1270158473937555519)
+  partnerRoleId: string | null;   // Specific partner role ID (e.g., CrucisMC: 1382114019715846154)
+  roles: string[];                // All Discord role IDs
+  lastSync: string | null;        // ISO timestamp of last role sync
+}
+
 export interface UserSettings {
   username: string;
   allocatedRam: number; // in GB
   // launcherDataUrl removed, endpoint is now hardcoded
   language: string; // 'es' | 'en'
-  authMethod: 'offline' | 'microsoft';
+  authMethod: 'offline' | 'microsoft' | 'discord' | 'both'; // Updated to include Discord
   microsoftAccount?: MicrosoftAccount;
+  discordAccount?: DiscordAccount; // NEW: Discord account info
   enablePrereleases?: boolean;
   enableAnimations?: boolean;
   clientToken?: string; // launcher-generated token to authenticate offline users
