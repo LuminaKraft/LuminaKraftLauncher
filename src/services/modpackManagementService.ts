@@ -154,7 +154,7 @@ export class ModpackManagementService {
         .from('users')
         .select('id')
         .eq('microsoft_id', this.microsoftAccount.xuid)
-        .single();
+        .single() as { data: { id: string } | null };
 
       if (!userData) {
         return { success: false, error: 'User profile not found' };
@@ -283,6 +283,7 @@ export class ModpackManagementService {
    * Calculate SHA256 hash of a file
    * Currently unused but reserved for future integrity checking
    */
+  // @ts-ignore - Reserved for future file integrity verification
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private async _calculateSHA256(file: File): Promise<string> {
     const buffer = await file.arrayBuffer();
@@ -324,11 +325,10 @@ export class ModpackManagementService {
       if (updates.primaryColor !== undefined) updateData.primary_color = updates.primaryColor;
       if (updates.isActive !== undefined) updateData.is_active = updates.isActive;
 
-      const result = await supabase
+      const { error }: any = await (supabase as any)
         .from('modpacks')
-        .update(updateData as any)
+        .update(updateData)
         .eq('id', modpackId);
-      const { error } = result as { error: any };
 
       if (error) {
         console.error('Error updating modpack:', error);
@@ -386,11 +386,10 @@ export class ModpackManagementService {
 
       // Update modpack with image URL
       const imageUrlField = imageType === 'logo' ? 'logo_url' : 'banner_url';
-      const updateResult = await supabase
+      const { error: updateError }: any = await (supabase as any)
         .from('modpacks')
-        .update({ [imageUrlField]: result.fileUrl } as any)
+        .update({ [imageUrlField]: result.fileUrl })
         .eq('id', modpackId);
-      const { error: updateError } = updateResult as { error: any };
 
       if (updateError) {
         console.error('Error updating modpack with image URL:', updateError);
