@@ -426,8 +426,31 @@ class LauncherService {
   // Helper function to ensure modpack has required fields, refreshing data if needed
   private async ensureModpackHasRequiredFields(modpackId: string): Promise<any> {
     let modpack = this.modpacksData?.modpacks.find((m: any) => m.id === modpackId);
+
+    // If not found in server list, try to load from local instance metadata
     if (!modpack) {
-      throw new Error('Modpack no encontrado');
+      try {
+        const metadataJson = await safeInvoke<string | null>('get_instance_metadata', { modpackId });
+        if (metadataJson) {
+          const metadata = JSON.parse(metadataJson);
+          // Create a modpack object from local metadata
+          modpack = {
+            id: metadata.id,
+            name: metadata.name,
+            description: '',
+            version: metadata.version,
+            minecraftVersion: metadata.minecraftVersion,
+            modloader: metadata.modloader,
+            modloaderVersion: metadata.modloaderVersion,
+            urlModpackZip: '', // Local modpacks don't need download URL
+            category: 'community',
+          };
+        } else {
+          throw new Error('Modpack no encontrado');
+        }
+      } catch (error) {
+        throw new Error('Modpack no encontrado');
+      }
     }
 
     // Check if modpack has modloaderVersion, if not, try to refresh data

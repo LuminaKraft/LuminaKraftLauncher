@@ -371,7 +371,9 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
               <div
                 className="absolute inset-0 bg-center bg-cover"
                 style={{
-                  backgroundImage: `url(${modpack.backgroundImage})`,
+                  backgroundImage: modpack.backgroundImage.startsWith('linear-gradient')
+                    ? modpack.backgroundImage
+                    : `url(${modpack.backgroundImage})`,
                   opacity: 0.35
                 }}
               />

@@ -474,12 +474,16 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     modpackId: string
   ) => {
   const modpack = state.modpacksData?.modpacks.find((m: { id: string }) => m.id === modpackId);
-    if (!modpack) {
+
+    // For launch and stop actions, we don't need the modpack data from server
+    // These actions work with locally installed modpacks
+    if (!modpack && action !== 'launch' && action !== 'stop') {
       throw new Error('Modpack no encontrado');
     }
 
     // Verificar si el modpack requiere ZIP (no es vanilla/paper)
-    if (!modpack.urlModpackZip && (action === 'install' || action === 'update' || action === 'repair')) {
+    // Only check for actions that need download
+    if (modpack && !modpack.urlModpackZip && (action === 'install' || action === 'update' || action === 'repair')) {
       if (modpack.ip) {
         // Es un servidor vanilla/paper, solo se puede "conectar"
         throw new Error(`Este es un servidor ${modpack.modloader}. IP: ${modpack.ip}`);

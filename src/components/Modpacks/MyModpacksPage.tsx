@@ -385,17 +385,28 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
             {/* Installed Modpacks */}
             {localModpacks.map((localModpack, index) => {
               // Convert LocalModpack to Modpack format for ModpackCard
+              // Create a placeholder background image using a gradient
+              const gradients = [
+                'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+                'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+                'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
+              ];
+              const gradientIndex = localModpack.name.charCodeAt(0) % gradients.length;
+
               const modpack: Modpack = {
                 id: localModpack.id,
                 name: localModpack.name,
                 description: '',
-                shortDescription: `Installed on ${new Date(localModpack.createdAt).toLocaleDateString()}`,
+                shortDescription: `Minecraft ${localModpack.minecraftVersion} • ${localModpack.modloader.charAt(0).toUpperCase() + localModpack.modloader.slice(1)}`,
                 version: localModpack.version,
                 minecraftVersion: localModpack.minecraftVersion,
                 modloader: localModpack.modloader,
                 modloaderVersion: localModpack.modloaderVersion,
                 logo: '',
-                backgroundImage: '',
+                backgroundImage: gradients[gradientIndex],
                 urlModpackZip: '', // Local modpacks don't need download URL
                 category: 'community',
                 isActive: true,
