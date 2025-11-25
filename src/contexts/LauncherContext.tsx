@@ -33,7 +33,7 @@ interface LauncherContextType {
   isAuthenticating: boolean;
   hasActiveOperations: boolean;
   setIsAuthenticating: (_value: boolean) => void;
-  updateUserSettings: (_settings: Partial<UserSettings>) => void;
+  updateUserSettings: (_settings: Partial<UserSettings>) => Promise<void>;
   refreshData: () => Promise<void>;
   installModpack: (_id: string) => Promise<void>;
   installModpackFromZip: (_file: File) => Promise<void>;
@@ -227,11 +227,12 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        // Initialize Supabase anonymous session first
-        const authService = AuthService.getInstance();
-        await authService.initializeAnonymousSession();
-
         const settings = launcherService.getUserSettings();
+
+        // Initialize Supabase anonymous session with minecraft username
+        const authService = AuthService.getInstance();
+        await authService.initializeAnonymousSession(settings.username);
+
         dispatch({ type: 'SET_USER_SETTINGS', payload: settings });
         dispatch({ type: 'SET_LANGUAGE', payload: settings.language });
 
@@ -420,10 +421,16 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updateUserSettings = (settings: Partial<UserSettings>) => {
+  const updateUserSettings = async (settings: Partial<UserSettings>) => {
     const newSettings = { ...state.userSettings, ...settings };
     launcherService.saveUserSettings(settings);
     dispatch({ type: 'SET_USER_SETTINGS', payload: newSettings });
+
+    // If username changed, sync with Supabase
+    if (settings.username && settings.username !== state.userSettings.username) {
+      const authService = AuthService.getInstance();
+      await authService.updateMinecraftUsername(settings.username);
+    }
   };
 
   const changeLanguage = async (language: string) => {

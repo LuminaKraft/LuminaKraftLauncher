@@ -23,6 +23,7 @@ export interface Database {
           // Minecraft
           minecraft_username: string | null;
           minecraft_uuid: string | null;
+          minecraft_username_history: Array<{ username: string; from: string; to: string | null }>;
           is_minecraft_verified: boolean;
           // Discord Server Membership
           is_discord_member: boolean;
@@ -61,6 +62,7 @@ export interface Database {
           avatar_url?: string | null;
           minecraft_username?: string | null;
           minecraft_uuid?: string | null;
+          minecraft_username_history?: Array<{ username: string; from: string; to: string | null }>;
           is_minecraft_verified?: boolean;
           is_discord_member?: boolean;
           discord_member_since?: string | null;
@@ -91,6 +93,7 @@ export interface Database {
           avatar_url?: string | null;
           minecraft_username?: string | null;
           minecraft_uuid?: string | null;
+          minecraft_username_history?: Array<{ username: string; from: string; to: string | null }>;
           is_minecraft_verified?: boolean;
           is_discord_member?: boolean;
           discord_member_since?: string | null;
