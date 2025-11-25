@@ -290,6 +290,9 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
             {validating ? t('myModpacks.validating') : t('myModpacks.import')}
           </button>
         </div>
+        <p className="text-gray-600 dark:text-gray-400">
+          {t('myModpacks.subtitle')}
+        </p>
       </div>
 
       {/* Modpacks List */}

@@ -26,7 +26,7 @@
     "home": "Inicio",
     "myModpacks": "Mis Modpacks",
     "myModpacksDesc": "Gestiona tus instancias locales de modpacks",
-    "publishedModpacks": "Modpacks Publicados",
+    "publishedModpacks": "Modpacks Públicos",
     "publishedModpacksDesc": "Gestiona tus modpacks publicados"
   },
   "sidebar": {
@@ -80,7 +80,7 @@
     "serverIPLabel": "IP del Servidor",
     "refresh": "Actualizar lista de modpacks",
     "refreshDisabledDuringInstall": "No se puede actualizar mientras se instala un modpack",
-    "availableCount": "{{count}} modpack disponible",
+    "availableCount": "{{count}} modpacks disponibles",
     "availableCount_plural": "{{count}} modpacks disponibles",
     "descriptionNotAvailable": "Descripción no disponible",
     "recommendedRAM": "RAM Recomendada",
@@ -459,15 +459,10 @@
   },
   "myModpacks": {
     "title": "Mis Modpacks",
-    "subtitle": "Gestiona tus instancias locales de modpacks - disponible para todos los usuarios",
+    "subtitle": "Gestiona tus instancias locales de modpacks",
     "import": "Importar Modpack",
     "validating": "Validando...",
     "installedOn": "Instalado el",
-    "localManagement": {
-      "title": "Gestión de Modpacks Locales",
-      "description": "Estas son tus instancias locales de modpacks. Se almacenan en tu computadora y están disponibles sin conexión. Para compartir modpacks públicamente, usa",
-      "publishedModpacksLink": "Modpacks Publicados"
-    },
     "empty": {
       "title": "Aún no hay modpacks locales",
       "description": "Importa un modpack de CurseForge o Modrinth para comenzar",
