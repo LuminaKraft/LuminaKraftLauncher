@@ -987,27 +987,6 @@ class LauncherService {
   }
 
   /**
-   * Get aggregate stats for a modpack
-   */
-  async getModpackStats(modpackId: string): Promise<any> {
-    try {
-      const { data, error } = await supabase.rpc('get_modpack_aggregate_stats', {
-        p_modpack_id: modpackId
-      } as any) as { data: any; error: any };
-
-      if (error) {
-        console.error('Error getting modpack stats:', error);
-        return null;
-      }
-
-      return data;
-    } catch (error) {
-      console.error('Error getting modpack stats:', error);
-      return null;
-    }
-  }
-
-  /**
    * Check if a modpack has updates available
    * Returns the latest version info if an update is available
    */
