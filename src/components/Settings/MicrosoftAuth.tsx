@@ -155,29 +155,15 @@ export default function MicrosoftAuth({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center space-x-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-        <UserIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-        <div>
-          <p className="font-medium text-blue-800 dark:text-blue-200">
-            {t('auth.microsoftAuth')}
-          </p>
-          <p className="text-sm text-blue-600 dark:text-blue-400">
-            {t('auth.microsoftDescription')}
-          </p>
-        </div>
-      </div>
-
-      <button
-        onClick={startMicrosoftAuthModal}
-        disabled={isAuthenticating}
-        className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50"
-      >
-        <UserIcon className="w-4 h-4" />
-        <span>
-          {isAuthenticating ? t('auth.signing') : t('auth.signInMicrosoft')}
-        </span>
-      </button>
-    </div>
+    <button
+      onClick={startMicrosoftAuthModal}
+      disabled={isAuthenticating}
+      className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50"
+    >
+      <UserIcon className="w-4 h-4" />
+      <span>
+        {isAuthenticating ? t('auth.signing') : t('auth.signInMicrosoft')}
+      </span>
+    </button>
   );
 } 

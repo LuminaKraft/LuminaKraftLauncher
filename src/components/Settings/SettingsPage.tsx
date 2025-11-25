@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, HardDrive, Save, Wifi, WifiOff, RefreshCw, Trash2, Server, Languages, Shield, XCircle, CheckCircle, Zap } from 'lucide-react';
+import { User, HardDrive, Save, Wifi, WifiOff, RefreshCw, Trash2, Server, Languages, Shield, XCircle, Zap } from 'lucide-react';
 import { useLauncher } from '../../contexts/LauncherContext';
 import LauncherService from '../../services/launcherService';
 import MicrosoftAuth from './MicrosoftAuth';
@@ -385,20 +385,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
                   onAuthStop={handleAuthStop}
                 />
               </div>
-              
-              {formData.authMethod === 'offline' && (
-                <div className="p-4 bg-yellow-600/20 border border-yellow-600/30 rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="w-5 h-5 text-yellow-500" />
-                    <span className="text-yellow-400 font-medium">
-                      {t('auth.offlineMode')}
-                    </span>
-                  </div>
-                  <p className="text-yellow-300 text-sm mt-2">
-                    {t('auth.offlineModeDescription')}
-                  </p>
-                </div>
-              )}
             </div>
           </div>
 
