@@ -365,7 +365,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
       <div onClick={onSelect} className="flex-1 flex flex-col">
         <div className="space-y-4 flex-1">
           {/* Modpack Icon with API Background */}
-          <div className="w-full h-32 rounded-lg overflow-hidden flex items-center justify-center p-4 relative group-hover:bg-dark-600 transition-all duration-200">
+          <div className={`w-full h-32 rounded-lg overflow-hidden flex items-center justify-center p-4 relative group-hover:bg-dark-600 transition-all duration-200 ${!modpack.backgroundImage ? 'bg-gradient-to-br from-blue-500 to-purple-600' : ''}`}>
             {/* API backgroundImage */}
             {modpack.backgroundImage && (
               <div
@@ -379,21 +379,29 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
               />
             )}
 
-            {/* Dark overlay to ensure readability */}
-            <div className="absolute inset-0 bg-black/40" />
+            {/* Dark overlay to ensure readability (only for images) */}
+            {modpack.backgroundImage && <div className="absolute inset-0 bg-black/40" />}
 
-            {/* Logo */}
-            <img
-              src={modpack.logo}
-              alt={displayName}
-              className={`relative z-10 max-w-full max-h-full object-contain transition-transform duration-200 ${
-                getAnimationClass('', 'group-hover:scale-105')
-              }`}
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSIjMzc0MTUxIi8+CjxwYXRoIGQ9Ik0yNCAyNEg0MFY0MEgyNFYyNFoiIGZpbGw9IiM2Mzc1ODMiLz4KPC9zdmc+';
-              }}
-            />
+            {/* Logo or first letter */}
+            {modpack.logo && modpack.logo.length === 1 ? (
+              // Show first letter for local modpacks
+              <div className="text-6xl font-bold text-white opacity-20 relative z-10">
+                {modpack.logo}
+              </div>
+            ) : modpack.logo ? (
+              // Show logo image for server modpacks
+              <img
+                src={modpack.logo}
+                alt={displayName}
+                className={`relative z-10 max-w-full max-h-full object-contain transition-transform duration-200 ${
+                  getAnimationClass('', 'group-hover:scale-105')
+                }`}
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSIjMzc0MTUxIi8+CjxwYXRoIGQ9Ik0yNCAyNEg0MFY0MEgyNFYyNFoiIGZpbGw9IiM2Mzc1ODMiLz4KPC9zdmc+';
+                }}
+              />
+            ) : null}
           </div>
 
           {/* Modpack Info */}

@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Trash2, X, AlertTriangle } from 'lucide-react';
 
@@ -24,14 +25,17 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   type = 'danger'
 }) => {
   const { t } = useTranslation();
-  const dialogRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to dialog when it appears
+  // Handle ESC key
   useEffect(() => {
-    if (dialogRef.current) {
-      dialogRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  }, []);
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onCancel();
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [onCancel]);
   
   // Usar traducciones como valores por defecto si no se proporcionan
   const finalConfirmText = confirmText || t('app.confirm');
@@ -68,9 +72,9 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     }
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div ref={dialogRef} className="bg-dark-800 rounded-lg p-6 max-w-md w-full mx-4 border border-dark-600">
+      <div className="bg-dark-800 rounded-lg p-6 max-w-md w-full mx-4 border border-dark-600">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
             {getIcon()}
@@ -115,7 +119,8 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
