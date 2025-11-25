@@ -389,7 +389,7 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
                 id: localModpack.id,
                 name: localModpack.name,
                 description: '',
-                shortDescription: `Minecraft ${localModpack.minecraftVersion} • ${localModpack.modloader.charAt(0).toUpperCase() + localModpack.modloader.slice(1)}`,
+                shortDescription: `Installed on ${new Date(localModpack.createdAt).toLocaleDateString()}`,
                 version: localModpack.version,
                 minecraftVersion: localModpack.minecraftVersion,
                 modloader: localModpack.modloader,

@@ -58,27 +58,27 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
     if (modpack.isNew) {
       return (
         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-600/40 text-green-300 border border-green-600/60">
-          {'Nuevo'}
+          {t('modpacks.status.new')}
         </span>
       );
     }
     if (modpack.isActive) {
       return (
         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-600/40 text-green-300 border border-green-600/60">
-          {t('progress.active')}
+          {t('modpacks.status.active')}
         </span>
       );
     }
     if (modpack.isComingSoon) {
       return (
         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-600/40 text-blue-300 border border-blue-600/60">
-          {t('modpack.comingSoon', 'Próximamente')}
+          {t('modpacks.status.coming_soon')}
         </span>
       );
     }
     return (
       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-600/40 text-gray-300 border border-gray-600/60">
-        {t('progress.inactive')}
+        {t('modpacks.status.inactive')}
       </span>
     );
   };
@@ -429,12 +429,12 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
               <span className={`bg-dark-700/50 px-2 py-1 rounded-full transition-all duration-200 ${
                 getAnimationClass('', 'group-hover:bg-lumina-600/20')
               }`}>
-                v{modpack.version}
+                Minecraft {modpack.minecraftVersion}
               </span>
               <span className={`capitalize bg-dark-700/50 px-2 py-1 rounded-full transition-all duration-200 ${
                 getAnimationClass('', 'group-hover:bg-lumina-600/20')
               }`}>
-                {modpack.modloader}
+                {modpack.modloader} {modpack.modloaderVersion}
               </span>
               {modpack.gamemode && (
                 <span className={`text-lumina-400 bg-lumina-600/20 px-2 py-1 rounded-full transition-all duration-200 ${

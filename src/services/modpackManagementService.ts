@@ -518,11 +518,46 @@ export class ModpackManagementService {
         return [];
       }
 
-      const { data, error } = await supabase
-        .from('modpacks')
-        .select('*')
-        .eq('author_id', user.id)
-        .order('created_at', { ascending: false });
+      // Get user profile to check role and partner
+      const { data: profile } = await supabase
+        .from('users')
+        .select('role, partner_id')
+        .eq('supabase_id', user.id)
+        .single();
+
+      if (!profile) {
+        // Fallback to author_id filter if profile not found
+        const { data, error } = await supabase
+          .from('modpacks')
+          .select('*')
+          .eq('author_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Error getting user modpacks:', error);
+          return [];
+        }
+
+        return data || [];
+      }
+
+      let query = supabase.from('modpacks').select('*');
+
+      // Filter based on role
+      if (profile.role === 'admin') {
+        // Admins see all official modpacks
+        query = query.eq('category', 'official');
+      } else if (profile.role === 'partner' && profile.partner_id) {
+        // Partners see all modpacks from their partner
+        query = query.eq('partner_id', profile.partner_id);
+      } else {
+        // Community users see only their own modpacks
+        query = query.eq('author_id', user.id);
+      }
+
+      query = query.order('created_at', { ascending: false });
+
+      const { data, error } = await query;
 
       if (error) {
         console.error('Error getting user modpacks:', error);
