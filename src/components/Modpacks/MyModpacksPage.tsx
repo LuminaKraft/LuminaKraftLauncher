@@ -251,8 +251,11 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps) {
 
       // Construct a Modpack object for the backend
       // Local modpacks don't have urlModpackZip since they're already installed
-      const modpackData: Modpack = {
+      // Backend struct has Spanish field names (nombre, descripcion) that are required
+      const modpackData: any = {
         id: modpack.id,
+        nombre: modpack.name, // Backend expects 'nombre' (Spanish)
+        descripcion: '', // Backend expects 'descripcion' (Spanish)
         name: modpack.name,
         description: '',
         version: modpack.version,
