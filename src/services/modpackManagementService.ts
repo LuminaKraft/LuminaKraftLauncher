@@ -27,7 +27,7 @@ export class ModpackManagementService {
 
   /**
    * Check if the current user can create/edit modpacks
-   * Requires Microsoft authentication
+   * Requires Microsoft authentication AND Discord linked
    */
   async canManageModpacks(microsoftAccount?: MicrosoftAccount | null): Promise<{
     canManage: boolean;
@@ -42,14 +42,19 @@ export class ModpackManagementService {
         return { canManage: false, role: null };
       }
 
-      // Look up user by microsoft_id
+      // Look up user by microsoft_id and check Discord is linked
       const { data: profile } = await supabase
         .from('users')
-        .select('role')
+        .select('role, discord_id')
         .eq('microsoft_id', account.xuid)
         .single() as { data: any };
 
       if (!profile) {
+        return { canManage: false, role: null };
+      }
+
+      // Must have Discord linked
+      if (!profile.discord_id) {
         return { canManage: false, role: null };
       }
 
@@ -71,7 +76,7 @@ export class ModpackManagementService {
    */
   async parseManifestFromZip(zipFile: File): Promise<{ success: boolean; data?: ParsedModpackData; error?: string }> {
     try {
-      console.log('📦 Parsing manifest from ZIP:', zipFile.name);
+      console.log('Parsing manifest from ZIP:', zipFile.name);
 
       // Load ZIP file
       const zip = new JSZip();
