@@ -54,12 +54,12 @@ class AuthService {
       });
 
       if (error) {
-        console.error(' Failed to authenticate Microsoft account with Supabase:', error);
+        console.error('Failed to authenticate Microsoft account with Supabase:', error);
         return false;
       }
 
       if (!data.success) {
-        console.error(' Authentication failed:', data.error);
+        console.error('Authentication failed:', data.error);
         return false;
       }
 
@@ -71,7 +71,7 @@ class AuthService {
         });
 
         if (sessionError) {
-          console.error(' Failed to verify OTP token:', sessionError);
+          console.error('Failed to verify OTP token:', sessionError);
           return false;
         }
 
@@ -84,7 +84,7 @@ class AuthService {
         console.log('   Current session role:', session?.user.role);
         console.log('   Current session aud:', session?.user.aud);
       } else {
-        console.warn(' No hashed_token returned from Edge Function');
+        console.warn('No hashed_token returned from Edge Function');
         console.log('   Response data:', data);
       }
 
@@ -95,7 +95,7 @@ class AuthService {
 
       return true;
     } catch (error) {
-      console.error(' Error authenticating Microsoft account with Supabase:', error);
+      console.error('Error authenticating Microsoft account with Supabase:', error);
       return false;
     }
   }
@@ -110,7 +110,7 @@ class AuthService {
       const { data: { session } } = await supabase.auth.getSession();
       return session?.access_token || null;
     } catch (error) {
-      console.error(' Error getting Supabase access token:', error);
+      console.error('Error getting Supabase access token:', error);
       return null;
     }
   }
@@ -233,7 +233,7 @@ class AuthService {
       });
 
       if (error || !data?.url) {
-        console.error(' Discord OAuth error:', error);
+        console.error('Discord OAuth error:', error);
         return false;
       }
 
@@ -244,7 +244,7 @@ class AuthService {
       console.log('Discord OAuth opened in browser');
       return true;
     } catch (error) {
-      console.error(' Error linking Discord account:', error);
+      console.error('Error linking Discord account:', error);
       return false;
     }
   }
@@ -292,7 +292,7 @@ class AuthService {
       }).eq('id', session.user.id);
 
       if (updateError) {
-        console.error(' Failed to update user with Discord data:', updateError);
+        console.error('Failed to update user with Discord data:', updateError);
         return false;
       }
 
@@ -302,7 +302,7 @@ class AuthService {
       console.log('Discord account linked successfully');
       return true;
     } catch (error) {
-      console.error(' Error handling Discord callback:', error);
+      console.error('Error handling Discord callback:', error);
       return false;
     }
   }
@@ -318,7 +318,7 @@ class AuthService {
       const { data: { session } } = await supabase.auth.getSession();
 
       if (!session) {
-        console.error(' No session, cannot sync roles');
+        console.error('No session, cannot sync roles');
         return false;
       }
 
@@ -326,7 +326,7 @@ class AuthService {
       const discordAccessToken = session.provider_token; // Discord OAuth token
 
       if (!discordAccessToken) {
-        console.error(' No Discord access token in session');
+        console.error('No Discord access token in session');
         return false;
       }
 
@@ -339,14 +339,14 @@ class AuthService {
       });
 
       if (error) {
-        console.error(' Failed to sync Discord roles:', error);
+        console.error('Failed to sync Discord roles:', error);
         return false;
       }
 
       console.log('Discord roles synced:', data);
       return data.success;
     } catch (error) {
-      console.error(' Error syncing Discord roles:', error);
+      console.error('Error syncing Discord roles:', error);
       return false;
     }
   }
@@ -447,14 +447,14 @@ class AuthService {
       }).eq('id', user.id);
 
       if (error) {
-        console.error(' Failed to unlink Discord account:', error);
+        console.error('Failed to unlink Discord account:', error);
         return false;
       }
 
       console.log('Discord account unlinked');
       return true;
     } catch (error) {
-      console.error(' Error unlinking Discord account:', error);
+      console.error('Error unlinking Discord account:', error);
       return false;
     }
   }
