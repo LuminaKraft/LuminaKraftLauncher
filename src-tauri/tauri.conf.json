@@ -46,7 +46,14 @@
       "exceptionDomain": "",
       "signingIdentity": null,
       "entitlements": null,
-      "infoString": "Info.plist"
+      "infoPlist": {
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLName": "LuminaKraft Protocol",
+            "CFBundleURLSchemes": ["luminakraft"]
+          }
+        ]
+      }
     },
     "windows": {
       "webviewInstallMode": {
