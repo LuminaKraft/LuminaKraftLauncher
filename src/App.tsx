@@ -16,6 +16,8 @@ import { updateService, UpdateInfo } from './services/updateService';
 import './App.css';
 import { Toaster } from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
+import AuthService from './services/authService';
+import toast from 'react-hot-toast';
 
 function AppContent() {
   const [activeSection, setActiveSection] = useState('home');
@@ -30,6 +32,75 @@ function AppContent() {
   const { withDelay } = useAnimation();
   const { t } = useTranslation();
   const launcherService = LauncherService.getInstance();
+
+  // Handle Discord OAuth callback via deep link
+  useEffect(() => {
+    let unsubscribe: (() => void) | null = null;
+    let isProcessing = false;
+
+    const setupDeepLinkListener = async () => {
+      try {
+        if (launcherService.isTauriAvailable()) {
+          console.log('Setting up deep link listener...');
+          const { onOpenUrl } = await import('@tauri-apps/plugin-deep-link');
+
+          unsubscribe = await onOpenUrl(async (urls) => {
+            console.log('Deep link received:', urls);
+
+            if (isProcessing) {
+              console.log('Already processing deep link, ignoring duplicate');
+              return;
+            }
+
+            for (const url of urls) {
+              console.log('Processing URL:', url);
+
+              if (url.startsWith('luminakraft://auth/callback')) {
+                console.log('Discord OAuth callback detected via deep link');
+                isProcessing = true;
+
+                const hashPart = url.split('#')[1];
+                console.log('Hash part extracted:', hashPart ? 'yes' : 'no');
+
+                if (hashPart) {
+                  window.location.hash = hashPart;
+
+                  const authService = AuthService.getInstance();
+                  const success = await authService.syncDiscordData();
+
+                  if (success) {
+                    toast.success(t('auth.discordLinked'));
+                    setActiveSection('settings');
+                    await refreshData();
+                  } else {
+                    toast.error(t('auth.discordLinkFailed'));
+                  }
+                }
+
+                setTimeout(() => {
+                  isProcessing = false;
+                }, 3000);
+              }
+            }
+          });
+
+          console.log('Deep link listener setup complete');
+        } else {
+          console.log('Tauri not available, skipping deep link setup');
+        }
+      } catch (error) {
+        console.error('Failed to setup deep link listener:', error);
+      }
+    };
+
+    setupDeepLinkListener();
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [t, launcherService, refreshData]);
 
   useEffect(() => {
     const checkForUpdatesOnStartup = async () => {

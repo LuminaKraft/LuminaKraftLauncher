@@ -227,7 +227,7 @@ class AuthService {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'discord',
         options: {
-          redirectTo: 'https://www.luminakraft.com/',
+          redirectTo: 'https://www.luminakraft.com/auth-callback',
           scopes: 'identify guilds guilds.members.read',
           skipBrowserRedirect: true
         }
