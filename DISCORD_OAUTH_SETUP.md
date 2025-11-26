@@ -1,52 +1,21 @@
-# Discord OAuth Deep Link Setup
+# Discord OAuth Setup
 
 ## Overview
-Discord OAuth authentication now opens in the user's default browser instead of within the app, using a custom protocol handler for the callback.
+Discord OAuth authentication opens in the user's default browser. After authorization, the user is redirected to https://www.luminakraft.com/ and must manually return to the launcher app.
 
 ## Setup Steps
 
-### 1. Host the OAuth Success Page
-
-The file `public/auth-success.html` needs to be hosted on a web server so it can be used as a redirect URL.
-
-**Option A: Using GitHub Pages**
-1. Create a new GitHub repository
-2. Upload `public/auth-success.html` as `index.html`
-3. Enable GitHub Pages in repository settings
-4. Your URL will be: `https://yourusername.github.io/your-repo-name/`
-
-**Option B: Using Vercel**
-1. Create a new project on Vercel
-2. Upload `public/auth-success.html`
-3. Deploy and get your URL: `https://your-project.vercel.app/auth-success.html`
-
-**Option C: Use Your Own Domain**
-Host the file on your own web server.
-
-### 2. Add Redirect URL to Supabase
+### 1. Add Redirect URL to Supabase
 
 In your Supabase project settings, navigate to:
 **Authentication > URL Configuration > Redirect URLs**
 
-Add your hosted auth success page URL:
+Add the LuminaKraft website as redirect URL:
 ```
-https://yourusername.github.io/your-repo-name/
-```
-
-Or if using your own domain:
-```
-https://yourdomain.com/auth-success.html
+https://www.luminakraft.com/
 ```
 
-### 3. Update Redirect URL in Code
-
-In `src/services/authService.ts`, update the `linkDiscordAccount()` method to use your hosted URL:
-
-```typescript
-redirectTo: 'https://yourusername.github.io/your-repo-name/',
-```
-
-### 4. Discord Provider Setup
+### 2. Discord Provider Setup
 
 Ensure Discord OAuth provider is configured in:
 **Authentication > Providers > Discord**
@@ -55,7 +24,7 @@ Ensure Discord OAuth provider is configured in:
 - Client Secret: Your Discord application Client Secret
 - Scopes: `identify guilds guilds.members.read`
 
-### 5. Discord Application Settings
+### 3. Discord Application Settings
 
 In your Discord Developer Portal (https://discord.com/developers/applications):
 
@@ -69,31 +38,18 @@ In your Discord Developer Portal (https://discord.com/developers/applications):
 ## How It Works
 
 1. User clicks "Link Discord" in the launcher
-2. OAuth URL is generated with `skipBrowserRedirect: true`
-3. URL is opened in user's default browser
-4. User authenticates with Discord in the browser
-5. Discord redirects to Supabase callback URL
-6. Supabase redirects to your hosted `auth-success.html` page with tokens in hash
-7. The success page:
-   - Displays a success message to the user
-   - Extracts tokens from URL hash
-   - Triggers the deep link `luminakraft://auth/callback#...` with JavaScript
-   - Auto-closes after 5 seconds
-8. Browser opens the launcher app via deep link
-9. App extracts tokens and establishes session
-10. App syncs Discord roles from server
-11. User is authenticated and redirected to settings page
+2. OAuth URL is generated and opened in user's default browser
+3. User authenticates with Discord in the browser
+4. Discord redirects to Supabase callback URL
+5. Supabase establishes session and redirects to https://www.luminakraft.com/
+6. User sees LuminaKraft website and manually returns to the launcher app
+7. User opens Settings page in launcher
+8. Launcher automatically syncs Discord data from Supabase session
+9. Discord account is now linked and roles are synced
 
-## Deep Link Protocol
+## Important Notes
 
-- **Protocol**: `luminakraft://`
-- **Callback Path**: `auth/callback`
-- **Full URL**: `luminakraft://auth/callback#access_token=...&refresh_token=...&provider_token=...`
-
-## Platform Support
-
-- **Windows**: Deep links registered via MSI installer
-- **macOS**: Deep links registered via app bundle Info.plist
-- **Linux**: Deep links registered via .desktop file
-
-The deep link registration is handled automatically by Tauri's deep-link plugin during app installation.
+- User must manually return to the launcher after authorization
+- Discord data sync happens automatically when user opens Settings
+- The browser tab will remain open on luminakraft.com (user can close it manually)
+- Session persists in Supabase, so data syncs even after app restart

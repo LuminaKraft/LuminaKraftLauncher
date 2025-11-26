@@ -216,7 +216,8 @@ class AuthService {
 
   /**
    * Link Discord account using OAuth
-   * Opens Discord OAuth in external browser with deep link callback
+   * Opens Discord OAuth in external browser, redirects to luminakraft.com
+   * User must manually return to the app after authorization
    */
   async linkDiscordAccount(): Promise<boolean> {
     try {
@@ -226,7 +227,7 @@ class AuthService {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'discord',
         options: {
-          redirectTo: 'luminakraft://auth/callback',
+          redirectTo: 'https://www.luminakraft.com/',
           scopes: 'identify guilds guilds.members.read',
           skipBrowserRedirect: true
         }
@@ -242,6 +243,8 @@ class AuthService {
       await invoke('open_url', { url: data.url });
 
       console.log('Discord OAuth opened in browser');
+      console.log('User will be redirected to https://www.luminakraft.com/ after authorization');
+      console.log('User should return to the app manually to complete linking');
       return true;
     } catch (error) {
       console.error('Error linking Discord account:', error);
@@ -250,45 +253,26 @@ class AuthService {
   }
 
   /**
-   * Handle Discord OAuth callback
-   * Called when user returns from Discord authorization via deep link
+   * Sync Discord data from Supabase session to database
+   * Call this after user returns from OAuth authorization
    */
-  async handleDiscordCallback(): Promise<boolean> {
+  async syncDiscordData(): Promise<boolean> {
     try {
-      // Parse the OAuth tokens from URL hash
-      // Format: #access_token=...&expires_in=...&provider_token=...&refresh_token=...&token_type=bearer
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const accessToken = hashParams.get('access_token');
-      const refreshToken = hashParams.get('refresh_token');
-      const providerToken = hashParams.get('provider_token');
+      const { data: { session } } = await supabase.auth.getSession();
 
-      console.log('OAuth callback tokens:', {
-        hasAccessToken: !!accessToken,
-        hasRefreshToken: !!refreshToken,
-        hasProviderToken: !!providerToken
-      });
-
-      if (!accessToken || !refreshToken) {
-        console.error('No OAuth tokens found in callback URL');
+      if (!session) {
+        console.log('No session found');
         return false;
       }
 
-      // Set the session with the tokens from the callback
-      const { data: { session }, error } = await supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken
-      });
-
-      if (error || !session) {
-        console.error('Failed to set session from OAuth callback:', error);
-        return false;
-      }
-
-      console.log('Session established. Provider token in session:', !!session.provider_token);
-
-      // Extract Discord user data from session
+      // Check if this is a Discord OAuth session
       const discordUser = session.user.user_metadata;
-      console.log('Discord user data:', discordUser);
+      if (!discordUser?.provider_id || session.user.app_metadata?.provider !== 'discord') {
+        console.log('Not a Discord OAuth session');
+        return false;
+      }
+
+      console.log('Syncing Discord data from session...');
 
       // Update users table with Discord data
       // Note: username is the actual Discord username, global_name is the display name
@@ -300,6 +284,7 @@ class AuthService {
         discord_avatar: discordUser.avatar_url,
         linked_at: new Date().toISOString()
       };
+
       const { error: updateError } = await updateUser(session.user.id, updateData);
 
       if (updateError) {
@@ -310,10 +295,10 @@ class AuthService {
       // Trigger role sync
       await this.syncDiscordRoles();
 
-      console.log('Discord account linked successfully');
+      console.log('Discord data synced successfully');
       return true;
     } catch (error) {
-      console.error('Error handling Discord callback:', error);
+      console.error('Error syncing Discord data:', error);
       return false;
     }
   }

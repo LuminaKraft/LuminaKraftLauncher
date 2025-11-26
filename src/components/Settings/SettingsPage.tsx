@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { User, HardDrive, Save, Wifi, WifiOff, RefreshCw, Trash2, Server, Languages, Shield, XCircle, Zap } from 'lucide-react';
 import { useLauncher } from '../../contexts/LauncherContext';
 import LauncherService from '../../services/launcherService';
+import AuthService from '../../services/authService';
 import MicrosoftAuth from './MicrosoftAuth';
 import DiscordAuth from './DiscordAuth';
 import MetaStorageSettings from './MetaStorageSettings';
@@ -42,6 +43,19 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
     const isDifferent = JSON.stringify(formData) !== JSON.stringify(userSettings);
     setHasChanges(isDifferent);
   }, [formData, userSettings]);
+
+  // Auto-sync Discord data when Settings page loads
+  useEffect(() => {
+    const syncDiscord = async () => {
+      const authService = AuthService.getInstance();
+      const success = await authService.syncDiscordData();
+      if (success) {
+        console.log('Discord data synced automatically');
+      }
+    };
+
+    syncDiscord();
+  }, []);
 
   const checkAPIStatus = async () => {
     setApiStatus('checking');
