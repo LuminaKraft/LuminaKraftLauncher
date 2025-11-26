@@ -27,26 +27,25 @@ export class ModpackManagementService {
 
   /**
    * Check if the current user can create/edit modpacks
-   * Requires Microsoft authentication AND Discord linked
+   * Requires Discord authentication only
    */
   async canManageModpacks(microsoftAccount?: MicrosoftAccount | null): Promise<{
     canManage: boolean;
     role: 'admin' | 'partner' | 'user' | null;
   }> {
     try {
-      // Use provided account or stored account
-      const account = microsoftAccount || this.microsoftAccount;
+      // Check if user has active Supabase session
+      const { data: { user } } = await supabase.auth.getUser();
 
-      // User must be authenticated with Microsoft
-      if (!account) {
+      if (!user || user.is_anonymous) {
         return { canManage: false, role: null };
       }
 
-      // Look up user by microsoft_id and check Discord is linked
+      // Look up user profile and check Discord is linked
       const { data: profile } = await supabase
         .from('users')
         .select('role, discord_id')
-        .eq('microsoft_id', account.xuid)
+        .eq('id', user.id)
         .single() as { data: any };
 
       if (!profile) {
