@@ -289,7 +289,7 @@ class AuthService {
         discord_discriminator: discordUser.custom_claims?.discriminator || '0',
         discord_avatar: discordUser.avatar_url,
         linked_at: new Date().toISOString()
-      } as any) as any).eq('id', session.user.id);
+      }).eq('id', session.user.id);
 
       if (updateError) {
         console.error('Failed to update user with Discord data:', updateError);
@@ -444,7 +444,7 @@ class AuthService {
         has_partner_role: false,
         partner_role_id: null,
         linked_at: null
-      }) as any).eq('id', user.id);
+      }).eq('id', user.id);
 
       if (error) {
         console.error('Failed to unlink Discord account:', error);
@@ -517,7 +517,7 @@ class AuthService {
           minecraft_username: newUsername,
           minecraft_username_history: updatedHistory,
           updated_at: now
-        }) as any).eq('id', session.user.id);
+        }).eq('id', session.user.id);
 
         if (error) {
           console.error('Failed to update username with history:', error);
@@ -533,7 +533,7 @@ class AuthService {
             to: null
           }],
           updated_at: now
-        }) as any).eq('id', session.user.id);
+        }).eq('id', session.user.id);
 
         if (error) {
           console.error('Failed to set initial username:', error);

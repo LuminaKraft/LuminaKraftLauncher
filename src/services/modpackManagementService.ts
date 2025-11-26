@@ -29,7 +29,7 @@ export class ModpackManagementService {
    * Check if the current user can create/edit modpacks
    * Requires Discord authentication only
    */
-  async canManageModpacks(_microsoftAccount?: MicrosoftAccount | null): Promise<{
+  async canManageModpacks(microsoftAccount?: MicrosoftAccount | null): Promise<{
     canManage: boolean;
     role: 'admin' | 'partner' | 'user' | null;
   }> {
