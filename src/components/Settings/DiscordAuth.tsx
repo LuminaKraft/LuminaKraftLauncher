@@ -36,7 +36,10 @@ export default function DiscordAuth({
   const handleLinkDiscord = async () => {
     try {
       const success = await authService.linkDiscordAccount();
-      if (!success) {
+      if (success) {
+        // Show info message that user should authorize in browser and return to app
+        onError(t('auth.discordLinkingInBrowser') || 'Please authorize Discord in your browser. You can close the browser tab after authorization.');
+      } else {
         onError(t('auth.discordLinkFailed'));
       }
       // OAuth will redirect, callback will be handled by App.tsx

@@ -39,13 +39,14 @@ In your Discord Developer Portal (https://discord.com/developers/applications):
 
 1. User clicks "Link Discord" in the launcher
 2. OAuth URL is generated with `skipBrowserRedirect: true`
-3. URL is opened in user's default browser using Tauri shell API
-4. User authenticates with Discord
+3. URL is opened in user's default browser
+4. User authenticates with Discord in the browser
 5. Discord redirects to Supabase callback URL
 6. Supabase redirects to `luminakraft://auth/callback#access_token=...&refresh_token=...`
-7. Tauri deep link plugin captures the URL
+7. Browser opens the launcher app via deep link
 8. App extracts tokens and establishes session
 9. User is authenticated and redirected to settings page
+10. **User can manually close the browser tab** (it will remain open showing Discord's authorization page)
 
 ## Deep Link Protocol
 
