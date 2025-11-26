@@ -45,15 +45,7 @@
       "minimumSystemVersion": "10.13",
       "exceptionDomain": "",
       "signingIdentity": null,
-      "entitlements": null,
-      "infoPlist": {
-        "CFBundleURLTypes": [
-          {
-            "CFBundleURLName": "LuminaKraft Protocol",
-            "CFBundleURLSchemes": ["luminakraft"]
-          }
-        ]
-      }
+      "entitlements": null
     },
     "windows": {
       "webviewInstallMode": {
