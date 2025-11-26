@@ -16,8 +16,6 @@ import { updateService, UpdateInfo } from './services/updateService';
 import './App.css';
 import { Toaster } from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
-import AuthService from './services/authService';
-import toast from 'react-hot-toast';
 
 function AppContent() {
   const [activeSection, setActiveSection] = useState('home');
