@@ -1039,12 +1039,21 @@ fn main() {
             }
 
             // Register deep link protocol handler
-            #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
+            // Note: On macOS in dev mode, deep links are handled via Info.plist
+            // On Windows/Linux, runtime registration is needed
+            #[cfg(any(target_os = "windows", target_os = "linux"))]
             {
                 use tauri_plugin_deep_link::DeepLinkExt;
-                if let Err(e) = app.deep_link().register("luminakraft") {
-                    eprintln!("Failed to register deep link protocol: {}", e);
+                match app.deep_link().register("luminakraft") {
+                    Ok(_) => println!("Deep link protocol registered successfully"),
+                    Err(e) => eprintln!("Failed to register deep link protocol: {}", e),
                 }
+            }
+
+            #[cfg(target_os = "macos")]
+            {
+                // On macOS, deep links are registered via Info.plist during build
+                println!("Deep link protocol configured via Info.plist (macOS)");
             }
 
             Ok(())

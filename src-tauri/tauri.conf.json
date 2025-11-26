@@ -45,7 +45,8 @@
       "minimumSystemVersion": "10.13",
       "exceptionDomain": "",
       "signingIdentity": null,
-      "entitlements": null
+      "entitlements": null,
+      "infoString": "Info.plist"
     },
     "windows": {
       "webviewInstallMode": {
