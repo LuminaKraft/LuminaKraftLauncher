@@ -63,7 +63,7 @@ export async function hasRole(role: 'admin' | 'partner' | 'user'): Promise<boole
     .from('users')
     .select('role')
     .eq('id', user.id)
-    .single() as { data: any };
+    .single();
 
   return profile?.role === role;
 }

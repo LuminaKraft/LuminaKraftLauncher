@@ -165,9 +165,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
 
   const handleDiscordAuthSuccess = (account: DiscordAccount) => {
     setAuthError(null);
+    const authMethod: 'both' | 'discord' = formData.microsoftAccount ? 'both' : 'discord';
     const newSettings = {
       ...formData,
-      authMethod: (formData.microsoftAccount ? 'both' : 'discord') as const,
+      authMethod,
       discordAccount: account
     };
     setFormData(newSettings);
@@ -177,9 +178,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
 
   const handleDiscordAuthClear = () => {
     setAuthError(null);
+    const authMethod: 'microsoft' | 'offline' = formData.microsoftAccount ? 'microsoft' : 'offline';
     const newSettings = {
       ...formData,
-      authMethod: (formData.microsoftAccount ? 'microsoft' : 'offline') as const,
+      authMethod,
       discordAccount: undefined
     };
     setFormData(newSettings);
