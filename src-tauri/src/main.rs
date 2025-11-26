@@ -1037,6 +1037,16 @@ fn main() {
             ) {
                 eprintln!("Failed to create instances directory: {}", e);
             }
+
+            // Register deep link protocol handler
+            #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
+            {
+                use tauri_plugin_deep_link::DeepLinkExt;
+                if let Err(e) = app.deep_link().register("luminakraft") {
+                    eprintln!("Failed to register deep link protocol: {}", e);
+                }
+            }
+
             Ok(())
         })
         .run(tauri::generate_context!())
