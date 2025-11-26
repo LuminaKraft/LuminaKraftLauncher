@@ -1,7 +1,7 @@
 # Discord OAuth Setup
 
 ## Overview
-Discord OAuth authentication opens in the user's default browser. After authorization, the user is redirected to https://www.luminakraft.com/auth-callback which automatically triggers the launcher to open via deep link.
+Discord OAuth authentication opens in the user's default browser. After authorization, the user is redirected to https://luminakraft.com/auth-callback which automatically triggers the launcher to open via deep link.
 
 ## Setup Steps
 
@@ -12,7 +12,7 @@ In your Supabase project settings, navigate to:
 
 Add the auth callback page as redirect URL:
 ```
-https://www.luminakraft.com/auth-callback
+https://luminakraft.com/auth-callback
 ```
 
 ### 2. Discord Provider Setup
@@ -41,7 +41,7 @@ In your Discord Developer Portal (https://discord.com/developers/applications):
 2. OAuth URL is generated and opened in user's default browser
 3. User authenticates with Discord in the browser
 4. Discord redirects to Supabase callback URL
-5. Supabase establishes session and redirects to https://www.luminakraft.com/auth-callback
+5. Supabase establishes session and redirects to https://luminakraft.com/auth-callback
 6. The auth-callback page:
    - Shows a success message to the user
    - Extracts OAuth tokens from URL hash
