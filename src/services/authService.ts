@@ -243,8 +243,8 @@ class AuthService {
       await invoke('open_url', { url: data.url });
 
       console.log('Discord OAuth opened in browser');
-      console.log('User will be redirected to https://www.luminakraft.com/ after authorization');
-      console.log('User should return to the app manually to complete linking');
+      console.log('User will be redirected to https://luminakraft.com/auth-callback after authorization');
+      console.log('The web page will automatically trigger the launcher to open via deep link');
       return true;
     } catch (error) {
       console.error('Error linking Discord account:', error);

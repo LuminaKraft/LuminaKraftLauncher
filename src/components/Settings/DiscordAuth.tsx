@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CheckCircleIcon, XCircleIcon, RefreshCw, AlertCircle } from 'lucide-react';
+import toast from 'react-hot-toast';
 import AuthService from '../../services/authService';
 import type { DiscordAccount } from '../../types/launcher';
 
@@ -37,8 +38,10 @@ export default function DiscordAuth({
     try {
       const success = await authService.linkDiscordAccount();
       if (success) {
-        // Show info message that user should authorize in browser and return to app
-        onError(t('auth.discordLinkingInBrowser') || 'Please authorize Discord in your browser. You can close the browser tab after authorization.');
+        // Show info toast that OAuth was opened in browser
+        toast('Autoriza Discord en tu navegador. El launcher se abrirá automáticamente después.', {
+          duration: 5000,
+        });
       } else {
         onError(t('auth.discordLinkFailed'));
       }
