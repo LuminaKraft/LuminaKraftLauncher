@@ -1,7 +1,7 @@
 # Discord OAuth Setup
 
 ## Overview
-Discord OAuth authentication opens in the user's default browser. After authorization, the user is redirected to https://www.luminakraft.com/ and must manually return to the launcher app.
+Discord OAuth authentication opens in the user's default browser. After authorization, the user is redirected to https://www.luminakraft.com/auth-callback which automatically triggers the launcher to open via deep link.
 
 ## Setup Steps
 
@@ -10,9 +10,9 @@ Discord OAuth authentication opens in the user's default browser. After authoriz
 In your Supabase project settings, navigate to:
 **Authentication > URL Configuration > Redirect URLs**
 
-Add the LuminaKraft website as redirect URL:
+Add the auth callback page as redirect URL:
 ```
-https://www.luminakraft.com/
+https://www.luminakraft.com/auth-callback
 ```
 
 ### 2. Discord Provider Setup
@@ -41,15 +41,19 @@ In your Discord Developer Portal (https://discord.com/developers/applications):
 2. OAuth URL is generated and opened in user's default browser
 3. User authenticates with Discord in the browser
 4. Discord redirects to Supabase callback URL
-5. Supabase establishes session and redirects to https://www.luminakraft.com/
-6. User sees LuminaKraft website and manually returns to the launcher app
-7. User opens Settings page in launcher
-8. Launcher automatically syncs Discord data from Supabase session
+5. Supabase establishes session and redirects to https://www.luminakraft.com/auth-callback
+6. The auth-callback page:
+   - Shows a success message to the user
+   - Extracts OAuth tokens from URL hash
+   - Triggers deep link `luminakraft://auth/callback#tokens...`
+   - Browser attempts to open the launcher automatically
+7. Launcher receives deep link and syncs Discord data
+8. Success toast is shown and user is redirected to Settings page
 9. Discord account is now linked and roles are synced
 
 ## Important Notes
 
-- User must manually return to the launcher after authorization
-- Discord data sync happens automatically when user opens Settings
-- The browser tab will remain open on luminakraft.com (user can close it manually)
-- Session persists in Supabase, so data syncs even after app restart
+- The launcher opens automatically via deep link
+- User can close the browser tab showing the success message
+- Session persists in Supabase
+- Deep link is only registered when the app is built and installed (not in dev mode)
