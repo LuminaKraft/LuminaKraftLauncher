@@ -46,7 +46,7 @@
       "exceptionDomain": "",
       "signingIdentity": null,
       "entitlements": null,
-      "extendInfoPlist": {
+      "plist": {
         "CFBundleURLTypes": [
           {
             "CFBundleTypeRole": "Editor",
