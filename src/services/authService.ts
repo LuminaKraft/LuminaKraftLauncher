@@ -237,9 +237,9 @@ class AuthService {
         return false;
       }
 
-      // Open OAuth URL in external browser using Tauri shell
-      const { open } = await import('@tauri-apps/plugin-shell');
-      await open(data.url);
+      // Open OAuth URL in external browser using Tauri command
+      const { invoke } = await import('@tauri-apps/api/core');
+      await invoke('open_url', { url: data.url });
 
       console.log('Discord OAuth opened in browser');
       return true;
