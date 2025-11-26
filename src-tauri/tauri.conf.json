@@ -45,7 +45,16 @@
       "minimumSystemVersion": "10.13",
       "exceptionDomain": "",
       "signingIdentity": null,
-      "entitlements": null
+      "entitlements": null,
+      "extendInfoPlist": {
+        "CFBundleURLTypes": [
+          {
+            "CFBundleTypeRole": "Editor",
+            "CFBundleURLName": "com.luminakraft.launcher",
+            "CFBundleURLSchemes": ["luminakraft"]
+          }
+        ]
+      }
     },
     "windows": {
       "webviewInstallMode": {
