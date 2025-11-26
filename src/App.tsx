@@ -36,6 +36,7 @@ function AppContent() {
   // Handle Discord OAuth callback via deep link
   useEffect(() => {
     let unsubscribe: (() => void) | null = null;
+    let isProcessing = false;
 
     const setupDeepLinkListener = async () => {
       try {
@@ -48,12 +49,19 @@ function AppContent() {
           unsubscribe = await onOpenUrl(async (urls) => {
             console.log('Deep link received:', urls);
 
+            // Prevent duplicate processing
+            if (isProcessing) {
+              console.log('Already processing deep link, ignoring duplicate');
+              return;
+            }
+
             for (const url of urls) {
               console.log('Processing URL:', url);
 
               // Check if it's our auth callback
               if (url.startsWith('luminakraft://auth/callback')) {
                 console.log('Discord OAuth callback detected via deep link');
+                isProcessing = true;
 
                 // Extract tokens from URL and set to Supabase session
                 // The URL format is: luminakraft://auth/callback#access_token=...&refresh_token=...
@@ -76,6 +84,11 @@ function AppContent() {
                     toast.error(t('auth.discordLinkFailed'));
                   }
                 }
+
+                // Reset flag after a delay to allow future auth attempts
+                setTimeout(() => {
+                  isProcessing = false;
+                }, 3000);
               }
             }
           });
@@ -97,7 +110,7 @@ function AppContent() {
         unsubscribe();
       }
     };
-  }, [t, launcherService]);
+  }, [t, launcherService, refreshData]);
 
   useEffect(() => {
     const checkForUpdatesOnStartup = async () => {

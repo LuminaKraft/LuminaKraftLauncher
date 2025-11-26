@@ -1,5 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
-import type { Database } from '../types/supabase';
+import type { Database, Tables, Updates } from '../types/supabase';
+
+// Export types for use in other services
+export type { Tables, Updates };
 
 // Supabase configuration from environment variables
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -63,7 +66,7 @@ export async function hasRole(role: 'admin' | 'partner' | 'user'): Promise<boole
     .from('users')
     .select('role')
     .eq('id', user.id)
-    .single();
+    .single<Pick<Tables<'users'>, 'role'>>();
 
   return profile?.role === role;
 }
@@ -90,4 +93,15 @@ export async function getUserProfile() {
   }
 
   return profile;
+}
+
+/**
+ * Type-safe helper to update user data
+ * This ensures the update data matches the Users table schema
+ */
+export async function updateUser(userId: string, updates: Partial<Tables<'users'>>) {
+  return await supabase
+    .from('users')
+    .update(updates as never)
+    .eq('id', userId);
 }

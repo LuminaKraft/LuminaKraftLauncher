@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import type { MicrosoftAccount, DiscordAccount } from '../types/launcher';
-import { supabase } from './supabaseClient';
+import { supabase, updateUser, type Tables } from './supabaseClient';
 
 class AuthService {
   private static instance: AuthService;
@@ -260,6 +260,13 @@ class AuthService {
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       const accessToken = hashParams.get('access_token');
       const refreshToken = hashParams.get('refresh_token');
+      const providerToken = hashParams.get('provider_token');
+
+      console.log('OAuth callback tokens:', {
+        hasAccessToken: !!accessToken,
+        hasRefreshToken: !!refreshToken,
+        hasProviderToken: !!providerToken
+      });
 
       if (!accessToken || !refreshToken) {
         console.error('No OAuth tokens found in callback URL');
@@ -277,19 +284,23 @@ class AuthService {
         return false;
       }
 
+      console.log('Session established. Provider token in session:', !!session.provider_token);
+
       // Extract Discord user data from session
       const discordUser = session.user.user_metadata;
       console.log('Discord user data:', discordUser);
 
       // Update users table with Discord data
-      const { error: updateError } = await supabase.from('users').update({
+      // Note: username is the actual Discord username, global_name is the display name
+      const updateData = {
         discord_id: discordUser.provider_id,
-        discord_username: discordUser.custom_claims?.global_name || discordUser.name,
+        discord_username: discordUser.custom_claims?.username || discordUser.name,
         discord_global_name: discordUser.custom_claims?.global_name,
         discord_discriminator: discordUser.custom_claims?.discriminator || '0',
         discord_avatar: discordUser.avatar_url,
         linked_at: new Date().toISOString()
-      }).eq('id', session.user.id);
+      };
+      const { error: updateError } = await updateUser(session.user.id, updateData);
 
       if (updateError) {
         console.error('Failed to update user with Discord data:', updateError);
@@ -313,7 +324,7 @@ class AuthService {
    */
   async syncDiscordRoles(): Promise<boolean> {
     try {
-      console.log('🔄 Syncing Discord roles...');
+      console.log('Syncing Discord roles...');
 
       const { data: { session } } = await supabase.auth.getSession();
 
@@ -327,8 +338,15 @@ class AuthService {
 
       if (!discordAccessToken) {
         console.error('No Discord access token in session');
+        console.log('Session details:', {
+          hasUser: !!session.user,
+          hasProviderToken: !!session.provider_token,
+          hasProviderRefreshToken: !!session.provider_refresh_token
+        });
         return false;
       }
+
+      console.log('Calling sync-discord-roles Edge Function...');
 
       // Call Edge Function
       const { data, error } = await supabase.functions.invoke('sync-discord-roles', {
@@ -340,10 +358,11 @@ class AuthService {
 
       if (error) {
         console.error('Failed to sync Discord roles:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
         return false;
       }
 
-      console.log('Discord roles synced:', data);
+      console.log('Discord roles synced successfully:', data);
       return data.success;
     } catch (error) {
       console.error('Error syncing Discord roles:', error);
@@ -365,7 +384,7 @@ class AuthService {
         .from('users')
         .select('last_discord_sync, discord_id')
         .eq('id', user.id)
-        .single();
+        .single<Pick<Tables<'users'>, 'last_discord_sync' | 'discord_id'>>();
 
       if (!profile || !profile.discord_id) {
         return false; // No Discord linked
@@ -398,7 +417,7 @@ class AuthService {
         .from('users')
         .select('discord_id, discord_username, discord_global_name, discord_discriminator, discord_avatar, is_discord_member, has_partner_role, partner_role_id, discord_roles, last_discord_sync')
         .eq('id', user.id)
-        .single();
+        .single<Pick<Tables<'users'>, 'discord_id' | 'discord_username' | 'discord_global_name' | 'discord_discriminator' | 'discord_avatar' | 'is_discord_member' | 'has_partner_role' | 'partner_role_id' | 'discord_roles' | 'last_discord_sync'>>();
 
       if (!profile || !profile.discord_id) {
         return null;
@@ -413,7 +432,7 @@ class AuthService {
         isMember: profile.is_discord_member || false,
         hasPartnerRole: profile.has_partner_role || false,
         partnerRoleId: profile.partner_role_id,
-        roles: profile.discord_roles || [],
+        roles: Array.isArray(profile.discord_roles) ? profile.discord_roles as string[] : [],
         lastSync: profile.last_discord_sync
       };
     } catch (error) {
@@ -431,7 +450,7 @@ class AuthService {
 
       if (!user) return false;
 
-      const { error } = await supabase.from('users').update({
+      const unlinkData = {
         discord_id: null,
         discord_username: null,
         discord_global_name: null,
@@ -444,7 +463,8 @@ class AuthService {
         has_partner_role: false,
         partner_role_id: null,
         linked_at: null
-      }).eq('id', user.id);
+      };
+      const { error } = await updateUser(user.id, unlinkData);
 
       if (error) {
         console.error('Failed to unlink Discord account:', error);
@@ -485,9 +505,9 @@ class AuthService {
       // Get current user data
       const { data: currentUser } = await supabase
         .from('users')
-        .select('minecraft_username, minecraft_username_history, is_minecraft_verified')
+        .select('minecraft_username, minecraft_username_history')
         .eq('id', session.user.id)
-        .single();
+        .single<Pick<Tables<'users'>, 'minecraft_username' | 'minecraft_username_history'>>();
 
       // If username hasn't changed, skip update
       if (currentUser?.minecraft_username === newUsername) {
@@ -496,11 +516,13 @@ class AuthService {
       }
 
       const now = new Date().toISOString();
-      const history = currentUser?.minecraft_username_history || [];
+      const history = Array.isArray(currentUser?.minecraft_username_history)
+        ? currentUser.minecraft_username_history as Array<{ username: string; from: string; to: string | null }>
+        : [];
 
       // Close previous entry if exists
       if (currentUser?.minecraft_username) {
-        const updatedHistory = history.map((entry: any) =>
+        const updatedHistory = history.map((entry) =>
           entry.to === null
             ? { ...entry, to: now }
             : entry
@@ -513,11 +535,12 @@ class AuthService {
           to: null
         });
 
-        const { error } = await supabase.from('users').update({
+        const updateData = {
           minecraft_username: newUsername,
           minecraft_username_history: updatedHistory,
           updated_at: now
-        }).eq('id', session.user.id);
+        };
+        const { error } = await updateUser(session.user.id, updateData);
 
         if (error) {
           console.error('Failed to update username with history:', error);
@@ -525,7 +548,7 @@ class AuthService {
         }
       } else {
         // First username for authenticated user
-        const { error } = await supabase.from('users').update({
+        const firstUpdateData = {
           minecraft_username: newUsername,
           minecraft_username_history: [{
             username: newUsername,
@@ -533,7 +556,8 @@ class AuthService {
             to: null
           }],
           updated_at: now
-        }).eq('id', session.user.id);
+        };
+        const { error } = await updateUser(session.user.id, firstUpdateData);
 
         if (error) {
           console.error('Failed to set initial username:', error);
