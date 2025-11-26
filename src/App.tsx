@@ -41,6 +41,7 @@ function AppContent() {
       try {
         // Only setup in Tauri environment
         if (launcherService.isTauriAvailable()) {
+          console.log('Setting up deep link listener...');
           const { onOpenUrl } = await import('@tauri-apps/plugin-deep-link');
 
           // Listen for deep link events
@@ -48,6 +49,8 @@ function AppContent() {
             console.log('Deep link received:', urls);
 
             for (const url of urls) {
+              console.log('Processing URL:', url);
+
               // Check if it's our auth callback
               if (url.startsWith('luminakraft://auth/callback')) {
                 console.log('Discord OAuth callback detected via deep link');
@@ -55,6 +58,8 @@ function AppContent() {
                 // Extract tokens from URL and set to Supabase session
                 // The URL format is: luminakraft://auth/callback#access_token=...&refresh_token=...
                 const hashPart = url.split('#')[1];
+                console.log('Hash part extracted:', hashPart ? 'yes' : 'no');
+
                 if (hashPart) {
                   // Set the hash so Supabase can parse it
                   window.location.hash = hashPart;
@@ -65,6 +70,8 @@ function AppContent() {
                   if (success) {
                     toast.success(t('auth.discordLinked'));
                     setActiveSection('settings');
+                    // Refresh data to update Discord status
+                    await refreshData();
                   } else {
                     toast.error(t('auth.discordLinkFailed'));
                   }
@@ -72,6 +79,10 @@ function AppContent() {
               }
             }
           });
+
+          console.log('Deep link listener setup complete');
+        } else {
+          console.log('Tauri not available, skipping deep link setup');
         }
       } catch (error) {
         console.error('Failed to setup deep link listener:', error);
