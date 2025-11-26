@@ -1016,9 +1016,6 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
         }
       });
 
-      // Track download stats in Supabase
-      await launcherService.trackDownload(safeName);
-
       // Reload instance states to reflect the new installation
       await loadModpackStates();
     } catch (error) {
