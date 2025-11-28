@@ -510,6 +510,8 @@ class AuthService {
       console.log('Removed Discord refresh token from localStorage');
 
       // Unlink Discord identity from Supabase Auth
+      // Note: This may fail if manual linking is disabled in Supabase project settings
+      // but we continue anyway to clean up the database
       try {
         const { data: identities } = await supabase.auth.getUserIdentities();
         console.log('User identities:', identities);
@@ -519,12 +521,13 @@ class AuthService {
         );
 
         if (discordIdentity) {
-          console.log('Unlinking Discord identity:', discordIdentity.id);
+          console.log('Attempting to unlink Discord identity:', discordIdentity.id);
           const { error: unlinkError } = await supabase.auth.unlinkIdentity(discordIdentity);
 
           if (unlinkError) {
-            console.error('Failed to unlink Discord identity from Supabase:', unlinkError);
-            // Continue anyway to clean up database
+            // Manual linking may be disabled in Supabase - this is not critical
+            // The Discord data will still be cleaned from the database
+            console.warn('Could not unlink Discord OAuth identity (manual linking may be disabled):', unlinkError.message);
           } else {
             console.log('Discord identity unlinked from Supabase Auth');
           }
@@ -532,8 +535,7 @@ class AuthService {
           console.log('No Discord identity found in Supabase Auth');
         }
       } catch (identityError) {
-        console.error('Error unlinking Discord identity:', identityError);
-        // Continue anyway to clean up database
+        console.warn('Error unlinking Discord identity (continuing with database cleanup):', identityError);
       }
 
       // Clear Discord data in database
