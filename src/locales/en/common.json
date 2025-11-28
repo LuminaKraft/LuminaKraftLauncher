@@ -327,6 +327,7 @@
     "syncing": "Syncing...",
     "discordLinked": "Discord account linked successfully!",
     "discordLinkFailed": "Failed to link Discord account",
+    "discordSyncSuccess": "Discord roles synced successfully!",
     "discordSyncFailed": "Failed to sync Discord roles",
     "discordUnlinkFailed": "Failed to unlink Discord account",
     "confirmUnlinkDiscord": "Are you sure you want to unlink your Discord account? You won't be able to publish modpacks until you link it again.",

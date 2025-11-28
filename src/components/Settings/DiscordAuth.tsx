@@ -23,12 +23,33 @@ export default function DiscordAuth({
   const [showManualInput, setShowManualInput] = useState(false);
   const [manualUrl, setManualUrl] = useState('');
   const [isProcessingManual, setIsProcessingManual] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<number>(0);
+  const [cooldownRemaining, setCooldownRemaining] = useState<number>(0);
   const authService = AuthService.getInstance();
+
+  const SYNC_COOLDOWN_MS = 30000; // 30 seconds cooldown
 
   // Load Discord account on mount
   useEffect(() => {
     loadDiscordAccount();
   }, []);
+
+  // Cooldown timer
+  useEffect(() => {
+    if (lastSyncTime === 0) return;
+
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - lastSyncTime;
+      const remaining = Math.max(0, SYNC_COOLDOWN_MS - elapsed);
+      setCooldownRemaining(remaining);
+
+      if (remaining === 0) {
+        clearInterval(interval);
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [lastSyncTime]);
 
   const loadDiscordAccount = async () => {
     setIsLoading(true);
@@ -122,10 +143,17 @@ export default function DiscordAuth({
   };
 
   const handleSyncRoles = async () => {
+    // Check cooldown
+    if (cooldownRemaining > 0) {
+      toast.error(`Please wait ${Math.ceil(cooldownRemaining / 1000)} seconds before syncing again`);
+      return;
+    }
+
     setIsSyncing(true);
     try {
       const success = await authService.syncDiscordRoles();
       if (success) {
+        setLastSyncTime(Date.now());
         await loadDiscordAccount(); // Reload account data
         const updatedAccount = await authService.getDiscordAccount();
         if (updatedAccount) {
@@ -257,11 +285,16 @@ export default function DiscordAuth({
             {discordAccount.isMember && (
               <button
                 onClick={handleSyncRoles}
-                disabled={isSyncing}
-                className="flex items-center gap-2 px-3 py-1 text-sm bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-900/40 transition-colors disabled:opacity-50"
+                disabled={isSyncing || cooldownRemaining > 0}
+                className="flex items-center gap-2 px-3 py-1 text-sm bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-900/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                {isSyncing ? t('auth.syncing') : t('auth.syncRoles')}
+                {isSyncing
+                  ? t('auth.syncing')
+                  : cooldownRemaining > 0
+                    ? `${Math.ceil(cooldownRemaining / 1000)}s`
+                    : t('auth.syncRoles')
+                }
               </button>
             )}
           </div>
