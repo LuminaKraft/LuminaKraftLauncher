@@ -73,6 +73,14 @@ export default function DiscordAuth({
       const accessToken = params.get('access_token');
       const refreshToken = params.get('refresh_token');
       const providerToken = params.get('provider_token');
+      const providerRefreshToken = params.get('provider_refresh_token');
+
+      console.log('Tokens extracted from manual URL:', {
+        hasAccessToken: !!accessToken,
+        hasRefreshToken: !!refreshToken,
+        hasProviderToken: !!providerToken,
+        hasProviderRefreshToken: !!providerRefreshToken
+      });
 
       if (!accessToken || !refreshToken) {
         toast.error('Invalid URL: missing tokens');
@@ -92,8 +100,11 @@ export default function DiscordAuth({
         return;
       }
 
-      // Sync Discord data
-      const success = await authService.syncDiscordData(providerToken || undefined);
+      // Sync Discord data with both tokens
+      const success = await authService.syncDiscordData(
+        providerToken || undefined,
+        providerRefreshToken || undefined
+      );
       if (success) {
         toast.success(t('auth.discordLinked'));
         setShowManualInput(false);

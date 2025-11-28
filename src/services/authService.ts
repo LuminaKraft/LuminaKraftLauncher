@@ -409,6 +409,13 @@ class AuthService {
       }
 
       console.log('Discord roles synced successfully:', data);
+
+      // Update refresh token if a new one was returned (token rotation)
+      if (data.newRefreshToken) {
+        localStorage.setItem('discord_provider_refresh_token', data.newRefreshToken);
+        console.log('✅ New Discord refresh token saved for next sync');
+      }
+
       return data.success;
     } catch (error) {
       console.error('Error syncing Discord roles:', error);
