@@ -162,11 +162,17 @@ export default function DiscordAuth({
         }
         toast.success(t('auth.discordSyncSuccess'));
       } else {
-        toast.error(t('auth.discordSyncFailed'));
+        // Sync failed - suggest relinking Discord account
+        toast.error(t('auth.discordSyncFailed'), {
+          duration: 6000,
+        });
       }
     } catch (error) {
       console.error('Sync error:', error);
-      toast.error(t('auth.discordSyncFailed'));
+      // Error during sync - suggest relinking Discord account
+      toast.error(t('auth.discordSyncFailed'), {
+        duration: 6000,
+      });
     } finally {
       setIsSyncing(false);
     }

@@ -327,7 +327,7 @@
     "discordLinked": "¡Cuenta de Discord vinculada exitosamente!",
     "discordLinkFailed": "Error al vincular cuenta de Discord",
     "discordSyncSuccess": "¡Roles de Discord sincronizados exitosamente!",
-    "discordSyncFailed": "Error al sincronizar roles de Discord",
+    "discordSyncFailed": "Error al sincronizar roles de Discord. Por favor, vuelve a vincular tu cuenta.",
     "discordUnlinkFailed": "Error al desvincular cuenta de Discord",
     "confirmUnlinkDiscord": "¿Estás seguro de que quieres desvincular tu cuenta de Discord? No podrás publicar modpacks hasta que la vincules de nuevo.",
     "discordMemberYes": "Miembro del Servidor de Discord",
