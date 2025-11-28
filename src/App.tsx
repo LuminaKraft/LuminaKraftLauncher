@@ -67,12 +67,14 @@ function AppContent() {
                 const params = new URLSearchParams(hashPart);
                 const accessToken = params.get('access_token');
                 const refreshToken = params.get('refresh_token');
-                const providerToken = params.get('provider_token'); // Discord OAuth token
+                const providerToken = params.get('provider_token'); // Discord OAuth access token
+                const providerRefreshToken = params.get('provider_refresh_token'); // Discord OAuth refresh token
 
                 console.log('Tokens extracted:', {
                   hasAccessToken: !!accessToken,
                   hasRefreshToken: !!refreshToken,
-                  hasProviderToken: !!providerToken
+                  hasProviderToken: !!providerToken,
+                  hasProviderRefreshToken: !!providerRefreshToken
                 });
 
                 if (accessToken && refreshToken) {
@@ -90,9 +92,12 @@ function AppContent() {
                   } else {
                     console.log('Supabase session established from OAuth tokens');
 
-                    // Now sync Discord data with provider token
+                    // Now sync Discord data with provider tokens
                     const authService = AuthService.getInstance();
-                    const success = await authService.syncDiscordData(providerToken || undefined);
+                    const success = await authService.syncDiscordData(
+                      providerToken || undefined,
+                      providerRefreshToken || undefined
+                    );
 
                     if (success) {
                       toast.success(t('auth.discordLinked'));

@@ -255,9 +255,10 @@ class AuthService {
   /**
    * Sync Discord data from Supabase session to database
    * Call this after user returns from OAuth authorization
-   * @param providerToken Optional Discord OAuth token for role sync
+   * @param providerToken Optional Discord OAuth access token for role sync
+   * @param providerRefreshToken Optional Discord OAuth refresh token for future syncs
    */
-  async syncDiscordData(providerToken?: string): Promise<boolean> {
+  async syncDiscordData(providerToken?: string, providerRefreshToken?: string): Promise<boolean> {
     try {
       // Get the fresh user data after setting session
       const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -272,7 +273,8 @@ class AuthService {
         provider: user.app_metadata?.provider,
         hasUserMetadata: !!user.user_metadata,
         hasProviderMetadata: !!user.user_metadata?.provider_id,
-        hasProviderToken: !!providerToken
+        hasProviderToken: !!providerToken,
+        hasProviderRefreshToken: !!providerRefreshToken
       });
 
       // Extract Discord data from user metadata
@@ -328,8 +330,14 @@ class AuthService {
 
       console.log('Discord data updated in database, now syncing roles...');
 
+      // Save provider refresh token in localStorage for future syncs
+      if (providerRefreshToken) {
+        localStorage.setItem('discord_provider_refresh_token', providerRefreshToken);
+        console.log('Discord provider refresh token saved to localStorage');
+      }
+
       // Trigger role sync with provider token if available
-      const rolesSuccess = await this.syncDiscordRoles(providerToken);
+      const rolesSuccess = await this.syncDiscordRoles(providerToken, providerRefreshToken);
 
       if (rolesSuccess) {
         console.log('Discord data and roles synced successfully');
@@ -347,45 +355,50 @@ class AuthService {
   /**
    * Sync Discord roles from server
    * Calls sync-discord-roles Edge Function
-   * @param providerToken Optional Discord OAuth token (if not in session)
+   * @param providerToken Optional Discord OAuth access token
+   * @param providerRefreshToken Optional Discord OAuth refresh token
    */
-  async syncDiscordRoles(providerToken?: string): Promise<boolean> {
+  async syncDiscordRoles(providerToken?: string, providerRefreshToken?: string): Promise<boolean> {
     try {
       console.log('Syncing Discord roles...');
 
-      // Try to refresh the session to get a fresh provider_token
-      const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
+      const { data: { session } } = await supabase.auth.getSession();
 
-      if (refreshError || !session) {
-        console.error('Failed to refresh session:', refreshError);
+      if (!session) {
+        console.error('No session, cannot sync roles');
         return false;
       }
 
       // Get Discord access token from:
       // 1. Parameter (from initial login)
-      // 2. Refreshed session provider_token
-      const discordAccessToken = providerToken || session.provider_token;
+      // 2. Session provider_token (if available)
+      let discordAccessToken = providerToken || session.provider_token;
+
+      // Get refresh token from parameter or localStorage
+      const refreshToken = providerRefreshToken || localStorage.getItem('discord_provider_refresh_token');
 
       if (!discordAccessToken) {
-        console.error('No Discord access token available after refresh');
-        console.log('Please re-link your Discord account to refresh your access token');
+        console.log('No access token available, will use refresh token in Edge Function');
+      }
+
+      // If we don't have access token but have refresh token, Edge Function will handle it
+      if (!discordAccessToken && !refreshToken) {
+        console.error('No Discord access token or refresh token available');
+        console.log('Please re-link your Discord account');
         return false;
       }
 
       console.log('=== Calling sync-discord-roles Edge Function ===');
       console.log('  User ID:', session.user.id);
-      console.log('  Has Discord token:', !!discordAccessToken);
-      console.log('  Token length:', discordAccessToken?.length);
-      console.log('  Token preview:', discordAccessToken?.substring(0, 20) + '...');
-      console.log('  Session provider:', session.user.app_metadata?.provider);
-      console.log('  Session has provider_token:', !!session.provider_token);
-      console.log('  Session has provider_refresh_token:', !!session.provider_refresh_token);
+      console.log('  Has Discord access token:', !!discordAccessToken);
+      console.log('  Has Discord refresh token:', !!refreshToken);
 
-      // Call Edge Function
-      const { data, error } = await supabase.functions.invoke('sync-discord-roles', {
+      // Call Edge Function with access token OR refresh token
+      const { data, error} = await supabase.functions.invoke('sync-discord-roles', {
         body: {
           userId: session.user.id,
-          discordAccessToken
+          discordAccessToken: discordAccessToken || undefined,
+          discordRefreshToken: refreshToken || undefined
         }
       });
 
@@ -482,6 +495,9 @@ class AuthService {
       const { data: { user } } = await supabase.auth.getUser();
 
       if (!user) return false;
+
+      // Remove refresh token from localStorage
+      localStorage.removeItem('discord_provider_refresh_token');
 
       const unlinkData = {
         discord_id: null,
