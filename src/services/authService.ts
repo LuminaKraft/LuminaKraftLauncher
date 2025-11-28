@@ -255,47 +255,88 @@ class AuthService {
   /**
    * Sync Discord data from Supabase session to database
    * Call this after user returns from OAuth authorization
+   * @param providerToken Optional Discord OAuth token for role sync
    */
-  async syncDiscordData(): Promise<boolean> {
+  async syncDiscordData(providerToken?: string): Promise<boolean> {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      // Get the fresh user data after setting session
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-      if (!session) {
-        console.log('No session found');
+      if (userError || !user) {
+        console.error('Failed to get user after setting session:', userError);
         return false;
       }
 
-      // Check if this is a Discord OAuth session
-      const discordUser = session.user.user_metadata;
-      if (!discordUser?.provider_id || session.user.app_metadata?.provider !== 'discord') {
-        console.log('Not a Discord OAuth session');
+      console.log('User data retrieved:', {
+        userId: user.id,
+        provider: user.app_metadata?.provider,
+        hasUserMetadata: !!user.user_metadata,
+        hasProviderMetadata: !!user.user_metadata?.provider_id,
+        hasProviderToken: !!providerToken
+      });
+
+      // Extract Discord data from user metadata
+      const discordUser = user.user_metadata;
+
+      if (!discordUser?.provider_id) {
+        console.error('No Discord provider_id found in user metadata');
+        console.log('Available metadata:', user.user_metadata);
         return false;
       }
 
       console.log('Syncing Discord data from session...');
+      console.log('Discord user data:', {
+        provider_id: discordUser.provider_id,
+        name: discordUser.name,
+        username: discordUser.custom_claims?.username,
+        global_name: discordUser.custom_claims?.global_name
+      });
 
       // Update users table with Discord data
       // Note: username is the actual Discord username, global_name is the display name
+      // Discord eliminated discriminators, so we don't save it anymore
+
+      // Extract avatar hash from URL (remove extension if present)
+      let avatarHash = null;
+      if (discordUser.avatar_url) {
+        // URL format: https://cdn.discordapp.com/avatars/USER_ID/HASH.png
+        const avatarMatch = discordUser.avatar_url.match(/avatars\/\d+\/([^.?]+)/);
+        avatarHash = avatarMatch ? avatarMatch[1] : null;
+      }
+
+      // Clean username - remove discriminator if present (legacy format username#0000)
+      let cleanUsername = discordUser.custom_claims?.username || discordUser.name || '';
+      if (cleanUsername.includes('#')) {
+        cleanUsername = cleanUsername.split('#')[0];
+      }
+
       const updateData = {
         discord_id: discordUser.provider_id,
-        discord_username: discordUser.custom_claims?.username || discordUser.name,
+        discord_username: cleanUsername,
         discord_global_name: discordUser.custom_claims?.global_name,
-        discord_discriminator: discordUser.custom_claims?.discriminator || '0',
-        discord_avatar: discordUser.avatar_url,
+        discord_discriminator: null, // Discord eliminated discriminators
+        discord_avatar: avatarHash,
         linked_at: new Date().toISOString()
       };
 
-      const { error: updateError } = await updateUser(session.user.id, updateData);
+      const { error: updateError } = await updateUser(user.id, updateData);
 
       if (updateError) {
         console.error('Failed to update user with Discord data:', updateError);
         return false;
       }
 
-      // Trigger role sync
-      await this.syncDiscordRoles();
+      console.log('Discord data updated in database, now syncing roles...');
 
-      console.log('Discord data synced successfully');
+      // Trigger role sync with provider token if available
+      const rolesSuccess = await this.syncDiscordRoles(providerToken);
+
+      if (rolesSuccess) {
+        console.log('Discord data and roles synced successfully');
+      } else {
+        console.warn('Discord data synced but role sync failed');
+      }
+
       return true;
     } catch (error) {
       console.error('Error syncing Discord data:', error);
@@ -306,32 +347,39 @@ class AuthService {
   /**
    * Sync Discord roles from server
    * Calls sync-discord-roles Edge Function
+   * @param providerToken Optional Discord OAuth token (if not in session)
    */
-  async syncDiscordRoles(): Promise<boolean> {
+  async syncDiscordRoles(providerToken?: string): Promise<boolean> {
     try {
       console.log('Syncing Discord roles...');
 
-      const { data: { session } } = await supabase.auth.getSession();
+      // Try to refresh the session to get a fresh provider_token
+      const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
 
-      if (!session) {
-        console.error('No session, cannot sync roles');
+      if (refreshError || !session) {
+        console.error('Failed to refresh session:', refreshError);
         return false;
       }
 
-      // Get Discord access token from session
-      const discordAccessToken = session.provider_token; // Discord OAuth token
+      // Get Discord access token from:
+      // 1. Parameter (from initial login)
+      // 2. Refreshed session provider_token
+      const discordAccessToken = providerToken || session.provider_token;
 
       if (!discordAccessToken) {
-        console.error('No Discord access token in session');
-        console.log('Session details:', {
-          hasUser: !!session.user,
-          hasProviderToken: !!session.provider_token,
-          hasProviderRefreshToken: !!session.provider_refresh_token
-        });
+        console.error('No Discord access token available after refresh');
+        console.log('Please re-link your Discord account to refresh your access token');
         return false;
       }
 
-      console.log('Calling sync-discord-roles Edge Function...');
+      console.log('=== Calling sync-discord-roles Edge Function ===');
+      console.log('  User ID:', session.user.id);
+      console.log('  Has Discord token:', !!discordAccessToken);
+      console.log('  Token length:', discordAccessToken?.length);
+      console.log('  Token preview:', discordAccessToken?.substring(0, 20) + '...');
+      console.log('  Session provider:', session.user.app_metadata?.provider);
+      console.log('  Session has provider_token:', !!session.provider_token);
+      console.log('  Session has provider_refresh_token:', !!session.provider_refresh_token);
 
       // Call Edge Function
       const { data, error } = await supabase.functions.invoke('sync-discord-roles', {
@@ -412,8 +460,8 @@ class AuthService {
         id: profile.discord_id,
         username: profile.discord_username || '',
         globalName: profile.discord_global_name,
-        discriminator: profile.discord_discriminator || '0',
-        avatar: profile.discord_avatar,
+        discriminator: profile.discord_discriminator || undefined,
+        avatar: profile.discord_avatar || undefined,
         isMember: profile.is_discord_member || false,
         hasPartnerRole: profile.has_partner_role || false,
         partnerRoleId: profile.partner_role_id,

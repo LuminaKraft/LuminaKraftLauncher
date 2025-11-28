@@ -99,8 +99,9 @@ export interface DiscordAccount {
   id: string;                     // Discord user ID (snowflake)
   username: string;               // Discord username
   globalName: string | null;      // Display name (new Discord field)
-  discriminator: string;          // Deprecated but may exist (0000 for new users)
-  avatar: string | null;          // Avatar hash
+  discriminator: string | undefined;  // Discord removed discriminators
+  avatar: string | null | undefined;  // Avatar hash
+  providerRefreshToken?: string;  // Discord OAuth refresh token for syncing roles
   isMember: boolean;              // Member of LuminaKraft Discord server
   hasPartnerRole: boolean;        // Has Partner role (1270158473937555519)
   partnerRoleId: string | null;   // Specific partner role ID (e.g., CrucisMC: 1382114019715846154)

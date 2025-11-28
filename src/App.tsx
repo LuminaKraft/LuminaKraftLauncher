@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { LauncherProvider, useLauncher } from './contexts/LauncherContext';
 import { AnimationProvider, useAnimation } from './contexts/AnimationContext';
 import Sidebar from './components/Layout/Sidebar';
@@ -32,11 +32,11 @@ function AppContent() {
   const { withDelay } = useAnimation();
   const { t } = useTranslation();
   const launcherService = LauncherService.getInstance();
+  const isProcessingDiscordCallback = useRef(false);
 
   // Handle Discord OAuth callback via deep link
   useEffect(() => {
     let unsubscribe: (() => void) | null = null;
-    let isProcessing = false;
 
     const setupDeepLinkListener = async () => {
       try {
@@ -47,39 +47,70 @@ function AppContent() {
           unsubscribe = await onOpenUrl(async (urls) => {
             console.log('Deep link received:', urls);
 
-            if (isProcessing) {
+            if (isProcessingDiscordCallback.current) {
               console.log('Already processing deep link, ignoring duplicate');
               return;
             }
 
-            for (const url of urls) {
-              console.log('Processing URL:', url);
+            // Find Discord callback URL
+            const discordCallbackUrl = urls.find(url => url.startsWith('luminakraft://auth/callback'));
 
-              if (url.startsWith('luminakraft://auth/callback')) {
-                console.log('Discord OAuth callback detected via deep link');
-                isProcessing = true;
+            if (discordCallbackUrl) {
+              console.log('Discord OAuth callback detected via deep link');
+              isProcessingDiscordCallback.current = true;
 
-                const hashPart = url.split('#')[1];
-                console.log('Hash part extracted:', hashPart ? 'yes' : 'no');
+              const hashPart = discordCallbackUrl.split('#')[1];
+              console.log('Hash part extracted:', hashPart ? 'yes' : 'no');
 
-                if (hashPart) {
-                  window.location.hash = hashPart;
+              if (hashPart) {
+                // Parse the hash to extract OAuth tokens
+                const params = new URLSearchParams(hashPart);
+                const accessToken = params.get('access_token');
+                const refreshToken = params.get('refresh_token');
+                const providerToken = params.get('provider_token'); // Discord OAuth token
 
-                  const authService = AuthService.getInstance();
-                  const success = await authService.syncDiscordData();
+                console.log('Tokens extracted:', {
+                  hasAccessToken: !!accessToken,
+                  hasRefreshToken: !!refreshToken,
+                  hasProviderToken: !!providerToken
+                });
 
-                  if (success) {
-                    toast.success(t('auth.discordLinked'));
-                    setActiveSection('settings');
-                    await refreshData();
-                  } else {
+                if (accessToken && refreshToken) {
+                  // Establish Supabase session with the OAuth tokens
+                  const { supabase } = await import('./services/supabaseClient');
+                  const { error: sessionError } = await supabase.auth.setSession({
+                    access_token: accessToken,
+                    refresh_token: refreshToken
+                  });
+
+                  if (sessionError) {
+                    console.error('Failed to set Supabase session:', sessionError);
                     toast.error(t('auth.discordLinkFailed'));
-                  }
-                }
+                    isProcessingDiscordCallback.current = false;
+                  } else {
+                    console.log('Supabase session established from OAuth tokens');
 
-                setTimeout(() => {
-                  isProcessing = false;
-                }, 3000);
+                    // Now sync Discord data with provider token
+                    const authService = AuthService.getInstance();
+                    const success = await authService.syncDiscordData(providerToken || undefined);
+
+                    if (success) {
+                      toast.success(t('auth.discordLinked'));
+                      setActiveSection('settings');
+                      await refreshData();
+                    } else {
+                      toast.error(t('auth.discordLinkFailed'));
+                    }
+
+                    isProcessingDiscordCallback.current = false;
+                  }
+                } else {
+                  console.error('Missing required OAuth tokens in hash');
+                  toast.error(t('auth.discordLinkFailed'));
+                  isProcessingDiscordCallback.current = false;
+                }
+              } else {
+                isProcessingDiscordCallback.current = false;
               }
             }
           });

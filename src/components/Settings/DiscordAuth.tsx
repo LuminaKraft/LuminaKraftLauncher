@@ -20,6 +20,9 @@ export default function DiscordAuth({
   const [discordAccount, setDiscordAccount] = useState<DiscordAccount | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [showManualInput, setShowManualInput] = useState(false);
+  const [manualUrl, setManualUrl] = useState('');
+  const [isProcessingManual, setIsProcessingManual] = useState(false);
   const authService = AuthService.getInstance();
 
   // Load Discord account on mount
@@ -42,6 +45,7 @@ export default function DiscordAuth({
         toast('Autoriza Discord en tu navegador. El launcher se abrirá automáticamente después.', {
           duration: 5000,
         });
+        setShowManualInput(true);
       } else {
         onError(t('auth.discordLinkFailed'));
       }
@@ -52,21 +56,78 @@ export default function DiscordAuth({
     }
   };
 
+  const handleManualUrlSubmit = async () => {
+    if (!manualUrl) return;
+
+    setIsProcessingManual(true);
+    try {
+      // Extract hash from URL
+      const hashPart = manualUrl.split('#')[1];
+      if (!hashPart) {
+        toast.error('Invalid URL: no token found');
+        return;
+      }
+
+      // Parse tokens
+      const params = new URLSearchParams(hashPart);
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+      const providerToken = params.get('provider_token');
+
+      if (!accessToken || !refreshToken) {
+        toast.error('Invalid URL: missing tokens');
+        return;
+      }
+
+      // Set session
+      const { supabase } = await import('../../services/supabaseClient');
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken
+      });
+
+      if (sessionError) {
+        toast.error('Failed to set session');
+        console.error(sessionError);
+        return;
+      }
+
+      // Sync Discord data
+      const success = await authService.syncDiscordData(providerToken || undefined);
+      if (success) {
+        toast.success(t('auth.discordLinked'));
+        setShowManualInput(false);
+        setManualUrl('');
+        await loadDiscordAccount();
+      } else {
+        toast.error(t('auth.discordLinkFailed'));
+      }
+    } catch (error) {
+      console.error('Manual auth error:', error);
+      toast.error('Error processing URL');
+    } finally {
+      setIsProcessingManual(false);
+    }
+  };
+
   const handleSyncRoles = async () => {
     setIsSyncing(true);
     try {
       const success = await authService.syncDiscordRoles();
       if (success) {
         await loadDiscordAccount(); // Reload account data
-        if (discordAccount) {
-          onAuthSuccess(discordAccount);
+        const updatedAccount = await authService.getDiscordAccount();
+        if (updatedAccount) {
+          setDiscordAccount(updatedAccount);
+          onAuthSuccess(updatedAccount);
         }
+        toast.success(t('auth.discordSyncSuccess'));
       } else {
-        onError(t('auth.discordSyncFailed'));
+        toast.error(t('auth.discordSyncFailed'));
       }
     } catch (error) {
       console.error('Sync error:', error);
-      onError(t('auth.discordSyncFailed'));
+      toast.error(t('auth.discordSyncFailed'));
     } finally {
       setIsSyncing(false);
     }
@@ -79,8 +140,10 @@ export default function DiscordAuth({
     if (success) {
       setDiscordAccount(null);
       onAuthClear();
+      await loadDiscordAccount(); // Force reload to confirm unlink
+      toast.success(t('auth.discordUnlinked'));
     } else {
-      onError(t('auth.discordUnlinkFailed'));
+      toast.error(t('auth.discordUnlinkFailed'));
     }
   };
 
@@ -107,9 +170,16 @@ export default function DiscordAuth({
           <div className="flex items-center space-x-3">
             {discordAccount.avatar ? (
               <img
-                src={`https://cdn.discordapp.com/avatars/${discordAccount.id}/${discordAccount.avatar}.png?size=40`}
+                src={`https://cdn.discordapp.com/avatars/${discordAccount.id}/${discordAccount.avatar}.webp?size=40`}
                 alt="Discord avatar"
                 className="w-10 h-10 rounded-full"
+                onError={(e) => {
+                  // Fallback to PNG if WebP fails
+                  const target = e.target as HTMLImageElement;
+                  if (target.src.includes('.webp')) {
+                    target.src = `https://cdn.discordapp.com/avatars/${discordAccount.id}/${discordAccount.avatar}.png?size=40`;
+                  }
+                }}
               />
             ) : (
               <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold">
@@ -234,6 +304,40 @@ export default function DiscordAuth({
           </svg>
           <span>{t('auth.linkDiscord')}</span>
         </button>
+
+        {/* Manual URL input for development/fallback */}
+        {showManualInput && (
+          <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200 dark:border-yellow-800">
+            <p className="text-sm text-yellow-800 dark:text-yellow-200 mb-2">
+              Si no se abrió el launcher automáticamente, pega aquí la URL completa de auth-callback:
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={manualUrl}
+                onChange={(e) => setManualUrl(e.target.value)}
+                placeholder="https://luminakraft.com/auth-callback#access_token=..."
+                className="flex-1 px-3 py-2 text-sm bg-white dark:bg-gray-900 border border-yellow-300 dark:border-yellow-700 rounded focus:outline-none focus:ring-2 focus:ring-yellow-500"
+              />
+              <button
+                onClick={handleManualUrlSubmit}
+                disabled={isProcessingManual || !manualUrl}
+                className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
+                {isProcessingManual ? 'Procesando...' : 'Vincular'}
+              </button>
+            </div>
+            <button
+              onClick={() => {
+                setShowManualInput(false);
+                setManualUrl('');
+              }}
+              className="mt-2 text-sm text-yellow-700 dark:text-yellow-300 hover:underline"
+            >
+              Cancelar
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
