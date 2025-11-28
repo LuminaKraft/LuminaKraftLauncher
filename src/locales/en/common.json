@@ -329,6 +329,7 @@
     "discordLinkFailed": "Failed to link Discord account",
     "discordSyncSuccess": "Discord roles synced successfully!",
     "discordSyncFailed": "Failed to sync Discord roles. Please re-link your Discord account.",
+    "discordUnlinked": "Discord account unlinked successfully",
     "discordUnlinkFailed": "Failed to unlink Discord account",
     "confirmUnlinkDiscord": "Are you sure you want to unlink your Discord account? You won't be able to publish modpacks until you link it again.",
     "discordMemberYes": "Discord Server Member",

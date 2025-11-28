@@ -503,9 +503,40 @@ class AuthService {
 
       if (!user) return false;
 
+      console.log('Unlinking Discord account...');
+
       // Remove refresh token from localStorage
       localStorage.removeItem('discord_provider_refresh_token');
+      console.log('Removed Discord refresh token from localStorage');
 
+      // Unlink Discord identity from Supabase Auth
+      try {
+        const { data: identities } = await supabase.auth.getUserIdentities();
+        console.log('User identities:', identities);
+
+        const discordIdentity = identities?.identities?.find(
+          (identity) => identity.provider === 'discord'
+        );
+
+        if (discordIdentity) {
+          console.log('Unlinking Discord identity:', discordIdentity.id);
+          const { error: unlinkError } = await supabase.auth.unlinkIdentity(discordIdentity);
+
+          if (unlinkError) {
+            console.error('Failed to unlink Discord identity from Supabase:', unlinkError);
+            // Continue anyway to clean up database
+          } else {
+            console.log('Discord identity unlinked from Supabase Auth');
+          }
+        } else {
+          console.log('No Discord identity found in Supabase Auth');
+        }
+      } catch (identityError) {
+        console.error('Error unlinking Discord identity:', identityError);
+        // Continue anyway to clean up database
+      }
+
+      // Clear Discord data in database
       const unlinkData = {
         discord_id: null,
         discord_username: null,
@@ -520,14 +551,16 @@ class AuthService {
         partner_role_id: null,
         linked_at: null
       };
+
+      console.log('Clearing Discord data from database...');
       const { error } = await updateUser(user.id, unlinkData);
 
       if (error) {
-        console.error('Failed to unlink Discord account:', error);
+        console.error('Failed to update user in database:', error);
         return false;
       }
 
-      console.log('Discord account unlinked');
+      console.log('Discord account unlinked successfully');
       return true;
     } catch (error) {
       console.error('Error unlinking Discord account:', error);
