@@ -476,9 +476,9 @@ class AuthService {
 
       const { data: profile } = await supabase
         .from('users')
-        .select('discord_id, discord_username, discord_global_name, discord_avatar, discord_linked_at, is_discord_member, has_partner_role, partner_role_id, discord_roles, last_discord_sync')
+        .select('discord_id, discord_username, discord_global_name, discord_avatar, discord_linked_at, is_discord_member, has_partner_role, partner_id, discord_roles, last_discord_sync')
         .eq('id', user.id)
-        .single<Pick<Tables<'users'>, 'discord_id' | 'discord_username' | 'discord_global_name' | 'discord_avatar' | 'discord_linked_at' | 'is_discord_member' | 'has_partner_role' | 'partner_role_id' | 'discord_roles' | 'last_discord_sync'>>();
+        .single<Pick<Tables<'users'>, 'discord_id' | 'discord_username' | 'discord_global_name' | 'discord_avatar' | 'discord_linked_at' | 'is_discord_member' | 'has_partner_role' | 'partner_id' | 'discord_roles' | 'last_discord_sync'>>();
 
       // Discord is linked only if discord_linked_at is NOT NULL
       if (!profile || !profile.discord_id || !profile.discord_linked_at) {
@@ -493,7 +493,7 @@ class AuthService {
         avatar: profile.discord_avatar || undefined,
         isMember: profile.is_discord_member || false,
         hasPartnerRole: profile.has_partner_role || false,
-        partnerRoleId: profile.partner_role_id,
+        partnerId: profile.partner_id,
         roles: Array.isArray(profile.discord_roles) ? profile.discord_roles as string[] : [],
         lastSync: profile.last_discord_sync
       };

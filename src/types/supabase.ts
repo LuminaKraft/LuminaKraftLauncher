@@ -14,76 +14,123 @@ export type Updates<T extends keyof Database['public']['Tables']> = Database['pu
 export interface Database {
   public: {
     Tables: {
+      partners: {
+        Row: {
+          id: string
+          name: string
+          logo_url: string | null
+          website_url: string | null
+          discord_invite: string | null
+          discord_role_id: string | null
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          name: string
+          logo_url?: string | null
+          website_url?: string | null
+          discord_invite?: string | null
+          discord_role_id?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          logo_url?: string | null
+          website_url?: string | null
+          discord_invite?: string | null
+          discord_role_id?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
       users: {
         Row: {
           id: string
           microsoft_id: string | null
-          minecraft_uuid: string | null
-          minecraft_username: string | null
-          minecraft_username_history: Json | null
+          microsoft_linked_at: string | null
           discord_id: string | null
           discord_username: string | null
           discord_global_name: string | null
-          discord_discriminator: string | null
           discord_avatar: string | null
+          discord_linked_at: string | null
+          display_name: string | null
+          avatar_url: string | null
+          email: string | null
+          minecraft_username: string | null
+          minecraft_uuid: string | null
+          minecraft_username_history: Json | null
+          is_minecraft_verified: boolean
           is_discord_member: boolean
           discord_member_since: string | null
           last_discord_sync: string | null
           discord_roles: Json | null
           has_partner_role: boolean
-          partner_role_id: string | null
-          linked_at: string | null
-          display_name: string | null
-          email: string | null
+          partner_id: string | null
           role: string
+          is_active: boolean
+          is_verified: boolean
           created_at: string
           updated_at: string
         }
         Insert: {
           id?: string
           microsoft_id?: string | null
-          minecraft_uuid?: string | null
-          minecraft_username?: string | null
-          minecraft_username_history?: Json | null
+          microsoft_linked_at?: string | null
           discord_id?: string | null
           discord_username?: string | null
           discord_global_name?: string | null
-          discord_discriminator?: string | null
           discord_avatar?: string | null
+          discord_linked_at?: string | null
+          display_name?: string | null
+          avatar_url?: string | null
+          email?: string | null
+          minecraft_username?: string | null
+          minecraft_uuid?: string | null
+          minecraft_username_history?: Json | null
+          is_minecraft_verified?: boolean
           is_discord_member?: boolean
           discord_member_since?: string | null
           last_discord_sync?: string | null
           discord_roles?: Json | null
           has_partner_role?: boolean
-          partner_role_id?: string | null
-          linked_at?: string | null
-          display_name?: string | null
-          email?: string | null
+          partner_id?: string | null
           role?: string
+          is_active?: boolean
+          is_verified?: boolean
           created_at?: string
           updated_at?: string
         }
         Update: {
           id?: string
           microsoft_id?: string | null
-          minecraft_uuid?: string | null
-          minecraft_username?: string | null
-          minecraft_username_history?: Json | null
+          microsoft_linked_at?: string | null
           discord_id?: string | null
           discord_username?: string | null
           discord_global_name?: string | null
-          discord_discriminator?: string | null
           discord_avatar?: string | null
+          discord_linked_at?: string | null
+          display_name?: string | null
+          avatar_url?: string | null
+          email?: string | null
+          minecraft_username?: string | null
+          minecraft_uuid?: string | null
+          minecraft_username_history?: Json | null
+          is_minecraft_verified?: boolean
           is_discord_member?: boolean
           discord_member_since?: string | null
           last_discord_sync?: string | null
           discord_roles?: Json | null
           has_partner_role?: boolean
-          partner_role_id?: string | null
-          linked_at?: string | null
-          display_name?: string | null
-          email?: string | null
+          partner_id?: string | null
           role?: string
+          is_active?: boolean
+          is_verified?: boolean
           created_at?: string
           updated_at?: string
         }

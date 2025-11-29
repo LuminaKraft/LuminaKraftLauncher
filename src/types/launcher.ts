@@ -104,7 +104,7 @@ export interface DiscordAccount {
   providerRefreshToken?: string;  // Discord OAuth refresh token for syncing roles
   isMember: boolean;              // Member of LuminaKraft Discord server
   hasPartnerRole: boolean;        // Has Partner role (1270158473937555519)
-  partnerRoleId: string | null;   // Specific partner role ID (e.g., CrucisMC: 1382114019715846154)
+  partnerId: string | null;       // Specific partner ID from partners table (e.g., 'crucismc')
   roles: string[];                // All Discord role IDs
   lastSync: string | null;        // ISO timestamp of last role sync
 }
