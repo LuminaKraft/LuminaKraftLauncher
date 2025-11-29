@@ -234,24 +234,27 @@ class AuthService {
     try {
       console.log('Initiating Discord OAuth...');
 
-      // Get OAuth URL without automatic redirect
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'discord',
-        options: {
-          redirectTo: 'https://luminakraft.com/auth-callback',
-          scopes: 'identify guilds guilds.members.read',
-          skipBrowserRedirect: true
-        }
+      // Get OAuth URL from backend
+      const { supabaseUrl } = await import('./supabaseClient');
+      const response = await fetch(`${supabaseUrl}/functions/v1/link-discord-account`, {
+        method: 'GET'
       });
 
-      if (error || !data?.url) {
-        console.error('Discord OAuth error:', error);
+      if (!response.ok) {
+        console.error('Failed to get OAuth URL:', await response.text());
+        return false;
+      }
+
+      const { url } = await response.json();
+
+      if (!url) {
+        console.error('No OAuth URL returned from backend');
         return false;
       }
 
       // Open OAuth URL in external browser using Tauri command
       const { invoke } = await import('@tauri-apps/api/core');
-      await invoke('open_url', { url: data.url });
+      await invoke('open_url', { url });
 
       console.log('Discord OAuth opened in browser');
       console.log('User will be redirected to https://luminakraft.com/auth-callback after authorization');
