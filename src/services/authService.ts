@@ -42,6 +42,14 @@ class AuthService {
     try {
       console.log('Authenticating Microsoft account with Supabase...');
 
+      // Check if user already has an active session (e.g., Discord already linked)
+      const { data: { session } } = await supabase.auth.getSession();
+      const currentUserId = session?.user?.id;
+
+      if (currentUserId) {
+        console.log('User already has active session, will link Microsoft to existing account:', currentUserId);
+      }
+
       // Call Edge Function to create/update user and get session tokens
       const { data, error } = await supabase.functions.invoke('auth-with-microsoft', {
         body: {
@@ -49,7 +57,8 @@ class AuthService {
           minecraft_username: microsoftAccount.username,
           minecraft_uuid: microsoftAccount.uuid,
           email: '', // Lyceris doesn't provide email
-          display_name: microsoftAccount.username
+          display_name: microsoftAccount.username,
+          user_id: currentUserId || undefined // Send user_id if already logged in
         }
       });
 
@@ -316,9 +325,8 @@ class AuthService {
         discord_id: discordUser.provider_id,
         discord_username: cleanUsername,
         discord_global_name: discordUser.custom_claims?.global_name,
-        discord_discriminator: null, // Discord eliminated discriminators
         discord_avatar: avatarHash,
-        linked_at: new Date().toISOString()
+        discord_linked_at: new Date().toISOString() // Track when Discord was linked
       };
 
       const { error: updateError } = await updateUser(user.id, updateData);
@@ -435,12 +443,12 @@ class AuthService {
 
       const { data: profile } = await supabase
         .from('users')
-        .select('last_discord_sync, discord_id')
+        .select('last_discord_sync, discord_linked_at')
         .eq('id', user.id)
-        .single<Pick<Tables<'users'>, 'last_discord_sync' | 'discord_id'>>();
+        .single<Pick<Tables<'users'>, 'last_discord_sync' | 'discord_linked_at'>>();
 
-      if (!profile || !profile.discord_id) {
-        return false; // No Discord linked
+      if (!profile || !profile.discord_linked_at) {
+        return false; // No Discord linked (discord_linked_at is NULL)
       }
 
       if (!profile.last_discord_sync) {
@@ -468,11 +476,12 @@ class AuthService {
 
       const { data: profile } = await supabase
         .from('users')
-        .select('discord_id, discord_username, discord_global_name, discord_discriminator, discord_avatar, is_discord_member, has_partner_role, partner_role_id, discord_roles, last_discord_sync')
+        .select('discord_id, discord_username, discord_global_name, discord_avatar, discord_linked_at, is_discord_member, has_partner_role, partner_role_id, discord_roles, last_discord_sync')
         .eq('id', user.id)
-        .single<Pick<Tables<'users'>, 'discord_id' | 'discord_username' | 'discord_global_name' | 'discord_discriminator' | 'discord_avatar' | 'is_discord_member' | 'has_partner_role' | 'partner_role_id' | 'discord_roles' | 'last_discord_sync'>>();
+        .single<Pick<Tables<'users'>, 'discord_id' | 'discord_username' | 'discord_global_name' | 'discord_avatar' | 'discord_linked_at' | 'is_discord_member' | 'has_partner_role' | 'partner_role_id' | 'discord_roles' | 'last_discord_sync'>>();
 
-      if (!profile || !profile.discord_id) {
+      // Discord is linked only if discord_linked_at is NOT NULL
+      if (!profile || !profile.discord_id || !profile.discord_linked_at) {
         return null;
       }
 
@@ -480,7 +489,7 @@ class AuthService {
         id: profile.discord_id,
         username: profile.discord_username || '',
         globalName: profile.discord_global_name,
-        discriminator: profile.discord_discriminator || undefined,
+        discriminator: undefined, // Discord eliminated discriminators
         avatar: profile.discord_avatar || undefined,
         isMember: profile.is_discord_member || false,
         hasPartnerRole: profile.has_partner_role || false,
@@ -540,18 +549,9 @@ class AuthService {
 
       // Clear Discord data in database
       const unlinkData = {
-        discord_id: null,
-        discord_username: null,
-        discord_global_name: null,
-        discord_discriminator: null,
-        discord_avatar: null,
-        is_discord_member: false,
-        discord_member_since: null,
-        last_discord_sync: null,
-        discord_roles: [],
-        has_partner_role: false,
-        partner_role_id: null,
-        linked_at: null
+        discord_linked_at: null // Set to NULL to mark as unlinked
+        // NOTE: We keep discord_id, username, etc. for history
+        // Only discord_linked_at NULL indicates "not currently linked"
       };
 
       console.log('Clearing Discord data from database...');
