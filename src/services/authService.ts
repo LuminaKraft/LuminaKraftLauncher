@@ -400,12 +400,28 @@ class AuthService {
         cleanUsername = cleanUsername.split('#')[0];
       }
 
+      // Fetch current user data to calculate display_name with priority
+      const { data: currentUser } = await supabase
+        .from('users')
+        .select('minecraft_username, email')
+        .eq('id', user.id)
+        .single();
+
+      // Calculate display_name with priority: Discord global_name > Discord username > Minecraft username > Email > User
+      const calculated_display_name =
+        discordUser.global_name ||
+        cleanUsername ||
+        currentUser?.minecraft_username ||
+        currentUser?.email?.split('@')[0] ||
+        'User';
+
       const updateData = {
         discord_id: discordUser.id,
         discord_username: cleanUsername,
         discord_global_name: discordUser.global_name,
         discord_avatar: avatarHash,
-        discord_linked_at: new Date().toISOString() // Track when Discord was linked
+        discord_linked_at: new Date().toISOString(), // Track when Discord was linked
+        display_name: calculated_display_name
       };
 
       const { error: updateError } = await updateUser(user.id, updateData);
