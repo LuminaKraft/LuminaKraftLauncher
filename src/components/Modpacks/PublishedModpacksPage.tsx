@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import { Plus, Edit, Trash2, Eye, EyeOff, Download, Cloud, Lock } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, EyeOff, Download, Cloud, Lock, Loader2 } from 'lucide-react';
 import ModpackManagementService from '../../services/modpackManagementService';
 import AuthService from '../../services/authService';
 import { ConfirmDialog } from '../Common/ConfirmDialog';
@@ -171,7 +171,7 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-xl text-gray-600 dark:text-gray-400">{t('publishedModpacks.loading')}</div>
+        <Loader2 className="w-12 h-12 text-lumina-500 animate-spin" />
       </div>
     );
   }
