@@ -273,6 +273,13 @@ class AuthService {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
 
       if (userError || !user) {
+        // Check if this is a "user doesn't exist" error (happens after DB reset)
+        if (userError?.message?.includes('JWT') || userError?.message?.includes('does not exist')) {
+          console.warn('Session JWT is invalid (user does not exist in database). Clearing session...');
+          await supabase.auth.signOut();
+          return false;
+        }
+
         console.error('Failed to get user after setting session:', userError);
         return false;
       }
@@ -470,15 +477,29 @@ class AuthService {
    */
   async getDiscordAccount(): Promise<DiscordAccount | null> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+      // Handle invalid session (user doesn't exist in DB after reset)
+      if (userError?.message?.includes('JWT') || userError?.message?.includes('does not exist')) {
+        console.warn('Session JWT is invalid (user does not exist in database). Clearing session...');
+        await supabase.auth.signOut();
+        return null;
+      }
 
       if (!user) return null;
 
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('users')
         .select('discord_id, discord_username, discord_global_name, discord_avatar, discord_linked_at, is_discord_member, has_partner_role, partner_id, discord_roles, last_discord_sync')
         .eq('id', user.id)
         .single<Pick<Tables<'users'>, 'discord_id' | 'discord_username' | 'discord_global_name' | 'discord_avatar' | 'discord_linked_at' | 'is_discord_member' | 'has_partner_role' | 'partner_id' | 'discord_roles' | 'last_discord_sync'>>();
+
+      // Handle 403 Forbidden (RLS policy blocking access)
+      if (profileError && (profileError.code === 'PGRST301' || profileError.message?.includes('403'))) {
+        console.warn('Access forbidden to user profile. Session may be invalid. Clearing session...');
+        await supabase.auth.signOut();
+        return null;
+      }
 
       // Discord is linked only if discord_linked_at is NOT NULL
       if (!profile || !profile.discord_id || !profile.discord_linked_at) {
