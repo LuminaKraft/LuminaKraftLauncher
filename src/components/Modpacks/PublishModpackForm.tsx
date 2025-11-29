@@ -80,22 +80,19 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
   const [showDownloadDialog, setShowDownloadDialog] = useState(false);
   const [pendingUploadedFiles, setPendingUploadedFiles] = useState<Map<string, File> | null>(null);
 
-  // Check Discord access on mount
-  useEffect(() => {
-    checkDiscordAccess();
-  }, []);
-
   const checkDiscordAccess = async () => {
     setIsCheckingAccess(true);
     const account = await authService.getDiscordAccount();
     setDiscordAccount(account);
     setIsCheckingAccess(false);
+    return account;
   };
 
-  // Smart sync: Check if roles need syncing (>1 hour old) on mount
+  // Check Discord access and smart sync on mount
   useEffect(() => {
-    const checkAndSyncIfNeeded = async () => {
-      const account = await authService.getDiscordAccount();
+    const initializeAndSync = async () => {
+      // First, load Discord account
+      const account = await checkDiscordAccess();
       if (!account) return;
 
       // Check if roles are stale (>1 hour)
@@ -119,7 +116,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
       }
     };
 
-    checkAndSyncIfNeeded();
+    initializeAndSync();
   }, []);
 
   const updateFormData = (field: string, value: any) => {
