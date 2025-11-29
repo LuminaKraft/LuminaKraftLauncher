@@ -42,30 +42,15 @@ export class ModpackManagementService {
       }
 
       // Look up user profile and check Discord is linked
-      console.log('🔍 canManageModpacks - Querying users table for user:', user.id);
-      const result = await supabase
+      const { data: profile } = await supabase
         .from('users')
         .select('role, discord_id')
         .eq('id', user.id)
-        .single();
+        .single() as { data: any };
 
-      console.log('📊 canManageModpacks - Query result:', result);
-
-      if (result.error) {
-        console.error('❌ canManageModpacks - Profile query error:', {
-          code: result.error.code,
-          message: result.error.message,
-          details: result.error.details,
-          hint: result.error.hint,
-          userId: user.id
-        });
-      }
-
-      if (!result.data) {
+      if (!profile) {
         return { canManage: false, role: null };
       }
-
-      const profile = result.data;
 
       // Must have Discord linked
       if (!profile.discord_id) {
