@@ -44,10 +44,17 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
     setHasChanges(isDifferent);
   }, [formData, userSettings]);
 
-  // Auto-sync Discord data when Settings page loads
+  // Auto-sync Discord data when Settings page loads (if user has active session)
   useEffect(() => {
     const syncDiscord = async () => {
       const authService = AuthService.getInstance();
+
+      // Check if there's an active Discord account before syncing
+      const discordAccount = await authService.getDiscordAccount();
+      if (!discordAccount) {
+        return; // No Discord linked, skip sync
+      }
+
       const success = await authService.syncDiscordData();
       if (success) {
         console.log('Discord data synced automatically');

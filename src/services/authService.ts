@@ -444,15 +444,29 @@ class AuthService {
    */
   async shouldSyncDiscordRoles(): Promise<boolean> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+      // Handle invalid session (user doesn't exist in DB after reset)
+      if (userError?.message?.includes('JWT') || userError?.message?.includes('does not exist')) {
+        console.warn('Session JWT is invalid (user does not exist in database). Clearing session...');
+        await supabase.auth.signOut();
+        return false;
+      }
 
       if (!user) return false;
 
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('users')
         .select('last_discord_sync, discord_linked_at')
         .eq('id', user.id)
         .single<Pick<Tables<'users'>, 'last_discord_sync' | 'discord_linked_at'>>();
+
+      // Handle 403 Forbidden (RLS policy blocking access)
+      if (profileError && (profileError.code === 'PGRST301' || profileError.message?.includes('403'))) {
+        console.warn('Access forbidden to user profile. Session may be invalid. Clearing session...');
+        await supabase.auth.signOut();
+        return false;
+      }
 
       if (!profile || !profile.discord_linked_at) {
         return false; // No Discord linked (discord_linked_at is NULL)
