@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { Plus, X, Upload, FileArchive, AlertCircle, Settings } from 'lucide-react';
+import { Plus, X, Upload, FileArchive, AlertCircle, Settings, RefreshCw } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import ModpackManagementService from '../../services/modpackManagementService';
@@ -41,6 +41,8 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
 
   const [discordAccount, setDiscordAccount] = useState<DiscordAccount | null>(null);
   const [isCheckingAccess, setIsCheckingAccess] = useState(true);
+  const [isSyncingRoles, setIsSyncingRoles] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<FormData>({
     name: { en: '', es: '' },
@@ -89,6 +91,36 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
     setDiscordAccount(account);
     setIsCheckingAccess(false);
   };
+
+  // Smart sync: Check if roles need syncing (>1 hour old) on mount
+  useEffect(() => {
+    const checkAndSyncIfNeeded = async () => {
+      const account = await authService.getDiscordAccount();
+      if (!account) return;
+
+      // Check if roles are stale (>1 hour)
+      const lastSync = account.lastSync ? new Date(account.lastSync) : null;
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+
+      const needsSync = !lastSync || lastSync < oneHourAgo;
+
+      if (needsSync) {
+        setIsSyncingRoles(true);
+        try {
+          await authService.syncDiscordRoles();
+          // Reload Discord account after sync
+          await checkDiscordAccess();
+        } catch (error) {
+          console.error('Failed to sync roles:', error);
+          setSyncError('roles_sync_failed');
+        } finally {
+          setIsSyncingRoles(false);
+        }
+      }
+    };
+
+    checkAndSyncIfNeeded();
+  }, []);
 
   const updateFormData = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -496,6 +528,35 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Role Sync Loading Indicator */}
+      {isSyncingRoles && (
+        <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <div className="flex items-center gap-2">
+            <RefreshCw className="w-4 h-4 animate-spin text-blue-600 dark:text-blue-400" />
+            <span className="text-sm text-blue-700 dark:text-blue-300">
+              Refreshing Discord roles...
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Role Sync Error Indicator */}
+      {syncError && (
+        <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-yellow-700 dark:text-yellow-300">
+              Discord roles may be outdated. Sync manually for latest permissions.
+            </span>
+            <button
+              onClick={() => onNavigate?.('settings')}
+              className="text-sm text-yellow-800 dark:text-yellow-200 underline hover:no-underline"
+            >
+              Go to Settings
+            </button>
           </div>
         </div>
       )}
