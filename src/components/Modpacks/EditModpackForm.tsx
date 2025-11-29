@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import ModpackManagementService from '../../services/modpackManagementService';
+import AuthService from '../../services/authService';
 import { supabase } from '../../services/supabaseClient';
 
 interface FormData {
@@ -24,6 +25,7 @@ interface EditModpackFormProps {
 
 export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps) {
   const service = ModpackManagementService.getInstance();
+  const authService = AuthService.getInstance();
 
   const [formData, setFormData] = useState<FormData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -109,6 +111,21 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
 
     try {
       setIsUpdating(true);
+
+      // CRITICAL: Sync roles before updating modpack to ensure fresh permissions
+      const toastId = toast.loading('Verifying permissions...');
+
+      try {
+        await authService.syncDiscordRoles();
+      } catch (syncError) {
+        console.error('Failed to sync roles:', syncError);
+        toast.error('Failed to verify permissions. Please try again.', { id: toastId });
+        setIsUpdating(false);
+        return;
+      }
+
+      toast.loading('Updating modpack...', { id: toastId });
+
       const { success, error } = await service.updateModpack(modpackId, {
         name: formData.name,
         shortDescription: formData.shortDescription,
@@ -123,9 +140,9 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
       });
 
       if (success) {
-        toast.success('Modpack updated successfully');
+        toast.success('Modpack updated successfully', { id: toastId });
       } else {
-        toast.error(`Error updating modpack: ${error}`);
+        toast.error(`Error updating modpack: ${error}`, { id: toastId });
       }
     } catch (error) {
       console.error('Error updating modpack:', error);
@@ -144,6 +161,20 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
     try {
       setIsUpdating(true);
 
+      // CRITICAL: Sync roles before uploading new version to ensure fresh permissions
+      const toastId = toast.loading('Verifying permissions...');
+
+      try {
+        await authService.syncDiscordRoles();
+      } catch (syncError) {
+        console.error('Failed to sync roles:', syncError);
+        toast.error('Failed to verify permissions. Please try again.', { id: toastId });
+        setIsUpdating(false);
+        return;
+      }
+
+      toast.loading('Uploading new version...', { id: toastId });
+
       // 1. Upload new file
       const uploadResult = await service.uploadModpackFile(
         modpackId,
@@ -152,7 +183,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
       );
 
       if (!uploadResult.success) {
-        toast.error(`Error uploading file: ${uploadResult.error}`);
+        toast.error(`Error uploading file: ${uploadResult.error}`, { id: toastId });
         return;
       }
 
@@ -175,7 +206,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
         console.error('Error creating version entry:', error);
       }
 
-      toast.success('New version uploaded successfully');
+      toast.success('New version uploaded successfully', { id: toastId });
       setNewVersion('');
       setChangelog({ en: '', es: '' });
       setZipFile(null);
