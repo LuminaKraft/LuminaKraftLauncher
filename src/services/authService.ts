@@ -234,18 +234,18 @@ class AuthService {
     try {
       console.log('Initiating Discord OAuth...');
 
-      // Get OAuth URL from backend
-      const { supabaseUrl } = await import('./supabaseClient');
-      const response = await fetch(`${supabaseUrl}/functions/v1/link-discord-account`, {
+      // Get OAuth URL from backend using Supabase client (handles auth automatically)
+      const { supabase } = await import('./supabaseClient');
+      const { data, error } = await supabase.functions.invoke('link-discord-account', {
         method: 'GET'
       });
 
-      if (!response.ok) {
-        console.error('Failed to get OAuth URL:', await response.text());
+      if (error) {
+        console.error('Failed to get OAuth URL:', error);
         return false;
       }
 
-      const { url } = await response.json();
+      const url = data?.url;
 
       if (!url) {
         console.error('No OAuth URL returned from backend');
