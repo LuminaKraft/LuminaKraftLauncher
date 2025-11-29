@@ -90,12 +90,10 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
 
   // Check Discord access and smart sync on mount
   useEffect(() => {
-    let isMounted = true;
-
     const initializeAndSync = async () => {
       // First, load Discord account
       const account = await checkDiscordAccess();
-      if (!account || !isMounted) return;
+      if (!account) return;
 
       // Check if roles are stale (>1 hour)
       const lastSync = account.lastSync ? new Date(account.lastSync) : null;
@@ -103,34 +101,23 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
 
       const needsSync = !lastSync || lastSync < oneHourAgo;
 
-      if (needsSync && isMounted) {
+      if (needsSync) {
         setIsSyncingRoles(true);
         try {
           await authService.syncDiscordRoles();
           // Reload Discord account after sync (without triggering loading state)
-          if (isMounted) {
-            const updatedAccount = await authService.getDiscordAccount();
-            setDiscordAccount(updatedAccount);
-          }
+          const updatedAccount = await authService.getDiscordAccount();
+          setDiscordAccount(updatedAccount);
         } catch (error) {
           console.error('Failed to sync roles:', error);
-          if (isMounted) {
-            setSyncError('roles_sync_failed');
-          }
+          setSyncError('roles_sync_failed');
         } finally {
-          if (isMounted) {
-            setIsSyncingRoles(false);
-          }
+          setIsSyncingRoles(false);
         }
       }
     };
 
     initializeAndSync();
-
-    // Cleanup function to prevent state updates on unmounted component
-    return () => {
-      isMounted = false;
-    };
   }, []);
 
   const updateFormData = (field: string, value: any) => {
