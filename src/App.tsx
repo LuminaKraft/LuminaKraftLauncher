@@ -79,7 +79,7 @@ function AppContent() {
 
                 if (accessToken && refreshToken) {
                   // Establish Supabase session with the OAuth tokens
-                  const { supabase } = await import('./supabaseClient');
+                  const { supabase } = await import('./services/supabaseClient');
                   const { error: sessionError } = await supabase.auth.setSession({
                     access_token: accessToken,
                     refresh_token: refreshToken
