@@ -364,6 +364,28 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
       return;
     }
 
+    // CRITICAL: Always sync roles before publishing to ensure fresh permissions
+    setIsSyncingRoles(true);
+    try {
+      await authService.syncDiscordRoles();
+      // Reload account to get fresh permissions
+      const freshAccount = await checkDiscordAccess();
+
+      // Re-check permissions with fresh data
+      if (!freshAccount || !freshAccount.isMember) {
+        toast.error('You must be a Discord server member to publish modpacks');
+        setIsSyncingRoles(false);
+        return;
+      }
+    } catch (error) {
+      console.error('Failed to sync roles before publishing:', error);
+      toast.error('Failed to verify permissions. Please try again.');
+      setIsSyncingRoles(false);
+      return;
+    } finally {
+      setIsSyncingRoles(false);
+    }
+
     setIsUploading(true);
 
     try {
