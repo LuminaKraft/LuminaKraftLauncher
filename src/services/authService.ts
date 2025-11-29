@@ -227,34 +227,56 @@ class AuthService {
 
   /**
    * Link Discord account using OAuth
+   * Uses linkIdentity() if user is logged in, signInWithOAuth() otherwise
    * Opens Discord OAuth in external browser, redirects to luminakraft.com
-   * User must manually return to the app after authorization
    */
   async linkDiscordAccount(): Promise<boolean> {
     try {
       console.log('Initiating Discord OAuth...');
 
-      // Get OAuth URL from backend using Supabase client (handles auth automatically)
       const { supabase } = await import('./supabaseClient');
-      const { data, error } = await supabase.functions.invoke('link-discord-account', {
-        method: 'GET'
-      });
 
-      if (error) {
-        console.error('Failed to get OAuth URL:', error);
-        return false;
+      // Check if user is already logged in
+      const { data: { session } } = await supabase.auth.getSession();
+
+      let data, error;
+
+      if (session) {
+        // User logged in → Link identity
+        console.log('User logged in, linking Discord identity...');
+        const result = await supabase.auth.linkIdentity({
+          provider: 'discord',
+          options: {
+            redirectTo: 'https://luminakraft.com/auth-callback',
+            scopes: 'identify guilds guilds.members.read',
+            skipBrowserRedirect: true
+          }
+        });
+        data = result.data;
+        error = result.error;
+      } else {
+        // No session → Sign in with OAuth
+        console.log('No active session, signing in with Discord...');
+        const result = await supabase.auth.signInWithOAuth({
+          provider: 'discord',
+          options: {
+            redirectTo: 'https://luminakraft.com/auth-callback',
+            scopes: 'identify guilds guilds.members.read',
+            skipBrowserRedirect: true
+          }
+        });
+        data = result.data;
+        error = result.error;
       }
 
-      const url = data?.url;
-
-      if (!url) {
-        console.error('No OAuth URL returned from backend');
+      if (error || !data?.url) {
+        console.error('Discord OAuth error:', error);
         return false;
       }
 
       // Open OAuth URL in external browser using Tauri command
       const { invoke } = await import('@tauri-apps/api/core');
-      await invoke('open_url', { url });
+      await invoke('open_url', { url: data.url });
 
       console.log('Discord OAuth opened in browser');
       console.log('User will be redirected to https://luminakraft.com/auth-callback after authorization');

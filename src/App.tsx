@@ -59,92 +59,62 @@ function AppContent() {
               console.log('Discord OAuth callback detected via deep link');
               isProcessingDiscordCallback.current = true;
 
-              try {
-                // Parse code parameter from URL
-                const url = new URL(discordCallbackUrl);
-                const code = url.searchParams.get('code');
+              const hashPart = discordCallbackUrl.split('#')[1];
+              console.log('Hash part extracted:', hashPart ? 'yes' : 'no');
 
-                if (!code) {
-                  console.error('No authorization code in callback URL');
-                  toast.error(t('auth.discordLinkFailed'));
-                  isProcessingDiscordCallback.current = false;
-                  return;
-                }
+              if (hashPart) {
+                // Parse the hash to extract OAuth tokens
+                const params = new URLSearchParams(hashPart);
+                const accessToken = params.get('access_token');
+                const refreshToken = params.get('refresh_token');
+                const providerToken = params.get('provider_token'); // Discord OAuth access token
+                const providerRefreshToken = params.get('provider_refresh_token'); // Discord OAuth refresh token
 
-                console.log('Authorization code extracted');
-
-                // Get current user session (if exists)
-                const { supabase, supabaseUrl } = await import('./services/supabaseClient');
-                const { data: { user } } = await supabase.auth.getUser();
-                const userId = user?.id;
-
-                console.log('Calling link-discord-account edge function:', { hasUserId: !!userId });
-
-                // Call link-discord-account edge function
-                const response = await fetch(`${supabaseUrl}/functions/v1/link-discord-account`, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json'
-                  },
-                  body: JSON.stringify({
-                    code: code,
-                    user_id: userId || null
-                  })
+                console.log('Tokens extracted:', {
+                  hasAccessToken: !!accessToken,
+                  hasRefreshToken: !!refreshToken,
+                  hasProviderToken: !!providerToken,
+                  hasProviderRefreshToken: !!providerRefreshToken
                 });
 
-                if (!response.ok) {
-                  const errorText = await response.text();
-                  console.error('Edge function failed:', errorText);
-                  toast.error(t('auth.discordLinkFailed'));
-                  isProcessingDiscordCallback.current = false;
-                  return;
-                }
+                if (accessToken && refreshToken) {
+                  // Establish Supabase session with the OAuth tokens
+                  const { supabase } = await import('./supabaseClient');
+                  const { error: sessionError } = await supabase.auth.setSession({
+                    access_token: accessToken,
+                    refresh_token: refreshToken
+                  });
 
-                const result = await response.json();
+                  if (sessionError) {
+                    console.error('Failed to set Supabase session:', sessionError);
+                    toast.error(t('auth.discordLinkFailed'));
+                    isProcessingDiscordCallback.current = false;
+                  } else {
+                    console.log('Supabase session established from OAuth tokens');
 
-                if (!result.success) {
-                  console.error('Discord linking failed:', result.error);
-                  toast.error(t('auth.discordLinkFailed'));
-                  isProcessingDiscordCallback.current = false;
-                  return;
-                }
+                    // Now sync Discord data with provider tokens
+                    const authService = AuthService.getInstance();
+                    const success = await authService.syncDiscordData(
+                      providerToken || undefined,
+                      providerRefreshToken || undefined
+                    );
 
-                console.log('Discord linking successful, establishing session...');
+                    if (success) {
+                      toast.success(t('auth.discordLinked'));
+                      setActiveSection('settings');
+                      await refreshData();
+                    } else {
+                      toast.error(t('auth.discordLinkFailed'));
+                    }
 
-                // Exchange hashed_token for session
-                const { error: recoveryError } = await supabase.auth.verifyOtp({
-                  token_hash: result.hashed_token,
-                  type: 'recovery'
-                });
-
-                if (recoveryError) {
-                  console.error('Failed to establish session:', recoveryError);
-                  toast.error(t('auth.discordLinkFailed'));
-                  isProcessingDiscordCallback.current = false;
-                  return;
-                }
-
-                console.log('Session established, syncing Discord data...');
-
-                // Now sync Discord data with provider tokens
-                const authService = AuthService.getInstance();
-                const success = await authService.syncDiscordData(
-                  result.provider_token,
-                  result.provider_refresh_token
-                );
-
-                if (success) {
-                  toast.success(t('auth.discordLinked'));
-                  setActiveSection('settings');
-                  await refreshData();
+                    isProcessingDiscordCallback.current = false;
+                  }
                 } else {
+                  console.error('Missing required OAuth tokens in hash');
                   toast.error(t('auth.discordLinkFailed'));
+                  isProcessingDiscordCallback.current = false;
                 }
-
-                isProcessingDiscordCallback.current = false;
-              } catch (error) {
-                console.error('Error processing Discord callback:', error);
-                toast.error(t('auth.discordLinkFailed'));
+              } else {
                 isProcessingDiscordCallback.current = false;
               }
             }
