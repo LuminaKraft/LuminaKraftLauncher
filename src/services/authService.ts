@@ -421,6 +421,7 @@ class AuthService {
         discord_global_name: discordUser.global_name,
         discord_avatar: avatarHash,
         discord_linked_at: new Date().toISOString(), // Track when Discord was linked
+        email: discordUser.email || currentUser?.email, // Use Discord email if available
         display_name: calculated_display_name
       };
 
@@ -684,14 +685,30 @@ class AuthService {
         console.warn('Error unlinking Discord identity (continuing with database cleanup):', identityError);
       }
 
-      // Clear Discord data in database
+      // Fetch current user data to recalculate display_name
+      const { data: currentUser } = await supabase
+        .from('users')
+        .select('minecraft_username, email')
+        .eq('id', user.id)
+        .single();
+
+      // Recalculate display_name without Discord (priority: Minecraft > Email > User)
+      const calculated_display_name =
+        (currentUser as any)?.minecraft_username ||
+        (currentUser as any)?.email?.split('@')[0] ||
+        'User';
+
+      // Clear ALL Discord data in database
       const unlinkData = {
-        discord_linked_at: null // Set to NULL to mark as unlinked
-        // NOTE: We keep discord_id, username, etc. for history
-        // Only discord_linked_at NULL indicates "not currently linked"
+        discord_id: null,
+        discord_username: null,
+        discord_global_name: null,
+        discord_avatar: null,
+        discord_linked_at: null,
+        display_name: calculated_display_name
       };
 
-      console.log('Clearing Discord data from database...');
+      console.log('Clearing Discord data from database and recalculating display_name...');
       const { error } = await updateUser(user.id, unlinkData);
 
       if (error) {
