@@ -4,6 +4,8 @@ import { supabase, updateUser, type Tables } from './supabaseClient';
 
 class AuthService {
   private static instance: AuthService;
+  private isSyncingDiscord: boolean = false; // Lock to prevent concurrent Discord data syncs
+  private isSyncingRoles: boolean = false; // Lock to prevent concurrent Discord role syncs
 
   public static getInstance(): AuthService {
     if (!AuthService.instance) {
@@ -268,6 +270,14 @@ class AuthService {
    * @param providerRefreshToken Optional Discord OAuth refresh token for future syncs
    */
   async syncDiscordData(providerToken?: string, providerRefreshToken?: string): Promise<boolean> {
+    // Prevent concurrent syncs (race condition protection)
+    if (this.isSyncingDiscord) {
+      console.log('Discord sync already in progress, skipping duplicate call');
+      return false;
+    }
+
+    this.isSyncingDiscord = true;
+
     try {
       // Get the fresh user data after setting session
       const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -364,6 +374,9 @@ class AuthService {
     } catch (error) {
       console.error('Error syncing Discord data:', error);
       return false;
+    } finally {
+      // Always release the lock
+      this.isSyncingDiscord = false;
     }
   }
 
@@ -374,6 +387,14 @@ class AuthService {
    * @param providerRefreshToken Optional Discord OAuth refresh token
    */
   async syncDiscordRoles(providerToken?: string, providerRefreshToken?: string): Promise<boolean> {
+    // Prevent concurrent role syncs (race condition protection)
+    if (this.isSyncingRoles) {
+      console.log('Discord role sync already in progress, skipping duplicate call');
+      return false;
+    }
+
+    this.isSyncingRoles = true;
+
     try {
       console.log('Syncing Discord roles...');
 
@@ -435,6 +456,9 @@ class AuthService {
     } catch (error) {
       console.error('Error syncing Discord roles:', error);
       return false;
+    } finally {
+      // Always release the lock
+      this.isSyncingRoles = false;
     }
   }
 
