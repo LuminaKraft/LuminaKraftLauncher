@@ -328,45 +328,82 @@ class AuthService {
         hasProviderRefreshToken: !!providerRefreshToken
       });
 
-      // Extract Discord data from user metadata
-      const discordUser = user.user_metadata;
+      // Fetch Discord user data from API using provider_token
+      let discordUser: any = null;
 
-      if (!discordUser?.provider_id) {
-        console.error('No Discord provider_id found in user metadata');
-        console.log('Available metadata:', user.user_metadata);
+      if (providerToken) {
+        console.log('Fetching Discord user data from API...');
+        try {
+          const response = await fetch('https://discord.com/api/users/@me', {
+            headers: {
+              'Authorization': `Bearer ${providerToken}`
+            }
+          });
+
+          if (!response.ok) {
+            console.error('Failed to fetch Discord user data:', response.status);
+          } else {
+            discordUser = await response.json();
+            console.log('Discord user data fetched from API:', {
+              id: discordUser.id,
+              username: discordUser.username,
+              global_name: discordUser.global_name,
+              avatar: discordUser.avatar
+            });
+          }
+        } catch (error) {
+          console.error('Error fetching Discord user data:', error);
+        }
+      }
+
+      // Fallback to user metadata if API fetch failed
+      if (!discordUser) {
+        console.log('Falling back to user metadata...');
+        discordUser = {
+          id: user.user_metadata?.provider_id,
+          username: user.user_metadata?.username || user.user_metadata?.custom_claims?.username,
+          global_name: user.user_metadata?.global_name || user.user_metadata?.custom_claims?.global_name,
+          avatar_url: user.user_metadata?.avatar_url,
+          avatar: user.user_metadata?.avatar
+        };
+      }
+
+      if (!discordUser?.id) {
+        console.error('No Discord ID found');
         return false;
       }
 
       console.log('Syncing Discord data from session...');
       console.log('Discord user data:', {
-        provider_id: discordUser.provider_id,
-        name: discordUser.name,
-        username: discordUser.custom_claims?.username,
-        global_name: discordUser.custom_claims?.global_name
+        provider_id: discordUser.id,
+        username: discordUser.username,
+        global_name: discordUser.global_name
       });
 
       // Update users table with Discord data
       // Note: username is the actual Discord username, global_name is the display name
       // Discord eliminated discriminators, so we don't save it anymore
 
-      // Extract avatar hash from URL (remove extension if present)
-      let avatarHash = null;
-      if (discordUser.avatar_url) {
+      // Extract avatar hash
+      // If from API: avatar is just the hash
+      // If from metadata: avatar_url might be full URL
+      let avatarHash = discordUser.avatar || null;
+      if (discordUser.avatar_url && !avatarHash) {
         // URL format: https://cdn.discordapp.com/avatars/USER_ID/HASH.png
         const avatarMatch = discordUser.avatar_url.match(/avatars\/\d+\/([^.?]+)/);
         avatarHash = avatarMatch ? avatarMatch[1] : null;
       }
 
       // Clean username - remove discriminator if present (legacy format username#0000)
-      let cleanUsername = discordUser.custom_claims?.username || discordUser.name || '';
+      let cleanUsername = discordUser.username || '';
       if (cleanUsername.includes('#')) {
         cleanUsername = cleanUsername.split('#')[0];
       }
 
       const updateData = {
-        discord_id: discordUser.provider_id,
+        discord_id: discordUser.id,
         discord_username: cleanUsername,
-        discord_global_name: discordUser.custom_claims?.global_name,
+        discord_global_name: discordUser.global_name,
         discord_avatar: avatarHash,
         discord_linked_at: new Date().toISOString() // Track when Discord was linked
       };
