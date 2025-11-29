@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { Plus, Edit, Trash2, Eye, EyeOff, Download, Cloud, Lock } from 'lucide-react';
 import ModpackManagementService from '../../services/modpackManagementService';
+import AuthService from '../../services/authService';
 import { ConfirmDialog } from '../Common/ConfirmDialog';
 
 interface Modpack {
@@ -28,6 +29,7 @@ interface PublishedModpacksPageProps {
 export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps) {
   const { t, i18n } = useTranslation();
   const service = ModpackManagementService.getInstance();
+  const authService = AuthService.getInstance();
 
   const [modpacks, setModpacks] = useState<Modpack[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,15 +64,28 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
 
   const handleToggleActive = async (modpackId: string, currentState: boolean) => {
     try {
+      // CRITICAL: Sync roles before modifying modpack to ensure fresh permissions
+      const toastId = toast.loading('Verifying permissions...');
+
+      try {
+        await authService.syncDiscordRoles();
+      } catch (syncError) {
+        console.error('Failed to sync roles:', syncError);
+        toast.error('Failed to verify permissions. Please try again.', { id: toastId });
+        return;
+      }
+
+      toast.loading(!currentState ? 'Activating modpack...' : 'Deactivating modpack...', { id: toastId });
+
       const { success, error } = await service.updateModpack(modpackId, {
         isActive: !currentState
       });
 
       if (success) {
-        toast.success(t(!currentState ? 'publishedModpacks.toast.activated' : 'publishedModpacks.toast.deactivated'));
+        toast.success(t(!currentState ? 'publishedModpacks.toast.activated' : 'publishedModpacks.toast.deactivated'), { id: toastId });
         loadData(); // Reload to reflect changes
       } else {
-        toast.error(t('publishedModpacks.toast.updateError', { error }));
+        toast.error(t('publishedModpacks.toast.updateError', { error }), { id: toastId });
       }
     } catch (error) {
       console.error('Error toggling modpack status:', error);
@@ -87,7 +102,18 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
     if (!selectedModpack) return;
 
     try {
-      const toastId = toast.loading(t('publishedModpacks.toast.deleting'));
+      // CRITICAL: Sync roles before deleting to ensure fresh permissions
+      const toastId = toast.loading('Verifying permissions...');
+
+      try {
+        await authService.syncDiscordRoles();
+      } catch (syncError) {
+        console.error('Failed to sync roles:', syncError);
+        toast.error('Failed to verify permissions. Please try again.', { id: toastId });
+        return;
+      }
+
+      toast.loading(t('publishedModpacks.toast.deleting'), { id: toastId });
 
       const { success, error } = await service.deleteModpack(selectedModpack.id);
 
