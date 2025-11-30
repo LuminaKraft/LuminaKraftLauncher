@@ -4,6 +4,8 @@ use tauri::{AppHandle, Emitter, Wry};
 struct CallbackPayload {
     access_token: String,
     refresh_token: String,
+    provider_token: Option<String>,
+    provider_refresh_token: Option<String>,
 }
 
 fn handle_request(

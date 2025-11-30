@@ -137,10 +137,16 @@ const MinecraftAccountDropdown: React.FC<MinecraftAccountDropdownProps> = ({
               {isMicrosoft ? <Gamepad2 className="w-6 h-6" /> : <WifiOff className="w-6 h-6" />}
             </div>
             <div>
-              <p className="text-white font-medium">{isMicrosoft ? t('auth.microsoftTitle') : t('auth.offlineMode')}</p>
-              <p className="text-xs text-gray-400">
-                {isMicrosoft ? userSettings.microsoftAccount?.username : userSettings.username}
-              </p>
+              {isMicrosoft ? (
+                <p className="text-white font-medium">
+                  {userSettings.microsoftAccount?.username}
+                </p>
+              ) : (
+                <>
+                  <p className="text-white font-medium">{t('auth.offlineMode')}</p>
+                  <p className="text-xs text-gray-400">{userSettings.username}</p>
+                </>
+              )}
             </div>
           </div>
         </div>

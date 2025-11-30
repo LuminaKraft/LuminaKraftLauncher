@@ -6,6 +6,7 @@ import LauncherService from '../../services/launcherService';
 import AuthService from '../../services/authService';
 import MetaStorageSettings from './MetaStorageSettings';
 import ProfileEditor from './ProfileEditor';
+import { ConfirmDialog } from '../Common/ConfirmDialog';
 import type { MicrosoftAccount, DiscordAccount } from '../../types/launcher';
 import toast from 'react-hot-toast';
 
@@ -34,6 +35,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
   const [authError, setAuthError] = useState<string | null>(null);
   const [luminaKraftUser, setLuminaKraftUser] = useState<any>(null);
   const [isLoadingLuminaKraft, setIsLoadingLuminaKraft] = useState(true);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showUnlinkConfirm, setShowUnlinkConfirm] = useState(false);
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   // Java runtime handled internally by Lyceris; no user-facing settings.
 
   useEffect(() => {
@@ -51,24 +55,53 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
       try {
         const { supabase } = await import('../../services/supabaseClient');
 
-        // Load initial session
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
+        const fetchUserWithProfile = async (retries = 3) => {
           const { data: { user } } = await supabase.auth.getUser();
-          setLuminaKraftUser(user);
-        }
+          if (!user) return null;
+
+          // Fetch public profile to get up-to-date display_name
+          // We implement a retry mechanism because on new sign-ups, the trigger
+          // creating the public.users record might have a slight delay.
+          for (let i = 0; i < retries; i++) {
+            const { data: profile, error } = await supabase
+              .from('users')
+              .select('display_name, avatar_url')
+              .eq('id', user.id)
+              .single();
+
+            if (profile) {
+              // Merge DB profile into user metadata for UI consistency
+              user.user_metadata = {
+                ...user.user_metadata,
+                display_name: profile.display_name,
+                avatar_url: profile.avatar_url
+              };
+              return user;
+            }
+
+            if (i < retries - 1) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+          }
+          
+          // If still no profile after retries, return user as is (fallback)
+          return user;
+        };
+
+        // Load initial session
+        const user = await fetchUserWithProfile(1); // No need to retry heavily on initial load
+        setLuminaKraftUser(user);
         setIsLoadingLuminaKraft(false);
 
         // Listen for auth state changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          async (event, session) => {
+          (event, _session) => {
             console.log('Auth state changed:', event);
-            if (session) {
-              const { data: { user } } = await supabase.auth.getUser();
-              setLuminaKraftUser(user);
-            } else {
-              setLuminaKraftUser(null);
-            }
+            // Retry fetching profile on sign-in to ensure DB trigger has finished
+            // Fire-and-forget to avoid blocking the auth flow
+            fetchUserWithProfile(event === 'SIGNED_IN' ? 5 : 1).then(updatedUser => {
+              setLuminaKraftUser(updatedUser);
+            });
           }
         );
 
@@ -202,6 +235,21 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
     }
   };
 
+  const handleSignOutFromLuminaKraft = async () => {
+    setShowSignOutConfirm(true);
+  };
+
+  const performSignOut = async () => {
+    try {
+      const authService = AuthService.getInstance();
+      await authService.signOutSupabase();
+      // state updates via listener
+    } catch (error) {
+      console.error('Sign out error:', error);
+      toast.error('Failed to sign out');
+    }
+  };
+
   const handleProfileUpdate = async () => {
     const { supabase } = await import('../../services/supabaseClient');
     const { data: { user } } = await supabase.auth.getUser();
@@ -214,8 +262,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
   };
 
   const handleUnlinkDiscord = async () => {
-    if (!confirm('Are you sure you want to unlink your Discord account?')) return;
-    
+    setShowUnlinkConfirm(true);
+  };
+
+  const performUnlinkDiscord = async () => {
     const authService = AuthService.getInstance();
     const success = await authService.unlinkDiscordAccount();
     
@@ -239,8 +289,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
   };
 
   const handleDeleteAccount = async () => {
-    if (!confirm(t('auth.confirmDeleteAccount') || 'Are you sure you want to delete your account? This action cannot be undone.')) return;
-    
+    setShowDeleteConfirm(true);
+  };
+
+  const performDeleteAccount = async () => {
     const authService = AuthService.getInstance();
     const success = await authService.deleteAccount();
     
@@ -482,13 +534,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
               <h2 className="text-white text-xl font-semibold">{t('settings.luminakraftAccount')}</h2>
             </div>
 
-            <div className="p-4 bg-purple-600/10 border border-purple-600/20 rounded-lg mb-6">
-              <p className="text-purple-300 text-sm leading-relaxed">
-                <strong className="text-purple-200">{t('settings.luminakraftAccountDesc')}</strong><br />
-                {t('settings.luminakraftAccountHelp')}
-              </p>
-            </div>
-
             {luminaKraftUser ? (
               <>
                 <ProfileEditor
@@ -497,14 +542,14 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
                   onUpdate={handleProfileUpdate}
                 />
 
-                <div className="mt-8 border-t border-dark-700 pt-6">
-                  <h3 className="text-lg font-medium text-white mb-4">{t('settings.linkedAccounts')}</h3>
+                <div className="mt-6">
+                  <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">{t('settings.linkedAccounts')}</h3>
                   
                   {formData.discordAccount ? (
-                    <div className="flex items-center justify-between p-4 bg-dark-700 rounded-lg border border-dark-600">
+                    <div className="flex items-center justify-between p-3 bg-dark-700/50 rounded-lg border border-dark-600">
                       <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 rounded-full bg-[#5865F2] flex items-center justify-center">
-                          <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
+                        <div className="w-8 h-8 rounded-full bg-[#5865F2] flex items-center justify-center">
+                          <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037 3.42 3.42 0 0 0-.623 1.281 18.346 18.346 0 0 0-5.462 0 2.79 2.79 0 0 0-.623-1.281.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.086 2.176 2.419 0 1.334-.966 2.419-2.176 2.419zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.086 2.176 2.419 0 1.334-.966 2.419-2.176 2.419z"/>
                           </svg>
                         </div>
@@ -523,10 +568,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
                   ) : (
                     <button
                       onClick={handleLinkDiscord}
-                      className="w-full p-4 border border-dashed border-dark-600 rounded-lg hover:border-dark-500 hover:bg-dark-700/50 transition-colors flex items-center justify-center space-x-2 group"
+                      className="w-full p-3 border border-dashed border-dark-600 rounded-lg hover:border-dark-500 hover:bg-dark-700/50 transition-colors flex items-center justify-center space-x-2 group"
                     >
-                      <div className="w-8 h-8 rounded-full bg-[#5865F2]/20 group-hover:bg-[#5865F2]/30 flex items-center justify-center transition-colors">
-                         <svg className="w-5 h-5 text-[#5865F2]" viewBox="0 0 24 24" fill="currentColor">
+                      <div className="w-6 h-6 rounded-full bg-[#5865F2]/20 group-hover:bg-[#5865F2]/30 flex items-center justify-center transition-colors">
+                         <svg className="w-4 h-4 text-[#5865F2]" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037 3.42 3.42 0 0 0-.623 1.281 18.346 18.346 0 0 0-5.462 0 2.79 2.79 0 0 0-.623-1.281.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.086 2.176 2.419 0 1.334-.966 2.419-2.176 2.419zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.086 2.176 2.419 0 1.334-.966 2.419-2.176 2.419z"/>
                          </svg>
                       </div>
@@ -535,12 +580,18 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
                   )}
                 </div>
 
-                {/* Danger Zone */}
-                <div className="mt-8 border-t border-red-900/30 pt-6">
-                  <h3 className="text-red-400 font-medium mb-2">{t('settings.dangerZone')}</h3>
-                  <button onClick={handleDeleteAccount} className="text-sm text-red-400 hover:text-red-300 border border-red-900/50 rounded px-3 py-2 hover:bg-red-900/20 transition-colors">
-                    {t('settings.deleteAccount')}
+                <div className="mt-6 pt-6 border-t border-dark-700 flex flex-col gap-2">
+                  <button onClick={handleSignOutFromLuminaKraft} className="w-full btn-secondary text-sm">
+                    {t('auth.signOut')}
                   </button>
+                  
+                  <div className="pt-2">
+                    <h3 className="text-xs font-bold text-red-400/70 uppercase tracking-wider mb-2">{t('settings.dangerZone')}</h3>
+                    <button onClick={handleDeleteAccount} className="text-sm text-red-400 hover:text-red-300 transition-colors flex items-center space-x-2">
+                      <Trash2 className="w-4 h-4" />
+                      <span>{t('settings.deleteAccount')}</span>
+                    </button>
+                  </div>
                 </div>
               </>
             ) : (
@@ -802,6 +853,35 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
         </div>
       </div>
 
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={performDeleteAccount}
+        title={t('settings.deleteAccount')}
+        message={t('auth.confirmDeleteAccount')}
+        confirmText={t('app.delete')}
+        variant="danger"
+      />
+
+      <ConfirmDialog
+        isOpen={showUnlinkConfirm}
+        onClose={() => setShowUnlinkConfirm(false)}
+        onConfirm={performUnlinkDiscord}
+        title={t('auth.unlinkDiscord')}
+        message={t('auth.confirmUnlinkDiscord')}
+        confirmText={t('auth.unlinkDiscord')}
+        variant="warning"
+      />
+
+      <ConfirmDialog
+        isOpen={showSignOutConfirm}
+        onClose={() => setShowSignOutConfirm(false)}
+        onConfirm={performSignOut}
+        title={t('auth.signOut')}
+        message="Are you sure you want to sign out from your LuminaKraft account?"
+        confirmText={t('auth.signOut')}
+        variant="info"
+      />
     </div>
   );
 };

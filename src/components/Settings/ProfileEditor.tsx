@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
-import { User as UserIcon } from 'lucide-react';
+import { User as UserIcon, Pencil, X, Check } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 import type { DiscordAccount } from '../../types/launcher';
 
@@ -14,9 +14,21 @@ interface ProfileEditorProps {
 const ProfileEditor: React.FC<ProfileEditorProps> = ({ luminaKraftUser, discordAccount, onUpdate }) => {
   const { t } = useTranslation();
   const [displayName, setDisplayName] = useState(luminaKraftUser.user_metadata?.display_name || '');
+  const [isEditing, setIsEditing] = useState(false);
+  const [tempDisplayName, setTempDisplayName] = useState(displayName);
+
+  const handleStartEdit = () => {
+    setTempDisplayName(displayName);
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setTempDisplayName(displayName);
+    setIsEditing(false);
+  };
 
   const handleUpdateDisplayName = async () => {
-    if (!displayName.trim()) {
+    if (!tempDisplayName.trim()) {
       toast.error('Display name cannot be empty');
       return;
     }
@@ -24,14 +36,16 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ luminaKraftUser, discordA
     try {
       const { supabase, updateUser } = await import('../../services/supabaseClient');
       const { error } = await supabase.auth.updateUser({
-        data: { display_name: displayName }
+        data: { display_name: tempDisplayName }
       });
 
       if (error) throw error;
 
       // Also update in public.users table
-      await updateUser(luminaKraftUser.id, { display_name: displayName });
+      await updateUser(luminaKraftUser.id, { display_name: tempDisplayName });
 
+      setDisplayName(tempDisplayName);
+      setIsEditing(false);
       toast.success('Display name updated!');
       onUpdate();
     } catch (error) {
@@ -41,7 +55,6 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ luminaKraftUser, discordA
   };
 
   const getProfilePicture = () => {
-    // Priority: Custom upload (if exists from before) > Discord avatar > Default
     if (luminaKraftUser.user_metadata?.avatar_url) {
       return luminaKraftUser.user_metadata.avatar_url;
     }
@@ -56,49 +69,59 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ luminaKraftUser, discordA
   const profilePic = getProfilePicture();
 
   return (
-    <div className="space-y-6">
-      {/* Profile Picture - View Only */}
-      <div>
-        <label className="block text-sm font-medium mb-2 text-gray-300">{t('settings.profilePicture')}</label>
-        <div className="flex items-center space-x-4">
-          {profilePic ? (
-             <img
-               src={profilePic}
-               alt="Profile"
-               className="w-16 h-16 rounded-full object-cover border-2 border-dark-600"
-             />
-          ) : (
-             <div className="w-16 h-16 bg-dark-700 rounded-full flex items-center justify-center border-2 border-dark-600">
-                <UserIcon className="w-8 h-8 text-dark-400" />
-             </div>
-          )}
-          
-          <div className="flex-1">
-            <p className="text-sm text-gray-400">
-              {discordAccount
-                ? t('settings.usingDiscordAvatar')
-                : 'Profile picture is managed by your linked account.'}
-            </p>
-          </div>
-        </div>
+    <div className="flex items-center space-x-4 mb-6 p-4 bg-dark-700/50 rounded-lg border border-dark-600">
+      {/* Avatar */}
+      <div className="relative flex-shrink-0">
+        {profilePic ? (
+           <img
+             src={profilePic}
+             alt="Profile"
+             className="w-16 h-16 rounded-full object-cover border-2 border-lumina-600/50 shadow-lg"
+           />
+        ) : (
+           <div className="w-16 h-16 bg-dark-700 rounded-full flex items-center justify-center border-2 border-dark-500">
+              <UserIcon className="w-8 h-8 text-dark-400" />
+           </div>
+        )}
       </div>
 
-      {/* Display Name */}
-      <div>
-        <label className="block text-sm font-medium mb-2 text-gray-300">{t('settings.displayName')}</label>
-        <div className="flex space-x-2">
-          <input
-            type="text"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            onBlur={handleUpdateDisplayName}
-            className="flex-1 px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg focus:ring-2 focus:ring-lumina-400 text-white placeholder-gray-500"
-            placeholder="Your display name"
-          />
-        </div>
-        <p className="text-xs text-gray-400 mt-1">
-          {t('settings.displayNameDesc')}
+      {/* Info & Edit */}
+      <div className="flex-1 min-w-0">
+        <p className="text-xs text-gray-400 uppercase font-bold tracking-wider mb-1">
+          {t('settings.displayName')}
         </p>
+        
+        {isEditing ? (
+          <div className="flex items-center space-x-2">
+            <input
+              type="text"
+              value={tempDisplayName}
+              onChange={(e) => setTempDisplayName(e.target.value)}
+              className="flex-1 px-3 py-1 bg-dark-800 border border-lumina-500 rounded focus:outline-none text-white text-sm"
+              placeholder="Display Name"
+              autoFocus
+            />
+            <button onClick={handleUpdateDisplayName} className="p-1.5 bg-green-600/20 text-green-400 rounded hover:bg-green-600/30">
+              <Check size={16} />
+            </button>
+            <button onClick={handleCancelEdit} className="p-1.5 bg-red-600/20 text-red-400 rounded hover:bg-red-600/30">
+              <X size={16} />
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center space-x-2 group">
+            <h3 className="text-xl font-bold text-white truncate">{displayName || 'User'}</h3>
+            <button 
+              onClick={handleStartEdit}
+              className="p-1.5 text-gray-500 hover:text-lumina-400 opacity-0 group-hover:opacity-100 transition-opacity"
+              title={t('settings.edit')}
+            >
+              <Pencil size={14} />
+            </button>
+          </div>
+        )}
+        
+        <p className="text-sm text-gray-500 mt-1 truncate">{luminaKraftUser.email}</p>
       </div>
     </div>
   );

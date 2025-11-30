@@ -364,7 +364,10 @@
     "whyLinkDiscord": "¿Por qué vincular Discord?",
     "discordBenefit1": "Publica tus propios modpacks en la comunidad",
     "discordBenefit2": "Obtén beneficios de partner y roles especiales",
-    "discordBenefit3": "Únete a nuestra comunidad y obtén soporte"
+    "discordBenefit3": "Únete a nuestra comunidad y obtén soporte",
+    "confirmDeleteAccount": "¿Estás seguro de que quieres eliminar tu cuenta? Esta acción no se puede deshacer.",
+    "accountDeleted": "Cuenta eliminada exitosamente",
+    "deleteAccountFailed": "Error al eliminar la cuenta"
   },
   "about": {
     "title": "Acerca de",

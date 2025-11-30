@@ -150,43 +150,62 @@ class AuthService {
       }>(
         'oauth-callback',
         async (event) => {
-          console.log('OAuth callback received');
-          const { access_token, refresh_token, provider_token, provider_refresh_token } = event.payload;
+          console.log('OAuth callback received - Raw Payload:', JSON.stringify(event.payload, null, 2));
+          try {
+            const { access_token, refresh_token, provider_token, provider_refresh_token } = event.payload;
 
-          // 3. Establish Supabase session with received tokens
-          const { data, error } = await supabase.auth.setSession({
-            access_token,
-            refresh_token
-          });
+            console.log('Setting Supabase session...');
+            // 3. Establish Supabase session with received tokens
+            const { data, error } = await supabase.auth.setSession({
+              access_token,
+              refresh_token
+            });
 
-          if (error) {
-            console.error('Failed to set Supabase session:', error);
-          } else {
-            console.log('✅ LuminaKraft account authenticated');
+            console.log('SetSession result:', { error, hasSession: !!data.session });
 
-            // NEW: Auto-detect and sync Discord data
-            if (data.session) {
-              // Check if user authenticated with Discord
-              const identities = data.session.user.identities || [];
-              const discordIdentity = identities.find(id => id.provider === 'discord');
+            if (error) {
+              console.error('Failed to set Supabase session:', error);
+            } else {
+              console.log('✅ LuminaKraft session set successfully');
+              
+              // Force refresh user to ensure session is active
+              const { data: { user } } = await supabase.auth.getUser();
+              console.log('Active User:', user?.id);
 
-              if (discordIdentity || provider_token) {
-                console.log('Discord provider detected, auto-syncing data...');
-                // Use the provider tokens directly from the callback
-                await this.syncDiscordData(provider_token, provider_refresh_token);
+              // NEW: Auto-detect and sync Discord data
+              if (user) {
+                const identities = user.identities || [];
+                const discordIdentity = identities.find(id => id.provider === 'discord');
+                
+                console.log('Identities found:', identities.length);
+
+                if (discordIdentity || provider_token) {
+                  console.log('Discord provider detected, auto-syncing data...');
+                  // Call sync directly
+                  try {
+                    await this.syncDiscordData(provider_token, provider_refresh_token);
+                  } catch (err) {
+                    console.error('SyncDiscordData failed:', err);
+                  }
+                } else {
+                  console.log('No Discord identity or token found in session initialization');
+                }
+              }
+
+              // Focus the launcher window
+              try {
+                await invoke('focus_window');
+                console.log('Launcher window focused');
+              } catch (focusError) {
+                console.warn('Failed to focus window:', focusError);
               }
             }
-
-            // Focus the launcher window
-            try {
-              await invoke('focus_window');
-              console.log('Launcher window focused');
-            } catch (focusError) {
-              console.warn('Failed to focus window:', focusError);
-            }
+          } catch (e) {
+            console.error('Error in oauth-callback listener:', e);
+          } finally {
+            console.log('Cleaning up listener');
+            unlisten();
           }
-
-          unlisten();
         }
       );
 
@@ -224,42 +243,54 @@ class AuthService {
       }>(
         'oauth-callback',
         async (event) => {
-          console.log('OAuth callback received');
-          const { access_token, refresh_token, provider_token, provider_refresh_token } = event.payload;
+          console.log('OAuth callback received (signup) - Raw Payload:', JSON.stringify(event.payload, null, 2));
+          try {
+            const { access_token, refresh_token, provider_token, provider_refresh_token } = event.payload;
 
-          // 3. Establish Supabase session with received tokens
-          const { data, error } = await supabase.auth.setSession({
-            access_token,
-            refresh_token
-          });
+            // 3. Establish Supabase session with received tokens
+            const { data, error } = await supabase.auth.setSession({
+              access_token,
+              refresh_token
+            });
 
-          if (error) {
-            console.error('Failed to set Supabase session:', error);
-          } else {
-            console.log('✅ LuminaKraft account created and authenticated');
+            console.log('SetSession result (signup):', { error, hasSession: !!data.session });
 
-            // NEW: Auto-detect and sync Discord data
-            if (data.session) {
-              // Check if user authenticated with Discord
-              const identities = data.session.user.identities || [];
-              const discordIdentity = identities.find(id => id.provider === 'discord');
+            if (error) {
+              console.error('Failed to set Supabase session:', error);
+            } else {
+              console.log('✅ LuminaKraft account created and authenticated');
 
-              if (discordIdentity || provider_token) {
-                console.log('Discord provider detected, auto-syncing data...');
-                await this.syncDiscordData(provider_token, provider_refresh_token);
+              // Force refresh user
+              const { data: { user } } = await supabase.auth.getUser();
+
+              // NEW: Auto-detect and sync Discord data
+              if (user) {
+                const identities = user.identities || [];
+                const discordIdentity = identities.find(id => id.provider === 'discord');
+
+                if (discordIdentity || provider_token) {
+                  console.log('Discord provider detected, auto-syncing data...');
+                  try {
+                    await this.syncDiscordData(provider_token, provider_refresh_token);
+                  } catch (err) {
+                    console.error('SyncDiscordData failed:', err);
+                  }
+                }
+              }
+
+              // Focus the launcher window
+              try {
+                await invoke('focus_window');
+                console.log('Launcher window focused');
+              } catch (focusError) {
+                console.warn('Failed to focus window:', focusError);
               }
             }
-
-            // Focus the launcher window
-            try {
-              await invoke('focus_window');
-              console.log('Launcher window focused');
-            } catch (focusError) {
-              console.warn('Failed to focus window:', focusError);
-            }
+          } catch (e) {
+            console.error('Error in oauth-callback listener:', e);
+          } finally {
+            unlisten();
           }
-
-          unlisten();
         }
       );
 
@@ -344,26 +375,41 @@ class AuthService {
       }>(
         'oauth-callback',
         async (event) => {
-          console.log('Discord link callback received');
-          const { access_token, refresh_token, provider_token, provider_refresh_token } = event.payload;
+          console.log('Discord link callback received - Raw Payload:', JSON.stringify(event.payload, null, 2));
+          try {
+            const { access_token, refresh_token, provider_token, provider_refresh_token } = event.payload;
 
-          // Update session with new identity
-          const { data, error } = await supabase.auth.setSession({
-            access_token,
-            refresh_token
-          });
+            // Update session with new identity
+            const { data, error } = await supabase.auth.setSession({
+              access_token,
+              refresh_token
+            });
 
-          if (error) {
-            console.error('Failed to link Discord:', error);
-          } else {
-            console.log('✅ Discord linked successfully');
+            console.log('SetSession result (link):', { error, hasSession: !!data.session });
 
-            // Auto-sync Discord data
-            // Use the provider tokens directly from the callback
-            await this.syncDiscordData(provider_token, provider_refresh_token);
+            if (error) {
+              console.error('Failed to link Discord:', error);
+            } else {
+              console.log('✅ Discord linked successfully');
+
+              // Force refresh user
+              const { data: { user } } = await supabase.auth.getUser();
+
+              // Auto-sync Discord data
+              // Use the provider tokens directly from the callback
+              if (user) {
+                 try {
+                  await this.syncDiscordData(provider_token, provider_refresh_token);
+                } catch (err) {
+                  console.error('SyncDiscordData failed:', err);
+                }
+              }
+            }
+          } catch (e) {
+            console.error('Error in oauth-callback listener (link):', e);
+          } finally {
+            unlisten();
           }
-
-          unlisten();
         }
       );
 
@@ -667,6 +713,13 @@ class AuthService {
 
       // Get refresh token from parameter or localStorage
       const refreshToken = providerRefreshToken || localStorage.getItem('discord_provider_refresh_token');
+
+      console.log('Token Check:', {
+        hasParamToken: !!providerToken,
+        hasSessionToken: !!session.provider_token,
+        tokenPreview: discordAccessToken ? discordAccessToken.substring(0, 5) + '...' : 'none',
+        hasRefreshToken: !!refreshToken
+      });
 
       if (!discordAccessToken) {
         console.log('No access token available, will use refresh token in Edge Function');
