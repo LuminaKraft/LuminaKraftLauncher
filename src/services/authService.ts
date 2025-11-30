@@ -184,16 +184,26 @@ class AuthService {
               if (user) {
                 const identities = user.identities || [];
                 const discordIdentity = identities.find(id => id.provider === 'discord');
+                const currentProvider = user.app_metadata.provider;
                 
                 console.log('Identities found:', identities.length);
+                console.log('Current provider:', currentProvider);
 
-                if (discordIdentity || provider_token) {
+                if (currentProvider === 'discord' && provider_token) {
                   console.log('Discord provider detected, auto-syncing data...');
-                  // Call sync directly
+                  // Call sync directly with the new token
                   try {
                     await this.syncDiscordData(provider_token, provider_refresh_token);
                   } catch (err) {
                     console.error('SyncDiscordData failed:', err);
+                  }
+                } else if (discordIdentity) {
+                  console.log('Discord identity found (linked), attempting background sync...');
+                  // Call sync without tokens (will use stored tokens if available)
+                  try {
+                    await this.syncDiscordData();
+                  } catch (err) {
+                    console.error('Background SyncDiscordData failed:', err);
                   }
                 } else {
                   console.log('No Discord identity or token found in session initialization');
@@ -284,13 +294,21 @@ class AuthService {
               if (user) {
                 const identities = user.identities || [];
                 const discordIdentity = identities.find(id => id.provider === 'discord');
+                const currentProvider = user.app_metadata.provider;
 
-                if (discordIdentity || provider_token) {
+                if (currentProvider === 'discord' && provider_token) {
                   console.log('Discord provider detected, auto-syncing data...');
                   try {
                     await this.syncDiscordData(provider_token, provider_refresh_token);
                   } catch (err) {
                     console.error('SyncDiscordData failed:', err);
+                  }
+                } else if (discordIdentity) {
+                  console.log('Discord identity found (linked), attempting background sync...');
+                  try {
+                    await this.syncDiscordData();
+                  } catch (err) {
+                    console.error('Background SyncDiscordData failed:', err);
                   }
                 }
 
