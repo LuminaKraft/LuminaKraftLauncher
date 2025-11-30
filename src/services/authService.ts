@@ -368,8 +368,10 @@ class AuthService {
         }
       }
 
-      if (!account) {
-        console.log('No local Minecraft account data found to sync.');
+      // Validate we have a valid Minecraft account structure (xuid is critical)
+      // This ensures we are not using partial data or confusing it with Supabase provider data.
+      if (!account || !account.xuid || !account.uuid) {
+        console.log('No valid local Minecraft account data found to sync (missing XUID/UUID).');
         return;
       }
 
