@@ -155,13 +155,21 @@ class AuthService {
             const { access_token, refresh_token, provider_token, provider_refresh_token } = event.payload;
 
             console.log('Setting Supabase session...');
+            
+            // Create a timeout promise
+            const timeoutPromise = new Promise<{ data: { session: null }, error: Error }>((_, reject) => 
+              setTimeout(() => reject(new Error('SetSession timeout')), 10000)
+            );
+
             // 3. Establish Supabase session with received tokens
-            const { data, error } = await supabase.auth.setSession({
+            const setSessionPromise = supabase.auth.setSession({
               access_token,
               refresh_token
             });
 
-            console.log('SetSession result:', { error, hasSession: !!data.session });
+            const { data, error } = await Promise.race([setSessionPromise, timeoutPromise]) as any;
+
+            console.log('SetSession result:', { error, hasSession: !!data?.session });
 
             if (error) {
               console.error('Failed to set Supabase session:', error);
@@ -188,8 +196,12 @@ class AuthService {
                     console.error('SyncDiscordData failed:', err);
                   }
                 } else {
-              // Sync Microsoft data if available locally
-              await this.syncMicrosoftData();
+                  console.log('No Discord identity or token found in session initialization');
+                }
+
+                // Sync Microsoft data if available locally
+                await this.syncMicrosoftData();
+              }
 
               // Focus the launcher window
               try {
@@ -247,12 +259,18 @@ class AuthService {
             const { access_token, refresh_token, provider_token, provider_refresh_token } = event.payload;
 
             // 3. Establish Supabase session with received tokens
-            const { data, error } = await supabase.auth.setSession({
+            const timeoutPromise = new Promise<{ data: { session: null }, error: Error }>((_, reject) => 
+              setTimeout(() => reject(new Error('SetSession timeout')), 10000)
+            );
+
+            const setSessionPromise = supabase.auth.setSession({
               access_token,
               refresh_token
             });
 
-            console.log('SetSession result (signup):', { error, hasSession: !!data.session });
+            const { data, error } = await Promise.race([setSessionPromise, timeoutPromise]) as any;
+
+            console.log('SetSession result (signup):', { error, hasSession: !!data?.session });
 
             if (error) {
               console.error('Failed to set Supabase session:', error);
@@ -275,10 +293,10 @@ class AuthService {
                     console.error('SyncDiscordData failed:', err);
                   }
                 }
-              }
 
-              // Sync Microsoft data if available locally
-              await this.syncMicrosoftData();
+                // Sync Microsoft data if available locally
+                await this.syncMicrosoftData();
+              }
 
               // Focus the launcher window
               try {
@@ -359,6 +377,7 @@ class AuthService {
         console.error('Failed to sync Microsoft data to DB:', error);
       } else {
         console.log('✅ Microsoft data synced to LuminaKraft account successfully');
+        this.emitProfileUpdate();
       }
 
     } catch (error) {
@@ -443,12 +462,18 @@ class AuthService {
             const { access_token, refresh_token, provider_token, provider_refresh_token } = event.payload;
 
             // Update session with new identity
-            const { data, error } = await supabase.auth.setSession({
+            const timeoutPromise = new Promise<{ data: { session: null }, error: Error }>((_, reject) => 
+              setTimeout(() => reject(new Error('SetSession timeout')), 10000)
+            );
+
+            const setSessionPromise = supabase.auth.setSession({
               access_token,
               refresh_token
             });
 
-            console.log('SetSession result (link):', { error, hasSession: !!data.session });
+            const { data, error } = await Promise.race([setSessionPromise, timeoutPromise]) as any;
+
+            console.log('SetSession result (link):', { error, hasSession: !!data?.session });
 
             if (error) {
               console.error('Failed to link Discord:', error);
@@ -734,6 +759,7 @@ class AuthService {
         console.warn('Discord data synced but role sync failed');
       }
 
+      this.emitProfileUpdate();
       return true;
     } catch (error) {
       console.error('Error syncing Discord data:', error);
@@ -1174,6 +1200,12 @@ class AuthService {
       console.error('Error reading username from localStorage:', error);
     }
     return null;
+  }
+
+  private emitProfileUpdate() {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('luminakraft:profile-updated'));
+    }
   }
 }
 

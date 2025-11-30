@@ -368,7 +368,8 @@
     "discordBenefit3": "Join our community and get support",
     "confirmDeleteAccount": "Are you sure you want to delete your account? This action cannot be undone.",
     "accountDeleted": "Account deleted successfully",
-    "deleteAccountFailed": "Failed to delete account"
+    "deleteAccountFailed": "Failed to delete account",
+    "cannotUnlinkOnlyProvider": "Cannot unlink your only sign-in method"
   },
   "about": {
     "title": "About",

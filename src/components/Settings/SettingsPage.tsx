@@ -39,6 +39,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showUnlinkConfirm, setShowUnlinkConfirm] = useState(false);
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
+  
+  const canUnlink = (luminaKraftUser?.identities?.length || 0) > 1;
   // Java runtime handled internally by Lyceris; no user-facing settings.
 
   useEffect(() => {
@@ -114,9 +116,19 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
           }
         );
 
+        // Listen for custom profile update events (triggered by authService after sync)
+        const handleProfileUpdateEvent = () => {
+          console.log('Profile update event received, refreshing user...');
+          fetchUserWithProfile(1).then(updatedUser => {
+            setLuminaKraftUser(updatedUser);
+          });
+        };
+        window.addEventListener('luminakraft:profile-updated', handleProfileUpdateEvent);
+
         // Cleanup subscription on unmount
         return () => {
           subscription.unsubscribe();
+          window.removeEventListener('luminakraft:profile-updated', handleProfileUpdateEvent);
         };
       } catch (error) {
         console.error('Error loading LuminaKraft session:', error);
@@ -252,7 +264,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
     try {
       const authService = AuthService.getInstance();
       await authService.signOutSupabase();
-      // state updates via listener
+      // Force state update to ensure UI reflects sign out immediately
+      setLuminaKraftUser(null);
+      setDiscordAccount(null);
     } catch (error) {
       console.error('Sign out error:', error);
       toast.error('Failed to sign out');
@@ -271,6 +285,11 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
   };
 
   const handleUnlinkDiscord = async () => {
+    const identities = luminaKraftUser?.identities || [];
+    if (identities.length <= 1) {
+      toast.error(t('auth.cannotUnlinkOnlyProvider') || 'Cannot unlink your only sign-in method');
+      return;
+    }
     setShowUnlinkConfirm(true);
   };
 
@@ -569,7 +588,13 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
                       </div>
                       <button
                         onClick={handleUnlinkDiscord}
-                        className="text-red-400 hover:text-red-300 text-sm font-medium px-3 py-1 rounded hover:bg-red-400/10 transition-colors"
+                        disabled={!canUnlink}
+                        title={!canUnlink ? (t('auth.cannotUnlinkOnlyProvider') || 'Cannot unlink only provider') : ''}
+                        className={`text-sm font-medium px-3 py-1 rounded transition-colors ${
+                          canUnlink 
+                            ? 'text-red-400 hover:text-red-300 hover:bg-red-400/10' 
+                            : 'text-gray-600 cursor-not-allowed'
+                        }`}
                       >
                         {t('auth.unlinkDiscord')}
                       </button>
