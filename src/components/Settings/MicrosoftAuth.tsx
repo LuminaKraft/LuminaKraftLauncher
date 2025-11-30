@@ -95,10 +95,24 @@ export default function MicrosoftAuth({
   };
 
   const handleSignOut = async () => {
-    // Sign out from Supabase and restore anonymous session
-    await authService.signOutSupabase();
+    // Confirm with user before signing out
+    const confirmSignOut = window.confirm(
+      t('auth.confirmSignOutMicrosoft') ||
+      'Are you sure you want to sign out? Your Microsoft account data will be removed.'
+    );
 
-    onAuthClear();
+    if (!confirmSignOut) {
+      return;
+    }
+
+    try {
+      // Sign out from Supabase (this will clean Microsoft data and remove provider)
+      await authService.signOutSupabase();
+      onAuthClear();
+    } catch (error) {
+      console.error('Error signing out:', error);
+      onError(t('auth.signOutFailed') || 'Failed to sign out');
+    }
   };
 
   // If user is already authenticated with Microsoft

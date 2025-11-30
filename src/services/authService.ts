@@ -128,13 +128,97 @@ class AuthService {
 
   /**
    * Sign out from Supabase
+   * Cleans Microsoft data from database and removes email provider if present
    */
   async signOutSupabase(): Promise<void> {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (user) {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('microsoft_id, discord_id, discord_global_name, discord_username, email')
+          .eq('id', user.id)
+          .single<{
+            microsoft_id: string | null;
+            discord_id: string | null;
+            discord_global_name: string | null;
+            discord_username: string | null;
+            email: string | null;
+          }>();
+
+        if (userData?.microsoft_id) {
+          const hasDiscord = !!userData.discord_id;
+
+          // 1. Remove Microsoft email provider from auth.users
+          try {
+            const { data: identities } = await supabase.auth.getUserIdentities();
+            console.log('User identities:', identities);
+
+            // Find the email provider ending with @launcher.luminakraft.com
+            const microsoftIdentity = identities?.identities?.find(
+              (identity) =>
+                identity.provider === 'email' &&
+                identity.identity_data?.email?.endsWith('@launcher.luminakraft.com')
+            );
+
+            if (microsoftIdentity) {
+              console.log('Attempting to unlink Microsoft email identity:', microsoftIdentity.id);
+              const { error: unlinkError } = await supabase.auth.unlinkIdentity(microsoftIdentity);
+
+              if (unlinkError) {
+                console.warn('Could not unlink Microsoft identity (manual linking may be disabled):', unlinkError.message);
+              } else {
+                console.log('Microsoft identity unlinked from Supabase Auth');
+              }
+            } else {
+              console.log('No Microsoft email identity found in Supabase Auth');
+            }
+          } catch (identityError) {
+            console.warn('Error unlinking Microsoft identity (continuing with database cleanup):', identityError);
+          }
+
+          // 2. Clean Microsoft data from public.users
+          const calculated_display_name =
+            userData.discord_global_name ||
+            userData.discord_username ||
+            userData.email?.split('@')[0] ||
+            'User';
+
+          const cleanupData: any = {
+            microsoft_id: null,
+            minecraft_uuid: null,
+            is_minecraft_verified: false,
+            microsoft_linked_at: null,
+            display_name: calculated_display_name
+          };
+
+          // Only clean minecraft_username if user doesn't have Discord
+          if (!hasDiscord) {
+            cleanupData.minecraft_username = null;
+          }
+
+          const { error: cleanupError } = await updateUser(user.id, cleanupData);
+
+          if (cleanupError) {
+            console.error('Failed to clean Microsoft data:', cleanupError);
+          } else {
+            console.log('✅ Microsoft data cleaned from database');
+          }
+        }
+      }
+
+      // 3. Sign out from Supabase (closes session)
       await supabase.auth.signOut();
       console.log('Signed out from Supabase');
     } catch (error) {
       console.error('Error signing out from Supabase:', error);
+      // Always try to sign out even if cleanup fails
+      try {
+        await supabase.auth.signOut();
+      } catch (signOutError) {
+        console.error('Critical: Could not sign out:', signOutError);
+      }
     }
   }
 
@@ -405,7 +489,10 @@ class AuthService {
         .from('users')
         .select('minecraft_username, email')
         .eq('id', user.id)
-        .single();
+        .single<{
+          minecraft_username: string | null;
+          email: string | null;
+        }>();
 
       // Calculate display_name with priority: Discord global_name > Discord username > Minecraft username > Email > User
       const calculated_display_name =
@@ -432,13 +519,60 @@ class AuthService {
         return false;
       }
 
-      console.log('Discord data updated in database, now syncing roles...');
+      console.log('Discord data updated in database');
+
+      // Capture anonymous username from localStorage if applicable
+      // This should happen ONLY if:
+      // 1. User does NOT have Microsoft linked (microsoft_id is null)
+      // 2. minecraft_username is currently null (no username set yet)
+      const { data: currentUserData } = await supabase
+        .from('users')
+        .select('microsoft_id, minecraft_username')
+        .eq('id', user.id)
+        .single<{
+          microsoft_id: string | null;
+          minecraft_username: string | null;
+        }>();
+
+      const hasMicrosoft = !!currentUserData?.microsoft_id;
+      const hasMinecraftUsername = !!currentUserData?.minecraft_username;
+
+      if (!hasMicrosoft && !hasMinecraftUsername) {
+        // User is Discord-only with no username → Try to capture from localStorage
+        const savedUsername = this.getAnonymousUsernameFromLocalStorage();
+
+        if (savedUsername && savedUsername !== 'Player') {
+          console.log('📝 Capturing anonymous username from localStorage:', savedUsername);
+
+          const now = new Date().toISOString();
+          const captureData = {
+            minecraft_username: savedUsername,
+            minecraft_username_history: [{
+              username: savedUsername,
+              from: now,
+              to: null
+            }]
+          };
+
+          const { error: captureError } = await updateUser(user.id, captureData);
+
+          if (captureError) {
+            console.error('Failed to capture anonymous username:', captureError);
+          } else {
+            console.log('✅ Anonymous username captured and history initialized');
+          }
+        } else {
+          console.log('ℹ️ No anonymous username to capture (using default "Player")');
+        }
+      }
 
       // Save provider refresh token in localStorage for future syncs
       if (providerRefreshToken) {
         localStorage.setItem('discord_provider_refresh_token', providerRefreshToken);
         console.log('Discord provider refresh token saved to localStorage');
       }
+
+      console.log('Now syncing Discord roles...');
 
       // Trigger role sync with provider token if available
       const rolesSuccess = await this.syncDiscordRoles(providerToken, providerRefreshToken);
@@ -690,12 +824,15 @@ class AuthService {
         .from('users')
         .select('minecraft_username, email')
         .eq('id', user.id)
-        .single();
+        .single<{
+          minecraft_username: string | null;
+          email: string | null;
+        }>();
 
       // Recalculate display_name without Discord (priority: Minecraft > Email > User)
       const calculated_display_name =
-        (currentUser as any)?.minecraft_username ||
-        (currentUser as any)?.email?.split('@')[0] ||
+        currentUser?.minecraft_username ||
+        currentUser?.email?.split('@')[0] ||
         'User';
 
       // Clear ALL Discord data in database
@@ -750,9 +887,19 @@ class AuthService {
       // Get current user data
       const { data: currentUser } = await supabase
         .from('users')
-        .select('minecraft_username, minecraft_username_history')
+        .select('minecraft_username, minecraft_username_history, microsoft_id')
         .eq('id', session.user.id)
-        .single<Pick<Tables<'users'>, 'minecraft_username' | 'minecraft_username_history'>>();
+        .single<{
+          minecraft_username: string | null;
+          minecraft_username_history: any;
+          microsoft_id: string | null;
+        }>();
+
+      // PROTECTION: Don't allow username changes if user has Microsoft linked
+      if (currentUser?.microsoft_id) {
+        console.error('Cannot change username: Microsoft account is linked (username comes from Microsoft)');
+        return false;
+      }
 
       // If username hasn't changed, skip update
       if (currentUser?.minecraft_username === newUsername) {
@@ -816,6 +963,27 @@ class AuthService {
       console.error('Error updating Minecraft username:', error);
       return false;
     }
+  }
+
+  // ============================================================================
+  // HELPER METHODS
+  // ============================================================================
+
+  /**
+   * Get anonymous username from localStorage
+   * Used when linking Discord to preserve user's chosen username
+   */
+  private getAnonymousUsernameFromLocalStorage(): string | null {
+    try {
+      const saved = localStorage.getItem('LuminaKraftLauncher_settings');
+      if (saved) {
+        const settings = JSON.parse(saved);
+        return settings.username || null;
+      }
+    } catch (error) {
+      console.error('Error reading username from localStorage:', error);
+    }
+    return null;
   }
 }
 

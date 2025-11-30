@@ -135,14 +135,25 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
     toast.success(t('settings.saved'));
   };
 
-  const handleMicrosoftAuthClear = () => {
+  const handleMicrosoftAuthClear = async () => {
     setAuthError(null);
     setIsAuthenticating(false);
+
+    // Check if user has Discord account to determine new auth state
+    const authService = AuthService.getInstance();
+    const discordAccount = await authService.getDiscordAccount();
+
+    // Determine new username:
+    // - If has Discord: keep current username (they might be using it for offline)
+    // - If no Discord: reset to 'Player'
+    const newUsername = discordAccount ? formData.username : 'Player';
+    const newAuthMethod: 'discord' | 'offline' = discordAccount ? 'discord' : 'offline';
+
     const newSettings = {
       ...formData,
-      authMethod: 'offline' as const,
+      authMethod: newAuthMethod,
       microsoftAccount: undefined,
-      username: 'Player'
+      username: newUsername
     };
     setFormData(newSettings);
     updateUserSettings(newSettings);
