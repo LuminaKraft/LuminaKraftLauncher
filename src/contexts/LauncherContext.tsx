@@ -236,10 +236,8 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
         // Synchronize language with react-i18next
         await i18n.changeLanguage(settings.language);
 
-        // If user has Microsoft account, sync with Supabase
+        // If user has Microsoft account, set it in modpack management service (for Minecraft launching)
         if (settings.authMethod === 'microsoft' && settings.microsoftAccount) {
-          await authService.authenticateSupabaseWithMicrosoft(settings.microsoftAccount);
-
           // Set Microsoft account in modpack management service
           const ModpackManagementService = (await import('../services/modpackManagementService')).ModpackManagementService;
           ModpackManagementService.getInstance().setMicrosoftAccount(settings.microsoftAccount);

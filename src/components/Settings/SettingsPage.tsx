@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, HardDrive, Save, Wifi, WifiOff, RefreshCw, Trash2, Server, Languages, Shield, XCircle, Zap } from 'lucide-react';
+import { User, HardDrive, Save, Wifi, WifiOff, RefreshCw, Trash2, Server, Languages, Shield, XCircle, Zap, CheckCircle as CheckCircleIcon } from 'lucide-react';
 import { useLauncher } from '../../contexts/LauncherContext';
 import LauncherService from '../../services/launcherService';
 import AuthService from '../../services/authService';
@@ -33,6 +33,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
   });
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [luminaKraftUser, setLuminaKraftUser] = useState<any>(null);
+  const [isLoadingLuminaKraft, setIsLoadingLuminaKraft] = useState(true);
   // Java runtime handled internally by Lyceris; no user-facing settings.
 
   useEffect(() => {
@@ -43,6 +45,27 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
     const isDifferent = JSON.stringify(formData) !== JSON.stringify(userSettings);
     setHasChanges(isDifferent);
   }, [formData, userSettings]);
+
+  // Load LuminaKraft account session
+  useEffect(() => {
+    const loadLuminaKraftSession = async () => {
+      try {
+        const { supabase } = await import('../../services/supabaseClient');
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (session) {
+          const { data: { user } } = await supabase.auth.getUser();
+          setLuminaKraftUser(user);
+        }
+      } catch (error) {
+        console.error('Error loading LuminaKraft session:', error);
+      } finally {
+        setIsLoadingLuminaKraft(false);
+      }
+    };
+
+    loadLuminaKraftSession();
+  }, []);
 
   const checkAPIStatus = async () => {
     setApiStatus('checking');
@@ -199,6 +222,56 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
     setFormData(newSettings);
     updateUserSettings(newSettings);
     toast.success(t('settings.saved'));
+  };
+
+  const handleSignInToLuminaKraft = async () => {
+    try {
+      const authService = AuthService.getInstance();
+      await authService.signInToLuminaKraftAccount();
+
+      // Reload session after successful sign in
+      const { supabase } = await import('../../services/supabaseClient');
+      const { data: { user } } = await supabase.auth.getUser();
+      setLuminaKraftUser(user);
+
+      toast.success('Successfully signed in to LuminaKraft Account');
+    } catch (error) {
+      console.error('Sign in error:', error);
+      toast.error('Failed to sign in to LuminaKraft Account');
+    }
+  };
+
+  const handleSignUpToLuminaKraft = async () => {
+    try {
+      const authService = AuthService.getInstance();
+      await authService.signUpLuminaKraftAccount();
+
+      // Reload session after successful sign up
+      const { supabase } = await import('../../services/supabaseClient');
+      const { data: { user } } = await supabase.auth.getUser();
+      setLuminaKraftUser(user);
+
+      toast.success('Successfully created LuminaKraft Account');
+    } catch (error) {
+      console.error('Sign up error:', error);
+      toast.error('Failed to create LuminaKraft Account');
+    }
+  };
+
+  const handleSignOutFromLuminaKraft = async () => {
+    if (!confirm('Are you sure you want to sign out from LuminaKraft Account? Your data will be preserved and you can sign in again anytime.')) {
+      return;
+    }
+
+    try {
+      const authService = AuthService.getInstance();
+      await authService.signOutSupabase();
+      setLuminaKraftUser(null);
+      toast.success('Successfully signed out from LuminaKraft Account');
+    } catch (error) {
+      console.error('Sign out error:', error);
+      toast.error('Failed to sign out from LuminaKraft Account');
+    }
   };
 
   const triggerShake = () => {
@@ -402,34 +475,96 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
             </div>
           </div>
 
-          {/* Authentication Settings */}
+          {/* Microsoft Account (Minecraft) - LOCAL ONLY */}
           <div className="card">
             <div className="flex items-center space-x-3 mb-6">
               <Shield className="w-6 h-6 text-lumina-500" />
-              <h2 className="text-white text-xl font-semibold">{t('auth.title')}</h2>
+              <h2 className="text-white text-xl font-semibold">Microsoft Account (Minecraft)</h2>
             </div>
 
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-white text-lg font-medium mb-2">{t('auth.microsoftTitle')}</h3>
-                <p className="text-dark-300 text-sm mb-4">
-                  {t('auth.microsoftDescription')}
+            <div className="space-y-4">
+              <div className="p-4 bg-blue-600/10 border border-blue-600/20 rounded-lg">
+                <p className="text-blue-300 text-sm leading-relaxed">
+                  <strong className="text-blue-200">For Minecraft Premium Only</strong><br />
+                  This authenticates your Microsoft account locally to verify Minecraft ownership and launch games with your premium account. This data is stored only on your device and does NOT create a LuminaKraft platform account.
                 </p>
-
-                <MicrosoftAuth
-                  userSettings={formData}
-                  onAuthSuccess={handleMicrosoftAuthSuccess}
-                  onAuthClear={handleMicrosoftAuthClear}
-                  onError={handleAuthError}
-                  onAuthStart={handleAuthStart}
-                  onAuthStop={handleAuthStop}
-                />
               </div>
 
+              <MicrosoftAuth
+                userSettings={formData}
+                onAuthSuccess={handleMicrosoftAuthSuccess}
+                onAuthClear={handleMicrosoftAuthClear}
+                onError={handleAuthError}
+                onAuthStart={handleAuthStart}
+                onAuthStop={handleAuthStop}
+              />
+            </div>
+          </div>
+
+          {/* LuminaKraft Account - PLATFORM ACCOUNT */}
+          <div className="card">
+            <div className="flex items-center space-x-3 mb-6">
+              <User className="w-6 h-6 text-lumina-500" />
+              <h2 className="text-white text-xl font-semibold">LuminaKraft Account</h2>
+            </div>
+
+            <div className="space-y-4">
+              <div className="p-4 bg-purple-600/10 border border-purple-600/20 rounded-lg">
+                <p className="text-purple-300 text-sm leading-relaxed">
+                  <strong className="text-purple-200">Platform Account for Exclusive Features</strong><br />
+                  Sign in to access publishing modpacks, syncing stats, exclusive content, and community features. Your account data is stored securely in the LuminaKraft platform.
+                </p>
+              </div>
+
+              {isLoadingLuminaKraft ? (
+                <div className="p-4 bg-dark-700 rounded-lg">
+                  <p className="text-dark-400 text-center">Loading account status...</p>
+                </div>
+              ) : luminaKraftUser ? (
+                <div className="space-y-3">
+                  <h3 className="text-white text-lg font-medium">Account Status</h3>
+                  <div className="flex items-center justify-between p-4 bg-green-600/10 border border-green-600/20 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <CheckCircleIcon className="w-5 h-5 text-green-400" />
+                      <div>
+                        <p className="font-medium text-green-200">Signed In</p>
+                        <p className="text-sm text-green-400">{luminaKraftUser.email}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleSignOutFromLuminaKraft}
+                      className="px-3 py-1 text-sm bg-red-600/20 text-red-300 rounded hover:bg-red-600/40 transition-colors"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <h3 className="text-white text-lg font-medium">Account Access</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={handleSignInToLuminaKraft}
+                      className="btn-primary flex items-center justify-center space-x-2"
+                    >
+                      <User className="w-4 h-4" />
+                      <span>Sign In</span>
+                    </button>
+                    <button
+                      onClick={handleSignUpToLuminaKraft}
+                      className="btn-secondary flex items-center justify-center space-x-2"
+                    >
+                      <User className="w-4 h-4" />
+                      <span>Sign Up</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="border-t border-dark-700 pt-6">
-                <h3 className="text-white text-lg font-medium mb-2">{t('auth.discordTitle')}</h3>
+                <h3 className="text-white text-lg font-medium mb-2">Linked Accounts</h3>
                 <p className="text-dark-300 text-sm mb-4">
-                  {t('auth.discordDescription')}
+                  Connect your Discord account to access exclusive features and community benefits.
                 </p>
 
                 <DiscordAuth

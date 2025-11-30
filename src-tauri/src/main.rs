@@ -12,6 +12,7 @@ mod filesystem;
 mod minecraft;
 mod modpack;
 mod utils;
+mod oauth;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Modpack {
@@ -1026,6 +1027,7 @@ fn main() {
             add_mods_to_instance,
             create_modpack_with_overrides,
             install_modpack_from_local_zip,
+            oauth::start_oauth_server,
         ])
         .setup(|app| {
             // Initialize app data directory

@@ -39,11 +39,8 @@ export default function MicrosoftAuth({
       setIsAuthenticating(true);
       onAuthStart?.();
 
-      // Use the modal-based authentication (like Modrinth)
+      // Use the modal-based authentication
       const account = await authService.authenticateWithMicrosoftModal();
-
-      // Sync with Supabase
-      await authService.authenticateSupabaseWithMicrosoft(account);
 
       // Update ModpackManagementService with Microsoft account
       const { ModpackManagementService } = await import('../../services/modpackManagementService');

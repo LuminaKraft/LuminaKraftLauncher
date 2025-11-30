@@ -36,83 +36,6 @@ class AuthService {
   }
 
   /**
-   * Authenticate with Supabase using Microsoft account from Lyceris
-   * This calls the auth-with-microsoft Edge Function to create/update user profile
-   * and establishes an authenticated Supabase session
-   */
-  async authenticateSupabaseWithMicrosoft(microsoftAccount: MicrosoftAccount): Promise<boolean> {
-    try {
-      console.log('Authenticating Microsoft account with Supabase...');
-
-      // Check if user already has an active session (e.g., Discord already linked)
-      const { data: { session } } = await supabase.auth.getSession();
-      const currentUserId = session?.user?.id;
-
-      if (currentUserId) {
-        console.log('User already has active session, will link Microsoft to existing account:', currentUserId);
-      }
-
-      // Call Edge Function to create/update user and get session tokens
-      const { data, error } = await supabase.functions.invoke('auth-with-microsoft', {
-        body: {
-          microsoft_id: microsoftAccount.xuid,
-          minecraft_username: microsoftAccount.username,
-          minecraft_uuid: microsoftAccount.uuid,
-          email: '', // Lyceris doesn't provide email
-          display_name: microsoftAccount.username,
-          user_id: currentUserId || undefined // Send user_id if already logged in
-        }
-      });
-
-      if (error) {
-        console.error('Failed to authenticate Microsoft account with Supabase:', error);
-        return false;
-      }
-
-      if (!data.success) {
-        console.error('Authentication failed:', data.error);
-        return false;
-      }
-
-      // Exchange hashed_token for authenticated session
-      if (data.hashed_token) {
-        const { data: sessionData, error: sessionError } = await supabase.auth.verifyOtp({
-          token_hash: data.hashed_token,
-          type: 'recovery'
-        });
-
-        if (sessionError) {
-          console.error('Failed to verify OTP token:', sessionError);
-          return false;
-        }
-
-        console.log('Authenticated Supabase session established');
-        console.log('   Session user ID:', sessionData.session?.user.id);
-        console.log('   Is anonymous:', sessionData.session?.user.is_anonymous);
-
-        // Verify the session is now authenticated
-        const { data: { session } } = await supabase.auth.getSession();
-        console.log('   Current session role:', session?.user.role);
-        console.log('   Current session aud:', session?.user.aud);
-      } else {
-        console.warn('No hashed_token returned from Edge Function');
-        console.log('   Response data:', data);
-      }
-
-      console.log('Microsoft account authenticated with Supabase');
-      console.log(`   User ID: ${data.user.id}`);
-      console.log(`   Role: ${data.user.role}`);
-      console.log(`   Display Name: ${data.user.display_name}`);
-
-      return true;
-    } catch (error) {
-      console.error('Error authenticating Microsoft account with Supabase:', error);
-      return false;
-    }
-  }
-
-
-  /**
    * Get the current Supabase session access token
    * Returns null if no session exists
    */
@@ -127,98 +50,16 @@ class AuthService {
   }
 
   /**
-   * Sign out from Supabase
-   * Cleans Microsoft data from database and removes email provider if present
+   * Sign out from LuminaKraft Account (Supabase session)
+   * Note: This does NOT affect Microsoft Minecraft account (stored locally)
    */
   async signOutSupabase(): Promise<void> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (user) {
-        const { data: userData } = await supabase
-          .from('users')
-          .select('microsoft_id, discord_id, discord_global_name, discord_username, email')
-          .eq('id', user.id)
-          .single<{
-            microsoft_id: string | null;
-            discord_id: string | null;
-            discord_global_name: string | null;
-            discord_username: string | null;
-            email: string | null;
-          }>();
-
-        if (userData?.microsoft_id) {
-          const hasDiscord = !!userData.discord_id;
-
-          // 1. Remove Microsoft email provider from auth.users
-          try {
-            const { data: identities } = await supabase.auth.getUserIdentities();
-            console.log('User identities:', identities);
-
-            // Find the email provider ending with @launcher.luminakraft.com
-            const microsoftIdentity = identities?.identities?.find(
-              (identity) =>
-                identity.provider === 'email' &&
-                identity.identity_data?.email?.endsWith('@launcher.luminakraft.com')
-            );
-
-            if (microsoftIdentity) {
-              console.log('Attempting to unlink Microsoft email identity:', microsoftIdentity.id);
-              const { error: unlinkError } = await supabase.auth.unlinkIdentity(microsoftIdentity);
-
-              if (unlinkError) {
-                console.warn('Could not unlink Microsoft identity (manual linking may be disabled):', unlinkError.message);
-              } else {
-                console.log('Microsoft identity unlinked from Supabase Auth');
-              }
-            } else {
-              console.log('No Microsoft email identity found in Supabase Auth');
-            }
-          } catch (identityError) {
-            console.warn('Error unlinking Microsoft identity (continuing with database cleanup):', identityError);
-          }
-
-          // 2. Clean Microsoft data from public.users
-          const calculated_display_name =
-            userData.discord_global_name ||
-            userData.discord_username ||
-            userData.email?.split('@')[0] ||
-            'User';
-
-          const cleanupData: any = {
-            microsoft_id: null,
-            minecraft_uuid: null,
-            is_minecraft_verified: false,
-            microsoft_linked_at: null,
-            display_name: calculated_display_name
-          };
-
-          // Only clean minecraft_username if user doesn't have Discord
-          if (!hasDiscord) {
-            cleanupData.minecraft_username = null;
-          }
-
-          const { error: cleanupError } = await updateUser(user.id, cleanupData);
-
-          if (cleanupError) {
-            console.error('Failed to clean Microsoft data:', cleanupError);
-          } else {
-            console.log('✅ Microsoft data cleaned from database');
-          }
-        }
-      }
-
-      // 3. Sign out from Supabase (closes session)
       await supabase.auth.signOut();
-      console.log('Signed out from Supabase');
+      console.log('✅ Signed out from LuminaKraft Account');
     } catch (error) {
       console.error('Error signing out from Supabase:', error);
-      // Always try to sign out even if cleanup fails
-      try {
-        await supabase.auth.signOut();
-      } catch (signOutError) {
-        console.error('Critical: Could not sign out:', signOutError);
-      }
+      throw error;
     }
   }
 
@@ -285,6 +126,113 @@ class AuthService {
       console.error('Failed to refresh Microsoft token:', error);
       return null;
     }
+  }
+
+  /**
+   * Sign in to LuminaKraft Account using web-based OAuth flow
+   * Opens browser to /auth/sign-in with HTTP server callback
+   */
+  async signInToLuminaKraftAccount(): Promise<boolean> {
+    try {
+      console.log('Starting LuminaKraft Account sign in flow...');
+
+      // 1. Start HTTP server and get port
+      const port = await invoke<number>('start_oauth_server');
+      console.log(`OAuth server started on port ${port}`);
+
+      // 2. Set up event listener for oauth callback
+      const { listen } = await import('@tauri-apps/api/event');
+      const unlisten = await listen<{ access_token: string; refresh_token: string }>(
+        'oauth-callback',
+        async (event) => {
+          console.log('OAuth callback received');
+          const { access_token, refresh_token } = event.payload;
+
+          // 3. Establish Supabase session with received tokens
+          const { error } = await supabase.auth.setSession({
+            access_token,
+            refresh_token
+          });
+
+          if (error) {
+            console.error('Failed to set Supabase session:', error);
+          } else {
+            console.log('✅ LuminaKraft account authenticated');
+          }
+
+          unlisten();
+        }
+      );
+
+      // 4. Open browser to sign in page
+      const url = `https://luminakraft.com/auth/sign-in?launcher=true&port=${port}`;
+      await invoke('open_url', { url });
+      console.log(`Opened browser to ${url}`);
+
+      return true;
+    } catch (error) {
+      console.error('OAuth flow failed:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Sign up for LuminaKraft Account using web-based OAuth flow
+   * Opens browser to /auth/sign-up with HTTP server callback
+   */
+  async signUpLuminaKraftAccount(): Promise<boolean> {
+    try {
+      console.log('Starting LuminaKraft Account sign up flow...');
+
+      // 1. Start HTTP server and get port
+      const port = await invoke<number>('start_oauth_server');
+      console.log(`OAuth server started on port ${port}`);
+
+      // 2. Set up event listener for oauth callback
+      const { listen } = await import('@tauri-apps/api/event');
+      const unlisten = await listen<{ access_token: string; refresh_token: string }>(
+        'oauth-callback',
+        async (event) => {
+          console.log('OAuth callback received');
+          const { access_token, refresh_token } = event.payload;
+
+          // 3. Establish Supabase session with received tokens
+          const { error } = await supabase.auth.setSession({
+            access_token,
+            refresh_token
+          });
+
+          if (error) {
+            console.error('Failed to set Supabase session:', error);
+          } else {
+            console.log('✅ LuminaKraft account created and authenticated');
+          }
+
+          unlisten();
+        }
+      );
+
+      // 4. Open browser to sign up page
+      const url = `https://luminakraft.com/auth/sign-up?launcher=true&port=${port}`;
+      await invoke('open_url', { url });
+      console.log(`Opened browser to ${url}`);
+
+      return true;
+    } catch (error) {
+      console.error('OAuth flow failed:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Authenticate Microsoft account for Minecraft premium only (local storage)
+   * This does NOT create a LuminaKraft account - use signInToLuminaKraftAccount() for that
+   */
+  async authenticateMicrosoftMinecraft(): Promise<MicrosoftAccount> {
+    const account = await this.authenticateWithMicrosoftModal();
+    console.log('Microsoft account authenticated for Minecraft (local only)');
+    // Data is stored in UserSettings by the caller, not in Supabase
+    return account;
   }
 
   /**
