@@ -61,9 +61,6 @@
     "shell": {
       "open": true
     },
-    "deep-link": {
-      "schemes": ["luminakraft"]
-    },
     "updater": {
       "active": true,
       "endpoints": [

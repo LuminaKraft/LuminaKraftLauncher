@@ -992,7 +992,6 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
-        .plugin(tauri_plugin_deep_link::init())
         .invoke_handler(tauri::generate_handler![
             get_instance_metadata,
             get_local_modpacks,
@@ -1040,23 +1039,6 @@ fn main() {
                 eprintln!("Failed to create instances directory: {}", e);
             }
 
-            // Register deep link protocol handler
-            // Note: On macOS in dev mode, deep links are handled via Info.plist
-            // On Windows/Linux, runtime registration is needed
-            #[cfg(any(target_os = "windows", target_os = "linux"))]
-            {
-                use tauri_plugin_deep_link::DeepLinkExt;
-                match app.deep_link().register("luminakraft") {
-                    Ok(_) => println!("Deep link protocol registered successfully"),
-                    Err(e) => eprintln!("Failed to register deep link protocol: {}", e),
-                }
-            }
-
-            #[cfg(target_os = "macos")]
-            {
-                // On macOS, deep links are registered via Info.plist during build
-                println!("Deep link protocol configured via Info.plist (macOS)");
-            }
 
             Ok(())
         })

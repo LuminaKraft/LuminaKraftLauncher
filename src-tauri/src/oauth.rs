@@ -1,4 +1,3 @@
-use std::io::Read;
 use tauri::{AppHandle, Emitter, Wry};
 
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
