@@ -188,9 +188,8 @@ class AuthService {
                     console.error('SyncDiscordData failed:', err);
                   }
                 } else {
-                  console.log('No Discord identity or token found in session initialization');
-                }
-              }
+              // Sync Microsoft data if available locally
+              await this.syncMicrosoftData();
 
               // Focus the launcher window
               try {
@@ -278,6 +277,9 @@ class AuthService {
                 }
               }
 
+              // Sync Microsoft data if available locally
+              await this.syncMicrosoftData();
+
               // Focus the launcher window
               try {
                 await invoke('focus_window');
@@ -307,6 +309,64 @@ class AuthService {
   }
 
   /**
+   * Sync Microsoft/Minecraft data to LuminaKraft account if both are available
+   * Called after successful login to either service
+   */
+  async syncMicrosoftData(microsoftAccount?: MicrosoftAccount): Promise<void> {
+    try {
+      console.log('Attempting to sync Microsoft data to LuminaKraft account...');
+      
+      // 1. Get Microsoft Data (either passed or from local storage)
+      let account = microsoftAccount;
+      if (!account) {
+        const saved = localStorage.getItem('LuminaKraftLauncher_settings');
+        if (saved) {
+          const settings = JSON.parse(saved);
+          if (settings.authMethod === 'microsoft' && settings.microsoftAccount) {
+            account = settings.microsoftAccount;
+          }
+        }
+      }
+
+      if (!account) {
+        console.log('No Microsoft account data found locally to sync.');
+        return;
+      }
+
+      // 2. Get Supabase Session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.log('No active LuminaKraft session. Skipping sync.');
+        return;
+      }
+
+      console.log('Syncing Microsoft data:', { 
+        username: account.username, 
+        uuid: account.uuid,
+        userId: session.user.id 
+      });
+
+      // 3. Update Database
+      const { error } = await updateUser(session.user.id, {
+        microsoft_id: account.uuid, // Using UUID as the unique ID
+        minecraft_username: account.username,
+        minecraft_uuid: account.uuid,
+        is_minecraft_verified: true,
+        microsoft_linked_at: new Date().toISOString()
+      });
+
+      if (error) {
+        console.error('Failed to sync Microsoft data to DB:', error);
+      } else {
+        console.log('✅ Microsoft data synced to LuminaKraft account successfully');
+      }
+
+    } catch (error) {
+      console.error('Error syncing Microsoft data:', error);
+    }
+  }
+
+  /**
    * Authenticate Microsoft account for Minecraft premium only (local storage)
    * This does NOT create a LuminaKraft account - use signInToLuminaKraftAccount() for that
    */
@@ -327,6 +387,9 @@ class AuthService {
 
       // Step 2: Complete authentication with the code
       const account = await invoke<MicrosoftAccount>('authenticate_microsoft', { code: authCode });
+
+      // Sync with LuminaKraft account if logged in
+      await this.syncMicrosoftData(account);
 
       return account;
     } catch (error) {

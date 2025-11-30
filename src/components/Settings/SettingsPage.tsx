@@ -34,6 +34,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [luminaKraftUser, setLuminaKraftUser] = useState<any>(null);
+  const [discordAccount, setDiscordAccount] = useState<DiscordAccount | null>(null);
   const [isLoadingLuminaKraft, setIsLoadingLuminaKraft] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showUnlinkConfirm, setShowUnlinkConfirm] = useState(false);
@@ -57,7 +58,15 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
 
         const fetchUserWithProfile = async (retries = 3) => {
           const { data: { user } } = await supabase.auth.getUser();
-          if (!user) return null;
+          if (!user) {
+            setDiscordAccount(null);
+            return null;
+          }
+
+          // Fetch Discord account status
+          const authService = AuthService.getInstance();
+          const discord = await authService.getDiscordAccount();
+          setDiscordAccount(discord);
 
           // Fetch public profile to get up-to-date display_name
           // We implement a retry mechanism because on new sign-ups, the trigger
@@ -538,14 +547,14 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
               <>
                 <ProfileEditor
                   luminaKraftUser={luminaKraftUser}
-                  discordAccount={formData.discordAccount || null}
+                  discordAccount={discordAccount || null}
                   onUpdate={handleProfileUpdate}
                 />
 
                 <div className="mt-6">
                   <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">{t('settings.linkedAccounts')}</h3>
                   
-                  {formData.discordAccount ? (
+                  {discordAccount ? (
                     <div className="flex items-center justify-between p-3 bg-dark-700/50 rounded-lg border border-dark-600">
                       <div className="flex items-center space-x-3">
                         <div className="w-8 h-8 rounded-full bg-[#5865F2] flex items-center justify-center">
@@ -554,7 +563,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
                           </svg>
                         </div>
                         <div>
-                          <p className="font-medium text-white">{formData.discordAccount.username}</p>
+                          <p className="font-medium text-white">{discordAccount.username}</p>
                           <p className="text-xs text-green-400">{t('settings.connected')}</p>
                         </div>
                       </div>
