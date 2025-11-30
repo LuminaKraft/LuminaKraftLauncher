@@ -158,6 +158,14 @@ class AuthService {
             console.error('Failed to set Supabase session:', error);
           } else {
             console.log('✅ LuminaKraft account authenticated');
+
+            // Focus the launcher window
+            try {
+              await invoke('focus_window');
+              console.log('Launcher window focused');
+            } catch (focusError) {
+              console.warn('Failed to focus window:', focusError);
+            }
           }
 
           unlisten();
@@ -206,6 +214,14 @@ class AuthService {
             console.error('Failed to set Supabase session:', error);
           } else {
             console.log('✅ LuminaKraft account created and authenticated');
+
+            // Focus the launcher window
+            try {
+              await invoke('focus_window');
+              console.log('Launcher window focused');
+            } catch (focusError) {
+              console.warn('Failed to focus window:', focusError);
+            }
           }
 
           unlisten();

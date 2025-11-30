@@ -359,6 +359,17 @@ async fn open_url(app: tauri::AppHandle, url: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+async fn focus_window(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("main") {
+        window.set_focus()
+            .map_err(|e| format!("Failed to focus window: {}", e))?;
+        window.show()
+            .map_err(|e| format!("Failed to show window: {}", e))?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
 async fn create_microsoft_auth_link() -> Result<String, String> {
     match lyceris::auth::microsoft::create_link() {
         Ok(url) => Ok(url),
@@ -1008,6 +1019,7 @@ fn main() {
             check_instance_needs_update,
             check_curseforge_modpack,
             open_url,
+            focus_window,
             create_microsoft_auth_link,
             authenticate_microsoft,
             refresh_microsoft_token,
