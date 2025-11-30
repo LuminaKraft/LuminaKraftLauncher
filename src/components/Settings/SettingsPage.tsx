@@ -46,25 +46,47 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
     setHasChanges(isDifferent);
   }, [formData, userSettings]);
 
-  // Load LuminaKraft account session
+  // Load LuminaKraft account session and listen for changes
   useEffect(() => {
-    const loadLuminaKraftSession = async () => {
+    const setupAuth = async () => {
       try {
         const { supabase } = await import('../../services/supabaseClient');
-        const { data: { session } } = await supabase.auth.getSession();
 
+        // Load initial session
+        const { data: { session } } = await supabase.auth.getSession();
         if (session) {
           const { data: { user } } = await supabase.auth.getUser();
           setLuminaKraftUser(user);
         }
+        setIsLoadingLuminaKraft(false);
+
+        // Listen for auth state changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (event, session) => {
+            console.log('Auth state changed:', event);
+            if (session) {
+              const { data: { user } } = await supabase.auth.getUser();
+              setLuminaKraftUser(user);
+            } else {
+              setLuminaKraftUser(null);
+            }
+          }
+        );
+
+        // Cleanup subscription on unmount
+        return () => {
+          subscription.unsubscribe();
+        };
       } catch (error) {
         console.error('Error loading LuminaKraft session:', error);
-      } finally {
         setIsLoadingLuminaKraft(false);
       }
     };
 
-    loadLuminaKraftSession();
+    const cleanup = setupAuth();
+    return () => {
+      cleanup.then(unsub => unsub?.());
+    };
   }, []);
 
   const checkAPIStatus = async () => {
