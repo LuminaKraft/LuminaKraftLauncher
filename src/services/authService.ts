@@ -142,14 +142,19 @@ class AuthService {
 
       // 2. Set up event listener for oauth callback
       const { listen } = await import('@tauri-apps/api/event');
-      const unlisten = await listen<{ access_token: string; refresh_token: string }>(
+      const unlisten = await listen<{ 
+        access_token: string; 
+        refresh_token: string; 
+        provider_token?: string; 
+        provider_refresh_token?: string;
+      }>(
         'oauth-callback',
         async (event) => {
           console.log('OAuth callback received');
-          const { access_token, refresh_token } = event.payload;
+          const { access_token, refresh_token, provider_token, provider_refresh_token } = event.payload;
 
           // 3. Establish Supabase session with received tokens
-          const { error } = await supabase.auth.setSession({
+          const { data, error } = await supabase.auth.setSession({
             access_token,
             refresh_token
           });
@@ -158,6 +163,19 @@ class AuthService {
             console.error('Failed to set Supabase session:', error);
           } else {
             console.log('✅ LuminaKraft account authenticated');
+
+            // NEW: Auto-detect and sync Discord data
+            if (data.session) {
+              // Check if user authenticated with Discord
+              const identities = data.session.user.identities || [];
+              const discordIdentity = identities.find(id => id.provider === 'discord');
+
+              if (discordIdentity || provider_token) {
+                console.log('Discord provider detected, auto-syncing data...');
+                // Use the provider tokens directly from the callback
+                await this.syncDiscordData(provider_token, provider_refresh_token);
+              }
+            }
 
             // Focus the launcher window
             try {
@@ -198,14 +216,19 @@ class AuthService {
 
       // 2. Set up event listener for oauth callback
       const { listen } = await import('@tauri-apps/api/event');
-      const unlisten = await listen<{ access_token: string; refresh_token: string }>(
+      const unlisten = await listen<{ 
+        access_token: string; 
+        refresh_token: string;
+        provider_token?: string;
+        provider_refresh_token?: string;
+      }>(
         'oauth-callback',
         async (event) => {
           console.log('OAuth callback received');
-          const { access_token, refresh_token } = event.payload;
+          const { access_token, refresh_token, provider_token, provider_refresh_token } = event.payload;
 
           // 3. Establish Supabase session with received tokens
-          const { error } = await supabase.auth.setSession({
+          const { data, error } = await supabase.auth.setSession({
             access_token,
             refresh_token
           });
@@ -214,6 +237,18 @@ class AuthService {
             console.error('Failed to set Supabase session:', error);
           } else {
             console.log('✅ LuminaKraft account created and authenticated');
+
+            // NEW: Auto-detect and sync Discord data
+            if (data.session) {
+              // Check if user authenticated with Discord
+              const identities = data.session.user.identities || [];
+              const discordIdentity = identities.find(id => id.provider === 'discord');
+
+              if (discordIdentity || provider_token) {
+                console.log('Discord provider detected, auto-syncing data...');
+                await this.syncDiscordData(provider_token, provider_refresh_token);
+              }
+            }
 
             // Focus the launcher window
             try {
@@ -280,35 +315,81 @@ class AuthService {
    */
   async linkDiscordAccount(): Promise<boolean> {
     try {
-      console.log('Initiating Discord OAuth...');
+      console.log('Linking Discord account...');
 
       const { supabase } = await import('./supabaseClient');
 
       // Check if user is already logged in
       const { data: { session } } = await supabase.auth.getSession();
 
+      if (!session) {
+        console.error('No active session. User must sign in first.');
+        return false;
+      }
+
+      // 1. Start HTTP server and get port
+      const port = await invoke<number>('start_oauth_server');
+      console.log(`OAuth server started on port ${port}`);
+
+      // Construct redirect URL with port
+      const redirectUrl = `https://luminakraft.com/auth-callback?launcher=true&port=${port}`;
+
+      // 2. Set up event listener for oauth callback
+      const { listen } = await import('@tauri-apps/api/event');
+      const unlisten = await listen<{ 
+        access_token: string; 
+        refresh_token: string;
+        provider_token?: string;
+        provider_refresh_token?: string;
+      }>(
+        'oauth-callback',
+        async (event) => {
+          console.log('Discord link callback received');
+          const { access_token, refresh_token, provider_token, provider_refresh_token } = event.payload;
+
+          // Update session with new identity
+          const { data, error } = await supabase.auth.setSession({
+            access_token,
+            refresh_token
+          });
+
+          if (error) {
+            console.error('Failed to link Discord:', error);
+          } else {
+            console.log('✅ Discord linked successfully');
+
+            // Auto-sync Discord data
+            // Use the provider tokens directly from the callback
+            await this.syncDiscordData(provider_token, provider_refresh_token);
+          }
+
+          unlisten();
+        }
+      );
+
       let data, error;
 
+      // 3. Initiate OAuth flow
       if (session) {
         // User logged in → Link identity
         console.log('User logged in, linking Discord identity...');
         const result = await supabase.auth.linkIdentity({
           provider: 'discord',
           options: {
-            redirectTo: 'https://luminakraft.com/auth-callback',
+            redirectTo: redirectUrl,
             scopes: 'identify guilds guilds.members.read',
-            skipBrowserRedirect: true
+            skipBrowserRedirect: true // This returns the URL instead of redirecting
           }
         });
         data = result.data;
         error = result.error;
       } else {
-        // No session → Sign in with OAuth
+        // Fallback: No session → Sign in with OAuth
         console.log('No active session, signing in with Discord...');
         const result = await supabase.auth.signInWithOAuth({
           provider: 'discord',
           options: {
-            redirectTo: 'https://luminakraft.com/auth-callback',
+            redirectTo: redirectUrl,
             scopes: 'identify guilds guilds.members.read',
             skipBrowserRedirect: true
           }
@@ -322,13 +403,10 @@ class AuthService {
         return false;
       }
 
-      // Open OAuth URL in external browser using Tauri command
-      const { invoke } = await import('@tauri-apps/api/core');
+      // 4. Open OAuth URL in external browser
       await invoke('open_url', { url: data.url });
 
-      console.log('Discord OAuth opened in browser');
-      console.log('User will be redirected to https://luminakraft.com/auth-callback after authorization');
-      console.log('The web page will automatically trigger the launcher to open via deep link');
+      console.log(`Discord OAuth opened. Redirecting to: ${redirectUrl}`);
       return true;
     } catch (error) {
       console.error('Error linking Discord account:', error);
@@ -821,6 +899,38 @@ class AuthService {
       return true;
     } catch (error) {
       console.error('Error unlinking Discord account:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Delete the user's account
+   * Calls the delete-account Edge Function to remove data from auth and public tables
+   */
+  async deleteAccount(): Promise<boolean> {
+    try {
+      console.log('Initiating account deletion...');
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        console.error('No session, cannot delete account');
+        return false;
+      }
+
+      const { error } = await supabase.functions.invoke('delete-account', {
+        body: { userId: session.user.id }
+      });
+
+      if (error) {
+        console.error('Failed to delete account:', error);
+        throw error;
+      }
+
+      // Sign out after successful deletion
+      await this.signOutSupabase();
+      return true;
+    } catch (error) {
+      console.error('Error deleting account:', error);
       return false;
     }
   }

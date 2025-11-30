@@ -4,9 +4,8 @@ import { User, HardDrive, Save, Wifi, WifiOff, RefreshCw, Trash2, Server, Langua
 import { useLauncher } from '../../contexts/LauncherContext';
 import LauncherService from '../../services/launcherService';
 import AuthService from '../../services/authService';
-import MicrosoftAuth from './MicrosoftAuth';
-import DiscordAuth from './DiscordAuth';
 import MetaStorageSettings from './MetaStorageSettings';
+import ProfileEditor from './ProfileEditor';
 import type { MicrosoftAccount, DiscordAccount } from '../../types/launcher';
 import toast from 'react-hot-toast';
 
@@ -166,45 +165,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
     toast.success(t('settings.saved'));
   };
 
-  const handleMicrosoftAuthSuccess = (account: MicrosoftAccount) => {
-    setAuthError(null);
-    setIsAuthenticating(false);
-    const newSettings = {
-      ...formData,
-      authMethod: 'microsoft' as const,
-      microsoftAccount: account,
-      username: account.username
-    };
-    setFormData(newSettings);
-    updateUserSettings(newSettings);
-    toast.success(t('settings.saved'));
-  };
-
-  const handleMicrosoftAuthClear = async () => {
-    setAuthError(null);
-    setIsAuthenticating(false);
-
-    // Check if user has Discord account to determine new auth state
-    const authService = AuthService.getInstance();
-    const discordAccount = await authService.getDiscordAccount();
-
-    // Determine new username:
-    // - If has Discord: keep current username (they might be using it for offline)
-    // - If no Discord: reset to 'Player'
-    const newUsername = discordAccount ? formData.username : 'Player';
-    const newAuthMethod: 'discord' | 'offline' = discordAccount ? 'discord' : 'offline';
-
-    const newSettings = {
-      ...formData,
-      authMethod: newAuthMethod,
-      microsoftAccount: undefined,
-      username: newUsername
-    };
-    setFormData(newSettings);
-    updateUserSettings(newSettings);
-    toast.success(t('settings.saved'));
-  };
-
   const handleAuthError = (error: string) => {
     setAuthError(error);
     setIsAuthenticating(false);
@@ -220,43 +180,11 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
     setIsAuthenticating(false);
   };
 
-  const handleDiscordAuthSuccess = (account: DiscordAccount) => {
-    setAuthError(null);
-    const authMethod: 'both' | 'discord' = formData.microsoftAccount ? 'both' : 'discord';
-    const newSettings = {
-      ...formData,
-      authMethod,
-      discordAccount: account
-    };
-    setFormData(newSettings);
-    updateUserSettings(newSettings);
-    toast.success(t('settings.saved'));
-  };
-
-  const handleDiscordAuthClear = () => {
-    setAuthError(null);
-    const authMethod: 'microsoft' | 'offline' = formData.microsoftAccount ? 'microsoft' : 'offline';
-    const newSettings = {
-      ...formData,
-      authMethod,
-      discordAccount: undefined
-    };
-    setFormData(newSettings);
-    updateUserSettings(newSettings);
-    toast.success(t('settings.saved'));
-  };
-
   const handleSignInToLuminaKraft = async () => {
     try {
       const authService = AuthService.getInstance();
       await authService.signInToLuminaKraftAccount();
-
-      // Reload session after successful sign in
-      const { supabase } = await import('../../services/supabaseClient');
-      const { data: { user } } = await supabase.auth.getUser();
-      setLuminaKraftUser(user);
-
-      toast.success('Successfully signed in to LuminaKraft Account');
+      // The auth state change listener will update the UI automatically
     } catch (error) {
       console.error('Sign in error:', error);
       toast.error('Failed to sign in to LuminaKraft Account');
@@ -267,32 +195,64 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
     try {
       const authService = AuthService.getInstance();
       await authService.signUpLuminaKraftAccount();
-
-      // Reload session after successful sign up
-      const { supabase } = await import('../../services/supabaseClient');
-      const { data: { user } } = await supabase.auth.getUser();
-      setLuminaKraftUser(user);
-
-      toast.success('Successfully created LuminaKraft Account');
+      // The auth state change listener will update the UI automatically
     } catch (error) {
       console.error('Sign up error:', error);
       toast.error('Failed to create LuminaKraft Account');
     }
   };
 
-  const handleSignOutFromLuminaKraft = async () => {
-    if (!confirm('Are you sure you want to sign out from LuminaKraft Account? Your data will be preserved and you can sign in again anytime.')) {
-      return;
-    }
+  const handleProfileUpdate = async () => {
+    const { supabase } = await import('../../services/supabaseClient');
+    const { data: { user } } = await supabase.auth.getUser();
+    setLuminaKraftUser(user);
+  };
 
-    try {
-      const authService = AuthService.getInstance();
-      await authService.signOutSupabase();
+  const handleLinkDiscord = async () => {
+    const authService = AuthService.getInstance();
+    await authService.linkDiscordAccount();
+  };
+
+  const handleUnlinkDiscord = async () => {
+    if (!confirm('Are you sure you want to unlink your Discord account?')) return;
+    
+    const authService = AuthService.getInstance();
+    const success = await authService.unlinkDiscordAccount();
+    
+    if (success) {
+      toast.success('Discord account unlinked');
+      // Refresh user data
+      const { supabase } = await import('../../services/supabaseClient');
+      const { data: { user } } = await supabase.auth.getUser();
+      setLuminaKraftUser(user);
+      
+      // Update local settings
+      const newSettings = {
+        ...formData,
+        discordAccount: undefined
+      };
+      setFormData(newSettings);
+      updateUserSettings(newSettings);
+    } else {
+      toast.error('Failed to unlink Discord account');
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!confirm(t('auth.confirmDeleteAccount') || 'Are you sure you want to delete your account? This action cannot be undone.')) return;
+    
+    const authService = AuthService.getInstance();
+    const success = await authService.deleteAccount();
+    
+    if (success) {
+      toast.success(t('auth.accountDeleted') || 'Account deleted successfully');
       setLuminaKraftUser(null);
-      toast.success('Successfully signed out from LuminaKraft Account');
-    } catch (error) {
-      console.error('Sign out error:', error);
-      toast.error('Failed to sign out from LuminaKraft Account');
+      setFormData(prev => ({
+        ...prev,
+        discordAccount: undefined
+      }));
+    } else {
+      toast.error(t('auth.deleteAccountFailed') || 'Failed to delete account');
     }
   };
 
@@ -497,105 +457,115 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
             </div>
           </div>
 
-          {/* Microsoft Account (Minecraft) - LOCAL ONLY */}
+          {/* Minecraft Account - REDIRECT TO SIDEBAR */}
           <div className="card">
             <div className="flex items-center space-x-3 mb-6">
-              <Shield className="w-6 h-6 text-lumina-500" />
-              <h2 className="text-white text-xl font-semibold">Microsoft Account (Minecraft)</h2>
-            </div>
-
-            <div className="space-y-4">
-              <div className="p-4 bg-blue-600/10 border border-blue-600/20 rounded-lg">
-                <p className="text-blue-300 text-sm leading-relaxed">
-                  <strong className="text-blue-200">For Minecraft Premium Only</strong><br />
-                  This authenticates your Microsoft account locally to verify Minecraft ownership and launch games with your premium account. This data is stored only on your device and does NOT create a LuminaKraft platform account.
-                </p>
+              <div className="w-6 h-6 text-lumina-500">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M4 2h16a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm2 4v12h12V6H6zm3 3h6v6H9V9zm1 1v4h4v-4h-4z"/>
+                </svg>
               </div>
-
-              <MicrosoftAuth
-                userSettings={formData}
-                onAuthSuccess={handleMicrosoftAuthSuccess}
-                onAuthClear={handleMicrosoftAuthClear}
-                onError={handleAuthError}
-                onAuthStart={handleAuthStart}
-                onAuthStop={handleAuthStop}
-              />
+              <h2 className="text-white text-xl font-semibold">Minecraft Account</h2>
+            </div>
+            <div className="p-4 bg-blue-600/10 border border-blue-600/20 rounded-lg">
+              <p className="text-blue-300 text-sm leading-relaxed mb-3">
+                <strong className="text-blue-200">Manage your gameplay identity</strong><br />
+                Your Minecraft account (Premium or Offline) is managed directly from the sidebar. Click your player head/avatar in the sidebar to switch accounts or login.
+              </p>
             </div>
           </div>
 
-          {/* LuminaKraft Account - PLATFORM ACCOUNT */}
+          {/* Account Management */}
           <div className="card">
             <div className="flex items-center space-x-3 mb-6">
               <User className="w-6 h-6 text-lumina-500" />
-              <h2 className="text-white text-xl font-semibold">LuminaKraft Account</h2>
+              <h2 className="text-white text-xl font-semibold">{t('settings.luminakraftAccount')}</h2>
             </div>
 
-            <div className="space-y-4">
-              <div className="p-4 bg-purple-600/10 border border-purple-600/20 rounded-lg">
-                <p className="text-purple-300 text-sm leading-relaxed">
-                  <strong className="text-purple-200">Platform Account for Exclusive Features</strong><br />
-                  Sign in to access publishing modpacks, syncing stats, exclusive content, and community features. Your account data is stored securely in the LuminaKraft platform.
-                </p>
-              </div>
+            <div className="p-4 bg-purple-600/10 border border-purple-600/20 rounded-lg mb-6">
+              <p className="text-purple-300 text-sm leading-relaxed">
+                <strong className="text-purple-200">{t('settings.luminakraftAccountDesc')}</strong><br />
+                {t('settings.luminakraftAccountHelp')}
+              </p>
+            </div>
 
-              {isLoadingLuminaKraft ? (
-                <div className="p-4 bg-dark-700 rounded-lg">
-                  <p className="text-dark-400 text-center">Loading account status...</p>
-                </div>
-              ) : luminaKraftUser ? (
-                <div className="space-y-3">
-                  <h3 className="text-white text-lg font-medium">Account Status</h3>
-                  <div className="flex items-center justify-between p-4 bg-green-600/10 border border-green-600/20 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <CheckCircleIcon className="w-5 h-5 text-green-400" />
-                      <div>
-                        <p className="font-medium text-green-200">Signed In</p>
-                        <p className="text-sm text-green-400">{luminaKraftUser.email}</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={handleSignOutFromLuminaKraft}
-                      className="px-3 py-1 text-sm bg-red-600/20 text-red-300 rounded hover:bg-red-600/40 transition-colors"
-                    >
-                      Sign Out
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <h3 className="text-white text-lg font-medium">Account Access</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      onClick={handleSignInToLuminaKraft}
-                      className="btn-primary flex items-center justify-center space-x-2"
-                    >
-                      <User className="w-4 h-4" />
-                      <span>Sign In</span>
-                    </button>
-                    <button
-                      onClick={handleSignUpToLuminaKraft}
-                      className="btn-secondary flex items-center justify-center space-x-2"
-                    >
-                      <User className="w-4 h-4" />
-                      <span>Sign Up</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              <div className="border-t border-dark-700 pt-6">
-                <h3 className="text-white text-lg font-medium mb-2">Linked Accounts</h3>
-                <p className="text-dark-300 text-sm mb-4">
-                  Connect your Discord account to access exclusive features and community benefits.
-                </p>
-
-                <DiscordAuth
-                  onAuthSuccess={handleDiscordAuthSuccess}
-                  onAuthClear={handleDiscordAuthClear}
-                  onError={handleAuthError}
+            {luminaKraftUser ? (
+              <>
+                <ProfileEditor
+                  luminaKraftUser={luminaKraftUser}
+                  discordAccount={formData.discordAccount || null}
+                  onUpdate={handleProfileUpdate}
                 />
+
+                <div className="mt-8 border-t border-dark-700 pt-6">
+                  <h3 className="text-lg font-medium text-white mb-4">{t('settings.linkedAccounts')}</h3>
+                  
+                  {formData.discordAccount ? (
+                    <div className="flex items-center justify-between p-4 bg-dark-700 rounded-lg border border-dark-600">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 rounded-full bg-[#5865F2] flex items-center justify-center">
+                          <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037 3.42 3.42 0 0 0-.623 1.281 18.346 18.346 0 0 0-5.462 0 2.79 2.79 0 0 0-.623-1.281.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.086 2.176 2.419 0 1.334-.966 2.419-2.176 2.419zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.086 2.176 2.419 0 1.334-.966 2.419-2.176 2.419z"/>
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="font-medium text-white">{formData.discordAccount.username}</p>
+                          <p className="text-xs text-green-400">{t('settings.connected')}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleUnlinkDiscord}
+                        className="text-red-400 hover:text-red-300 text-sm font-medium px-3 py-1 rounded hover:bg-red-400/10 transition-colors"
+                      >
+                        {t('auth.unlinkDiscord')}
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={handleLinkDiscord}
+                      className="w-full p-4 border border-dashed border-dark-600 rounded-lg hover:border-dark-500 hover:bg-dark-700/50 transition-colors flex items-center justify-center space-x-2 group"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-[#5865F2]/20 group-hover:bg-[#5865F2]/30 flex items-center justify-center transition-colors">
+                         <svg className="w-5 h-5 text-[#5865F2]" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037 3.42 3.42 0 0 0-.623 1.281 18.346 18.346 0 0 0-5.462 0 2.79 2.79 0 0 0-.623-1.281.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.086 2.176 2.419 0 1.334-.966 2.419-2.176 2.419zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.086 2.176 2.419 0 1.334-.966 2.419-2.176 2.419z"/>
+                         </svg>
+                      </div>
+                      <span className="text-dark-300 group-hover:text-white transition-colors font-medium">{t('auth.linkDiscord')}</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Danger Zone */}
+                <div className="mt-8 border-t border-red-900/30 pt-6">
+                  <h3 className="text-red-400 font-medium mb-2">{t('settings.dangerZone')}</h3>
+                  <button onClick={handleDeleteAccount} className="text-sm text-red-400 hover:text-red-300 border border-red-900/50 rounded px-3 py-2 hover:bg-red-900/20 transition-colors">
+                    {t('settings.deleteAccount')}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center p-6 bg-dark-700 rounded-lg border border-dark-600">
+                <User className="w-12 h-12 text-dark-400 mb-4" />
+                <h3 className="text-lg font-medium text-white mb-2">{t('settings.accountAccess')}</h3>
+                <p className="text-dark-400 text-center mb-6 max-w-sm">
+                  {t('settings.luminakraftAccountHelp')}
+                </p>
+                <div className="flex space-x-4 w-full max-w-xs">
+                  <button 
+                    onClick={handleSignInToLuminaKraft}
+                    className="flex-1 btn-primary py-2"
+                  >
+                    {t('settings.signIn')}
+                  </button>
+                  <button 
+                    onClick={handleSignUpToLuminaKraft}
+                    className="flex-1 btn-secondary py-2"
+                  >
+                    {t('settings.signUp')}
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* API Status */}
@@ -836,4 +806,4 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
   );
 };
 
-export default SettingsPage; 
+export default SettingsPage;

@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Home, Settings, Info, AlertCircle, Pin, PinOff, FolderOpen, UploadCloud } from 'lucide-react';
 import { useLauncher } from '../../contexts/LauncherContext';
 import PlayerHeadLoader from '../PlayerHeadLoader';
 import { check } from '@tauri-apps/plugin-updater';
+import MinecraftAccountDropdown from './AccountDropdown'; // Using the file we just refactored
 
 interface SidebarProps {
   activeSection: string;
@@ -12,7 +13,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => {
   const { t } = useTranslation();
-  const { userSettings } = useLauncher();
+  const { userSettings, updateUserSettings } = useLauncher(); // Added updateUserSettings
   const [isExpanded, setIsExpanded] = useState(false);
   const [isPinned, setIsPinned] = useState(() => {
     if (typeof window === 'undefined') return false;
@@ -20,6 +21,10 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
   });
   const [hasUpdate, setHasUpdate] = useState(false);
   const [latestVersion, setLatestVersion] = useState<string>('');
+
+  // Minecraft Account Dropdown State
+  const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
+  const playerSectionRef = useRef<HTMLDivElement>(null);
 
   // Persist pin state
   useEffect(() => {
@@ -81,15 +86,12 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
   ];
 
   const handleAvatarClick = () => {
-    if (userSettings.authMethod === 'offline') {
-      localStorage.setItem('triggerMicrosoftAuth', '1');
-    }
-    onSectionChange('settings');
+    setIsAccountDropdownOpen(!isAccountDropdownOpen);
   };
 
   return (
     <div 
-      className={`${isExpanded ? 'w-64' : 'w-20'} bg-dark-800 border-r border-dark-700 flex flex-col transition-all duration-200 ease-in-out select-none`}
+      className={`${isExpanded ? 'w-64' : 'w-20'} bg-dark-800 border-r border-dark-700 flex flex-col transition-all duration-200 ease-in-out select-none relative`}
       style={{
         animation: 'fadeInLeft 0.4s ease-out'
       }}
@@ -99,8 +101,17 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
         }
       }}
     >
+      {/* Minecraft Account Dropdown */}
+      <MinecraftAccountDropdown
+        isOpen={isAccountDropdownOpen}
+        onClose={() => setIsAccountDropdownOpen(false)}
+        anchorRef={playerSectionRef}
+        userSettings={userSettings}
+        onUpdateSettings={updateUserSettings}
+      />
+
       {/* Header - consistent positioning */}
-      <div className="p-4 h-20 border-b border-dark-700 flex items-center">
+      <div ref={playerSectionRef} className="p-4 h-20 border-b border-dark-700 flex items-center">
         <div className="flex items-center space-x-3 w-full pl-[0.25rem]">
           {/* Player info when logged in with Microsoft */}
           {userSettings.authMethod === 'microsoft' && userSettings.microsoftAccount ? (
