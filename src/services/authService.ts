@@ -519,6 +519,14 @@ class AuthService {
                   console.error('SyncDiscordData failed:', err);
                 }
               }
+
+              // Focus the launcher window
+              try {
+                await invoke('focus_window');
+                console.log('Launcher window focused');
+              } catch (focusError) {
+                console.warn('Failed to focus window:', focusError);
+              }
             }
           } catch (e) {
             console.error('Error in oauth-callback listener (link):', e);
@@ -1074,6 +1082,167 @@ class AuthService {
     } catch (error) {
       console.error('Error unlinking Discord account:', error);
       return false;
+    }
+  }
+
+  /**
+   * Link any OAuth provider (GitHub, Google, etc.)
+   */
+  async linkProvider(provider: 'github' | 'google'): Promise<boolean> {
+    try {
+      console.log(`Linking ${provider} account...`);
+
+      const { supabase } = await import('./supabaseClient');
+
+      // Check if user is already logged in
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        console.error('No active session. User must sign in first.');
+        return false;
+      }
+
+      // 1. Start HTTP server and get port
+      const port = await invoke<number>('start_oauth_server');
+      console.log(`OAuth server started on port ${port}`);
+
+      // Construct redirect URL with port
+      const redirectUrl = `https://luminakraft.com/auth-callback?launcher=true&port=${port}`;
+
+      // 2. Set up event listener for oauth callback
+      const { listen } = await import('@tauri-apps/api/event');
+      const unlisten = await listen<{
+        access_token: string;
+        refresh_token: string;
+        provider_token?: string;
+        provider_refresh_token?: string;
+      }>(
+        'oauth-callback',
+        async (event) => {
+          console.log(`${provider} link callback received`);
+          try {
+            const { access_token, refresh_token } = event.payload;
+
+            // Update session with new identity
+            const timeoutPromise = new Promise<{ data: { session: null }, error: Error }>((_, reject) =>
+              setTimeout(() => reject(new Error('SetSession timeout')), 10000)
+            );
+
+            const setSessionPromise = supabase.auth.setSession({
+              access_token,
+              refresh_token
+            });
+
+            const { data, error } = await Promise.race([setSessionPromise, timeoutPromise]) as any;
+
+            console.log(`SetSession result (${provider} link):`, { error, hasSession: !!data?.session });
+
+            if (error) {
+              console.error(`Failed to link ${provider}:`, error);
+            } else {
+              console.log(`✅ ${provider} linked successfully`);
+
+              // Focus the launcher window
+              try {
+                await invoke('focus_window');
+                console.log('Launcher window focused');
+              } catch (focusError) {
+                console.warn('Failed to focus window:', focusError);
+              }
+            }
+          } catch (e) {
+            console.error(`Error in oauth-callback listener (${provider} link):`, e);
+          } finally {
+            unlisten();
+          }
+        }
+      );
+
+      // 3. Link identity
+      console.log(`User logged in, linking ${provider} identity...`);
+      const { data, error } = await supabase.auth.linkIdentity({
+        provider: provider,
+        options: {
+          redirectTo: redirectUrl,
+          skipBrowserRedirect: true
+        }
+      });
+
+      if (error || !data?.url) {
+        console.error(`${provider} OAuth error:`, error);
+        return false;
+      }
+
+      // 4. Open OAuth URL in external browser
+      await invoke('open_url', { url: data.url });
+
+      console.log(`${provider} OAuth opened. Redirecting to: ${redirectUrl}`);
+      return true;
+    } catch (error) {
+      console.error(`Error linking ${provider} account:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Unlink any OAuth provider (GitHub, Google, etc.)
+   */
+  async unlinkProvider(provider: 'github' | 'google' | 'discord'): Promise<boolean> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) return false;
+
+      console.log(`Unlinking ${provider} account...`);
+
+      // Get user identities
+      const { data: identities } = await supabase.auth.getUserIdentities();
+      console.log('User identities:', identities);
+
+      const identity = identities?.identities?.find(
+        (id) => id.provider === provider
+      );
+
+      if (!identity) {
+        console.log(`No ${provider} identity found`);
+        return false;
+      }
+
+      console.log(`Attempting to unlink ${provider} identity:`, identity.id);
+      const { error: unlinkError } = await supabase.auth.unlinkIdentity(identity);
+
+      if (unlinkError) {
+        console.error(`Failed to unlink ${provider}:`, unlinkError);
+        return false;
+      }
+
+      console.log(`${provider} account unlinked successfully`);
+      return true;
+    } catch (error) {
+      console.error(`Error unlinking ${provider} account:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Get all linked providers for the current user
+   */
+  async getLinkedProviders(): Promise<{ provider: string; email?: string; id: string }[]> {
+    try {
+      const { data: identities } = await supabase.auth.getUserIdentities();
+
+      if (!identities?.identities) {
+        return [];
+      }
+
+      return identities.identities.map(identity => ({
+        provider: identity.provider,
+        email: identity.identity_data?.email,
+        id: identity.id
+      }));
+    } catch (error) {
+      console.error('Error getting linked providers:', error);
+      return [];
     }
   }
 
