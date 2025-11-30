@@ -346,11 +346,15 @@ class AuthService {
 
   /**
    * Sync Microsoft/Minecraft data to LuminaKraft account if both are available
-   * Called after successful login to either service
+   * Called after successful login to either service.
+   * 
+   * IMPORTANT: This method strictly uses the LOCAL Minecraft authentication data (from localStorage)
+   * to update the user's profile. It does NOT use the Supabase Auth provider data (Azure/Microsoft)
+   * to fill these columns, as they represent distinct identities (Platform Login vs Game Profile).
    */
   async syncMicrosoftData(microsoftAccount?: MicrosoftAccount): Promise<void> {
     try {
-      console.log('Attempting to sync Microsoft data to LuminaKraft account...');
+      console.log('Attempting to sync LOCAL Minecraft data to LuminaKraft account...');
       
       // 1. Get Microsoft Data (either passed or from local storage)
       let account = microsoftAccount;
@@ -365,7 +369,7 @@ class AuthService {
       }
 
       if (!account) {
-        console.log('No Microsoft account data found locally to sync.');
+        console.log('No local Minecraft account data found to sync.');
         return;
       }
 
@@ -376,15 +380,18 @@ class AuthService {
         return;
       }
 
-      console.log('Syncing Microsoft data:', { 
+      console.log('Syncing Minecraft profile data:', { 
         username: account.username, 
         uuid: account.uuid,
+        xuid: account.xuid,
         userId: session.user.id 
       });
 
       // 3. Update Database
+      // We use the Minecraft Profile UUID for minecraft_uuid
+      // We use the Xbox User ID (xuid) for microsoft_id (as it's the stable account ID)
       const { error } = await updateUser(session.user.id, {
-        microsoft_id: account.uuid, // Using UUID as the unique ID
+        microsoft_id: account.xuid, 
         minecraft_username: account.username,
         minecraft_uuid: account.uuid,
         is_minecraft_verified: true,
@@ -394,7 +401,7 @@ class AuthService {
       if (error) {
         console.error('Failed to sync Microsoft data to DB:', error);
       } else {
-        console.log('✅ Microsoft data synced to LuminaKraft account successfully');
+        console.log('✅ Minecraft profile data synced to LuminaKraft account successfully');
         this.emitProfileUpdate();
       }
 
@@ -636,84 +643,89 @@ class AuthService {
 
       // Fallback to user metadata if API fetch failed
       if (!discordUser) {
-        console.log('Falling back to user metadata...');
-        discordUser = {
-          id: user.user_metadata?.provider_id,
-          username: user.user_metadata?.username || user.user_metadata?.custom_claims?.username,
-          global_name: user.user_metadata?.global_name || user.user_metadata?.custom_claims?.global_name,
-          avatar_url: user.user_metadata?.avatar_url,
-          avatar: user.user_metadata?.avatar
-        };
+        // CRITICAL: Only use metadata if the current provider IS Discord.
+        // Otherwise we risk using Microsoft metadata for Discord fields if logged in via Microsoft.
+        if (user.app_metadata.provider === 'discord') {
+          console.log('Falling back to user metadata...');
+          discordUser = {
+            id: user.user_metadata?.provider_id,
+            username: user.user_metadata?.username || user.user_metadata?.custom_claims?.username,
+            global_name: user.user_metadata?.global_name || user.user_metadata?.custom_claims?.global_name,
+            avatar_url: user.user_metadata?.avatar_url,
+            avatar: user.user_metadata?.avatar
+          };
+        } else {
+          console.log('Current provider is not Discord, and no API token provided. Skipping Discord profile update.');
+        }
       }
 
       if (!discordUser?.id) {
-        console.error('No Discord ID found');
-        return false;
+        console.log('No Discord user data available to sync profile.');
+      } else {
+        console.log('Syncing Discord data from session...');
+        console.log('Discord user data:', {
+          provider_id: discordUser.id,
+          username: discordUser.username,
+          global_name: discordUser.global_name
+        });
+
+        // Update users table with Discord data
+        // Note: username is the actual Discord username, global_name is the display name
+        // Discord eliminated discriminators, so we don't save it anymore
+
+        // Extract avatar hash
+        // If from API: avatar is just the hash
+        // If from metadata: avatar_url might be full URL
+        let avatarHash = discordUser.avatar || null;
+        if (discordUser.avatar_url && !avatarHash) {
+          // URL format: https://cdn.discordapp.com/avatars/USER_ID/HASH.png
+          const avatarMatch = discordUser.avatar_url.match(/avatars\/\d+\/([^.?]+)/);
+          avatarHash = avatarMatch ? avatarMatch[1] : null;
+        }
+
+        // Clean username - remove discriminator if present (legacy format username#0000)
+        let cleanUsername = discordUser.username || '';
+        if (cleanUsername.includes('#')) {
+          cleanUsername = cleanUsername.split('#')[0];
+        }
+
+        // Fetch current user data to calculate display_name with priority
+        const { data: currentUser } = await supabase
+          .from('users')
+          .select('minecraft_username, email')
+          .eq('id', user.id)
+          .single<{
+            minecraft_username: string | null;
+            email: string | null;
+          }>();
+
+        // Calculate display_name with priority: Discord global_name > Discord username > Minecraft username > Email > User
+        const calculated_display_name =
+          discordUser.global_name ||
+          cleanUsername ||
+          currentUser?.minecraft_username ||
+          currentUser?.email?.split('@')[0] ||
+          'User';
+
+        const updateData = {
+          discord_id: discordUser.id,
+          discord_username: cleanUsername,
+          discord_global_name: discordUser.global_name,
+          discord_avatar: avatarHash,
+          discord_linked_at: new Date().toISOString(), // Track when Discord was linked
+          email: discordUser.email || currentUser?.email, // Use Discord email if available
+          display_name: calculated_display_name
+        };
+
+        const { error: updateError } = await updateUser(user.id, updateData);
+
+        if (updateError) {
+          console.error('Failed to update user with Discord data:', updateError);
+          return false;
+        }
+
+        console.log('Discord data updated in database');
       }
-
-      console.log('Syncing Discord data from session...');
-      console.log('Discord user data:', {
-        provider_id: discordUser.id,
-        username: discordUser.username,
-        global_name: discordUser.global_name
-      });
-
-      // Update users table with Discord data
-      // Note: username is the actual Discord username, global_name is the display name
-      // Discord eliminated discriminators, so we don't save it anymore
-
-      // Extract avatar hash
-      // If from API: avatar is just the hash
-      // If from metadata: avatar_url might be full URL
-      let avatarHash = discordUser.avatar || null;
-      if (discordUser.avatar_url && !avatarHash) {
-        // URL format: https://cdn.discordapp.com/avatars/USER_ID/HASH.png
-        const avatarMatch = discordUser.avatar_url.match(/avatars\/\d+\/([^.?]+)/);
-        avatarHash = avatarMatch ? avatarMatch[1] : null;
-      }
-
-      // Clean username - remove discriminator if present (legacy format username#0000)
-      let cleanUsername = discordUser.username || '';
-      if (cleanUsername.includes('#')) {
-        cleanUsername = cleanUsername.split('#')[0];
-      }
-
-      // Fetch current user data to calculate display_name with priority
-      const { data: currentUser } = await supabase
-        .from('users')
-        .select('minecraft_username, email')
-        .eq('id', user.id)
-        .single<{
-          minecraft_username: string | null;
-          email: string | null;
-        }>();
-
-      // Calculate display_name with priority: Discord global_name > Discord username > Minecraft username > Email > User
-      const calculated_display_name =
-        discordUser.global_name ||
-        cleanUsername ||
-        currentUser?.minecraft_username ||
-        currentUser?.email?.split('@')[0] ||
-        'User';
-
-      const updateData = {
-        discord_id: discordUser.id,
-        discord_username: cleanUsername,
-        discord_global_name: discordUser.global_name,
-        discord_avatar: avatarHash,
-        discord_linked_at: new Date().toISOString(), // Track when Discord was linked
-        email: discordUser.email || currentUser?.email, // Use Discord email if available
-        display_name: calculated_display_name
-      };
-
-      const { error: updateError } = await updateUser(user.id, updateData);
-
-      if (updateError) {
-        console.error('Failed to update user with Discord data:', updateError);
-        return false;
-      }
-
-      console.log('Discord data updated in database');
 
       // Capture anonymous username from localStorage if applicable
       // This should happen ONLY if:
