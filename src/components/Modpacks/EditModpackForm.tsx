@@ -64,6 +64,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
   const [changelog, setChangelog] = useState({ en: '', es: '' });
   const [zipFile, setZipFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -309,6 +310,27 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
     setZipFile(file);
     resetValidation();
     await validateAndParseManifest(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file && file.name.endsWith('.zip')) {
+      handleZipFile(file);
+    } else {
+      toast.error('Please upload a valid ZIP file');
+    }
   };
 
   const handleUploadNewVersion = async () => {
@@ -811,7 +833,15 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                 <div className="space-y-6">
                   <div>
                     <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Modpack ZIP File</label>
-                    <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
+                    <div
+                      className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${isDragging
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                          : 'border-gray-300 dark:border-gray-600'
+                        }`}
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                    >
                       <input
                         type="file"
                         accept=".zip"

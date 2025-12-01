@@ -128,7 +128,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
         return {
           text: state.status === 'installing' ? t('modpacks.installing') : t('modpacks.updating'),
           icon: Loader2,
-          onClick: () => {},
+          onClick: () => { },
           className: 'btn-secondary',
           disabled: true
         };
@@ -136,7 +136,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
         return {
           text: t('modpacks.launching'),
           icon: Loader2,
-          onClick: () => {},
+          onClick: () => { },
           className: 'btn-success',
           disabled: true
         };
@@ -152,7 +152,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
         return {
           text: t('modpacks.stopping'),
           icon: Loader2,
-          onClick: () => {},
+          onClick: () => { },
           className: 'btn-danger',
           disabled: true
         };
@@ -170,7 +170,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
           return {
             text: t('modpacks.notAvailable'),
             icon: AlertTriangle,
-            onClick: () => {},
+            onClick: () => { },
             className: 'btn-secondary',
             disabled: true
           };
@@ -234,7 +234,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
     : state.progress?.percentage ?? 0;
 
   const displayName = modpack.name;
-  const displayDescription = modpack.shortDescription || modpack.description || t('modpacks.description');
+  const displayDescription = modpack.shortDescription || modpack.description || '';
 
   // Parse general message format: "progress.key|counter" or just "progress.key"
   const parseGeneralMessage = (message?: string): { translatedMessage: string; counter?: string } => {
@@ -256,7 +256,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
 
   const getStepMessage = (step?: string): string => {
     if (!step) return '';
-    
+
     // Map snake_case step names to camelCase translation keys
     const stepToTranslationKey: { [key: string]: string } = {
       'checking': 'checking',
@@ -312,11 +312,11 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
   const handleRemoveModpack = async () => {
     try {
       setIsRemoving(true);
-              console.log('🗑️ Removing instance:', modpack.id);
+      console.log('🗑️ Removing instance:', modpack.id);
       await removeModpack(modpack.id);
       setShowRemoveDialog(false);
     } catch (error) {
-              console.error('❌ Error removing instance:', error);
+      console.error('❌ Error removing instance:', error);
     } finally {
       setIsRemoving(false);
     }
@@ -333,18 +333,15 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
 
   // Special styling for coming soon items
   const isComingSoon = modpack.isComingSoon;
-  const cardClasses = `card cursor-pointer group flex flex-col h-full relative ${
-    getAnimationClass('hover:bg-dark-700 transition-all duration-200', 'hover:border-lumina-400/40')
-  } ${
-    isComingSoon 
-      ? `border-2 border-blue-500/50 shadow-blue-500/20 shadow-lg ${
-          getAnimationClass('', 'hover:border-blue-400/70 hover:shadow-blue-400/30 hover:shadow-xl')
-        }` 
+  const cardClasses = `card cursor-pointer group flex flex-col h-full relative ${getAnimationClass('hover:bg-dark-700 transition-all duration-200', 'hover:border-lumina-400/40')
+    } ${isComingSoon
+      ? `border-2 border-blue-500/50 shadow-blue-500/20 shadow-lg ${getAnimationClass('', 'hover:border-blue-400/70 hover:shadow-blue-400/30 hover:shadow-xl')
+      }`
       : ''
-  }`;
+    }`;
 
   return (
-    <div 
+    <div
       className={cardClasses}
       style={{
         animation: `fadeInUp 0.4s ease-out ${index * 0.05 + 0.2}s backwards`,
@@ -360,9 +357,8 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
 
       {/* Coming Soon Glow Effect */}
       {isComingSoon && (
-        <div className={`absolute inset-0 rounded-lg bg-gradient-to-br from-blue-500/10 via-transparent to-blue-400/5 pointer-events-none ${
-          getAnimationClass('', 'animate-pulse')
-        }`} />
+        <div className={`absolute inset-0 rounded-lg bg-gradient-to-br from-blue-500/10 via-transparent to-blue-400/5 pointer-events-none ${getAnimationClass('', 'animate-pulse')
+          }`} />
       )}
 
       <div onClick={onSelect} className="flex-1 flex flex-col">
@@ -396,9 +392,8 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
               <img
                 src={modpack.logo}
                 alt={displayName}
-                className={`relative z-10 max-w-full max-h-full object-contain transition-transform duration-200 ${
-                  getAnimationClass('', 'group-hover:scale-105')
-                }`}
+                className={`relative z-10 max-w-full max-h-full object-contain transition-transform duration-200 ${getAnimationClass('', 'group-hover:scale-105')
+                  }`}
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSIjMzc0MTUxIi8+CjxwYXRoIGQ9Ik0yNCAyNEg0MFY0MEgyNFYyNFoiIGZpbGw9IiM2Mzc1ODMiLz4KPC9zdmc+';
@@ -409,18 +404,16 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
 
           {/* Modpack Info */}
           <div className="space-y-3 flex-1">
-            <h3 className={`text-white font-semibold text-lg truncate transition-colors duration-200 pr-2 ${
-              getAnimationClass('', 'group-hover:text-lumina-300')
-            }`}>
+            <h3 className={`text-white font-semibold text-lg truncate transition-colors duration-200 pr-2 ${getAnimationClass('', 'group-hover:text-lumina-300')
+              }`}>
               {displayName}
             </h3>
-            
-            <p className={`text-dark-300 text-sm line-clamp-2 transition-colors duration-200 ${
-              getAnimationClass('', 'group-hover:text-dark-200')
-            }`}>
+
+            <p className={`text-dark-300 text-sm line-clamp-2 transition-colors duration-200 ${getAnimationClass('', 'group-hover:text-dark-200')
+              }`}>
               {displayDescription}
             </p>
-            
+
             {/* Category Badge */}
             {!hideServerBadges && (
               <div className="mb-2">
@@ -428,28 +421,23 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
               </div>
             )}
 
-            <div className={`flex items-center space-x-3 text-xs text-dark-400 transition-colors duration-200 ${
-              getAnimationClass('', 'group-hover:text-dark-300')
-            }`}>
-              <span className={`bg-dark-700/50 px-2 py-1 rounded-full transition-all duration-200 ${
-                getAnimationClass('', 'group-hover:bg-lumina-600/20')
+            <div className={`flex items-center space-x-3 text-xs text-dark-400 transition-colors duration-200 ${getAnimationClass('', 'group-hover:text-dark-300')
               }`}>
+              <span className={`bg-dark-700/50 px-2 py-1 rounded-full transition-all duration-200 ${getAnimationClass('', 'group-hover:bg-lumina-600/20')
+                }`}>
                 v{modpack.version}
               </span>
-              <span className={`bg-dark-700/50 px-2 py-1 rounded-full transition-all duration-200 ${
-                getAnimationClass('', 'group-hover:bg-lumina-600/20')
-              }`}>
+              <span className={`bg-dark-700/50 px-2 py-1 rounded-full transition-all duration-200 ${getAnimationClass('', 'group-hover:bg-lumina-600/20')
+                }`}>
                 Minecraft {modpack.minecraftVersion}
               </span>
-              <span className={`capitalize bg-dark-700/50 px-2 py-1 rounded-full transition-all duration-200 ${
-                getAnimationClass('', 'group-hover:bg-lumina-600/20')
-              }`}>
+              <span className={`capitalize bg-dark-700/50 px-2 py-1 rounded-full transition-all duration-200 ${getAnimationClass('', 'group-hover:bg-lumina-600/20')
+                }`}>
                 {modpack.modloader} {modpack.modloaderVersion}
               </span>
               {modpack.gamemode && (
-                <span className={`text-lumina-400 bg-lumina-600/20 px-2 py-1 rounded-full transition-all duration-200 ${
-                  getAnimationClass('', 'group-hover:bg-lumina-600/30')
-                }`}>
+                <span className={`text-lumina-400 bg-lumina-600/20 px-2 py-1 rounded-full transition-all duration-200 ${getAnimationClass('', 'group-hover:bg-lumina-600/30')
+                  }`}>
                   {modpack.gamemode}
                 </span>
               )}
@@ -517,7 +505,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
                       );
                     })()}
                   </div>
-                  
+
                   {/* Right side: ETA aligned with percentage */}
                   <div className="flex-shrink-0 font-mono">
                     <div className="relative">
@@ -545,9 +533,8 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
       </div>
 
       {/* Action Buttons */}
-      <div className={`mt-4 pt-4 border-t border-dark-700 transition-colors duration-200 ${
-        getAnimationClass('', 'group-hover:border-lumina-400/30')
-      }`}>
+      <div className={`mt-4 pt-4 border-t border-dark-700 transition-colors duration-200 ${getAnimationClass('', 'group-hover:border-lumina-400/30')
+        }`}>
         <div className="flex gap-2">
           <button
             onClick={(e) => {
@@ -557,12 +544,12 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
             disabled={buttonConfig.disabled}
             className={`${buttonConfig.className} flex-1 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed`}
           >
-            <ButtonIcon 
+            <ButtonIcon
               className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`}
             />
             <span>{buttonConfig.text}</span>
           </button>
-          
+
           {/* Open folder button */}
           {['installed', 'outdated', 'error'].includes(state.status) && (
             <button
@@ -577,7 +564,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
               <FolderOpen className="w-4 h-4" />
             </button>
           )}
-          
+
           {/* Remove button */}
           {['installed', 'outdated', 'error'].includes(state.status) && (
             <button
