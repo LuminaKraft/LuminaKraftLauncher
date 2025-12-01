@@ -1163,6 +1163,11 @@ class AuthService {
    */
   async unlinkProvider(provider: 'github' | 'google' | 'azure' | 'discord'): Promise<boolean> {
     try {
+      // Discord requires special handling to clean up database
+      if (provider === 'discord') {
+        return await this.unlinkDiscordAccount();
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
 
       if (!user) return false;
