@@ -114,6 +114,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
         anchorRef={playerSectionRef}
         userSettings={userSettings}
         onUpdateSettings={updateUserSettings}
+        onNavigateToAccount={() => onSectionChange('account')}
       />
 
       {/* Header - consistent positioning */}

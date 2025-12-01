@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User as UserIcon, LogOut, LogIn, WifiOff, Gamepad2 } from 'lucide-react';
+import { User as UserIcon, LogOut, LogIn, WifiOff, Gamepad2, Settings } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { UserSettings, MicrosoftAccount } from '../../types/launcher';
 import AuthService from '../../services/authService';
@@ -11,6 +11,7 @@ interface MinecraftAccountDropdownProps {
   anchorRef: React.RefObject<HTMLDivElement>;
   userSettings: UserSettings;
   onUpdateSettings: (settings: UserSettings) => void;
+  onNavigateToAccount?: () => void;
 }
 
 const MinecraftAccountDropdown: React.FC<MinecraftAccountDropdownProps> = ({
@@ -19,17 +20,19 @@ const MinecraftAccountDropdown: React.FC<MinecraftAccountDropdownProps> = ({
   anchorRef,
   userSettings,
   onUpdateSettings,
+  onNavigateToAccount,
 }) => {
   const { t } = useTranslation();
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [offlineUsername, setOfflineUsername] = useState(userSettings.username || 'Player');
   const [isEditingUsername, setIsEditingUsername] = useState(false);
+  const [luminaKraftUser, setLuminaKraftUser] = useState<any>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
-        isOpen && 
-        anchorRef.current && 
+        isOpen &&
+        anchorRef.current &&
         !anchorRef.current.contains(event.target as Node) &&
         !(event.target as Element).closest('.minecraft-account-dropdown')
       ) {
@@ -42,6 +45,34 @@ const MinecraftAccountDropdown: React.FC<MinecraftAccountDropdownProps> = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isOpen, onClose, anchorRef]);
+
+  // Listen for LuminaKraft profile updates
+  useEffect(() => {
+    const loadLuminaKraftUser = async () => {
+      try {
+        const { supabase } = await import('../../services/supabaseClient');
+        const { data: { user } } = await supabase.auth.getUser();
+        setLuminaKraftUser(user);
+      } catch (error) {
+        console.error('Error loading LuminaKraft user:', error);
+      }
+    };
+
+    // Load initial state
+    loadLuminaKraftUser();
+
+    // Listen for profile updates
+    const handleProfileUpdate = () => {
+      console.log('Profile update event received in AccountDropdown');
+      loadLuminaKraftUser();
+    };
+
+    window.addEventListener('luminakraft:profile-updated', handleProfileUpdate);
+
+    return () => {
+      window.removeEventListener('luminakraft:profile-updated', handleProfileUpdate);
+    };
+  }, []);
 
   // Initialize offline username from settings if not in Microsoft mode
   useEffect(() => {
@@ -217,6 +248,41 @@ const MinecraftAccountDropdown: React.FC<MinecraftAccountDropdownProps> = ({
             </p>
           </div>
         )}
+
+        {/* LuminaKraft Account Section */}
+        <div className="pt-3 border-t border-dark-700">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">LuminaKraft Account</h4>
+          </div>
+          {luminaKraftUser ? (
+            <div className="flex items-center justify-between p-2 bg-lumina-900/10 border border-lumina-800/30 rounded">
+              <div className="flex items-center space-x-2">
+                <UserIcon className="w-4 h-4 text-lumina-400" />
+                <span className="text-sm text-white">{luminaKraftUser.user_metadata?.display_name || luminaKraftUser.email}</span>
+              </div>
+              <button
+                onClick={() => {
+                  onNavigateToAccount?.();
+                  onClose();
+                }}
+                className="text-xs px-2 py-1 text-lumina-400 hover:text-lumina-300 hover:bg-lumina-400/10 rounded transition-colors"
+              >
+                <Settings className="w-3 h-3" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                onNavigateToAccount?.();
+                onClose();
+              }}
+              className="w-full btn-secondary text-sm py-2 flex items-center justify-center space-x-2"
+            >
+              <LogIn className="w-4 h-4" />
+              <span>Sign In</span>
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

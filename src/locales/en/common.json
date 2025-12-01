@@ -325,6 +325,8 @@
     "signInMicrosoft": "Sign in with Microsoft",
     "signing": "Starting...",
     "authenticated": "Authenticated with Microsoft",
+    "signIn": "Sign In",
+    "signUp": "Sign Up",
     "signOut": "Sign out",
     "tokenExpired": "Token expired",
     "tokenExpiredDescription": "Your session has expired, you need to refresh the token",
