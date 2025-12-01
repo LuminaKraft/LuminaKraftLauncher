@@ -167,11 +167,17 @@ export class ModpackManagementService {
         return { success: false, error: 'Insufficient permissions' };
       }
 
-      // Get user ID from users table
+      // Get authenticated user from Supabase
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+      if (authError || !authUser) {
+        return { success: false, error: 'User not authenticated' };
+      }
+
+      // Get user data from users table
       const { data: userData } = await supabase
         .from('users')
         .select('id, partner_id')
-        .eq('microsoft_id', this.microsoftAccount.xuid)
+        .eq('id', authUser.id)
         .single() as { data: { id: string; partner_id: string | null } | null };
 
       if (!userData) {
