@@ -387,7 +387,22 @@ export class ModpackManagementService {
       if (updates.gamemode !== undefined) updateData.gamemode = updates.gamemode;
       if (updates.serverIp !== undefined) updateData.server_ip = updates.serverIp;
       if (updates.primaryColor !== undefined) updateData.primary_color = updates.primaryColor;
-      if (updates.isActive !== undefined) updateData.is_active = updates.isActive;
+      if (updates.isActive !== undefined) {
+        updateData.is_active = updates.isActive;
+        // Set published_at when making modpack public for the first time
+        if (updates.isActive) {
+          // Check if published_at is already set
+          const { data: modpack } = await supabase
+            .from('modpacks')
+            .select('published_at')
+            .eq('id', modpackId)
+            .single();
+
+          if (modpack && !modpack.published_at) {
+            updateData.published_at = new Date().toISOString();
+          }
+        }
+      }
 
       const { error }: any = await (supabase as any)
         .from('modpacks')
