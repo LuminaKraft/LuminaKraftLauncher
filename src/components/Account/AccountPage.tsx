@@ -227,9 +227,9 @@ const AccountPage: React.FC = () => {
         onClose={() => setShowDeleteConfirm(false)}
         onConfirm={performDeleteAccount}
         title={t('settings.deleteAccount')}
-        message={t('settings.confirmDeleteAccount')}
+        message={t('auth.confirmDeleteAccount')}
         confirmText={t('settings.deleteAccount')}
-        confirmVariant="danger"
+        variant="danger"
       />
 
       <ConfirmDialog

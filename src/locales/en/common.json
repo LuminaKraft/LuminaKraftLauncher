@@ -366,6 +366,7 @@
     "discordBenefit1": "Publish your own modpacks to the community",
     "discordBenefit2": "Get partner benefits and special roles",
     "discordBenefit3": "Join our community and get support",
+    "confirmSignOut": "Are you sure you want to sign out of your LuminaKraft account?",
     "confirmDeleteAccount": "Are you sure you want to delete your account? This action cannot be undone.",
     "accountDeleted": "Account deleted successfully",
     "deleteAccountFailed": "Failed to delete account",

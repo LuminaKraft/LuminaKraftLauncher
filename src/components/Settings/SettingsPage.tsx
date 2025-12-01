@@ -582,38 +582,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
             </div>
           </div>
 
-          {/* Minecraft Account - REDIRECT TO SIDEBAR */}
-          <div className="card">
-            <div className="flex items-center space-x-3 mb-6">
-              <div className="w-6 h-6 text-lumina-500">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M4 2h16a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm2 4v12h12V6H6zm3 3h6v6H9V9zm1 1v4h4v-4h-4z"/>
-                </svg>
-              </div>
-              <h2 className="text-white text-xl font-semibold">Minecraft Account</h2>
-            </div>
-            <div className="p-4 bg-blue-600/10 border border-blue-600/20 rounded-lg">
-              <p className="text-blue-300 text-sm leading-relaxed mb-3">
-                <strong className="text-blue-200">Manage your gameplay identity</strong><br />
-                Your Minecraft account (Premium or Offline) is managed directly from the sidebar. Click your player head/avatar in the sidebar to switch accounts or login.
-              </p>
-            </div>
-          </div>
-
-          {/* Account Management - REDIRECT TO ACCOUNT PAGE */}
-          <div className="card">
-            <div className="flex items-center space-x-3 mb-6">
-              <User className="w-6 h-6 text-lumina-500" />
-              <h2 className="text-white text-xl font-semibold">Account Management</h2>
-            </div>
-            <div className="p-4 bg-lumina-600/10 border border-lumina-600/20 rounded-lg">
-              <p className="text-lumina-300 text-sm leading-relaxed mb-3">
-                <strong className="text-lumina-200">Manage your LuminaKraft account and linked providers</strong><br />
-                Your account settings, profile, and linked OAuth providers (Discord, GitHub, Google, Microsoft) are managed in the Account section. Click the Account button in the sidebar to access your account settings.
-              </p>
-            </div>
-          </div>
-
           {/* API Status */}
           <div className="card">
             <div className="flex items-center space-x-3 mb-6">
