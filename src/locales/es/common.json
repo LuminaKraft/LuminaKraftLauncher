@@ -346,8 +346,6 @@
     "refreshFailed": "Error al refrescar el token. Por favor vuelve a autenticarte.",
     "authTimeout": "La autenticación expiró. Inténtalo de nuevo.",
     "authCanceled": "La autenticación fue cancelada.",
-    "microsoftTitle": "Autenticación Microsoft",
-    "microsoftDescription": "Inicia sesión con tu cuenta de Microsoft para acceso premium a Minecraft",
     "discordTitle": "Autenticación Discord",
     "discordDescription": "Vincula tu cuenta de Discord para publicar modpacks y unirte a nuestra comunidad",
     "linkDiscord": "Vincular Cuenta de Discord",
@@ -501,7 +499,10 @@
     "downloadPage": "Abrir página de descarga",
     "installUpdate": "Instalar actualización",
     "platform": "Plataforma: {{platform}}",
-    "viewOnGithub": "Ver en GitHub"
+    "viewOnGithub": "Ver en GitHub",
+    "screenshots": {
+      "noScreenshots": "No hay screenshots disponibles"
+    }
   },
   "myModpacks": {
     "title": "Mis Modpacks",

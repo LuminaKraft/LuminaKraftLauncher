@@ -32,6 +32,7 @@ export class ModpackManagementService {
   async canManageModpacks(): Promise<{
     canManage: boolean;
     role: 'admin' | 'partner' | 'user' | null;
+    partnerName?: string;
   }> {
     try {
       // Check if user has active Supabase session
@@ -44,7 +45,7 @@ export class ModpackManagementService {
       // Look up user profile and check Discord is linked
       const { data: profile } = await supabase
         .from('users')
-        .select('role, discord_id')
+        .select('role, discord_id, partner_id')
         .eq('id', user.id)
         .single() as { data: any };
 
@@ -62,7 +63,20 @@ export class ModpackManagementService {
       // Only admin, partner, and authenticated users (community) can manage
       const canManage = ['admin', 'partner', 'user'].includes(role);
 
-      return { canManage, role };
+      let partnerName: string | undefined;
+      if (role === 'partner' && profile.partner_id) {
+        const { data: partner } = await supabase
+          .from('partners')
+          .select('name')
+          .eq('id', profile.partner_id)
+          .single() as { data: { name: string } | null };
+
+        if (partner) {
+          partnerName = partner.name;
+        }
+      }
+
+      return { canManage, role, partnerName };
     } catch (error) {
       console.error('Error checking user permissions:', error);
       return { canManage: false, role: null };
@@ -156,9 +170,9 @@ export class ModpackManagementService {
       // Get user ID from users table
       const { data: userData } = await supabase
         .from('users')
-        .select('id')
+        .select('id, partner_id')
         .eq('microsoft_id', this.microsoftAccount.xuid)
-        .single() as { data: { id: string } | null };
+        .single() as { data: { id: string; partner_id: string | null } | null };
 
       if (!userData) {
         return { success: false, error: 'User profile not found' };
@@ -190,6 +204,7 @@ export class ModpackManagementService {
           server_ip: modpackData.serverIp || null,
           primary_color: modpackData.primaryColor || null,
           author_id: userData.id,
+          partner_id: userData.partner_id, // Save partner_id if available
           upload_status: 'pending',
           is_active: false, // Activate after uploading files
         } as any)
@@ -597,12 +612,13 @@ export class ModpackManagementService {
       let query = supabase.from('modpacks').select('*');
 
       // Filter based on role
+      // Filter based on role
       if (profile.role === 'admin') {
-        // Admins see all official modpacks
-        query = query.eq('category', 'official');
+        // Admins see all modpacks (official, partner, and community)
+        // No filter needed to show everything
       } else if (profile.role === 'partner' && profile.partner_id) {
-        // Partners see all modpacks from their partner
-        query = query.eq('partner_id', profile.partner_id);
+        // Partners see modpacks from their partner organization AND their own personal modpacks
+        query = query.or(`partner_id.eq.${profile.partner_id},author_id.eq.${user.id}`);
       } else {
         // Community users see only their own modpacks
         query = query.eq('author_id', user.id);

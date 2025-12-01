@@ -112,6 +112,7 @@
       "inactive": "Inactive"
     },
     "screenshots": "Screenshots",
+    "noScreenshots": "No screenshots available",
     "logs": "Logs",
     "noLogsAvailable": "No logs available",
     "logsWillAppear": "Logs will appear here when the modpack starts",
@@ -347,8 +348,6 @@
     "refreshFailed": "Failed to refresh token. Please authenticate again.",
     "authTimeout": "Authentication timed out. Please try again.",
     "authCanceled": "Authentication was canceled.",
-    "microsoftTitle": "Microsoft Authentication",
-    "microsoftDescription": "Sign in with your Microsoft account for Minecraft premium access",
     "discordTitle": "Discord Authentication",
     "discordDescription": "Link your Discord account to publish modpacks and join our community",
     "linkDiscord": "Link Discord Account",

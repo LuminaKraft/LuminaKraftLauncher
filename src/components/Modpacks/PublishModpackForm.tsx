@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { Plus, X, Upload, FileArchive, AlertCircle, RefreshCw, Check, ChevronRight, ChevronLeft, Info, Image as ImageIcon, FileText, Package } from 'lucide-react';
+import { Plus, X, Upload, FileArchive, AlertCircle, RefreshCw, Check, ChevronRight, ChevronLeft, Info, Image as ImageIcon, FileText, Package, Layers } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import ModpackManagementService from '../../services/modpackManagementService';
@@ -28,6 +28,7 @@ interface FormData {
   serverIp?: string;
   primaryColor: string;
   features: Feature[];
+  category?: 'official' | 'partner' | 'community';
 }
 
 interface PublishModpackFormProps {
@@ -41,6 +42,8 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
   const [discordAccount, setDiscordAccount] = useState<DiscordAccount | null>(null);
   const [isCheckingAccess, setIsCheckingAccess] = useState(true);
   const [isLinkingDiscord, setIsLinkingDiscord] = useState(false);
+  const [userRole, setUserRole] = useState<'admin' | 'partner' | 'user' | null>(null);
+  const [partnerName, setPartnerName] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<FormData>({
     name: { en: '', es: '' },
@@ -72,6 +75,15 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
     { id: 4, title: 'Media', icon: ImageIcon, description: 'Logo & Screenshots' },
     { id: 5, title: 'Review', icon: Check, description: 'Review & Publish' }
   ];
+
+  // Insert Category step if user is partner or admin
+  const effectiveSteps = (userRole === 'admin' || userRole === 'partner')
+    ? [
+      steps[0],
+      { id: 1.5, title: 'Category', icon: Layers, description: 'Select Category' },
+      ...steps.slice(1)
+    ].map((s, i) => ({ ...s, id: i + 1 }))
+    : steps;
 
   const {
     isParsing,
@@ -106,6 +118,13 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
     const account = await authService.getDiscordAccount();
     setDiscordAccount(account);
     setIsCheckingAccess(false);
+    setIsCheckingAccess(false);
+
+    // Check permissions and role
+    const { role, partnerName } = await service.canManageModpacks();
+    setUserRole(role);
+    setPartnerName(partnerName || null);
+
     return account;
   };
 
@@ -299,12 +318,16 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
       toast.error('Modpack ZIP file is required');
       return false;
     }
+    if ((userRole === 'admin' || userRole === 'partner') && !formData.category) {
+      toast.error('Please select a category for the modpack');
+      return false;
+    }
     return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (currentStep !== 5) return; // Prevent submission if not on the final step
+    if (currentStep !== effectiveSteps.length) return; // Prevent submission if not on the final step
     if (!validateForm()) return;
 
     try {
@@ -324,7 +347,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
     try {
       const { success, modpackId, error } = await service.createModpack({
         slug: formData.name.en.toLowerCase().replace(/\s+/g, '-'),
-        category: 'community',
+        category: formData.category || 'community', // Default to community if not set
         name: formData.name,
         shortDescription: formData.shortDescription,
         description: formData.description,
@@ -383,12 +406,18 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
   };
 
   const nextStep = () => {
-    if (currentStep < steps.length) {
-      if (currentStep === 1 && !zipFile) {
+    if (currentStep < effectiveSteps.length) {
+      // Validation for current step before moving to next
+      const currentEffectiveStep = effectiveSteps.find(s => s.id === currentStep);
+      if (currentEffectiveStep?.title === 'Upload' && !zipFile) {
         toast.error('Please upload a modpack ZIP file');
         return;
       }
-      if (currentStep === 2) {
+      if (currentEffectiveStep?.title === 'Category' && !formData.category) {
+        toast.error('Please select a category for the modpack');
+        return;
+      }
+      if (currentEffectiveStep?.title === 'Basic Info') {
         if (!formData.name.en || !formData.name.es) {
           toast.error('Name is required in both languages');
           return;
@@ -420,32 +449,34 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
           <div className="absolute top-1/2 left-0 w-full h-1 bg-gray-200 dark:bg-gray-700 -z-10 rounded-full"></div>
           <div
             className="absolute top-1/2 left-0 h-1 bg-blue-600 -z-10 rounded-full transition-all duration-500 ease-in-out"
-            style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}
+            style={{ width: `${((currentStep - 1) / (effectiveSteps.length - 1)) * 100}%` }}
           ></div>
-          {steps.map((step) => {
-            const isActive = step.id === currentStep;
-            const isCompleted = step.id < currentStep;
-            return (
-              <div key={step.id} className="flex flex-col items-center gap-2 bg-gray-50 dark:bg-gray-900 px-2">
-                <div
-                  className={`
+          <div className="flex items-center justify-between relative z-10 w-full">
+            {effectiveSteps.map((step) => {
+              const isCompleted = currentStep > step.id;
+              const isCurrent = currentStep === step.id;
+              return (
+                <div key={step.id} className="flex flex-col items-center gap-2 bg-gray-50 dark:bg-gray-900 px-2">
+                  <div
+                    className={`
                   w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300
-                  ${isActive
-                      ? 'border-blue-600 bg-blue-600 text-white scale-110 shadow-lg shadow-blue-500/30'
-                      : isCompleted
-                        ? 'border-blue-600 bg-blue-600 text-white'
-                        : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-400'
-                    }
+                  ${isCurrent
+                        ? 'border-blue-600 bg-blue-600 text-white scale-110 shadow-lg shadow-blue-500/30'
+                        : isCompleted
+                          ? 'border-blue-600 bg-blue-600 text-white'
+                          : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-400'
+                      }
                 `}
-                >
-                  {isCompleted ? <Check className="w-6 h-6" /> : <step.icon className="w-5 h-5" />}
+                  >
+                    {isCompleted ? <Check className="w-6 h-6" /> : <step.icon className="w-5 h-5" />}
+                  </div>
+                  <span className={`text-xs font-medium ${isCurrent ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500'}`}>
+                    {step.title}
+                  </span>
                 </div>
-                <span className={`text-xs font-medium ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500'}`}>
-                  {step.title}
-                </span>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -612,492 +643,586 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
           </div>
         )}
 
-        {/* Step 2: Basic Information */}
-        {currentStep === 2 && (
+        {/* Step 1.5: Category Selection (Partner/Admin only) */}
+        {currentStep === 2 && (userRole === 'admin' || userRole === 'partner') && (
           <div className="space-y-6 animate-fade-in">
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
-              <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-                Step 2: Basic Information
-              </h2>
-              <div className="flex gap-2 mb-6 border-b border-gray-200 dark:border-gray-700">
-                <button
-                  type="button"
-                  onClick={() => setCurrentLang('en')}
-                  className={`px-4 py-2 font-medium transition-colors relative ${currentLang === 'en'
-                    ? 'text-blue-600 dark:text-blue-400'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                    }`}
-                >
-                  English
-                  {currentLang === 'en' && (
-                    <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 dark:bg-blue-400 rounded-t-full"></span>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCurrentLang('es')}
-                  className={`px-4 py-2 font-medium transition-colors relative ${currentLang === 'es'
-                    ? 'text-blue-600 dark:text-blue-400'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                    }`}
-                >
-                  Español
-                  {currentLang === 'es' && (
-                    <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 dark:bg-blue-400 rounded-t-full"></span>
-                  )}
-                </button>
-              </div>
-              <div className="mb-4">
-                <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-                  Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.name[currentLang]}
-                  onChange={(e) => updateI18nField('name', currentLang, e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
-                  required
-                  placeholder={currentLang === 'en' ? 'My Awesome Modpack' : 'Mi Increíble Modpack'}
-                />
-              </div>
-            </div>
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
-              <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-                Technical Details
-              </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-6 flex items-center gap-2">
-                <Info className="w-4 h-4" />
-                {manifestParsed ? 'Auto-filled from manifest.json' : 'These will be auto-filled when you upload a ZIP'}
-              </p>
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
+              <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">Select Category</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-                    Version <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.version}
-                    onChange={(e) => updateFormData('version', e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
-                    required
-                    placeholder="1.0.0"
-                  />
-                </div>
-                <div>
-                  <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-                    Minecraft Version <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.minecraftVersion}
-                    onChange={(e) => updateFormData('minecraftVersion', e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
-                    required
-                    placeholder="1.20.1"
-                  />
-                </div>
-                <div>
-                  <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-                    Modloader <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={formData.modloader}
-                    onChange={(e) => updateFormData('modloader', e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
+                {userRole === 'admin' && (
+                  <div
+                    onClick={() => updateFormData('category', 'official')}
+                    className={`p-6 rounded-lg border-2 cursor-pointer transition-all ${formData.category === 'official'
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-blue-300'
+                      }`}
                   >
-                    <option value="forge">Forge</option>
-                    <option value="fabric">Fabric</option>
-                    <option value="neoforge">NeoForge</option>
-                    <option value="quilt">Quilt</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-                    Modloader Version <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.modloaderVersion}
-                    onChange={(e) => updateFormData('modloaderVersion', e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
-                    required
-                    placeholder="47.2.0"
-                  />
-                </div>
-                <div>
-                  <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-                    Gamemode (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.gamemode || ''}
-                    onChange={(e) => updateFormData('gamemode', e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
-                    placeholder="survival, creative, pvp, rpg, etc."
-                  />
-                </div>
-                <div>
-                  <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-                    Server IP (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.serverIp || ''}
-                    onChange={(e) => updateFormData('serverIp', e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
-                    placeholder="play.example.com"
-                  />
-                </div>
-                <div>
-                  <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-                    Primary Color
-                  </label>
-                  <div className="flex gap-4 items-center">
-                    <input
-                      type="color"
-                      value={formData.primaryColor}
-                      onChange={(e) => updateFormData('primaryColor', e.target.value)}
-                      className="w-12 h-12 p-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 cursor-pointer"
-                    />
-                    <span className="text-gray-600 dark:text-gray-400 font-mono">{formData.primaryColor}</span>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg text-blue-600 dark:text-blue-400">
+                        <Package className="w-6 h-6" />
+                      </div>
+                      <h3 className="font-semibold text-gray-900 dark:text-white">Official Modpack</h3>
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Official LuminaKraft modpacks managed by the team.
+                    </p>
                   </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+                )}
 
-        {/* Step 3: Details (Descriptions & Features) */}
-        {currentStep === 3 && (
-          <div className="space-y-6 animate-fade-in">
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
-              <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-                Step 3: Details
-              </h2>
-              <div className="flex gap-2 mb-6 border-b border-gray-200 dark:border-gray-700">
-                <button
-                  type="button"
-                  onClick={() => setCurrentLang('en')}
-                  className={`px-4 py-2 font-medium transition-colors relative ${currentLang === 'en'
-                    ? 'text-blue-600 dark:text-blue-400'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                    }`}
-                >
-                  English
-                  {currentLang === 'en' && (
-                    <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 dark:bg-blue-400 rounded-t-full"></span>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCurrentLang('es')}
-                  className={`px-4 py-2 font-medium transition-colors relative ${currentLang === 'es'
-                    ? 'text-blue-600 dark:text-blue-400'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                    }`}
-                >
-                  Español
-                  {currentLang === 'es' && (
-                    <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 dark:bg-blue-400 rounded-t-full"></span>
-                  )}
-                </button>
-              </div>
-              <div className="mb-4">
-                <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-                  Short Description
-                </label>
-                <input
-                  type="text"
-                  value={formData.shortDescription[currentLang]}
-                  onChange={(e) => updateI18nField('shortDescription', currentLang, e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
-                  placeholder={currentLang === 'en' ? 'A brief description...' : 'Una breve descripción...'}
-                />
-                <p className="text-xs text-gray-500 mt-1">Shown in modpack cards</p>
-              </div>
-              <div className="mb-4">
-                <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-                  Full Description
-                </label>
-                <textarea
-                  value={formData.description[currentLang]}
-                  onChange={(e) => updateI18nField('description', currentLang, e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 min-h-[150px] transition-shadow"
-                  placeholder={currentLang === 'en' ? 'Full description...' : 'Descripción completa...'}
-                />
-                <p className="text-xs text-gray-500 mt-1">Markdown supported</p>
-              </div>
-            </div>
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  Features (Optional)
-                </h2>
-                <div className="flex gap-2">
-                  <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mr-4">
-                    <button
-                      type="button"
-                      onClick={() => setCurrentLang('en')}
-                      className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${currentLang === 'en'
-                        ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                        }`}
-                    >
-                      EN
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCurrentLang('es')}
-                      className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${currentLang === 'es'
-                        ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                        }`}
-                    >
-                      ES
-                    </button>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={addFeature}
-                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                {userRole === 'partner' && (
+                  <div
+                    onClick={() => updateFormData('category', 'partner')}
+                    className={`p-6 rounded-lg border-2 cursor-pointer transition-all ${formData.category === 'partner'
+                      ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-purple-300'
+                      }`}
                   >
-                    <Plus className="w-4 h-4" />
-                    Add Feature
-                  </button>
-                </div>
-              </div>
-              {formData.features.length === 0 ? (
-                <div className="text-center py-8 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg">
-                  <p className="text-gray-500 dark:text-gray-400">
-                    No features added yet. Add features to highlight what makes your modpack unique.
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg text-purple-600 dark:text-purple-400">
+                        <Layers className="w-6 h-6" />
+                      </div>
+                      <h3 className="font-semibold text-gray-900 dark:text-white">Partner Modpack</h3>
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Exclusive modpacks from verified partners.
+                      {partnerName && (
+                        <span className="block mt-1 font-medium text-purple-600 dark:text-purple-400">
+                          Partner: {partnerName}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                )}
+
+                <div
+                  onClick={() => updateFormData('category', 'community')}
+                  className={`p-6 rounded-lg border-2 cursor-pointer transition-all ${formData.category === 'community'
+                    ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-green-300'
+                    }`}
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg text-green-600 dark:text-green-400">
+                      <Package className="w-6 h-6" />
+                    </div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white">Community Modpack</h3>
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Standard community modpack available to everyone.
                   </p>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {formData.features.map((feature, index) => (
-                    <div key={index} className="p-4 border border-gray-300 dark:border-gray-600 rounded-lg relative bg-gray-50 dark:bg-gray-700/50">
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Step 2: Basic Information */}
+        {((userRole !== 'admin' && userRole !== 'partner' && currentStep === 2) ||
+          ((userRole === 'admin' || userRole === 'partner') && currentStep === 3)) && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
+                <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+                  Step {effectiveSteps.find(s => s.title === 'Basic Info')?.id}: Basic Information
+                </h2>
+                <div className="flex gap-2 mb-6 border-b border-gray-200 dark:border-gray-700">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentLang('en')}
+                    className={`px-4 py-2 font-medium transition-colors relative ${currentLang === 'en'
+                      ? 'text-blue-600 dark:text-blue-400'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                      }`}
+                  >
+                    English
+                    {currentLang === 'en' && (
+                      <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 dark:bg-blue-400 rounded-t-full"></span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentLang('es')}
+                    className={`px-4 py-2 font-medium transition-colors relative ${currentLang === 'es'
+                      ? 'text-blue-600 dark:text-blue-400'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                      }`}
+                  >
+                    Español
+                    {currentLang === 'es' && (
+                      <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 dark:bg-blue-400 rounded-t-full"></span>
+                    )}
+                  </button>
+                </div>
+                <div className="mb-4">
+                  <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
+                    Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.name[currentLang]}
+                    onChange={(e) => updateI18nField('name', currentLang, e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
+                    required
+                    placeholder={currentLang === 'en' ? 'My Awesome Modpack' : 'Mi Increíble Modpack'}
+                  />
+                </div>
+              </div>
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
+                <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+                  Technical Details
+                </h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-6 flex items-center gap-2">
+                  <Info className="w-4 h-4" />
+                  {manifestParsed ? 'Auto-filled from manifest.json' : 'These will be auto-filled when you upload a ZIP'}
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
+                      Version <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.version}
+                      onChange={(e) => updateFormData('version', e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
+                      required
+                      placeholder="1.0.0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
+                      Minecraft Version <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.minecraftVersion}
+                      onChange={(e) => updateFormData('minecraftVersion', e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
+                      required
+                      placeholder="1.20.1"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
+                      Modloader <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={formData.modloader}
+                      onChange={(e) => updateFormData('modloader', e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
+                    >
+                      <option value="forge">Forge</option>
+                      <option value="fabric">Fabric</option>
+                      <option value="neoforge">NeoForge</option>
+                      <option value="quilt">Quilt</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
+                      Modloader Version <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.modloaderVersion}
+                      onChange={(e) => updateFormData('modloaderVersion', e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
+                      required
+                      placeholder="47.2.0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
+                      Gamemode (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.gamemode || ''}
+                      onChange={(e) => updateFormData('gamemode', e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
+                      placeholder="survival, creative, pvp, rpg, etc."
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
+                      Server IP (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.serverIp || ''}
+                      onChange={(e) => updateFormData('serverIp', e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
+                      placeholder="play.example.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
+                      Primary Color
+                    </label>
+                    <div className="flex gap-4 items-center">
+                      <input
+                        type="color"
+                        value={formData.primaryColor}
+                        onChange={(e) => updateFormData('primaryColor', e.target.value)}
+                        className="w-12 h-12 p-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 cursor-pointer"
+                      />
+                      <span className="text-gray-600 dark:text-gray-400 font-mono">{formData.primaryColor}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+        {/* Step 3: Details (Descriptions & Features) */}
+        {((userRole !== 'admin' && userRole !== 'partner' && currentStep === 3) ||
+          ((userRole === 'admin' || userRole === 'partner') && currentStep === 4)) && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
+                <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+                  Step {effectiveSteps.find(s => s.title === 'Details')?.id}: Details
+                </h2>
+                <div className="flex gap-2 mb-6 border-b border-gray-200 dark:border-gray-700">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentLang('en')}
+                    className={`px-4 py-2 font-medium transition-colors relative ${currentLang === 'en'
+                      ? 'text-blue-600 dark:text-blue-400'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                      }`}
+                  >
+                    English
+                    {currentLang === 'en' && (
+                      <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 dark:bg-blue-400 rounded-t-full"></span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentLang('es')}
+                    className={`px-4 py-2 font-medium transition-colors relative ${currentLang === 'es'
+                      ? 'text-blue-600 dark:text-blue-400'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                      }`}
+                  >
+                    Español
+                    {currentLang === 'es' && (
+                      <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 dark:bg-blue-400 rounded-t-full"></span>
+                    )}
+                  </button>
+                </div>
+                <div className="mb-4">
+                  <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
+                    Short Description
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.shortDescription[currentLang]}
+                    onChange={(e) => updateI18nField('shortDescription', currentLang, e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
+                    placeholder={currentLang === 'en' ? 'A brief description...' : 'Una breve descripción...'}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Shown in modpack cards</p>
+                </div>
+                <div className="mb-4">
+                  <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
+                    Full Description
+                  </label>
+                  <textarea
+                    value={formData.description[currentLang]}
+                    onChange={(e) => updateI18nField('description', currentLang, e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 min-h-[150px] transition-shadow"
+                    placeholder={currentLang === 'en' ? 'Full description...' : 'Descripción completa...'}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Markdown supported</p>
+                </div>
+              </div>
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    Features (Optional)
+                  </h2>
+                  <div className="flex gap-2">
+                    <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mr-4">
                       <button
                         type="button"
-                        onClick={() => removeFeature(index)}
-                        className="absolute top-2 right-2 p-1 text-red-600 hover:bg-red-100 dark:hover:bg-red-900 rounded transition-colors"
-                        title="Remove feature"
+                        onClick={() => setCurrentLang('en')}
+                        className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${currentLang === 'en'
+                          ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                          : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                          }`}
                       >
-                        <X className="w-5 h-5" />
+                        EN
                       </button>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Title ({currentLang.toUpperCase()})</label>
-                          <input
-                            type="text"
-                            value={feature.title[currentLang]}
-                            onChange={(e) => updateFeature(index, 'title', currentLang, e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                            placeholder="Feature Title"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Icon (FontAwesome)</label>
-                          <input
-                            type="text"
-                            value={feature.icon}
-                            onChange={(e) => updateFeatureIcon(index, e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                            placeholder="e.g. fa-star"
-                          />
-                        </div>
-                        <div className="md:col-span-2">
-                          <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Description ({currentLang.toUpperCase()})</label>
-                          <textarea
-                            value={feature.description[currentLang]}
-                            onChange={(e) => updateFeature(index, 'description', currentLang, e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 h-20"
-                            placeholder="Feature Description"
-                          />
+                      <button
+                        type="button"
+                        onClick={() => setCurrentLang('es')}
+                        className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${currentLang === 'es'
+                          ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                          : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                          }`}
+                      >
+                        ES
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={addFeature}
+                      className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Feature
+                    </button>
+                  </div>
+                </div>
+                {formData.features.length === 0 ? (
+                  <div className="text-center py-8 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg">
+                    <p className="text-gray-500 dark:text-gray-400">
+                      No features added yet. Add features to highlight what makes your modpack unique.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {formData.features.map((feature, index) => (
+                      <div key={index} className="p-4 border border-gray-300 dark:border-gray-600 rounded-lg relative bg-gray-50 dark:bg-gray-700/50">
+                        <button
+                          type="button"
+                          onClick={() => removeFeature(index)}
+                          className="absolute top-2 right-2 p-1 text-red-600 hover:bg-red-100 dark:hover:bg-red-900 rounded transition-colors"
+                          title="Remove feature"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Title ({currentLang.toUpperCase()})</label>
+                            <input
+                              type="text"
+                              value={feature.title[currentLang]}
+                              onChange={(e) => updateFeature(index, 'title', currentLang, e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                              placeholder="Feature Title"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Icon (FontAwesome)</label>
+                            <input
+                              type="text"
+                              value={feature.icon}
+                              onChange={(e) => updateFeatureIcon(index, e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                              placeholder="e.g. fa-star"
+                            />
+                          </div>
+                          <div className="md:col-span-2">
+                            <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Description ({currentLang.toUpperCase()})</label>
+                            <textarea
+                              value={feature.description[currentLang]}
+                              onChange={(e) => updateFeature(index, 'description', currentLang, e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 h-20"
+                              placeholder="Feature Description"
+                            />
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         {/* Step 4: Media */}
-        {currentStep === 4 && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md animate-fade-in">
-            <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">
-              Step 4: Media
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div>
-                <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-                  Logo (Optional)
-                </label>
-                <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer relative group">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  />
-                  {logoFile ? (
-                    <div className="relative z-10">
-                      <img
-                        src={URL.createObjectURL(logoFile)}
-                        alt="Logo preview"
-                        className="w-32 h-32 object-contain mx-auto mb-2 rounded-lg"
+        {((userRole !== 'admin' && userRole !== 'partner' && currentStep === 4) ||
+          ((userRole === 'admin' || userRole === 'partner') && currentStep === 5)) && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
+                <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">
+                  Step {effectiveSteps.find(s => s.title === 'Media')?.id}: Media
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
+                      Logo (Optional)
+                    </label>
+                    <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer relative group h-48 flex flex-col items-center justify-center">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                       />
-                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{logoFile.name}</p>
-                      <p className="text-xs text-gray-500">{(logoFile.size / 1024).toFixed(1)} KB</p>
+                      {logoFile ? (
+                        <div className="relative z-10 w-full h-full flex flex-col items-center justify-center">
+                          <img
+                            src={URL.createObjectURL(logoFile)}
+                            alt="Logo preview"
+                            className="w-24 h-24 object-contain mb-2 rounded-lg"
+                          />
+                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate max-w-full px-2">{logoFile.name}</p>
+                          <p className="text-xs text-gray-500">{(logoFile.size / 1024).toFixed(1)} KB</p>
+                        </div>
+                      ) : (
+                        <div className="py-2">
+                          <ImageIcon className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Click to upload logo</p>
+                          <p className="text-xs text-gray-500 mt-1">Recommended: 512x512px</p>
+                        </div>
+                      )}
                     </div>
-                  ) : (
-                    <div className="py-8">
-                      <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Click to upload logo</p>
-                      <p className="text-xs text-gray-500 mt-1">Recommended: 512x512px</p>
+                  </div>
+                  <div>
+                    <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
+                      Banner (Optional)
+                    </label>
+                    <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer relative group h-48 flex flex-col items-center justify-center">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => setBannerFile(e.target.files?.[0] || null)}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      />
+                      {bannerFile ? (
+                        <div className="relative z-10 w-full h-full flex flex-col items-center justify-center">
+                          <img
+                            src={URL.createObjectURL(bannerFile)}
+                            alt="Banner preview"
+                            className="w-full h-24 object-cover mb-2 rounded-lg"
+                          />
+                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate max-w-full px-2">{bannerFile.name}</p>
+                          <p className="text-xs text-gray-500">{(bannerFile.size / 1024).toFixed(1)} KB</p>
+                        </div>
+                      ) : (
+                        <div className="py-2">
+                          <ImageIcon className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Click to upload banner</p>
+                          <p className="text-xs text-gray-500 mt-1">Recommended: 1920x1080px</p>
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
-              </div>
-              <div>
-                <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-                  Banner (Optional)
-                </label>
-                <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer relative group">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setBannerFile(e.target.files?.[0] || null)}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  />
-                  {bannerFile ? (
-                    <div className="relative z-10">
-                      <img
-                        src={URL.createObjectURL(bannerFile)}
-                        alt="Banner preview"
-                        className="w-full h-32 object-cover mx-auto mb-2 rounded-lg"
-                      />
-                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{bannerFile.name}</p>
-                      <p className="text-xs text-gray-500">{(bannerFile.size / 1024).toFixed(1)} KB</p>
+
+                <div className="mt-8">
+                  <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
+                    Screenshots (Optional) - Max 5
+                  </label>
+                  <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer relative">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={(e) => {
+                        const newFiles = Array.from(e.target.files || []);
+                        if (screenshotFiles.length + newFiles.length > 5) {
+                          toast.error('You can only upload a maximum of 5 screenshots');
+                        }
+                        setScreenshotFiles(prev => [...prev, ...newFiles].slice(0, 5));
+                        // Reset input value to allow selecting the same file again if needed
+                        e.target.value = '';
+                      }}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      disabled={screenshotFiles.length >= 5}
+                    />
+                    <div className="py-4">
+                      <ImageIcon className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {screenshotFiles.length >= 5 ? 'Maximum screenshots reached' : 'Click to upload screenshots'}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">Select multiple files (Max 5)</p>
                     </div>
-                  ) : (
-                    <div className="py-8">
-                      <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Click to upload banner</p>
-                      <p className="text-xs text-gray-500 mt-1">Recommended: 1920x1080px</p>
+                  </div>
+                  {screenshotFiles.length > 0 && (
+                    <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {screenshotFiles.map((file, index) => (
+                        <div key={index} className="relative group">
+                          <img
+                            src={URL.createObjectURL(file)}
+                            alt={`Screenshot ${index + 1}`}
+                            className="w-full h-24 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setScreenshotFiles(prev => prev.filter((_, i) => i !== index))}
+                            className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
               </div>
             </div>
-            <div className="mt-8">
-              <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-                Screenshots (Optional)
-              </label>
-              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer relative">
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={(e) => setScreenshotFiles(Array.from(e.target.files || []))}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                />
-                <div className="py-4">
-                  <ImageIcon className="w-10 h-10 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Click to upload screenshots</p>
-                  <p className="text-xs text-gray-500 mt-1">Select multiple files</p>
-                </div>
-              </div>
-              {screenshotFiles.length > 0 && (
-                <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {screenshotFiles.map((file, index) => (
-                    <div key={index} className="relative group">
-                      <img
-                        src={URL.createObjectURL(file)}
-                        alt={`Screenshot ${index + 1}`}
-                        className="w-full h-24 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setScreenshotFiles(prev => prev.filter((_, i) => i !== index))}
-                        className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+          )
+        }
 
         {/* Step 5: Review */}
-        {currentStep === 5 && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md animate-fade-in">
-            <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">
-              Step 5: Review & Publish
-            </h2>
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Basic Info</h3>
-                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 space-y-2">
-                    <p><span className="font-medium">Name:</span> {formData.name.en}</p>
-                    <p><span className="font-medium">Version:</span> {formData.version}</p>
-                    <p><span className="font-medium">Minecraft:</span> {formData.minecraftVersion}</p>
-                    <p><span className="font-medium">Modloader:</span> {formData.modloader} {formData.modloaderVersion}</p>
+        {
+          ((userRole !== 'admin' && userRole !== 'partner' && currentStep === 5) ||
+            ((userRole === 'admin' || userRole === 'partner') && currentStep === 6)) && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md animate-fade-in">
+              <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">
+                Step 5: Review & Publish
+              </h2>
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Basic Info</h3>
+                    <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 space-y-2">
+                      <p><span className="font-medium">Name:</span> {formData.name.en}</p>
+                      <p><span className="font-medium">Version:</span> {formData.version}</p>
+                      <p><span className="font-medium">Minecraft:</span> {formData.minecraftVersion}</p>
+                      <p><span className="font-medium">Modloader:</span> {formData.modloader} {formData.modloaderVersion}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Files</h3>
+                    <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 space-y-2">
+                      <p className="flex items-center gap-2">
+                        <FileArchive className="w-4 h-4" />
+                        {zipFile?.name || 'No ZIP selected'}
+                      </p>
+                      <p className="flex items-center gap-2">
+                        <ImageIcon className="w-4 h-4" />
+                        Logo: {logoFile ? 'Uploaded' : 'None'}
+                      </p>
+                      <p className="flex items-center gap-2">
+                        <ImageIcon className="w-4 h-4" />
+                        Banner: {bannerFile ? 'Uploaded' : 'None'}
+                      </p>
+                      <p className="flex items-center gap-2">
+                        <ImageIcon className="w-4 h-4" />
+                        Screenshots: {screenshotFiles.length}
+                      </p>
+                    </div>
                   </div>
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Files</h3>
-                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 space-y-2">
-                    <p className="flex items-center gap-2">
-                      <FileArchive className="w-4 h-4" />
-                      {zipFile?.name || 'No ZIP selected'}
-                    </p>
-                    <p className="flex items-center gap-2">
-                      <ImageIcon className="w-4 h-4" />
-                      Logo: {logoFile ? 'Uploaded' : 'None'}
-                    </p>
-                    <p className="flex items-center gap-2">
-                      <ImageIcon className="w-4 h-4" />
-                      Banner: {bannerFile ? 'Uploaded' : 'None'}
-                    </p>
-                    <p className="flex items-center gap-2">
-                      <ImageIcon className="w-4 h-4" />
-                      Screenshots: {screenshotFiles.length}
-                    </p>
+                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Description</h3>
+                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                    <p className="line-clamp-3 text-gray-600 dark:text-gray-300">{formData.description.en || 'No description provided.'}</p>
                   </div>
                 </div>
-              </div>
-              <div>
-                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Description</h3>
-                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
-                  <p className="line-clamp-3 text-gray-600 dark:text-gray-300">{formData.description.en || 'No description provided.'}</p>
-                </div>
-              </div>
-              <div>
-                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Features</h3>
-                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
-                  {formData.features.length > 0 ? (
-                    <ul className="list-disc list-inside">
-                      {formData.features.map((f, i) => (
-                        <li key={i}>
-                          <span className="font-medium">{f.title.en}</span>
-                          {f.title.es && <span className="text-gray-500 text-sm ml-2">({f.title.es})</span>}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-gray-500 italic">No features added.</p>
-                  )}
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Features</h3>
+                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                    {formData.features.length > 0 ? (
+                      <ul className="list-disc list-inside">
+                        {formData.features.map((f, i) => (
+                          <li key={i}>
+                            <span className="font-medium">{f.title.en}</span>
+                            {f.title.es && <span className="text-gray-500 text-sm ml-2">({f.title.es})</span>}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-gray-500 italic">No features added.</p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )
+        }
 
         <div className="flex justify-between pt-6 border-t border-gray-200 dark:border-gray-700 mt-8">
           <button
@@ -1113,7 +1238,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
               </>
             )}
           </button>
-          {currentStep < 5 ? (
+          {currentStep < effectiveSteps.length ? (
             <button
               type="button"
               onClick={nextStep}
@@ -1143,9 +1268,11 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
             </button>
           )}
         </div>
+      </form >
 
-        {/* Validation Dialog */}
-        {validationData && (
+      {/* Validation Dialog */}
+      {
+        validationData && (
           <ModpackValidationDialog
             isOpen={showValidationDialog}
             onClose={() => {
@@ -1166,27 +1293,28 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
             modsWithoutUrl={validationData.modsWithoutUrl}
             modsInOverrides={validationData.modsInOverrides}
           />
-        )}
+        )
+      }
 
-        {/* Download Updated Modpack Confirmation Dialog */}
-        <ConfirmDialog
-          isOpen={showDownloadDialog}
-          onClose={() => {
-            setShowDownloadDialog(false);
-            handleSkipDownload();
-          }}
-          onConfirm={async () => {
-            setShowDownloadDialog(false);
-            await handleDownloadUpdatedZip();
-          }}
-          title="Download Updated Modpack?"
-          message={`You've uploaded ${pendingUploadedFiles?.size || 0} file(s) that were missing from this modpack.\n\nWould you like to download an updated version of the ZIP file with these files included in the overrides folder?\n\nYou can then use this updated ZIP to publish your modpack.`}
-          confirmText="Download Updated ZIP"
-          cancelText="Skip Download"
-          variant="info"
-        />
-      </form>
-    </div>
+      {/* Download Updated Modpack Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showDownloadDialog}
+        onClose={() => {
+          setShowDownloadDialog(false);
+          handleSkipDownload();
+        }}
+        onConfirm={async () => {
+          setShowDownloadDialog(false);
+          await handleDownloadUpdatedZip();
+        }}
+        title="Download Updated Modpack?"
+        message={`You've uploaded ${pendingUploadedFiles?.size || 0} file(s) that were missing from this modpack.\n\nWould you like to download an updated version of the ZIP file with these files included in the overrides folder?\n\nYou can then use this updated ZIP to publish your modpack.`}
+        confirmText="Download Updated ZIP"
+        cancelText="Skip Download"
+        variant="info"
+      />
+
+    </div >
   );
 }
 

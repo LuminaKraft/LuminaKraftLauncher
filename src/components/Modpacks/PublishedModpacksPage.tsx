@@ -35,6 +35,7 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
   const [modpacks, setModpacks] = useState<Modpack[]>([]);
   const [loading, setLoading] = useState(true);
   const [canManage, setCanManage] = useState(false);
+  const [partnerName, setPartnerName] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedModpack, setSelectedModpack] = useState<Modpack | null>(null);
   const [isLinkingDiscord, setIsLinkingDiscord] = useState(false);
@@ -76,8 +77,9 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
       setLoading(true);
 
       // Check permissions
-      const { canManage: hasPermission } = await service.canManageModpacks();
+      const { canManage: hasPermission, partnerName } = await service.canManageModpacks();
       setCanManage(hasPermission);
+      setPartnerName(partnerName || null);
 
       if (hasPermission) {
         // Load user's modpacks only if authenticated
@@ -303,21 +305,30 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
     <div className="max-w-7xl mx-auto p-6">
       {/* Header */}
       <div className="mb-6">
-        <div className="flex justify-between items-center mb-2">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            {t('publishedModpacks.title')}
-          </h1>
-          <button
-            onClick={() => onNavigate?.('publish-modpack')}
-            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
-          >
-            <Plus className="w-5 h-5" />
-            {t('publishedModpacks.publishNew')}
-          </button>
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              {t('publishedModpacks.title')}
+            </h1>
+            <p className="mt-2 text-gray-600 dark:text-gray-400">
+              {t('publishedModpacks.subtitle')}
+            </p>
+            {partnerName && (
+              <div className="mt-2 inline-flex items-center px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-sm font-medium">
+                <span>Partner: {partnerName}</span>
+              </div>
+            )}
+          </div>
+          {canManage && (
+            <button
+              onClick={() => onNavigate?.('publish-modpack')}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+            >
+              <Plus className="w-5 h-5" />
+              {t('publishedModpacks.publishNew')}
+            </button>
+          )}
         </div>
-        <p className="text-gray-600 dark:text-gray-400">
-          {t('publishedModpacks.subtitle')}
-        </p>
       </div>
 
       {/* Modpacks List */}
@@ -343,7 +354,7 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
             <div
               key={modpack.id}
               onClick={() => onNavigate?.('edit-modpack', modpack.id)}
-              className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow cursor-pointer group"
+              className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-200 cursor-pointer group relative border border-transparent hover:border-blue-500/50"
             >
               {/* Modpack Image */}
               <div className="h-48 bg-gray-200 dark:bg-gray-700 relative">
@@ -375,13 +386,35 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
                     </div>
                   )}
                 </div>
+
+                {/* Edit Overlay */}
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center backdrop-blur-[2px]">
+                  <div className="bg-white/10 backdrop-blur-md border border-white/20 p-3 rounded-full transform scale-90 group-hover:scale-100 transition-transform duration-200">
+                    <Edit className="w-8 h-8 text-white" />
+                  </div>
+                </div>
               </div>
 
               {/* Modpack Info */}
               <div className="p-4">
                 <div className="mb-2">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
-                    {getTranslatedName(modpack.name_i18n)}
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${modpack.category === 'official'
+                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+                      : modpack.category === 'partner'
+                        ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
+                        : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                      }`}>
+                      {modpack.category.charAt(0).toUpperCase() + modpack.category.slice(1)}
+                    </span>
+                    {modpack.category === 'partner' && partnerName && (
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        by {partnerName}
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1 line-clamp-1">
+                    {modpack.name_i18n[i18n.language] || modpack.name_i18n['en']}
                   </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     v{modpack.version} • {modpack.minecraft_version} • {modpack.modloader}
@@ -424,8 +457,8 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
                         handleToggleActive(modpack.id, modpack.is_active);
                       }}
                       className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm font-medium ${modpack.is_active
-                          ? 'bg-gray-600 text-white hover:bg-gray-700'
-                          : 'bg-green-600 text-white hover:bg-green-700'
+                        ? 'bg-gray-600 text-white hover:bg-gray-700'
+                        : 'bg-green-600 text-white hover:bg-green-700'
                         }`}
                     >
                       {modpack.is_active ? (
