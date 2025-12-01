@@ -85,11 +85,15 @@ const AccountPage: React.FC = () => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
           async (event, session) => {
             if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
+              // Show loading state while fetching user profile
+              setIsLoadingLuminaKraft(true);
+
               // Small delay to allow Supabase client to fully process the session
               await new Promise(resolve => setTimeout(resolve, 200));
               const updatedUser = await fetchUserWithProfile();
               setLuminaKraftUser(updatedUser);
 
+              setIsLoadingLuminaKraft(false);
               // Hide loading modal when sign-in completes
               setIsSigningIn(false);
             } else if (event === 'SIGNED_OUT') {
@@ -104,10 +108,13 @@ const AccountPage: React.FC = () => {
         // Listen for custom profile update events (triggered by authService after sync)
         const handleProfileUpdateEvent = async () => {
           try {
+            setIsLoadingLuminaKraft(true);
             const updatedUser = await fetchUserWithProfile(1);
             setLuminaKraftUser(updatedUser);
+            setIsLoadingLuminaKraft(false);
           } catch (error) {
             console.error('Error updating user from profile event:', error);
+            setIsLoadingLuminaKraft(false);
           }
         };
         window.addEventListener('luminakraft:profile-updated', handleProfileUpdateEvent);
@@ -260,7 +267,15 @@ const AccountPage: React.FC = () => {
           <h2 className="text-white text-xl font-semibold">{t('settings.luminakraftAccount')}</h2>
         </div>
 
-        {luminaKraftUser ? (
+        {isLoadingLuminaKraft ? (
+          <div className="flex flex-col items-center justify-center p-12 bg-dark-700 rounded-lg border border-dark-600">
+            <div className="relative w-12 h-12 mb-4">
+              <div className="absolute inset-0 rounded-full border-2 border-dark-600"></div>
+              <div className="absolute inset-0 rounded-full border-2 border-t-primary-500 animate-spin"></div>
+            </div>
+            <p className="text-dark-400 text-sm">{t('common.loading')}</p>
+          </div>
+        ) : luminaKraftUser ? (
           <>
             <ProfileEditor
               luminaKraftUser={luminaKraftUser}
