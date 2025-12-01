@@ -1041,13 +1041,18 @@ class AuthService {
         currentUser?.email?.split('@')[0] ||
         'User';
 
-      // Clear ALL Discord data in database
+      // Clear ALL Discord data in database (including roles and partner status)
       const unlinkData = {
         discord_id: null,
         discord_username: null,
         discord_global_name: null,
         discord_avatar: null,
         discord_linked_at: null,
+        is_discord_member: null,
+        has_partner_role: null,
+        partner_id: null,
+        discord_roles: null,
+        last_discord_sync: null,
         display_name: calculated_display_name
       };
 
