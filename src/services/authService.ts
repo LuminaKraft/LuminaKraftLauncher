@@ -795,11 +795,11 @@ class AuthService {
 
       if (rolesSuccess) {
         console.log('Discord data and roles synced successfully');
+        // Note: syncDiscordRoles() already emits profile-updated event after successful sync
       } else {
         console.warn('Discord data synced but role sync failed');
       }
 
-      this.emitProfileUpdate();
       return true;
     } catch (error) {
       console.error('Error syncing Discord data:', error);
@@ -887,6 +887,15 @@ class AuthService {
       if (data.newRefreshToken) {
         localStorage.setItem('discord_provider_refresh_token', data.newRefreshToken);
         console.log('✅ New Discord refresh token saved for next sync');
+      }
+
+      // Wait a bit to ensure the edge function has finished writing to the database
+      // The edge function updates the display_name, so we need to give it time before
+      // components refresh their data
+      if (data.success) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        this.emitProfileUpdate();
+        console.log('✅ Profile update event emitted (display_name updated by edge function)');
       }
 
       return data.success;
