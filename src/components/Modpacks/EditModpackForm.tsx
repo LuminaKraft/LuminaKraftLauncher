@@ -2,13 +2,15 @@ import { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import {
   Save, Upload, Plus, X, Trash2, Image as ImageIcon,
-  FileText, Package, Settings, Layers, History, Check,
-  AlertTriangle, RefreshCw
+  FileText, Package, Settings, Layers, History,
+  RefreshCw
 } from 'lucide-react';
 import ModpackManagementService from '../../services/modpackManagementService';
 import AuthService from '../../services/authService';
 import { supabase } from '../../services/supabaseClient';
 import { ConfirmDialog } from '../Common/ConfirmDialog';
+import { useModpackValidation } from '../../hooks/useModpackValidation';
+import { ModpackValidationDialog } from './ModpackValidationDialog';
 
 interface Feature {
   id?: string;
@@ -53,6 +55,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
   const [formData, setFormData] = useState<FormData | null>(null);
   const [features, setFeatures] = useState<Feature[]>([]);
   const [images, setImages] = useState<ModpackImage[]>([]);
+  const [versions, setVersions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -61,6 +64,23 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
   const [changelog, setChangelog] = useState({ en: '', es: '' });
   const [zipFile, setZipFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const {
+    isParsing,
+    validationData,
+    showValidationDialog,
+    setShowValidationDialog,
+    manifestParsed,
+    validateAndParseManifest,
+    resetValidation
+  } = useModpackValidation({
+    onManifestParsed: (data) => {
+      if (data.version) setNewVersion(data.version);
+      // We don't auto-fill other fields here to avoid overwriting existing modpack data accidentally
+      // but we could if we wanted to allow updating modpack metadata from the new version ZIP
+    }
+  });
 
   // Dialog State
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -82,22 +102,24 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
         .eq('id', modpackId)
         .single();
 
-      if (error || !data) throw new Error('Failed to load modpack');
+      const modpackData = data as any;
+
+      if (error || !modpackData) throw new Error('Failed to load modpack');
 
       setFormData({
-        name: data.name_i18n || { en: '', es: '' },
-        shortDescription: data.short_description_i18n || { en: '', es: '' },
-        description: data.description_i18n || { en: '', es: '' },
-        version: data.version || '',
-        minecraftVersion: data.minecraft_version || '',
-        modloader: data.modloader || 'forge',
-        modloaderVersion: data.modloader_version || '',
-        gamemode: data.gamemode || '',
-        serverIp: data.server_ip || '',
-        primaryColor: data.primary_color || '#3b82f6',
-        isActive: data.is_active || false,
-        logoUrl: data.logo_url,
-        bannerUrl: data.banner_url
+        name: modpackData.name_i18n || { en: '', es: '' },
+        shortDescription: modpackData.short_description_i18n || { en: '', es: '' },
+        description: modpackData.description_i18n || { en: '', es: '' },
+        version: modpackData.version || '',
+        minecraftVersion: modpackData.minecraft_version || '',
+        modloader: modpackData.modloader || 'forge',
+        modloaderVersion: modpackData.modloader_version || '',
+        gamemode: modpackData.gamemode || '',
+        serverIp: modpackData.server_ip || '',
+        primaryColor: modpackData.primary_color || '#3b82f6',
+        isActive: modpackData.is_active || false,
+        logoUrl: modpackData.logo_url,
+        bannerUrl: modpackData.banner_url
       });
 
       // 2. Fetch Features
@@ -115,6 +137,12 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
       const imagesResult = await service.getModpackImages(modpackId);
       if (imagesResult.success && imagesResult.data) {
         setImages(imagesResult.data);
+      }
+
+      // 4. Fetch Versions
+      const versionsResult = await service.getModpackVersions(modpackId);
+      if (versionsResult.success && versionsResult.data) {
+        setVersions(versionsResult.data);
       }
 
     } catch (error) {
@@ -243,7 +271,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
         .eq('modpack_id', modpackId);
 
       if (existingFeatures) {
-        for (const f of existingFeatures) {
+        for (const f of (existingFeatures as any[])) {
           await service.deleteModpackFeature(f.id);
         }
       }
@@ -273,10 +301,26 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
 
   // --- Versions Tab Handlers ---
 
+  const handleZipFile = async (file: File) => {
+    if (!file.name.endsWith('.zip')) {
+      toast.error('Please select a ZIP file');
+      return;
+    }
+    setZipFile(file);
+    resetValidation();
+    await validateAndParseManifest(file);
+  };
+
   const handleUploadNewVersion = async () => {
     if (!zipFile || !newVersion) {
       toast.error('Version and ZIP file are required');
       return;
+    }
+
+    // Ensure manifest is parsed/validated if not already (though UI should enforce this)
+    if (!manifestParsed) {
+      const isValid = await validateAndParseManifest(zipFile);
+      if (!isValid) return;
     }
 
     setIsUpdating(true);
@@ -303,11 +347,20 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
       setNewVersion('');
       setChangelog({ en: '', es: '' });
       setZipFile(null);
+      resetValidation();
       setUploadProgress(0);
+      if (fileInputRef.current) fileInputRef.current.value = '';
 
       // Update local state
       setFormData(prev => prev ? ({ ...prev, version: newVersion }) : null);
+
+      // Refresh versions list
+      const versionsResult = await service.getModpackVersions(modpackId);
+      if (versionsResult.success && versionsResult.data) {
+        setVersions(versionsResult.data);
+      }
     } catch (error) {
+      console.error(error);
       toast.error('Failed to upload version', { id: toastId });
     } finally {
       setIsUpdating(false);
@@ -371,8 +424,8 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
             {formData.name.en}
             <span className={`text-sm px-3 py-1 rounded-full border ${formData.isActive
-                ? 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800'
-                : 'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800'
+              ? 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800'
+              : 'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800'
               }`}>
               {formData.isActive ? 'Published' : 'Hidden'}
             </span>
@@ -396,8 +449,8 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors border-l-4 ${activeTab === tab.id
-                    ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
-                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                  ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'
                   }`}
               >
                 <tab.icon className="w-5 h-5" />
@@ -717,50 +770,55 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
           {activeTab === 'versions' && (
             <div className="space-y-6 animate-fade-in">
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
+                <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">Version History</h2>
+                {versions.length === 0 ? (
+                  <p className="text-gray-500 dark:text-gray-400">No versions uploaded yet.</p>
+                ) : (
+                  <div className="space-y-4">
+                    {versions.map((v) => (
+                      <div key={v.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="font-bold text-lg text-gray-900 dark:text-white">v{v.version}</h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              Released on {new Date(v.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <a
+                            href={v.file_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                          >
+                            Download ZIP
+                          </a>
+                        </div>
+                        {v.changelog_i18n && (
+                          <div className="mt-3 text-sm text-gray-600 dark:text-gray-300">
+                            <p className="font-medium mb-1">Changelog:</p>
+                            <p className="whitespace-pre-wrap">{v.changelog_i18n.en}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
                 <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">Upload New Version</h2>
 
                 <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">New Version Number</label>
-                    <input
-                      type="text"
-                      value={newVersion}
-                      onChange={(e) => setNewVersion(e.target.value)}
-                      placeholder="e.g. 1.1.0"
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Changelog (EN)</label>
-                      <textarea
-                        value={changelog.en}
-                        onChange={(e) => setChangelog(prev => ({ ...prev, en: e.target.value }))}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white h-32"
-                        placeholder="- Added new items..."
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Changelog (ES)</label>
-                      <textarea
-                        value={changelog.es}
-                        onChange={(e) => setChangelog(prev => ({ ...prev, es: e.target.value }))}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white h-32"
-                        placeholder="- Nuevos items..."
-                      />
-                    </div>
-                  </div>
-
                   <div>
                     <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Modpack ZIP File</label>
                     <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
                       <input
                         type="file"
                         accept=".zip"
-                        onChange={(e) => setZipFile(e.target.files?.[0] || null)}
+                        onChange={(e) => e.target.files?.[0] && handleZipFile(e.target.files[0])}
                         className="hidden"
                         id="zip-upload"
+                        ref={fileInputRef}
                       />
                       <label htmlFor="zip-upload" className="cursor-pointer flex flex-col items-center">
                         <Package className="w-12 h-12 text-gray-400 mb-2" />
@@ -770,26 +828,63 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                             {zipFile.name} ({(zipFile.size / 1024 / 1024).toFixed(2)} MB)
                           </div>
                         )}
+                        {isParsing && <p className="text-sm text-gray-500 mt-2">Validating...</p>}
                       </label>
                     </div>
                   </div>
 
-                  {isUpdating && uploadProgress > 0 && (
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                      <div className="bg-blue-600 h-2.5 rounded-full transition-all" style={{ width: `${uploadProgress}%` }}></div>
-                    </div>
-                  )}
+                  {manifestParsed && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">New Version Number</label>
+                        <input
+                          type="text"
+                          value={newVersion}
+                          onChange={(e) => setNewVersion(e.target.value)}
+                          placeholder="e.g. 1.1.0"
+                          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        />
+                      </div>
 
-                  <div className="flex justify-end">
-                    <button
-                      onClick={handleUploadNewVersion}
-                      disabled={isUpdating || !newVersion || !zipFile}
-                      className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
-                    >
-                      {isUpdating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                      Publish Version
-                    </button>
-                  </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Changelog (EN)</label>
+                          <textarea
+                            value={changelog.en}
+                            onChange={(e) => setChangelog(prev => ({ ...prev, en: e.target.value }))}
+                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white h-32"
+                            placeholder="- Added new items..."
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Changelog (ES)</label>
+                          <textarea
+                            value={changelog.es}
+                            onChange={(e) => setChangelog(prev => ({ ...prev, es: e.target.value }))}
+                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white h-32"
+                            placeholder="- Nuevos items..."
+                          />
+                        </div>
+                      </div>
+
+                      {isUpdating && uploadProgress > 0 && (
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                          <div className="bg-blue-600 h-2.5 rounded-full transition-all" style={{ width: `${uploadProgress}%` }}></div>
+                        </div>
+                      )}
+
+                      <div className="flex justify-end">
+                        <button
+                          onClick={handleUploadNewVersion}
+                          disabled={isUpdating || !newVersion || !zipFile}
+                          className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
+                        >
+                          {isUpdating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                          Publish Version
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -813,8 +908,8 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                     onClick={handleToggleVisibility}
                     disabled={isUpdating}
                     className={`px-4 py-2 rounded-lg font-medium transition-colors ${formData.isActive
-                        ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:hover:bg-yellow-900/50'
-                        : 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50'
+                      ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:hover:bg-yellow-900/50'
+                      : 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50'
                       }`}
                   >
                     {formData.isActive ? 'Hide Modpack' : 'Publish Modpack'}
@@ -849,6 +944,31 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
         confirmText="Delete Forever"
         variant="danger"
       />
+
+      {validationData && (
+        <ModpackValidationDialog
+          isOpen={showValidationDialog}
+          onClose={() => {
+            setShowValidationDialog(false);
+            setZipFile(null);
+            resetValidation();
+            if (fileInputRef.current) {
+              fileInputRef.current.value = '';
+            }
+          }}
+          onContinue={() => {
+            // For Edit form, we might want to handle overrides differently or just allow proceed
+            // Currently ModpackValidationDialog returns uploadedFiles but we don't have logic to merge them in Edit form yet
+            // So we might just close and let them proceed if they really want to (or block if strict)
+            // For now, let's just close and allow the user to try again or we can implement the merge logic later
+            setShowValidationDialog(false);
+            toast.success('Validation warning acknowledged. You can proceed with upload.');
+          }}
+          modpackName={validationData.modpackName}
+          modsWithoutUrl={validationData.modsWithoutUrl}
+          modsInOverrides={validationData.modsInOverrides}
+        />
+      )}
     </div>
   );
 }

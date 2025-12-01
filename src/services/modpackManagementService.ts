@@ -202,10 +202,45 @@ export class ModpackManagementService {
         return { success: false, error: error.message };
       }
 
+      // Create initial version entry
+      if (data?.id) {
+        await supabase
+          .from('modpack_versions')
+          .insert({
+            modpack_id: data.id,
+            version: modpackData.version,
+            changelog_i18n: { en: 'Initial release', es: 'Lanzamiento inicial' },
+            file_url: null // Will be updated after file upload
+          } as any);
+      }
+
       return { success: true, modpackId: data?.id || '' };
     } catch (error) {
       console.error('Error creating modpack:', error);
       return { success: false, error: 'Failed to create modpack' };
+    }
+  }
+
+  /**
+   * Get versions for a modpack
+   */
+  async getModpackVersions(modpackId: string): Promise<{ success: boolean; data?: any[]; error?: string }> {
+    try {
+      const { data, error } = await supabase
+        .from('modpack_versions')
+        .select('*')
+        .eq('modpack_id', modpackId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching versions:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data: data || [] };
+    } catch (error) {
+      console.error('Error fetching versions:', error);
+      return { success: false, error: 'Failed to fetch versions' };
     }
   }
 
@@ -257,8 +292,13 @@ export class ModpackManagementService {
                   filePath: response.filePath,
                   sha256: sha256
                 });
+
+                // If this upload is for a specific version, update the version record
+                // This is handled by the caller usually, but we could add logic here if needed
               } else {
-                resolve({ success: false, error: response.error || 'Upload failed' });
+                resolve({
+                  success: false, error: response.error || 'Upload failed'
+                });
               }
             } catch (parseError) {
               console.error('Error parsing response:', parseError);

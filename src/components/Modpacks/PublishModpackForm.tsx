@@ -4,7 +4,7 @@ import { Plus, X, Upload, FileArchive, AlertCircle, RefreshCw, Check, ChevronRig
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import ModpackManagementService from '../../services/modpackManagementService';
-import ModpackValidationService, { ModFileInfo } from '../../services/modpackValidationService';
+import { useModpackValidation } from '../../hooks/useModpackValidation';
 import { ModpackValidationDialog } from './ModpackValidationDialog';
 import { ConfirmDialog } from '../Common/ConfirmDialog';
 import AuthService from '../../services/authService';
@@ -36,13 +36,10 @@ interface PublishModpackFormProps {
 
 export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
   const service = ModpackManagementService.getInstance();
-  const validationService = ModpackValidationService.getInstance();
   const authService = AuthService.getInstance();
 
   const [discordAccount, setDiscordAccount] = useState<DiscordAccount | null>(null);
   const [isCheckingAccess, setIsCheckingAccess] = useState(true);
-  const [isSyncingRoles, setIsSyncingRoles] = useState(false);
-  const [syncError, setSyncError] = useState<string | null>(null);
   const [isLinkingDiscord, setIsLinkingDiscord] = useState(false);
 
   const [formData, setFormData] = useState<FormData>({
@@ -64,8 +61,6 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [isParsing, setIsParsing] = useState(false);
-  const [manifestParsed, setManifestParsed] = useState(false);
   const [currentLang, setCurrentLang] = useState<'en' | 'es'>('en');
   const [currentStep, setCurrentStep] = useState(1);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -78,13 +73,29 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
     { id: 5, title: 'Review', icon: Check, description: 'Review & Publish' }
   ];
 
-  // Validation state
-  const [showValidationDialog, setShowValidationDialog] = useState(false);
-  const [validationData, setValidationData] = useState<{
-    modpackName: string;
-    modsWithoutUrl: ModFileInfo[];
-    modsInOverrides: string[];
-  } | null>(null);
+  const {
+    isParsing,
+    validationData,
+    showValidationDialog,
+    setShowValidationDialog,
+    manifestParsed,
+    validateAndParseManifest,
+    resetValidation
+  } = useModpackValidation({
+    onManifestParsed: (data) => {
+      setFormData(prev => ({
+        ...prev,
+        name: {
+          en: data.name || prev.name.en,
+          es: data.name || prev.name.es
+        },
+        version: data.version || prev.version,
+        minecraftVersion: data.minecraftVersion || prev.minecraftVersion,
+        modloader: data.modloader || prev.modloader,
+        modloaderVersion: data.modloaderVersion || prev.modloaderVersion
+      }));
+    }
+  });
 
   // Download confirmation state
   const [showDownloadDialog, setShowDownloadDialog] = useState(false);
@@ -123,16 +134,12 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
       const needsSync = !lastSync || lastSync < oneHourAgo;
 
       if (needsSync) {
-        setIsSyncingRoles(true);
         try {
           await authService.syncDiscordRoles();
           const updatedAccount = await authService.getDiscordAccount();
           setDiscordAccount(updatedAccount);
         } catch (error) {
           console.error('Failed to sync roles:', error);
-          setSyncError('roles_sync_failed');
-        } finally {
-          setIsSyncingRoles(false);
         }
       }
     };
@@ -190,7 +197,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
       return;
     }
     setZipFile(file);
-    setManifestParsed(false);
+    resetValidation();
     await validateAndParseManifest(file);
   };
 
@@ -247,72 +254,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
     }
   };
 
-  const validateAndParseManifest = async (file: File) => {
-    setIsParsing(true);
-    try {
-      const validationResult = await validationService.validateModpackZip(file);
-      if (!validationResult.success) {
-        toast.error(validationResult.error || 'Failed to validate modpack');
-        return;
-      }
 
-      if (validationResult.modsWithoutUrl && validationResult.modsWithoutUrl.length > 0) {
-        const missingMods = validationResult.modsWithoutUrl.filter(
-          mod => !validationResult.modsInOverrides?.includes(mod.fileName)
-        );
-
-        if (missingMods.length > 0) {
-          setValidationData({
-            modpackName: validationResult.manifest?.name || file.name,
-            modsWithoutUrl: missingMods,
-            modsInOverrides: validationResult.modsInOverrides || []
-          });
-          setShowValidationDialog(true);
-        }
-      }
-
-      const parseResult = await service.parseManifestFromZip(file);
-      if (!parseResult.success || !parseResult.data) {
-        toast.error(parseResult.error || 'Failed to parse manifest.json');
-        return;
-      }
-
-      const data = parseResult.data;
-      setFormData(prev => ({
-        ...prev,
-        name: {
-          en: data.name || prev.name.en,
-          es: data.name || prev.name.es
-        },
-        version: data.version || prev.version,
-        minecraftVersion: data.minecraftVersion || prev.minecraftVersion,
-        modloader: data.modloader || prev.modloader,
-        modloaderVersion: data.modloaderVersion || prev.modloaderVersion
-      }));
-      setManifestParsed(true);
-
-      if (validationResult.modsWithoutUrl && validationResult.modsWithoutUrl.length > 0) {
-        const missingCount = validationResult.modsWithoutUrl.filter(
-          mod => !validationResult.modsInOverrides?.includes(mod.fileName)
-        ).length;
-        if (missingCount > 0) {
-          toast(`Manifest parsed, but ${missingCount} mod(s) require manual download.`, {
-            icon: '⚠️',
-            duration: 5000
-          });
-        } else {
-          toast.success('Manifest parsed! All required mods are in overrides.');
-        }
-      } else {
-        toast.success('Manifest parsed! Form auto-filled with modpack data.');
-      }
-    } catch (error) {
-      console.error('Error validating manifest:', error);
-      toast.error('Failed to validate modpack');
-    } finally {
-      setIsParsing(false);
-    }
-  };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -365,22 +307,17 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
     if (currentStep !== 5) return; // Prevent submission if not on the final step
     if (!validateForm()) return;
 
-    setIsSyncingRoles(true);
     try {
       await authService.syncDiscordRoles();
       const freshAccount = await checkDiscordAccess();
       if (!freshAccount || !freshAccount.isMember) {
         toast.error('You must be a Discord server member to publish modpacks');
-        setIsSyncingRoles(false);
         return;
       }
     } catch (error) {
       console.error('Failed to sync roles before publishing:', error);
       toast.error('Failed to verify permissions. Please try again.');
-      setIsSyncingRoles(false);
       return;
-    } finally {
-      setIsSyncingRoles(false);
     }
 
     setIsUploading(true);
@@ -629,7 +566,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                       onClick={(e) => {
                         e.stopPropagation();
                         setZipFile(null);
-                        setManifestParsed(false);
+                        resetValidation();
                         if (fileInputRef.current) fileInputRef.current.value = '';
                       }}
                       className="mt-4 px-4 py-2 text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
@@ -1214,14 +1151,15 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
             onClose={() => {
               setShowValidationDialog(false);
               setZipFile(null);
-              setManifestParsed(false);
-              if (fileInputRef.current) fileInputRef.current.value = '';
+              resetValidation();
+              if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+              }
             }}
             onContinue={(uploadedFiles) => {
               setShowValidationDialog(false);
               if (uploadedFiles) {
                 setPendingUploadedFiles(uploadedFiles);
-                setShowDownloadDialog(true);
               }
             }}
             modpackName={validationData.modpackName}
