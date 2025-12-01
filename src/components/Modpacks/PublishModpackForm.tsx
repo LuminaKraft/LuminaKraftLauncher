@@ -257,12 +257,18 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
       }
 
       if (validationResult.modsWithoutUrl && validationResult.modsWithoutUrl.length > 0) {
-        setValidationData({
-          modpackName: validationResult.manifest?.name || file.name,
-          modsWithoutUrl: validationResult.modsWithoutUrl,
-          modsInOverrides: validationResult.modsInOverrides || []
-        });
-        setShowValidationDialog(true);
+        const missingMods = validationResult.modsWithoutUrl.filter(
+          mod => !validationResult.modsInOverrides?.includes(mod.fileName)
+        );
+
+        if (missingMods.length > 0) {
+          setValidationData({
+            modpackName: validationResult.manifest?.name || file.name,
+            modsWithoutUrl: missingMods,
+            modsInOverrides: validationResult.modsInOverrides || []
+          });
+          setShowValidationDialog(true);
+        }
       }
 
       const parseResult = await service.parseManifestFromZip(file);
@@ -290,7 +296,10 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
           mod => !validationResult.modsInOverrides?.includes(mod.fileName)
         ).length;
         if (missingCount > 0) {
-          toast.error(`Manifest parsed, but ${missingCount} mod(s) require manual download.`);
+          toast(`Manifest parsed, but ${missingCount} mod(s) require manual download.`, {
+            icon: '⚠️',
+            duration: 5000
+          });
         } else {
           toast.success('Manifest parsed! All required mods are in overrides.');
         }
@@ -353,6 +362,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (currentStep !== 5) return; // Prevent submission if not on the final step
     if (!validateForm()) return;
 
     setIsSyncingRoles(true);
@@ -558,7 +568,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-8">
+      <form className="space-y-8">
         {/* Step 1: Upload ZIP File */}
         {currentStep === 1 && (
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md animate-fade-in">
@@ -886,14 +896,38 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                   Features (Optional)
                 </h2>
-                <button
-                  type="button"
-                  onClick={addFeature}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Feature
-                </button>
+                <div className="flex gap-2">
+                  <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mr-4">
+                    <button
+                      type="button"
+                      onClick={() => setCurrentLang('en')}
+                      className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${currentLang === 'en'
+                        ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                        }`}
+                    >
+                      EN
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentLang('es')}
+                      className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${currentLang === 'es'
+                        ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                        }`}
+                    >
+                      ES
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addFeature}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Feature
+                  </button>
+                </div>
               </div>
               {formData.features.length === 0 ? (
                 <div className="text-center py-8 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg">
@@ -1113,7 +1147,10 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                   {formData.features.length > 0 ? (
                     <ul className="list-disc list-inside">
                       {formData.features.map((f, i) => (
-                        <li key={i}>{f.title.en}</li>
+                        <li key={i}>
+                          <span className="font-medium">{f.title.en}</span>
+                          {f.title.es && <span className="text-gray-500 text-sm ml-2">({f.title.es})</span>}
+                        </li>
                       ))}
                     </ul>
                   ) : (
@@ -1150,7 +1187,8 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
             </button>
           ) : (
             <button
-              type="submit"
+              type="button"
+              onClick={handleSubmit}
               disabled={isUploading}
               className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors flex items-center gap-2 shadow-lg shadow-green-500/30"
             >
@@ -1173,7 +1211,12 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
         {validationData && (
           <ModpackValidationDialog
             isOpen={showValidationDialog}
-            onClose={() => setShowValidationDialog(false)}
+            onClose={() => {
+              setShowValidationDialog(false);
+              setZipFile(null);
+              setManifestParsed(false);
+              if (fileInputRef.current) fileInputRef.current.value = '';
+            }}
             onContinue={(uploadedFiles) => {
               setShowValidationDialog(false);
               if (uploadedFiles) {
