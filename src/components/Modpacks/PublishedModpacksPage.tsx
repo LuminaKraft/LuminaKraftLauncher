@@ -209,8 +209,9 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
   // Show authentication required screen for non-authenticated users
   if (!canManage) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-12 text-center">
+      <>
+        <div className="max-w-4xl mx-auto p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-12 text-center">
           {/* Icon */}
           <div className="relative inline-flex items-center justify-center mb-6">
             <Cloud className="w-20 h-20 text-blue-500" />
@@ -287,6 +288,14 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
           </div>
         </div>
       </div>
+
+      {/* Loading Modal for Discord Linking */}
+      <LoadingModal
+        isOpen={isLinkingDiscord}
+        message={t('auth.authenticating')}
+        submessage={t('auth.pleaseWaitAuth')}
+      />
+      </>
     );
   }
 
