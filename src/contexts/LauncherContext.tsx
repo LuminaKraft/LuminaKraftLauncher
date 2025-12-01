@@ -500,10 +500,16 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
         throw new Error(`Este es un servidor ${modpack.modloader}. IP: ${modpack.ip}`);
       } else {
         // Check if it's a community modpack that might not have been fully configured
+        console.error('Modpack missing urlModpackZip:', {
+          id: modpack.id,
+          name: modpack.name,
+          category: modpack.category,
+          modpack
+        });
         if (modpack.category === 'community') {
-          throw new Error('Este modpack de comunidad aún no tiene un archivo disponible para descarga. Por favor contacta al creador del modpack.');
+          throw new Error('Este modpack de comunidad aún no tiene un archivo disponible para descarga. Por favor contacta al creador del modpack. Intenta refrescar el launcher (Cmd+R).');
         } else {
-          throw new Error('Este modpack no tiene archivo disponible para descarga');
+          throw new Error('Este modpack no tiene archivo disponible para descarga. Intenta refrescar el launcher (Cmd+R).');
         }
       }
     }
