@@ -499,7 +499,12 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
         // Es un servidor vanilla/paper, solo se puede "conectar"
         throw new Error(`Este es un servidor ${modpack.modloader}. IP: ${modpack.ip}`);
       } else {
-        throw new Error('Este servidor no tiene modpack disponible para descarga');
+        // Check if it's a community modpack that might not have been fully configured
+        if (modpack.category === 'community') {
+          throw new Error('Este modpack de comunidad aún no tiene un archivo disponible para descarga. Por favor contacta al creador del modpack.');
+        } else {
+          throw new Error('Este modpack no tiene archivo disponible para descarga');
+        }
       }
     }
 
