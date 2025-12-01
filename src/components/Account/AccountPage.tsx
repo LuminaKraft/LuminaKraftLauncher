@@ -4,6 +4,7 @@ import { User, Trash2 } from 'lucide-react';
 import AuthService from '../../services/authService';
 import ProfileEditor from '../Settings/ProfileEditor';
 import { ConfirmDialog } from '../Common/ConfirmDialog';
+import { LoadingModal } from '../Common/LoadingModal';
 import type { DiscordAccount } from '../../types/launcher';
 import toast from 'react-hot-toast';
 
@@ -15,6 +16,7 @@ const AccountPage: React.FC = () => {
   const [isLoadingLuminaKraft, setIsLoadingLuminaKraft] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
+  const [isSigningIn, setIsSigningIn] = useState(false);
 
   const canUnlink = (luminaKraftUser?.identities?.length || 0) > 1;
 
@@ -25,7 +27,16 @@ const AccountPage: React.FC = () => {
         const { supabase } = await import('../../services/supabaseClient');
 
         const fetchUserWithProfile = async (retries = 3) => {
-          const { data: { user } } = await supabase.auth.getUser();
+          // Use Promise.race to timeout getUser() if it takes too long
+          const getUserPromise = supabase.auth.getUser();
+          const timeoutPromise = new Promise<{ data: { user: null } }>((resolve) =>
+            setTimeout(() => {
+              resolve({ data: { user: null } });
+            }, 3000)
+          );
+
+          const { data: { user } } = await Promise.race([getUserPromise, timeoutPromise]);
+
           if (!user) {
             setDiscordAccount(null);
             return null;
@@ -73,24 +84,31 @@ const AccountPage: React.FC = () => {
         // Listen for auth state changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
           async (event, session) => {
-            console.log('Auth state changed:', event);
             if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
+              // Small delay to allow Supabase client to fully process the session
+              await new Promise(resolve => setTimeout(resolve, 200));
               const updatedUser = await fetchUserWithProfile();
               setLuminaKraftUser(updatedUser);
+
+              // Hide loading modal when sign-in completes
+              setIsSigningIn(false);
             } else if (event === 'SIGNED_OUT') {
               setLuminaKraftUser(null);
               setDiscordAccount(null);
               setLinkedProviders([]);
+              setIsSigningIn(false);
             }
           }
         );
 
         // Listen for custom profile update events (triggered by authService after sync)
-        const handleProfileUpdateEvent = () => {
-          console.log('Profile update event received, refreshing user...');
-          fetchUserWithProfile(1).then(updatedUser => {
+        const handleProfileUpdateEvent = async () => {
+          try {
+            const updatedUser = await fetchUserWithProfile(1);
             setLuminaKraftUser(updatedUser);
-          });
+          } catch (error) {
+            console.error('Error updating user from profile event:', error);
+          }
         };
         window.addEventListener('luminakraft:profile-updated', handleProfileUpdateEvent);
 
@@ -112,11 +130,13 @@ const AccountPage: React.FC = () => {
   }, []);
 
   const handleSignInToLuminaKraft = async () => {
+    setIsSigningIn(true);
     const authService = AuthService.getInstance();
     await authService.signInToLuminaKraftAccount();
   };
 
   const handleSignUpToLuminaKraft = async () => {
+    setIsSigningIn(true);
     const authService = AuthService.getInstance();
     await authService.signUpLuminaKraftAccount();
   };
@@ -484,6 +504,13 @@ const AccountPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Loading Modal */}
+      <LoadingModal
+        isOpen={isSigningIn}
+        message={t('auth.signingIn')}
+        submessage={t('auth.pleaseWait')}
+      />
     </div>
   );
 };

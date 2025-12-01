@@ -323,6 +323,8 @@
     "microsoftDescription": "Inicia sesión con tu cuenta de Microsoft para acceder a Minecraft. Se abrirá automáticamente el navegador.",
     "signInMicrosoft": "Iniciar sesión con Microsoft",
     "signing": "Iniciando...",
+    "signingIn": "Iniciando sesión...",
+    "pleaseWait": "Por favor espera mientras autenticamos tu cuenta",
     "authenticated": "Autenticado con Microsoft",
     "signIn": "Iniciar Sesión",
     "signUp": "Registrarse",

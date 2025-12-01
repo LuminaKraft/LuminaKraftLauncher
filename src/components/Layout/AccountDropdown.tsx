@@ -63,7 +63,6 @@ const MinecraftAccountDropdown: React.FC<MinecraftAccountDropdownProps> = ({
 
     // Listen for profile updates
     const handleProfileUpdate = () => {
-      console.log('Profile update event received in AccountDropdown');
       loadLuminaKraftUser();
     };
 

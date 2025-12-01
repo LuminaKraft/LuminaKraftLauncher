@@ -134,11 +134,8 @@ class AuthService {
    */
   async signInToLuminaKraftAccount(): Promise<boolean> {
     try {
-      console.log('Starting LuminaKraft Account sign in flow...');
-
       // 1. Start HTTP server and get port
       const port = await invoke<number>('start_oauth_server');
-      console.log(`OAuth server started on port ${port}`);
 
       // 2. Set up event listener for oauth callback
       const { listen } = await import('@tauri-apps/api/event');
@@ -150,81 +147,67 @@ class AuthService {
       }>(
         'oauth-callback',
         async (event) => {
-          console.log('OAuth callback received - Raw Payload:', JSON.stringify(event.payload, null, 2));
           try {
             const { access_token, refresh_token, provider_token, provider_refresh_token } = event.payload;
 
-            console.log('Setting Supabase session...');
-            
-            // Create a timeout promise
-            const timeoutPromise = new Promise<{ data: { session: null }, error: Error }>((_, reject) => 
-              setTimeout(() => reject(new Error('SetSession timeout')), 10000)
-            );
-
             // 3. Establish Supabase session with received tokens
-            const setSessionPromise = supabase.auth.setSession({
+            // Don't await - let it process in background
+            supabase.auth.setSession({
               access_token,
               refresh_token
+            }).catch(err => {
+              console.error('SetSession error:', err);
             });
 
-            const { data, error } = await Promise.race([setSessionPromise, timeoutPromise]) as any;
+            // Focus the launcher window immediately
+            try {
+              await invoke('focus_window');
+            } catch (focusError) {
+              console.warn('Failed to focus window:', focusError);
+            }
 
-            console.log('SetSession result:', { error, hasSession: !!data?.session });
+            // Wait a bit for session to be processed, then emit update event
+            await new Promise(resolve => setTimeout(resolve, 500));
 
-            if (error) {
-              console.error('Failed to set Supabase session:', error);
-            } else {
-              console.log('✅ LuminaKraft session set successfully');
-              
-              // Force refresh user to ensure session is active
-              const { data: { user } } = await supabase.auth.getUser();
-              console.log('Active User:', user?.id);
+            // Emit profile update event (listeners will handle fetching user)
+            this.emitProfileUpdate();
 
-              // NEW: Auto-detect and sync Discord data
-              if (user) {
+            // Run sync operations in background (don't block)
+            setTimeout(async () => {
+              try {
+                const { data: { user } } = await supabase.auth.getUser();
+
+                if (!user) {
+                  return;
+                }
+
                 const identities = user.identities || [];
-                const discordIdentity = identities.find(id => id.provider === 'discord');
+                const discordIdentity = identities.find((id: any) => id.provider === 'discord');
                 const currentProvider = user.app_metadata.provider;
-                
-                console.log('Identities found:', identities.length);
-                console.log('Current provider:', currentProvider);
 
                 if (currentProvider === 'discord' && provider_token) {
-                  console.log('Discord provider detected, auto-syncing data...');
-                  // Call sync directly with the new token
                   try {
                     await this.syncDiscordData(provider_token, provider_refresh_token);
                   } catch (err) {
                     console.error('SyncDiscordData failed:', err);
                   }
                 } else if (discordIdentity) {
-                  console.log('Discord identity found (linked), attempting background sync...');
-                  // Call sync without tokens (will use stored tokens if available)
                   try {
                     await this.syncDiscordData();
                   } catch (err) {
                     console.error('Background SyncDiscordData failed:', err);
                   }
-                } else {
-                  console.log('No Discord identity or token found in session initialization');
                 }
 
                 // Sync Microsoft data if available locally
                 await this.syncMicrosoftData();
+              } catch (err) {
+                console.error('Background sync error:', err);
               }
-
-              // Focus the launcher window
-              try {
-                await invoke('focus_window');
-                console.log('Launcher window focused');
-              } catch (focusError) {
-                console.warn('Failed to focus window:', focusError);
-              }
-            }
+            }, 1000);
           } catch (e) {
             console.error('Error in oauth-callback listener:', e);
           } finally {
-            console.log('Cleaning up listener');
             unlisten();
           }
         }
@@ -233,7 +216,6 @@ class AuthService {
       // 4. Open browser to sign in page
       const url = `https://luminakraft.com/auth/sign-in?launcher=true&port=${port}`;
       await invoke('open_url', { url });
-      console.log(`Opened browser to ${url}`);
 
       return true;
     } catch (error) {
