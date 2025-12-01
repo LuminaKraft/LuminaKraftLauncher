@@ -5,6 +5,7 @@ import { Plus, Edit, Trash2, Eye, EyeOff, Download, Cloud, Lock, Loader2 } from 
 import ModpackManagementService from '../../services/modpackManagementService';
 import AuthService from '../../services/authService';
 import { ConfirmDialog } from '../Common/ConfirmDialog';
+import { LoadingModal } from '../Common/LoadingModal';
 
 interface Modpack {
   id: string;
@@ -36,9 +37,22 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
   const [canManage, setCanManage] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedModpack, setSelectedModpack] = useState<Modpack | null>(null);
+  const [isLinkingDiscord, setIsLinkingDiscord] = useState(false);
 
   useEffect(() => {
     loadData();
+
+    // Listen for profile updates (after Discord linking)
+    const handleProfileUpdate = () => {
+      setIsLinkingDiscord(false);
+      loadData(); // Refresh page data
+    };
+
+    window.addEventListener('luminakraft:profile-updated', handleProfileUpdate);
+
+    return () => {
+      window.removeEventListener('luminakraft:profile-updated', handleProfileUpdate);
+    };
   }, []);
 
   const loadData = async () => {
@@ -231,6 +245,7 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
           {/* Action Button */}
           <button
             onClick={async () => {
+              setIsLinkingDiscord(true);
               const authService = AuthService.getInstance();
               await authService.linkDiscordAccount();
             }}
@@ -423,6 +438,13 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
         confirmText={t('publishedModpacks.deleteDialog.confirm')}
         cancelText={t('publishedModpacks.deleteDialog.cancel')}
         variant="danger"
+      />
+
+      {/* Loading Modal for Discord Linking */}
+      <LoadingModal
+        isOpen={isLinkingDiscord}
+        message={t('auth.authenticating')}
+        submessage={t('auth.pleaseWaitAuth')}
       />
     </div>
   );
