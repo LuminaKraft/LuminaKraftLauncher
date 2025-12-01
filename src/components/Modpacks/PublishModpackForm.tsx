@@ -432,7 +432,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
           toast.error(`Error uploading file: ${uploadResult.error}`);
           return;
         }
-        await service.updateModpack(modpackId, { isActive: true });
+        await service.updateModpack(modpackId, { isActive: false });
       }
 
       toast.success('Modpack published successfully!');

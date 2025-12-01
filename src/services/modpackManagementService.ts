@@ -585,6 +585,96 @@ export class ModpackManagementService {
   }
 
   /**
+   * Get features for a modpack
+   */
+  async getModpackFeatures(modpackId: string): Promise<{ success: boolean; data?: any[]; error?: string }> {
+    try {
+      const { data, error } = await supabase
+        .from('modpack_features')
+        .select('*')
+        .eq('modpack_id', modpackId)
+        .order('sort_order', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching features:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data: data || [] };
+    } catch (error) {
+      console.error('Error fetching features:', error);
+      return { success: false, error: 'Failed to fetch features' };
+    }
+  }
+
+  /**
+   * Get images for a modpack
+   */
+  async getModpackImages(modpackId: string): Promise<{ success: boolean; data?: any[]; error?: string }> {
+    try {
+      const { data, error } = await supabase
+        .from('modpack_images')
+        .select('*')
+        .eq('modpack_id', modpackId)
+        .order('sort_order', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching images:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data: data || [] };
+    } catch (error) {
+      console.error('Error fetching images:', error);
+      return { success: false, error: 'Failed to fetch images' };
+    }
+  }
+
+  /**
+   * Delete a modpack feature
+   */
+  async deleteModpackFeature(featureId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { error } = await supabase
+        .from('modpack_features')
+        .delete()
+        .eq('id', featureId);
+
+      if (error) {
+        console.error('Error deleting feature:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error deleting feature:', error);
+      return { success: false, error: 'Failed to delete feature' };
+    }
+  }
+
+  /**
+   * Delete a modpack image
+   */
+  async deleteModpackImage(imageId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { error } = await supabase
+        .from('modpack_images')
+        .delete()
+        .eq('id', imageId);
+
+      if (error) {
+        console.error('Error deleting image:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error deleting image:', error);
+      return { success: false, error: 'Failed to delete image' };
+    }
+  }
+
+  /**
    * Delete a modpack and all its associated files from R2
    */
   async deleteModpack(modpackId: string): Promise<{ success: boolean; error?: string }> {
