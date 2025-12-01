@@ -1095,9 +1095,9 @@ class AuthService {
   }
 
   /**
-   * Link any OAuth provider (GitHub, Google, etc.)
+   * Link any OAuth provider (GitHub, Google, Azure, etc.)
    */
-  async linkProvider(provider: 'github' | 'google'): Promise<boolean> {
+  async linkProvider(provider: 'github' | 'google' | 'azure'): Promise<boolean> {
     try {
       console.log(`Linking ${provider} account...`);
 
@@ -1194,9 +1194,9 @@ class AuthService {
   }
 
   /**
-   * Unlink any OAuth provider (GitHub, Google, etc.)
+   * Unlink any OAuth provider (GitHub, Google, Azure, etc.)
    */
-  async unlinkProvider(provider: 'github' | 'google' | 'discord'): Promise<boolean> {
+  async unlinkProvider(provider: 'github' | 'google' | 'azure' | 'discord'): Promise<boolean> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
 

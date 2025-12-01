@@ -9,6 +9,7 @@ import EditModpackForm from './components/Modpacks/EditModpackForm';
 import PublishedModpacksPage from './components/Modpacks/PublishedModpacksPage';
 import SettingsPage from './components/Settings/SettingsPage';
 import AboutPage from './components/About/AboutPage';
+import AccountPage from './components/Account/AccountPage';
 import UpdateDialog from './components/UpdateDialog';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import LauncherService from './services/launcherService';
@@ -140,6 +141,8 @@ function AppContent() {
         ) : (
           <PublishedModpacksPage onNavigate={handleModpackNavigation} />
         );
+      case 'account':
+        return <AccountPage />;
       case 'settings':
         return <SettingsPage onNavigationBlocked={() => {}} />;
       case 'about':
