@@ -50,8 +50,24 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
 
     window.addEventListener('luminakraft:profile-updated', handleProfileUpdate);
 
+    // Also listen for auth state changes from Supabase
+    let cleanup: (() => void) | undefined;
+    (async () => {
+      const { supabase } = await import('../../services/supabaseClient');
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        async (event) => {
+          if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+            setIsLinkingDiscord(false);
+            loadData();
+          }
+        }
+      );
+      cleanup = () => subscription.unsubscribe();
+    })();
+
     return () => {
       window.removeEventListener('luminakraft:profile-updated', handleProfileUpdate);
+      cleanup?.();
     };
   }, []);
 
