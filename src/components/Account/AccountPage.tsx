@@ -166,25 +166,15 @@ const AccountPage: React.FC = () => {
   };
 
   const handleLinkDiscord = async () => {
+    setIsSigningIn(true);
     const authService = AuthService.getInstance();
     await authService.linkDiscordAccount();
-    // Reload providers after linking
-    setTimeout(async () => {
-      const providers = await authService.getLinkedProviders();
-      setLinkedProviders(providers);
-      const discord = await authService.getDiscordAccount();
-      setDiscordAccount(discord);
-    }, 2000);
   };
 
   const handleLinkProvider = async (provider: 'github' | 'google' | 'azure') => {
+    setIsSigningIn(true);
     const authService = AuthService.getInstance();
     await authService.linkProvider(provider);
-    // Reload providers after linking
-    setTimeout(async () => {
-      const providers = await authService.getLinkedProviders();
-      setLinkedProviders(providers);
-    }, 2000);
   };
 
   const handleUnlinkProvider = async (provider: 'github' | 'google' | 'azure' | 'discord') => {
@@ -508,8 +498,8 @@ const AccountPage: React.FC = () => {
       {/* Loading Modal */}
       <LoadingModal
         isOpen={isSigningIn}
-        message={t('auth.signingIn')}
-        submessage={t('auth.pleaseWait')}
+        message={t('auth.authenticating')}
+        submessage={t('auth.pleaseWaitAuth')}
       />
     </div>
   );

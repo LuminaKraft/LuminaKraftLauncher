@@ -230,9 +230,9 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
 
           {/* Action Button */}
           <button
-            onClick={() => {
-              // Navigate to settings to link Discord
-              onNavigate?.('settings');
+            onClick={async () => {
+              const authService = AuthService.getInstance();
+              await authService.linkDiscordAccount();
             }}
             className="px-8 py-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors text-lg inline-flex items-center gap-3 shadow-lg hover:shadow-xl"
           >

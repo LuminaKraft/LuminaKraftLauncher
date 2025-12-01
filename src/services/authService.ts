@@ -466,50 +466,41 @@ class AuthService {
       }>(
         'oauth-callback',
         async (event) => {
-          console.log('Discord link callback received - Raw Payload:', JSON.stringify(event.payload, null, 2));
           try {
             const { access_token, refresh_token, provider_token, provider_refresh_token } = event.payload;
 
-            // Update session with new identity
-            const timeoutPromise = new Promise<{ data: { session: null }, error: Error }>((_, reject) => 
-              setTimeout(() => reject(new Error('SetSession timeout')), 10000)
-            );
-
-            const setSessionPromise = supabase.auth.setSession({
+            // Update session with new identity - don't await
+            supabase.auth.setSession({
               access_token,
               refresh_token
+            }).catch(err => {
+              console.error('SetSession error:', err);
             });
 
-            const { data, error } = await Promise.race([setSessionPromise, timeoutPromise]) as any;
-
-            console.log('SetSession result (link):', { error, hasSession: !!data?.session });
-
-            if (error) {
-              console.error('Failed to link Discord:', error);
-            } else {
-              console.log('✅ Discord linked successfully');
-
-              // Force refresh user
-              const { data: { user } } = await supabase.auth.getUser();
-
-              // Auto-sync Discord data
-              // Use the provider tokens directly from the callback
-              if (user) {
-                 try {
-                  await this.syncDiscordData(provider_token, provider_refresh_token);
-                } catch (err) {
-                  console.error('SyncDiscordData failed:', err);
-                }
-              }
-
-              // Focus the launcher window
-              try {
-                await invoke('focus_window');
-                console.log('Launcher window focused');
-              } catch (focusError) {
-                console.warn('Failed to focus window:', focusError);
-              }
+            // Focus the launcher window immediately
+            try {
+              await invoke('focus_window');
+            } catch (focusError) {
+              console.warn('Failed to focus window:', focusError);
             }
+
+            // Wait a bit for session to be processed
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Emit profile update event (listeners will handle fetching user)
+            this.emitProfileUpdate();
+
+            // Run Discord sync in background
+            setTimeout(async () => {
+              try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user && provider_token) {
+                  await this.syncDiscordData(provider_token, provider_refresh_token);
+                }
+              } catch (err) {
+                console.error('SyncDiscordData failed:', err);
+              }
+            }, 1000);
           } catch (e) {
             console.error('Error in oauth-callback listener (link):', e);
           } finally {
@@ -1110,37 +1101,29 @@ class AuthService {
       }>(
         'oauth-callback',
         async (event) => {
-          console.log(`${provider} link callback received`);
           try {
             const { access_token, refresh_token } = event.payload;
 
-            // Update session with new identity
-            const timeoutPromise = new Promise<{ data: { session: null }, error: Error }>((_, reject) =>
-              setTimeout(() => reject(new Error('SetSession timeout')), 10000)
-            );
-
-            const setSessionPromise = supabase.auth.setSession({
+            // Update session with new identity - don't await
+            supabase.auth.setSession({
               access_token,
               refresh_token
+            }).catch(err => {
+              console.error('SetSession error:', err);
             });
 
-            const { data, error } = await Promise.race([setSessionPromise, timeoutPromise]) as any;
-
-            console.log(`SetSession result (${provider} link):`, { error, hasSession: !!data?.session });
-
-            if (error) {
-              console.error(`Failed to link ${provider}:`, error);
-            } else {
-              console.log(`✅ ${provider} linked successfully`);
-
-              // Focus the launcher window
-              try {
-                await invoke('focus_window');
-                console.log('Launcher window focused');
-              } catch (focusError) {
-                console.warn('Failed to focus window:', focusError);
-              }
+            // Focus the launcher window immediately
+            try {
+              await invoke('focus_window');
+            } catch (focusError) {
+              console.warn('Failed to focus window:', focusError);
             }
+
+            // Wait a bit for session to be processed, then emit update event
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Emit profile update event (listeners will handle fetching user)
+            this.emitProfileUpdate();
           } catch (e) {
             console.error(`Error in oauth-callback listener (${provider} link):`, e);
           } finally {
