@@ -217,16 +217,24 @@ async function main() {
   if (args.length === 0) {
     log('❌ No command provided', 'red');
     log('📖 Usage:', 'cyan');
-    log('  npm run release patch                    # Increment patch version (1.0.0 -> 1.0.1)', 'yellow');
-    log('  npm run release minor                    # Increment minor version (1.0.0 -> 1.1.0)', 'yellow');
-    log('  npm run release major                    # Increment major version (1.0.0 -> 2.0.0)', 'yellow');
-    log('  npm run release -- 1.0.0-beta.1         # Custom version (including prereleases)', 'yellow');
-    log('  npm run release:push                     # Push latest commit and tags to trigger build', 'yellow');
+    log('  npm run release patch                         # Increment patch version (1.0.0 -> 1.0.1)', 'yellow');
+    log('  npm run release minor                         # Increment minor version (1.0.0 -> 1.1.0)', 'yellow');
+    log('  npm run release major                         # Increment major version (1.0.0 -> 2.0.0)', 'yellow');
+    log('  npm run release alpha <N>                     # Create alpha prerelease (e.g., alpha 1)', 'yellow');
+    log('  npm run release beta <N> [--prerelease]       # Create beta (default: regular release)', 'yellow');
+    log('  npm run release -- 1.0.0-beta.1              # Custom version (including prereleases)', 'yellow');
+    log('  npm run release:push                          # Push latest commit and tags to trigger build', 'yellow');
     log('', 'reset');
-    log('🧪 Prerelease examples:', 'cyan');
-    log('  npm run release -- 1.0.0-alpha.1        # Alpha prerelease', 'yellow');
-    log('  npm run release -- 1.0.0-beta.1         # Beta prerelease', 'yellow');
-    log('  npm run release -- 1.0.0-rc.1           # Release candidate', 'yellow');
+    log('🧪 Release types:', 'cyan');
+    log('  Alpha:         Experimental, requires "experimental updates" enabled (prerelease=true)', 'yellow');
+    log('  Beta:          Public testing, auto-installs by default (prerelease=false)', 'yellow');
+    log('  Beta prerelease: Add --prerelease flag to require experimental updates (prerelease=true)', 'yellow');
+    log('  Stable:        Production-ready, auto-installs (prerelease=false)', 'yellow');
+    log('', 'reset');
+    log('📋 Examples:', 'cyan');
+    log('  npm run release alpha 1                       # Creates 0.0.9-alpha.1 (prerelease=true)', 'yellow');
+    log('  npm run release beta 1                        # Creates 0.0.9-beta.1 (prerelease=false)', 'yellow');
+    log('  npm run release beta 1 --prerelease           # Creates 0.0.9-beta.1 (prerelease=true)', 'yellow');
     process.exit(1);
   }
 
@@ -235,6 +243,90 @@ async function main() {
   // Handle push command
   if (command === 'push' || process.argv.includes('--push')) {
     pushChanges();
+    return;
+  }
+
+  // Handle alpha command (e.g., npm run release alpha 1)
+  if (command === 'alpha') {
+    const alphaNumber = args[1];
+    if (!alphaNumber || !alphaNumber.match(/^\d+$/)) {
+      log('❌ Alpha number is required', 'red');
+      log('📖 Usage: npm run release alpha <N>', 'yellow');
+      log('📋 Example: npm run release alpha 1  # Creates X.Y.Z-alpha.1', 'yellow');
+      process.exit(1);
+    }
+
+    // Get current version
+    const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+    const currentVersion = packageJson.version;
+    const baseVersion = currentVersion.split('-')[0];
+    const [major, minor, patch] = baseVersion.split('.').map(Number);
+
+    const newVersion = `${major}.${minor}.${patch}-alpha.${alphaNumber}`;
+
+    log(`🧪 Creating alpha prerelease: ${currentVersion} → ${newVersion}`, 'cyan');
+    log('ℹ️ Alpha releases require "experimental updates" enabled in the launcher', 'yellow');
+
+    validateVersion(newVersion);
+    updateVersion(newVersion, true); // isPrerelease = true for alpha
+    await commitAndTag(newVersion, true);
+
+    if (process.argv.includes('--push')) {
+      pushChanges();
+    } else {
+      log('\n✅ Alpha release prepared successfully!', 'green');
+      log('📋 Next steps:', 'cyan');
+      log(`  1. Review the changes with: git log --oneline -5`, 'yellow');
+      log(`  2. Push to trigger GitHub Actions: npm run release:push`, 'yellow');
+      log(`  3. Monitor build progress at: https://github.com/${REPO_OWNER}/${REPO_NAME}/actions`, 'yellow');
+    }
+    return;
+  }
+
+  // Handle beta command (e.g., npm run release beta 1)
+  if (command === 'beta') {
+    const betaNumber = args[1];
+    if (!betaNumber || !betaNumber.match(/^\d+$/)) {
+      log('❌ Beta number is required', 'red');
+      log('📖 Usage: npm run release beta <N> [--prerelease]', 'yellow');
+      log('📋 Examples:', 'yellow');
+      log('  npm run release beta 1              # Regular release (auto-installs)', 'yellow');
+      log('  npm run release beta 1 --prerelease # Prerelease (needs experimental updates)', 'yellow');
+      process.exit(1);
+    }
+
+    // Check if --prerelease flag is provided
+    const isPrerelease = args.includes('--prerelease') || process.argv.includes('--prerelease');
+
+    // Get current version
+    const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+    const currentVersion = packageJson.version;
+    const baseVersion = currentVersion.split('-')[0];
+    const [major, minor, patch] = baseVersion.split('.').map(Number);
+
+    const newVersion = `${major}.${minor}.${patch}-beta.${betaNumber}`;
+
+    if (isPrerelease) {
+      log(`🧪 Creating beta prerelease: ${currentVersion} → ${newVersion}`, 'cyan');
+      log('ℹ️ Beta prerelease requires "experimental updates" enabled', 'yellow');
+    } else {
+      log(`🚀 Creating beta release: ${currentVersion} → ${newVersion}`, 'cyan');
+      log('ℹ️ Beta release auto-installs WITHOUT requiring "experimental updates"', 'yellow');
+    }
+
+    validateVersion(newVersion);
+    updateVersion(newVersion, isPrerelease);
+    await commitAndTag(newVersion, isPrerelease);
+
+    if (process.argv.includes('--push')) {
+      pushChanges();
+    } else {
+      log('\n✅ Beta release prepared successfully!', 'green');
+      log('📋 Next steps:', 'cyan');
+      log(`  1. Review the changes with: git log --oneline -5`, 'yellow');
+      log(`  2. Push to trigger GitHub Actions: npm run release:push`, 'yellow');
+      log(`  3. Monitor build progress at: https://github.com/${REPO_OWNER}/${REPO_NAME}/actions`, 'yellow');
+    }
     return;
   }
 
@@ -272,7 +364,7 @@ async function main() {
   // Handle version bump commands
   if (!['patch', 'minor', 'major'].includes(command)) {
     log(`❌ Invalid command: ${command}`, 'red');
-    log('✅ Valid commands: patch, minor, major, push, or custom version', 'yellow');
+    log('✅ Valid commands: patch, minor, major, alpha, beta, push, or custom version', 'yellow');
     process.exit(1);
   }
 

@@ -30,11 +30,35 @@ graph TD
 ### Releases Estables
 ```bash
 npm run release patch    # 0.0.8 → 0.0.9
-npm run release minor    # 0.0.8 → 0.1.0  
+npm run release minor    # 0.0.8 → 0.1.0
 npm run release major    # 0.0.8 → 1.0.0
 ```
 
-### Releases Experimentales
+### Releases Experimentales (Prereleases)
+
+#### Alpha Releases (Requieren "Actualizaciones Experimentales")
+```bash
+npm run release alpha 1     # 0.0.8 → 0.0.8-alpha.1
+npm run release alpha 2     # 0.0.8 → 0.0.8-alpha.2
+```
+- ✅ Marcadas como **prerelease** en GitHub
+- ✅ Solo se instalan con "actualizaciones experimentales" habilitadas
+- ✅ Ideales para pruebas internas y desarrollo activo
+
+#### Beta Releases (Flexible)
+```bash
+# Beta como release regular (por defecto - auto-instala)
+npm run release beta 1      # 0.0.8 → 0.0.8-beta.1 (prerelease=false)
+npm run release beta 2      # 0.0.8 → 0.0.8-beta.2 (prerelease=false)
+
+# Beta como prerelease (requiere flag --prerelease)
+npm run release beta 1 --prerelease    # 0.0.8 → 0.0.8-beta.1 (prerelease=true)
+```
+- ✅ **Por defecto**: Marcadas como release regular, auto-instalan
+- ✅ **Con --prerelease**: Marcadas como prerelease, requieren "actualizaciones experimentales"
+- ✅ Ideales para pruebas públicas o testing interno según el flag
+
+#### Custom Versions
 ```bash
 npm run release -- 0.0.8-alpha.3    # Versión alpha específica
 npm run release -- 0.0.8-beta.1     # Versión beta específica
@@ -45,6 +69,17 @@ npm run release -- 0.0.8-rc.1       # Release candidate
 ```bash
 npm run release:push     # Push commits y tags para activar GitHub Actions
 ```
+
+## 📊 Tabla Comparativa de Releases
+
+| Tipo | Comando | GitHub Prerelease | Auto-Instala | Uso Recomendado |
+|------|---------|-------------------|--------------|-----------------|
+| **Stable** | `npm run release minor` | ❌ No | ✅ Sí | Versión final para producción |
+| **Beta (Regular)** | `npm run release beta 1` | ❌ No | ✅ Sí | Pruebas públicas, feature freeze |
+| **Beta (Prerelease)** | `npm run release beta 1 --prerelease` | ✅ Sí | ❌ No* | Testing interno antes de public beta |
+| **Alpha** | `npm run release alpha 1` | ✅ Sí | ❌ No* | Desarrollo activo, features inestables |
+
+\* Solo con "actualizaciones experimentales" habilitadas
 
 ## 🔄 Proceso Automatizado
 
@@ -133,6 +168,36 @@ npm run release:push
   - `TAURI_SIGNING_PRIVATE_KEY`
   - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
 - Revisa los logs en la pestaña Actions
+
+### Auto-Update falla en Windows
+Si las actualizaciones automáticas funcionan en macOS/Linux pero fallan en Windows:
+
+1. **Verificar archivo MSI en GitHub**:
+   - Ve a la página de Releases en GitHub
+   - Verifica que existe `LuminaKraft.Launcher_X.Y.Z_x64_en-US.msi`
+   - El archivo debe tener un `.sig` correspondiente
+
+2. **Verificar latest.json**:
+   ```bash
+   # Descargar y revisar el manifest
+   curl https://raw.githubusercontent.com/LuminaKraft/LuminakraftLauncher/main/latest.json
+   ```
+   - La URL de Windows debe apuntar al archivo `.msi`
+   - La firma debe coincidir con el archivo MSI
+
+3. **Regenerar manifest si es necesario**:
+   ```bash
+   # Para prereleases
+   node scripts/generate-prerelease-manifest.cjs 0.0.9-alpha.6
+   git add latest.json
+   git commit -m "fix: regenerate manifest with correct Windows URLs"
+   git push
+   ```
+
+4. **Revisar logs del cliente**:
+   - Abrir DevTools en la aplicación (si está habilitado)
+   - Buscar errores relacionados con la descarga
+   - Los logs ahora incluyen detalles de plataforma y URLs
 
 ## 📚 Documentación Relacionada
 

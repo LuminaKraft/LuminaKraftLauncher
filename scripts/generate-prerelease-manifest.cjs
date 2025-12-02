@@ -32,6 +32,8 @@ function baseVersionOf(v) {
 
 // Function to get the correct filename for each platform
 function fileNameForPlatform(platform, version) {
+  const baseVersion = baseVersionOf(version);
+
   switch (platform) {
     case 'darwin-x86_64':
       return `LuminaKraft.Launcher_x64.app.tar.gz`;
@@ -40,7 +42,8 @@ function fileNameForPlatform(platform, version) {
     case 'linux-x86_64':
       return `LuminaKraft.Launcher_${version}_amd64.AppImage.tar.gz`;
     case 'windows-x86_64':
-      return `LuminaKraft.Launcher_${baseVersionOf(version)}_x64-setup.nsis.zip`;
+      // Tauri updater on Windows uses .msi files with base version (no prerelease suffix)
+      return `LuminaKraft.Launcher_${baseVersion}_x64_en-US.msi`;
     default:
       throw new Error(`Unknown platform: ${platform}`);
   }

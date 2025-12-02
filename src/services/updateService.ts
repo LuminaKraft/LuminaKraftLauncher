@@ -192,13 +192,21 @@ class UpdateService {
    */
   private async checkPrereleaseWithTauri(release: any, currentVersion: string, platform: string): Promise<UpdateInfo> {
     try {
+      console.log(`🔍 Checking prerelease ${release.tag_name} via Tauri updater...`);
+
       // Force Tauri updater to use our latest.json (which now points to the prerelease)
       const update = await check();
-      
+
+      console.log(`Tauri updater response:`, update ? {
+        version: update.version,
+        date: update.date,
+        hasUpdate: !!update
+      } : 'No update found');
+
       if (update && update.version === release.tag_name.replace(/^v/, '')) {
         this.currentUpdate = update;
         console.log(`✅ Prerelease update available via Tauri: ${currentVersion} -> ${update.version}`);
-        
+
         const updateInfo: UpdateInfo = {
           hasUpdate: true,
           currentVersion,
@@ -213,7 +221,7 @@ class UpdateService {
       }
 
       // Fallback to manual download if Tauri couldn't detect the update
-      console.log(`⚠️ Prerelease ${release.tag_name} requires manual download`);
+      console.log(`⚠️ Prerelease ${release.tag_name} requires manual download (Tauri version mismatch or no update detected)`);
       const updateInfo: UpdateInfo = {
         hasUpdate: true,
         currentVersion,
@@ -228,6 +236,12 @@ class UpdateService {
       return updateInfo;
     } catch (error) {
       console.error('❌ Failed to check prerelease with Tauri:', error);
+      console.error('Error type:', typeof error);
+
+      if (error && typeof error === 'object') {
+        console.error('Error details:', JSON.stringify(error, null, 2));
+      }
+
       // Fallback to manual download
       const updateInfo: UpdateInfo = {
         hasUpdate: true,
@@ -371,8 +385,18 @@ class UpdateService {
     }
 
     try {
+      // Get platform info for logging
+      const platform = await invoke<string>('get_platform');
+
       console.log('📥 Starting automatic update download and installation...');
-      
+      console.log(`Platform: ${platform}`);
+      console.log(`Update version: ${this.currentUpdate.version}`);
+      console.log(`Current update object:`, {
+        version: this.currentUpdate.version,
+        date: this.currentUpdate.date,
+        // Don't log the full body as it can be very long
+      });
+
       await this.currentUpdate.downloadAndInstall((_event: any) => {
         const data = _event.data || {};
         switch (_event.event) {
@@ -398,7 +422,7 @@ class UpdateService {
       });
 
       console.log('🎉 Update installed successfully! Restarting application...');
-      
+
       setTimeout(async () => {
         try {
           await relaunch();
@@ -412,6 +436,15 @@ class UpdateService {
 
     } catch (error) {
       console.error('❌ Failed to download and install update:', error);
+      console.error('Error type:', typeof error);
+      console.error('Error details:', error);
+
+      // Try to extract more information from the error
+      if (error && typeof error === 'object') {
+        console.error('Error keys:', Object.keys(error));
+        console.error('Error stringified:', JSON.stringify(error, null, 2));
+      }
+
       throw error;
     }
   }
