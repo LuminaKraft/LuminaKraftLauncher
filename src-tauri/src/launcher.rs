@@ -11,8 +11,10 @@ pub async fn install_modpack(modpack: Modpack) -> Result<()> {
     let app_data_dir = data_dir()
         .ok_or_else(|| anyhow!("Failed to get app data directory"))?
         .join("LKLauncher");
-    
-    let instance_dir = app_data_dir.join("instances").join(&modpack.id);
+
+    // Generate a unique, human-readable folder name based on the modpack name
+    let folder_name = filesystem::generate_instance_folder_name(&modpack.name)?;
+    let instance_dir = app_data_dir.join("instances").join(&folder_name);
     
     // Create instance directory
     if instance_dir.exists() {

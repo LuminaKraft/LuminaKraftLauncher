@@ -246,12 +246,9 @@ pub struct InstanceDirectories {
 
 impl InstanceDirectories {
     pub fn new(modpack_id: &str) -> Result<Self> {
-        let base_dir = data_dir()
-            .ok_or_else(|| anyhow!("Failed to get app data directory"))?
-            .join("LKLauncher");
-        
-        let instance_dir = base_dir.join("instances").join(modpack_id);
-        
+        use crate::filesystem;
+        let instance_dir = filesystem::get_instance_dir(modpack_id)?;
+
         Ok(Self { instance_dir })
     }
 

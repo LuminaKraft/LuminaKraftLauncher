@@ -8,6 +8,7 @@ use lyceris::minecraft::{
     launch::launch,
     loader::{fabric::Fabric, forge::Forge, quilt::Quilt, neoforge::NeoForge, Loader},
 };
+use crate::filesystem;
 use lyceris::auth::AuthMethod;
 use crate::{Modpack, UserSettings};
 use once_cell::sync::Lazy;
@@ -436,14 +437,9 @@ where
 
 /// Launch Minecraft using Lyceris with token refresh support
 pub async fn launch_minecraft_with_token_refresh(modpack: Modpack, settings: UserSettings, app: tauri::AppHandle) -> Result<()> {
-    let launcher_data_dir = dirs::data_dir()
-        .ok_or_else(|| anyhow!("Could not determine data directory"))?
-        .join("LKLauncher");
-    
-    let instance_dir = launcher_data_dir
-        .join("instances")
-        .join(&modpack.id);
-    
+    // Use filesystem helper to get the correct instance directory
+    let instance_dir = filesystem::get_instance_dir(&modpack.id)?;
+
     // Ensure instance directory exists
     std::fs::create_dir_all(&instance_dir)?;
     

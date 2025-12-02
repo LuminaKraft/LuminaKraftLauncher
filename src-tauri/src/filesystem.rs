@@ -12,12 +12,12 @@ use tauri::Emitter;
 pub fn get_launcher_data_dir() -> Result<PathBuf> {
     let data_dir = dirs::data_dir()
         .ok_or_else(|| anyhow!("Could not determine data directory"))?;
-    
+
     let launcher_dir = data_dir.join("LKLauncher");
-    
+
     // Ensure the directory exists
     fs::create_dir_all(&launcher_dir)?;
-    
+
     Ok(launcher_dir)
 }
 
@@ -25,19 +25,75 @@ pub fn get_launcher_data_dir() -> Result<PathBuf> {
 pub fn get_instances_dir() -> Result<PathBuf> {
     let launcher_dir = get_launcher_data_dir()?;
     let instances_dir = launcher_dir.join("instances");
-    
+
     // Ensure the directory exists
     fs::create_dir_all(&instances_dir)?;
-    
+
     Ok(instances_dir)
 }
 
-/// Get the path to a specific instance directory
+/// Sanitize a modpack name to be filesystem-safe
+fn sanitize_folder_name(name: &str) -> String {
+    name.chars()
+        .map(|c| match c {
+            // Replace invalid characters with underscore
+            '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|' => '_',
+            _ => c,
+        })
+        .collect::<String>()
+        .trim()
+        .to_string()
+}
+
+/// Generate a unique folder name for an instance, handling duplicates like Windows (1), (2), etc.
+pub fn generate_instance_folder_name(modpack_name: &str) -> Result<String> {
+    let instances_dir = get_instances_dir()?;
+    let base_name = sanitize_folder_name(modpack_name);
+
+    // If the base name doesn't exist, use it directly
+    let base_path = instances_dir.join(&base_name);
+    if !base_path.exists() {
+        return Ok(base_name);
+    }
+
+    // Otherwise, try with (1), (2), (3), etc.
+    for i in 1..1000 {
+        let candidate_name = format!("{} ({})", base_name, i);
+        let candidate_path = instances_dir.join(&candidate_name);
+        if !candidate_path.exists() {
+            return Ok(candidate_name);
+        }
+    }
+
+    Err(anyhow!("Could not generate unique folder name for modpack"))
+}
+
+/// Get the path to a specific instance directory by modpack ID
+/// This function now looks up instances by their metadata to find the correct folder
 pub fn get_instance_dir(modpack_id: &str) -> Result<PathBuf> {
     let instances_dir = get_instances_dir()?;
-    let instance_dir = instances_dir.join(modpack_id);
-    
-    Ok(instance_dir)
+
+    // Look for an instance with this ID
+    if let Ok(entries) = fs::read_dir(&instances_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                let metadata_path = path.join("instance.json");
+                if metadata_path.exists() {
+                    if let Ok(content) = fs::read_to_string(&metadata_path) {
+                        if let Ok(metadata) = serde_json::from_str::<InstanceMetadata>(&content) {
+                            if metadata.id == modpack_id {
+                                return Ok(path);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // If not found, fall back to using the ID as folder name (for backwards compatibility)
+    Ok(instances_dir.join(modpack_id))
 }
 
 /// Save instance metadata to disk
