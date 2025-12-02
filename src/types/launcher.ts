@@ -201,7 +201,7 @@ export interface FailedMod {
 }
 
 /**
- * CurseForge/Modrinth Manifest Types
+ * CurseForge Manifest Types
  * For parsing modpack ZIP files
  */
 export interface CurseForgeManifest {

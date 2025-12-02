@@ -536,7 +536,7 @@
     "importedOn": "Importado el",
     "empty": {
       "title": "Aún no hay modpacks locales",
-      "description": "Importa un modpack de CurseForge o Modrinth para comenzar",
+      "description": "Importa un modpack de CurseForge para comenzar",
       "button": "Importa Tu Primer Modpack"
     }
   },

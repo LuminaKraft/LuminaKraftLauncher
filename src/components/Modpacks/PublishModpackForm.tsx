@@ -677,7 +677,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                         Drop your modpack ZIP here
                       </p>
                       <p className="text-gray-500 dark:text-gray-400">
-                        Supports CurseForge and Modrinth formats
+                        Supports CurseForge format
                       </p>
                     </div>
                   </>

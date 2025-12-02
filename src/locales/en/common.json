@@ -539,7 +539,7 @@
     "importedOn": "Imported on",
     "empty": {
       "title": "No local modpacks yet",
-      "description": "Import a CurseForge or Modrinth modpack to get started",
+      "description": "Import a CurseForge modpack to get started",
       "button": "Import Your First Modpack"
     }
   },

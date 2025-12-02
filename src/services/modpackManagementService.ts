@@ -84,7 +84,7 @@ export class ModpackManagementService {
   }
 
   /**
-   * Parse manifest.json from a CurseForge/Modrinth modpack ZIP
+   * Parse manifest.json from a CurseForge modpack ZIP
    * Extracts metadata like version, modloader, etc.
    */
   async parseManifestFromZip(zipFile: File): Promise<{ success: boolean; data?: ParsedModpackData; error?: string }> {
