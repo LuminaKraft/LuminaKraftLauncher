@@ -134,6 +134,30 @@ async fn get_instance_metadata(modpack_id: String) -> Result<Option<String>, Str
 }
 
 #[tauri::command]
+async fn update_instance_ram_settings(
+    modpack_id: String,
+    ram_allocation: String,
+    custom_ram: Option<u32>
+) -> Result<(), String> {
+    // Get existing metadata
+    let mut metadata = match filesystem::get_instance_metadata(&modpack_id).await {
+        Ok(Some(metadata)) => metadata,
+        Ok(None) => return Err(format!("Instance {} not found", modpack_id)),
+        Err(e) => return Err(format!("Failed to get instance metadata: {}", e)),
+    };
+
+    // Update RAM settings
+    metadata.ram_allocation = Some(ram_allocation);
+    metadata.custom_ram = custom_ram;
+
+    // Save updated metadata
+    match filesystem::save_instance_metadata(&metadata).await {
+        Ok(_) => Ok(()),
+        Err(e) => Err(format!("Failed to save instance metadata: {}", e)),
+    }
+}
+
+#[tauri::command]
 async fn get_local_modpacks() -> Result<String, String> {
     match filesystem::list_instances().await {
         Ok(instances) => {
@@ -1011,6 +1035,7 @@ fn main() {
         .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![
             get_instance_metadata,
+            update_instance_ram_settings,
             get_local_modpacks,
             install_modpack,
             install_modpack_with_minecraft,
