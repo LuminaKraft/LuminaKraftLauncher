@@ -283,12 +283,24 @@ class LauncherService {
     }
 
     try {
-      // Fetch modpack basic info
+      // Fetch modpack basic info with latest version
       const { data: modpackData, error: modpackError } = await supabase
         .from('modpacks')
-        .select('*')
+        .select(`
+          *,
+          modpack_versions!inner (
+            version,
+            minecraft_version,
+            modloader_version,
+            file_url,
+            file_size,
+            created_at
+          )
+        `)
         .eq('id', modpackId)
         .eq('is_active', true)
+        .order('created_at', { foreignTable: 'modpack_versions', ascending: false })
+        .limit(1, { foreignTable: 'modpack_versions' })
         .single() as { data: any; error: any };
 
       if (modpackError || !modpackData) {
@@ -296,6 +308,9 @@ class LauncherService {
         if (persisted) return persisted.data;
         return null;
       }
+
+      // Extract latest version info
+      const latestVersion = modpackData.modpack_versions?.[0] || null;
 
       // Fetch related data in parallel
       const [featuresResult, imagesResult, collaboratorsResult, statsResult] = await Promise.all([
@@ -334,16 +349,16 @@ class LauncherService {
         name: getTranslation(modpackData.name_i18n),
         shortDescription: getTranslation(modpackData.short_description_i18n),
         description: getTranslation(modpackData.description_i18n),
-        version: modpackData.version,
-        minecraftVersion: modpackData.minecraft_version,
+        version: latestVersion?.version || modpackData.version,
+        minecraftVersion: latestVersion?.minecraft_version || modpackData.minecraft_version,
         modloader: modpackData.modloader,
-        modloaderVersion: modpackData.modloader_version,
+        modloaderVersion: latestVersion?.modloader_version || modpackData.modloader_version,
         gamemode: modpackData.gamemode,
         ip: modpackData.server_ip,
         logo: modpackData.logo_url,
-        banner: modpackData.banner_url || modpackData.background_image_url,
-        backgroundImage: modpackData.background_image_url,
-        urlModpackZip: modpackData.file_url || modpackData.modpack_file_url,
+        banner: modpackData.banner_url,
+        backgroundImage: modpackData.banner_url, // Use banner as background
+        urlModpackZip: latestVersion?.file_url || null,
         primaryColor: modpackData.primary_color,
         isNew: modpackData.is_new || false,
         isActive: modpackData.is_active !== false,
