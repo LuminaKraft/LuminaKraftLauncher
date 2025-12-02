@@ -7,7 +7,7 @@ async function runCommand(command, args = []) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
       stdio: 'inherit',
-      shell: process.platform === 'win32' // Only use shell on Windows for .cmd/.bat files
+      // No shell needed - we use npx which works cross-platform
     });
 
     child.on('close', (code) => {
@@ -37,7 +37,7 @@ async function main() {
 
     // Run Tauri build
     console.log('🔨 Running Tauri build...');
-    await runCommand('tauri', ['build']);
+    await runCommand('npx', ['tauri', 'build']);
 
     console.log('✅ Build completed successfully!');
 
