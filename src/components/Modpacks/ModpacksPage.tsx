@@ -35,7 +35,8 @@ const ModpacksPage: React.FC = () => {
   );
 
   const filteredModpacks = modpacksData?.modpacks.filter(modpack =>
-    modpack.name.toLowerCase().includes(searchTerm.toLowerCase())
+    modpack.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+    !modpack.isComingSoon
   ) || [];
 
   const handleModpackSelect = (modpack: Modpack) => {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Download, Play, RefreshCw, Wrench, AlertTriangle, Loader2, Globe, Trash2, FolderOpen, StopCircle } from 'lucide-react';
+import { Download, Play, RefreshCw, Wrench, AlertTriangle, Loader2, Globe, Trash2, FolderOpen, StopCircle, Clock } from 'lucide-react';
 import type { Modpack, ModpackState, ProgressInfo } from '../../types/launcher';
 import { useLauncher } from '../../contexts/LauncherContext';
 import { useAnimation } from '../../contexts/AnimationContext';
@@ -67,6 +67,17 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
 
   const getButtonConfig = () => {
     const hasValidIp = modpack.ip && modpack.ip.trim() !== '';
+
+    // Check if Coming Soon - disable downloads
+    if (modpack.isComingSoon) {
+      return {
+        text: t('modpacks.comingSoon'),
+        icon: Clock,
+        onClick: () => { },
+        className: 'btn-secondary',
+        disabled: true
+      };
+    }
 
     // First check state status - this takes priority
     switch (state.status) {

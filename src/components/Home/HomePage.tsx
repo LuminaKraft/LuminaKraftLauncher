@@ -1,0 +1,139 @@
+import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ArrowRight, Newspaper, Clock } from 'lucide-react';
+import ModpackCard from '../Modpacks/ModpackCard';
+import { ModpackWithDetails } from '../../types/launcher';
+import ModpackManagementService from '../../services/modpackManagementService';
+
+interface HomePageProps {
+  onNavigate?: (_section: string, _modpackId?: string) => void;
+}
+
+export function HomePage({ onNavigate }: HomePageProps) {
+  const { t } = useTranslation();
+  const [comingSoonModpacks, setComingSoonModpacks] = useState<ModpackWithDetails[]>([]);
+  const [featuredModpacks, setFeaturedModpacks] = useState<ModpackWithDetails[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadHomePageData();
+  }, []);
+
+  const loadHomePageData = async () => {
+    setLoading(true);
+    try {
+      const service = ModpackManagementService.getInstance();
+      const result = await service.getModpacks();
+
+      if (result.success && result.data) {
+        const allModpacks = result.data as ModpackWithDetails[];
+
+        // Filter Coming Soon modpacks (active + coming soon)
+        const comingSoon = allModpacks.filter(
+          modpack => modpack.isActive && modpack.isComingSoon
+        );
+        setComingSoonModpacks(comingSoon);
+
+        // Filter Featured modpacks (active + NOT coming soon + (official OR new))
+        const featured = allModpacks.filter(
+          modpack => modpack.isActive && !modpack.isComingSoon &&
+          (modpack.category === 'official' || modpack.isNew)
+        );
+        setFeaturedModpacks(featured);
+      }
+    } catch (error) {
+      console.error('Error loading homepage data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto p-6 space-y-12">
+      {/* Hero Section */}
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-8 text-white">
+        <h1 className="text-4xl font-bold mb-4">{t('home.hero.title')}</h1>
+        <p className="text-xl opacity-90">{t('home.hero.subtitle')}</p>
+      </div>
+
+      {/* News Section (Placeholder) */}
+      <section>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <Newspaper className="w-6 h-6" />
+            {t('home.news.title')}
+          </h2>
+        </div>
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-8 shadow-sm border border-gray-200 dark:border-gray-700">
+          <p className="text-gray-500 dark:text-gray-400 text-center">
+            {t('home.news.placeholder')}
+          </p>
+        </div>
+      </section>
+
+      {/* Coming Soon Section */}
+      {comingSoonModpacks.length > 0 && (
+        <section>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <Clock className="w-6 h-6" />
+              {t('home.comingSoon.title')}
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {comingSoonModpacks.map(modpack => (
+              <ModpackCard
+                key={modpack.id}
+                modpack={modpack}
+                onNavigate={onNavigate}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Featured Section */}
+      <section>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+            {t('home.featured.title')}
+          </h2>
+          <button
+            onClick={() => onNavigate?.('explore')}
+            className="flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:underline font-medium"
+          >
+            {t('home.viewAll')}
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+        {featuredModpacks.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {featuredModpacks.slice(0, 6).map(modpack => (
+              <ModpackCard
+                key={modpack.id}
+                modpack={modpack}
+                onNavigate={onNavigate}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-8 shadow-sm border border-gray-200 dark:border-gray-700">
+            <p className="text-gray-500 dark:text-gray-400 text-center">
+              {t('home.featured.empty')}
+            </p>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+export default HomePage;
