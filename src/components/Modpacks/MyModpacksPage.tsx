@@ -80,6 +80,32 @@ export function MyModpacksPage() {
     loadLocalModpacks();
   }, []);
 
+  // Load details for installing modpacks (from Explore)
+  useEffect(() => {
+    const loadInstallingModpackDetails = async () => {
+      const installingIds = Object.entries(modpackStates)
+        .filter(([id, state]) => state.status === 'installing' && !localModpacks.some(m => m.id === id))
+        .map(([id]) => id);
+
+      for (const id of installingIds) {
+        // Skip if we already have details for this modpack
+        if (modpackDetails.has(id)) continue;
+
+        try {
+          const details = await launcherService.fetchModpackDetails(id);
+          if (details) {
+            setModpackDetails(prev => new Map(prev).set(id, details));
+          }
+        } catch (error) {
+          // Silently fail - modpack might be imported from local ZIP
+          console.log(`Could not fetch details for installing modpack ${id}`);
+        }
+      }
+    };
+
+    loadInstallingModpackDetails();
+  }, [modpackStates, localModpacks, modpackDetails]);
+
   const loadLocalModpacks = async () => {
     try {
       setLoading(true);
@@ -384,8 +410,16 @@ export function MyModpacksPage() {
             {/* Importing Modpacks */}
             {importingModpackIds.map((id, index) => {
               const state = modpackStates[id];
+
+              // Check if we have details from Supabase (for modpacks from Explore)
+              const details = modpackDetails.get(id);
+
               // Create a temporary modpack object for display
-              const tempModpack: Modpack = {
+              const tempModpack: Modpack = details ? {
+                // If installing from Explore, use server details
+                ...details,
+              } : {
+                // If importing from local ZIP, use generic placeholder
                 id,
                 name: t('myModpacks.importing.name'),
                 description: t('myModpacks.importing.description'),

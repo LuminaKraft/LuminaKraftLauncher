@@ -144,8 +144,8 @@
     "imagesAvailable": "imágenes disponibles",
     "carouselHint": "Usa las flechas o haz clic en los puntos para navegar",
     "category": {
-      "official": "Oficial",
-      "partner": "Socio",
+      "official": "Oficiales",
+      "partner": "Partners",
       "community": "Comunidad"
     }
   },
