@@ -19,8 +19,8 @@ interface CacheEntry<T = any> {
 
 // Helper function to check if we're running in Tauri context
 function isTauriContext(): boolean {
-  return typeof window !== 'undefined' && 
-         (window as any).__TAURI_INTERNALS__ !== undefined;
+  return typeof window !== 'undefined' &&
+    (window as any).__TAURI_INTERNALS__ !== undefined;
 }
 
 // Helper function to safely invoke Tauri commands
@@ -198,6 +198,17 @@ class LauncherService {
       }
       console.log('Fetching modpacks data from Supabase...');
 
+      // Fetch partners first to map names
+      const partners = await this.fetchPartners();
+      const partnersMap = new Map(partners.map((p: any) => [p.id, p.name]));
+
+      // Fetch modpack partner associations directly (workaround for potential RPC missing field)
+      const { data: modpackPartners } = await supabase
+        .from('modpacks')
+        .select('id, partner_id');
+
+      const modpackPartnerMap = new Map(modpackPartners?.map((m: any) => [m.id, m.partner_id]) || []);
+
       // Fetch modpacks using the i18n function
       const result = await supabase.rpc('modpacks_i18n', {
         p_language: lang
@@ -210,6 +221,10 @@ class LauncherService {
       }
 
       // Transform Supabase data to match launcher format
+      if (data && data.length > 0) {
+        console.log('📦 Raw modpack data sample:', data[0]);
+      }
+
       const modpacks = data?.map((modpack: any) => ({
         id: modpack.id,
         slug: modpack.slug,
@@ -233,7 +248,8 @@ class LauncherService {
         isComingSoon: modpack.is_coming_soon,
         youtubeEmbed: modpack.youtube_embed,
         tiktokEmbed: modpack.tiktok_embed,
-        partnerId: modpack.partner_id,
+        partnerId: modpack.partner_id || modpackPartnerMap.get(modpack.id),
+        partnerName: (modpack.partner_id || modpackPartnerMap.get(modpack.id)) ? partnersMap.get(modpack.partner_id || modpackPartnerMap.get(modpack.id)) : undefined,
         publishedAt: modpack.published_at,
       })) || [];
 
@@ -398,6 +414,45 @@ class LauncherService {
     }
   }
 
+  /**
+   * Fetches all active partners from Supabase
+   * Caches the result to avoid frequent DB calls
+   */
+  async fetchPartners(): Promise<any[]> {
+    const cacheKey = 'partners_data';
+    const cached = this.cache.get(cacheKey);
+    const persisted = this.readPersistentCache<any[]>(cacheKey);
+
+    if (cached && Date.now() - cached.timestamp < this.cacheTTL) {
+      return cached.data;
+    }
+    if (persisted && Date.now() - persisted.timestamp < this.cacheTTL) {
+      this.cache.set(cacheKey, { data: persisted.data, timestamp: persisted.timestamp });
+      return persisted.data;
+    }
+
+    try {
+      console.log('Fetching partners from Supabase...');
+      const { data, error } = await supabase
+        .from('partners')
+        .select('id, name')
+        .eq('is_active', true);
+
+      if (error) {
+        console.error('Error fetching partners:', error);
+        return [];
+      }
+
+      console.log(`✅ Loaded ${data?.length || 0} partners`);
+      this.cache.set(cacheKey, { data: data || [], timestamp: Date.now() });
+      this.writePersistentCache(cacheKey, data || []);
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching partners:', error);
+      return [];
+    }
+  }
+
   getModpacksData(): ModpacksData | null {
     return this.modpacksData;
   }
@@ -483,18 +538,18 @@ class LauncherService {
         // Clear cache and fetch fresh data
         this.clearCache();
         await this.fetchModpacksData();
-        
+
         // Try to find the modpack again with fresh data
         modpack = this.modpacksData?.modpacks.find((m: any) => m.id === modpackId);
-        
+
         if (!modpack) {
           throw new Error('Modpack no encontrado después de refrescar datos');
         }
-        
+
         if (!modpack.modloaderVersion) {
           throw new Error(`Modpack ${modpackId} aún no tiene modloaderVersion después de refrescar. La API puede no estar actualizada.`);
         }
-        
+
         console.log(`✅ Successfully refreshed modpack data for ${modpackId}`);
       } catch (refreshError) {
         console.error('Failed to refresh modpack data:', refreshError);
@@ -559,7 +614,7 @@ class LauncherService {
     try {
       // Set up progress listener if callback provided
       let unlistenProgress: (() => void) | null = null;
-      
+
       if (isTauriContext()) {
         const { listen } = await import('@tauri-apps/api/event');
         unlistenProgress = await listen(
@@ -574,7 +629,7 @@ class LauncherService {
               } else if (data.message && !data.message.startsWith('downloading_modpack:')) {
                 currentFile = data.message;
               }
-              
+
               _onProgress?.({
                 percentage: data.percentage || 0,
                 currentFile: currentFile,
@@ -587,17 +642,17 @@ class LauncherService {
             }
           }
         );
-    }
+      }
 
-    try {
-      // Transform the modpack structure to match backend expectations
-      const transformedModpack = this.transformModpackForBackend(modpack);
-      const transformedSettings = await this.transformUserSettingsForBackend(this.userSettings);
+      try {
+        // Transform the modpack structure to match backend expectations
+        const transformedModpack = this.transformModpackForBackend(modpack);
+        const transformedSettings = await this.transformUserSettingsForBackend(this.userSettings);
 
-      await safeInvoke('install_modpack_with_minecraft', {
-        modpack: transformedModpack,
-        settings: transformedSettings
-      });
+        await safeInvoke('install_modpack_with_minecraft', {
+          modpack: transformedModpack,
+          settings: transformedSettings
+        });
       } finally {
         // Clean up event listener
         if (unlistenProgress) {
@@ -648,7 +703,7 @@ class LauncherService {
     // about any issues and show specific errors
     try {
       console.log(`🔧 Starting repair for modpack: ${modpackId}`);
-      
+
       // Report initial progress specific to repair
       if (_onProgress) {
         _onProgress({
@@ -661,38 +716,38 @@ class LauncherService {
           detailMessage: i18next.t('progress.verifyingModpackStatus')
         });
       }
-      
+
       // Use installModpackWithFailedTracking to get detailed information
       const failedMods = await this.installModpackWithFailedTracking(modpackId, _onProgress);
-      
+
       console.log(`✅ Repair completed for modpack: ${modpackId}`, { failedMods: failedMods.length });
       return failedMods;
-      
+
     } catch (error) {
       console.error(`❌ Repair failed for modpack: ${modpackId}`, error);
-      
+
       // Improve error message to be more specific about repair
       if (error instanceof Error) {
         const originalMessage = error.message;
-        
+
         // If error is already specific, keep it
-        if (originalMessage.includes('authentication') || 
-            originalMessage.includes('forbidden') ||
-            originalMessage.includes('network') ||
-            originalMessage.includes('download') ||
-            originalMessage.includes('extraction') ||
-            originalMessage.includes('permission') ||
-            originalMessage.includes('space') ||
-            originalMessage.includes('java')) {
+        if (originalMessage.includes('authentication') ||
+          originalMessage.includes('forbidden') ||
+          originalMessage.includes('network') ||
+          originalMessage.includes('download') ||
+          originalMessage.includes('extraction') ||
+          originalMessage.includes('permission') ||
+          originalMessage.includes('space') ||
+          originalMessage.includes('java')) {
           throw error; // Keep specific error
         }
-        
+
         // For generic errors, create a more useful message
         const repairError = new Error(`Error durante la reparación: ${originalMessage}`);
         repairError.stack = error.stack;
         throw repairError;
       }
-      
+
       // For non-specific errors
       throw new Error(`Error durante la reparación del modpack: ${String(error)}`);
     }
@@ -784,12 +839,12 @@ class LauncherService {
   async changeLanguage(language: string): Promise<void> {
     this.userSettings.language = language;
     this.saveUserSettings({ language });
-    
+
     // Actualizar localStorage para i18n
     localStorage.setItem('LuminaKraftLauncher-language', language);
-    
+
     // Limpiar caché de traducciones y características para forzar recarga completa
-    const keysToDelete = Array.from(this.cache.keys()).filter(key => 
+    const keysToDelete = Array.from(this.cache.keys()).filter(key =>
       key.startsWith('translations_') || key.startsWith('features_')
     );
     keysToDelete.forEach(key => this.cache.delete(key));
@@ -838,7 +893,7 @@ class LauncherService {
     // Configurar listener de progreso si se proporciona callback
     if (_onProgress && isTauriContext()) {
       const { listen } = await import('@tauri-apps/api/event');
-      
+
       unlistenProgress = await listen(
         `modpack-progress-${modpackId}`,
         (_event: any) => {
@@ -851,7 +906,7 @@ class LauncherService {
             } else if (data.message && !data.message.startsWith('downloading_modpack:')) {
               currentFile = data.message;
             }
-            
+
             _onProgress({
               percentage: data.percentage || 0,
               currentFile: currentFile,
@@ -875,7 +930,7 @@ class LauncherService {
         modpack: transformedModpack,
         settings: transformedSettings
       });
-      
+
       return failedMods;
     } finally {
       // Clean up event listener

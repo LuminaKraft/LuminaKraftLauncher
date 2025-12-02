@@ -202,6 +202,59 @@ fn calculate_dir_size_sync(dir: &PathBuf) -> Result<u64> {
     Ok(total_size)
 }
 
+/// Try to fix instance name by reading from manifest.json or minecraftinstance.json
+fn try_fix_instance_name(instance_dir: &std::path::Path, metadata: &mut InstanceMetadata) -> Result<bool> {
+    // Only try to fix if name is same as ID (which implies it's using the folder name)
+    if metadata.name != metadata.id {
+        return Ok(false);
+    }
+
+    let mut new_name = None;
+
+    // Try manifest.json first
+    let manifest_path = instance_dir.join("manifest.json");
+    if manifest_path.exists() {
+        if let Ok(content) = fs::read_to_string(&manifest_path) {
+            if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
+                if let Some(name) = json.get("name").and_then(|n| n.as_str()) {
+                    new_name = Some(name.to_string());
+                }
+            }
+        }
+    }
+
+    // Try minecraftinstance.json if manifest.json didn't work
+    if new_name.is_none() {
+        let instance_cfg_path = instance_dir.join("minecraftinstance.json");
+        if instance_cfg_path.exists() {
+            if let Ok(content) = fs::read_to_string(&instance_cfg_path) {
+                if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
+                    if let Some(name) = json.get("name").and_then(|n| n.as_str()) {
+                        new_name = Some(name.to_string());
+                    }
+                }
+            }
+        }
+    }
+
+    if let Some(name) = new_name {
+        if name != metadata.name {
+            println!("🔧 Auto-fixing instance name for {}: {} -> {}", metadata.id, metadata.name, name);
+            metadata.name = name;
+            
+            // Save the updated metadata
+            let metadata_path = instance_dir.join("instance.json");
+            let metadata_json = serde_json::to_string_pretty(metadata)?;
+            let mut file = fs::File::create(metadata_path)?;
+            file.write_all(metadata_json.as_bytes())?;
+            
+            return Ok(true);
+        }
+    }
+
+    Ok(false)
+}
+
 /// List all installed instances
 #[allow(dead_code)]
 pub async fn list_instances() -> Result<Vec<InstanceMetadata>> {
@@ -221,7 +274,9 @@ pub async fn list_instances() -> Result<Vec<InstanceMetadata>> {
         if path.is_dir() {
             if let Some(instance_name) = path.file_name() {
                 if let Some(instance_id) = instance_name.to_str() {
-                    if let Ok(Some(metadata)) = get_instance_metadata(instance_id).await {
+                    if let Ok(Some(mut metadata)) = get_instance_metadata(instance_id).await {
+                        // Try to fix name if needed
+                        let _ = try_fix_instance_name(&path, &mut metadata);
                         instances.push(metadata);
                     }
                 }

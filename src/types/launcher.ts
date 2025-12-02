@@ -27,6 +27,8 @@ export interface Modpack {
   collaborators?: Collaborator[];
   urlModpackZip?: string;
   primaryColor?: string; // Hex color for gradient backgrounds
+  partnerId?: string; // Partner ID
+  partnerName?: string; // Name of the partner if category is 'partner'
 }
 
 export interface Collaborator {
@@ -139,7 +141,7 @@ export interface ProgressInfo {
 // Mantener DownloadProgress por compatibilidad
 export type DownloadProgress = ProgressInfo;
 
-export type ModpackStatus = 
+export type ModpackStatus =
   | 'not_installed'
   | 'installed'
   | 'outdated'

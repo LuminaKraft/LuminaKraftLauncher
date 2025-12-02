@@ -24,36 +24,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
 
-  const getCategoryBadge = () => {
-    const categoryConfig = {
-      official: {
-        translationKey: 'modpacks.category.official',
-        bg: 'bg-purple-600/40',
-        text: 'text-purple-300',
-        border: 'border-purple-600/60'
-      },
-      partner: {
-        translationKey: 'modpacks.category.partner',
-        bg: 'bg-blue-600/40',
-        text: 'text-blue-300',
-        border: 'border-blue-600/60'
-      },
-      community: {
-        translationKey: 'modpacks.category.community',
-        bg: 'bg-green-600/40',
-        text: 'text-green-300',
-        border: 'border-green-600/60'
-      }
-    };
 
-    const config = categoryConfig[modpack.category] || categoryConfig.community;
-
-    return (
-      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text} border ${config.border}`}>
-        {t(config.translationKey)}
-      </span>
-    );
-  };
 
   const getServerStatusBadge = () => {
     if (modpack.isNew) {
@@ -414,10 +385,12 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
               {displayDescription}
             </p>
 
-            {/* Category Badge */}
-            {!hideServerBadges && (
+            {/* Partner Name Display */}
+            {!hideServerBadges && modpack.category === 'partner' && modpack.partnerName && (
               <div className="mb-2">
-                {getCategoryBadge()}
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-600/20 text-blue-300 border border-blue-600/30">
+                  {modpack.partnerName}
+                </span>
               </div>
             )}
 
