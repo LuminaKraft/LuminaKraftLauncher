@@ -829,6 +829,7 @@ export class ModpackManagementService {
       }
 
       console.log('📁 Files to delete:', filePaths);
+      console.log('📦 Modpack data:', { modpackId, modpack_file_path: modpack.modpack_file_path, logo_url: modpack.logo_url, banner_url: modpack.banner_url });
 
       // Delete files from R2 using Edge Function (only if there are files to delete)
       if (filePaths.length > 0) {
@@ -836,27 +837,35 @@ export class ModpackManagementService {
           const { data: { session } } = await supabase.auth.getSession();
           const functionUrl = `${supabaseUrl}/functions/v1/delete-modpack-files`;
 
+          const requestBody = {
+            modpackId,
+            filePaths
+          };
+
+          console.log('🌐 Calling Edge Function:', functionUrl);
+          console.log('📤 Request body:', JSON.stringify(requestBody, null, 2));
+
           const response = await fetch(functionUrl, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${session?.access_token}`,
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-              modpackId,
-              filePaths
-            })
+            body: JSON.stringify(requestBody)
           });
+
+          console.log('📥 Response status:', response.status);
 
           if (!response.ok) {
             const errorText = await response.text();
-            console.error('Failed to delete files from R2:', response.status, errorText);
+            console.error('❌ Failed to delete files from R2:', response.status, errorText);
             // Continue with database deletion even if R2 deletion fails
           } else {
-            console.log('✅ Files deleted from R2');
+            const responseData = await response.json();
+            console.log('✅ Files deleted from R2:', responseData);
           }
         } catch (error) {
-          console.error('Error calling delete-modpack-files function:', error);
+          console.error('❌ Error calling delete-modpack-files function:', error);
           // Continue with database deletion even if R2 deletion fails
         }
       } else {
