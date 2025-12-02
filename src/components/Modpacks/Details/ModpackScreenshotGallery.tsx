@@ -258,7 +258,7 @@ const ModpackScreenshotGallery: React.FC<ScreenshotGalleryProps> = ({ images, mo
           {/* Close button */}
           <button
             onClick={closeImageModal}
-            className={`absolute top-4 right-4 md:top-6 md:right-6 z-[10000] w-10 h-10 bg-white/15 backdrop-blur-sm text-white/90 rounded-full flex items-center justify-center border border-white/30 ${getAnimationClass('hover:bg-white/25 hover:text-white transition-all duration-300', '')} ${imageModalAnimating ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-90 -translate-y-2'}`}
+            className={`absolute top-4 right-4 md:top-6 md:right-6 z-[10000] w-10 h-10 bg-white/15 backdrop-blur-sm text-white/90 rounded-full flex items-center justify-center border border-white/30 ${getAnimationClass('hover:bg-white/25 hover:text-white transition-all duration-200', '')} ${imageModalAnimating ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-90 -translate-y-2'}`}
             style={getAnimationStyle({})}
           >
             <X className="w-5 h-5" />
@@ -272,7 +272,7 @@ const ModpackScreenshotGallery: React.FC<ScreenshotGalleryProps> = ({ images, mo
                   e.stopPropagation();
                   navigateImage('prev');
                 }}
-                className={`absolute left-4 md:left-6 top-1/2 -translate-y-1/2 z-[10000] w-12 h-12 bg-white/15 backdrop-blur-sm text-white/80 rounded-full flex items-center justify-center border border-white/30 ${getAnimationClass('hover:bg-white/25 hover:text-white transition-all duration-300', '')} ${imageModalAnimating ? 'opacity-100 scale-100' : 'opacity-0 scale-90'}`}
+                className={`absolute left-4 md:left-6 top-1/2 -translate-y-1/2 z-[10000] w-12 h-12 bg-white/15 backdrop-blur-sm text-white/80 rounded-full flex items-center justify-center border border-white/30 ${getAnimationClass('hover:bg-white/25 hover:text-white transition-all duration-200', '')} ${imageModalAnimating ? 'opacity-100 scale-100' : 'opacity-0 scale-90'}`}
                 style={getAnimationStyle({})}
               >
                 <ChevronLeft className="w-6 h-6" />
@@ -282,7 +282,7 @@ const ModpackScreenshotGallery: React.FC<ScreenshotGalleryProps> = ({ images, mo
                   e.stopPropagation();
                   navigateImage('next');
                 }}
-                className={`absolute right-4 md:right-6 top-1/2 -translate-y-1/2 z-[10000] w-12 h-12 bg-white/15 backdrop-blur-sm text-white/80 rounded-full flex items-center justify-center border border-white/30 ${getAnimationClass('hover:bg-white/25 hover:text-white transition-all duration-300', '')} ${imageModalAnimating ? 'opacity-100 scale-100' : 'opacity-0 scale-90'}`}
+                className={`absolute right-4 md:right-6 top-1/2 -translate-y-1/2 z-[10000] w-12 h-12 bg-white/15 backdrop-blur-sm text-white/80 rounded-full flex items-center justify-center border border-white/30 ${getAnimationClass('hover:bg-white/25 hover:text-white transition-all duration-200', '')} ${imageModalAnimating ? 'opacity-100 scale-100' : 'opacity-0 scale-90'}`}
                 style={getAnimationStyle({})}
               >
                 <ChevronRight className="w-6 h-6" />
@@ -313,7 +313,7 @@ const ModpackScreenshotGallery: React.FC<ScreenshotGalleryProps> = ({ images, mo
           {/* Image counter */}
           {images.length > 1 && (
             <div
-              className={`absolute bottom-6 left-1/2 -translate-x-1/2 z-[10000] px-4 py-2 bg-black/40 backdrop-blur-sm text-white text-sm rounded-full border border-white/20 ${getAnimationClass('transition-all duration-300', '')} ${imageModalAnimating ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
+              className={`absolute bottom-6 left-1/2 -translate-x-1/2 z-[10000] px-4 py-2 bg-black/40 backdrop-blur-sm text-white text-sm rounded-full border border-white/20 ${getAnimationClass('transition-all duration-200', '')} ${imageModalAnimating ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
             >
               {selectedImageIndex + 1} / {images.length}
             </div>

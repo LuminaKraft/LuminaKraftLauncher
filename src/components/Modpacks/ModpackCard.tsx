@@ -454,7 +454,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
             </div>
             <div className="w-full bg-dark-700 rounded-full h-2 overflow-hidden">
               <div
-                className="bg-gradient-to-r from-lumina-600 to-lumina-500 h-2 rounded-full transition-all duration-300 ease-out"
+                className="bg-gradient-to-r from-lumina-600 to-lumina-500 h-2 rounded-full transition-all duration-200 ease-out"
                 style={{ width: `${displayedPercentage}%` }}
               />
             </div>

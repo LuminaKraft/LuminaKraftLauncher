@@ -160,7 +160,7 @@ function AppContent() {
       case 'explore':
         return <ModpacksPage key={modpacksPageKey} initialModpackId={selectedModpackId || undefined} />;
       case 'my-modpacks':
-        return <MyModpacksPage onNavigate={handleModpackNavigation} />;
+        return <MyModpacksPage />;
       case 'published-modpacks':
         return <PublishedModpacksPage onNavigate={handleModpackNavigation} />;
       case 'publish-modpack':
@@ -226,7 +226,7 @@ function AppContent() {
       />
       <main className="flex-1 overflow-auto">
         <div
-          className={`h-full transition-all duration-300 ease-out ${
+          className={`h-full transition-all duration-200 ease-out ${
             isTransitioning
               ? 'opacity-0 scale-95 translate-y-2'
               : 'opacity-100 scale-100 translate-y-0'

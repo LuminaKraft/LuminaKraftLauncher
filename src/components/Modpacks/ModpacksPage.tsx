@@ -71,7 +71,7 @@ const ModpacksPage: React.FC<ModpacksPageProps> = ({ initialModpackId }) => {
       withDelay(() => {
         setIsTransitioning(false);
       }, 100);
-    }, 200);
+    }, 100);
   };
 
   const handleBackToList = () => {
@@ -81,7 +81,7 @@ const ModpacksPage: React.FC<ModpacksPageProps> = ({ initialModpackId }) => {
     withDelay(() => {
       setSelectedModpack(null);
       setIsTransitioning(false);
-    }, 200);
+    }, 100);
   };
 
   const handleRefresh = async () => {
@@ -94,7 +94,7 @@ const ModpacksPage: React.FC<ModpacksPageProps> = ({ initialModpackId }) => {
     } finally {
       withDelay(() => {
         setIsRefreshAnimating(false);
-      }, 300);
+      }, 200);
     }
   };
 
@@ -128,7 +128,7 @@ const ModpacksPage: React.FC<ModpacksPageProps> = ({ initialModpackId }) => {
       status: 'not_installed' as const
     };
     return (
-      <div className={`h-full w-full ${getAnimationClass('transition-opacity duration-300 ease-out', '')
+      <div className={`h-full w-full ${getAnimationClass('transition-opacity duration-200 ease-out', '')
         } ${showingDetails && !isTransitioning
           ? 'opacity-100'
           : 'opacity-0'
@@ -151,7 +151,7 @@ const ModpacksPage: React.FC<ModpacksPageProps> = ({ initialModpackId }) => {
   }
 
   return (
-    <div className={`h-full flex flex-col ${getAnimationClass('transition-opacity duration-300 ease-out', '')
+    <div className={`h-full flex flex-col ${getAnimationClass('transition-opacity duration-200 ease-out', '')
       } ${isTransitioning
         ? 'opacity-0'
         : 'opacity-100'
@@ -191,7 +191,7 @@ const ModpacksPage: React.FC<ModpacksPageProps> = ({ initialModpackId }) => {
                 placeholder={t('modpacks.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className={`input-field pl-10 w-64 transition-all duration-300 ${getAnimationClass('', 'focus:ring-2 focus:ring-lumina-400/50 focus:border-lumina-400')
+                className={`input-field pl-10 w-64 transition-all duration-200 ${getAnimationClass('', 'focus:ring-2 focus:ring-lumina-400/50 focus:border-lumina-400')
                   }`}
                 style={getAnimationStyle({})}
               />

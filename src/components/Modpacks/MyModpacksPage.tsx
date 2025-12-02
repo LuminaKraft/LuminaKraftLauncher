@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import ModpackValidationService, { ModFileInfo } from '../../services/modpackValidationService';
 import ModpackValidationDialog from './ModpackValidationDialog';
 import ModpackCard from './ModpackCard';
+import ModpackDetailsRefactored from './ModpackDetailsRefactored';
 import { useLauncher } from '../../contexts/LauncherContext';
 import { ConfirmDialog } from '../Common/ConfirmDialog';
 import LauncherService from '../../services/launcherService';
@@ -23,11 +24,7 @@ interface LocalModpack {
   lastPlayed?: string;
 }
 
-interface MyModpacksPageProps {
-  onNavigate?: (section: string, modpackId?: string) => void;
-}
-
-export function MyModpacksPage({ onNavigate }: MyModpacksPageProps = {}) {
+export function MyModpacksPage() {
   const { t } = useTranslation();
   const validationService = ModpackValidationService.getInstance();
   const { installModpackFromZip, modpackStates } = useLauncher();
@@ -36,8 +33,33 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps = {}) {
 
   const [localModpacks, setLocalModpacks] = useState<LocalModpack[]>([]);
   const [modpackDetails, setModpackDetails] = useState<Map<string, Modpack>>(new Map());
+  const [selectedModpackId, setSelectedModpackId] = useState<string | null>(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const [loading, setLoading] = useState(true);
   const [validating, setValidating] = useState(false);
+
+  // Animation helper with delay (faster animations - 100ms)
+  const withDelay = (callback: () => void | Promise<void>, delay = 100) => {
+    setTimeout(callback, delay);
+  };
+
+  const handleModpackSelect = (modpackId: string) => {
+    setIsTransitioning(true);
+    withDelay(() => {
+      setSelectedModpackId(modpackId);
+      withDelay(() => {
+        setIsTransitioning(false);
+      }, 100);
+    }, 100);
+  };
+
+  const handleBackToList = () => {
+    setIsTransitioning(true);
+    withDelay(() => {
+      setSelectedModpackId(null);
+      setIsTransitioning(false); // Reset immediately to avoid double animation
+    }, 100);
+  };
   const [showValidationDialog, setShowValidationDialog] = useState(false);
   const [validationData, setValidationData] = useState<{
     modpackName: string;
@@ -263,8 +285,30 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps = {}) {
     );
   }
 
+  // If a modpack is selected, show its details
+  if (selectedModpackId) {
+    const modpack = modpackDetails.get(selectedModpackId);
+    const state = modpackStates[selectedModpackId];
+
+    if (modpack && state) {
+      return (
+        <div className={`h-full w-full transition-opacity duration-200 ease-out ${
+          isTransitioning ? 'opacity-0' : 'opacity-100'
+        }`}>
+          <ModpackDetailsRefactored
+            modpack={modpack}
+            state={state}
+            onBack={handleBackToList}
+          />
+        </div>
+      );
+    }
+  }
+
   return (
-    <div className="max-w-7xl mx-auto p-6">
+    <div className={`max-w-7xl mx-auto p-6 transition-opacity duration-200 ease-out ${
+      isTransitioning ? 'opacity-0' : 'opacity-100'
+    }`}>
       {/* Hidden file input */}
       <input
         ref={fileInputRef}
@@ -418,7 +462,7 @@ export function MyModpacksPage({ onNavigate }: MyModpacksPageProps = {}) {
                   key={localModpack.id}
                   modpack={modpack}
                   state={state}
-                  onSelect={() => onNavigate?.('explore', localModpack.id)}
+                  onSelect={() => handleModpackSelect(localModpack.id)}
                   index={index + importingModpackIds.length}
                   hideServerBadges={true}
                 />

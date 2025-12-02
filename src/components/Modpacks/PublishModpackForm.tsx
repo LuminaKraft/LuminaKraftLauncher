@@ -501,7 +501,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                 <div key={step.id} className="flex flex-col items-center gap-2 bg-gray-50 dark:bg-gray-900 px-2">
                   <div
                     className={`
-                  w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300
+                  w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-200
                   ${isCurrent
                         ? 'border-blue-600 bg-blue-600 text-white scale-110 shadow-lg shadow-blue-500/30'
                         : isCompleted
@@ -633,7 +633,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
                 className={`
-              relative border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-all duration-300
+              relative border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-all duration-200
               ${isDragging
                   ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 scale-[1.02]'
                   : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-gray-50 dark:hover:bg-gray-800/50'
@@ -720,7 +720,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                 </div>
                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">
                   <div
-                    className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+                    className="bg-blue-600 h-2.5 rounded-full transition-all duration-200"
                     style={{ width: `${uploadProgress}%` }}
                   />
                 </div>
