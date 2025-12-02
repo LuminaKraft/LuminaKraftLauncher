@@ -27,8 +27,8 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
   const { t } = useTranslation();
   const { userSettings } = useLauncher();
 
-  const [ramMode, setRamMode] = useState<'curseforge' | 'recommended' | 'custom' | 'global'>(
-    (metadata?.ramAllocation as 'curseforge' | 'recommended' | 'custom' | 'global') || 'recommended'
+  const [ramMode, setRamMode] = useState<'recommended' | 'custom' | 'global'>(
+    (metadata?.ramAllocation as 'recommended' | 'custom' | 'global') || 'recommended'
   );
   const [customRamValue, setCustomRamValue] = useState<number>(
     metadata?.customRam || metadata?.recommendedRam || userSettings.allocatedRam * 1024 || 4096
@@ -37,7 +37,7 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
 
   useEffect(() => {
     if (metadata) {
-      setRamMode((metadata.ramAllocation as 'curseforge' | 'recommended' | 'custom' | 'global') || 'recommended');
+      setRamMode((metadata.ramAllocation as 'recommended' | 'custom' | 'global') || 'recommended');
       setCustomRamValue(metadata.customRam || metadata.recommendedRam || userSettings.allocatedRam * 1024 || 4096);
     }
   }, [metadata, userSettings.allocatedRam]);
@@ -47,9 +47,6 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
   // RAM values based on mode
   const getEffectiveRam = (): number => {
     switch (ramMode) {
-      case 'curseforge':
-        // CurseForge default: 4096MB (4GB)
-        return 4096;
       case 'recommended':
         return metadata?.recommendedRam || userSettings.allocatedRam * 1024 || 4096;
       case 'custom':
@@ -84,8 +81,8 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
   const MAX_RAM = 32768; // 32GB maximum
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-dark-800 rounded-lg p-6 max-w-2xl w-full my-8 border border-dark-600">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-8 overflow-y-auto">
+      <div className="bg-dark-800 rounded-lg p-6 max-w-2xl w-full my-auto border border-dark-600">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-white">Profile Options</h2>
@@ -119,22 +116,6 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
           </div>
 
           <div className="space-y-3">
-            {/* Default Settings Option */}
-            <label className="flex items-start space-x-3 p-4 rounded-lg border border-dark-600 hover:border-lumina-500/50 transition-colors cursor-pointer">
-              <input
-                type="radio"
-                name="ramMode"
-                value="curseforge"
-                checked={ramMode === 'curseforge'}
-                onChange={(e) => setRamMode(e.target.value as 'curseforge')}
-                className="mt-1 w-4 h-4 text-lumina-600 bg-dark-700 border-dark-600 focus:ring-lumina-500 focus:ring-2"
-              />
-              <div className="flex-1">
-                <div className="text-white font-medium">Default Settings - 4096MB</div>
-                <div className="text-dark-300 text-sm">Use default memory allocation (4GB)</div>
-              </div>
-            </label>
-
             {/* Recommended by Author Option */}
             <label className="flex items-start space-x-3 p-4 rounded-lg border border-dark-600 hover:border-lumina-500/50 transition-colors cursor-pointer">
               <input

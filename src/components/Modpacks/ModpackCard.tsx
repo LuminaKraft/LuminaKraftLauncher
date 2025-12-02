@@ -551,7 +551,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
               buttonConfig.onClick();
             }}
             disabled={buttonConfig.disabled}
-            className={`${buttonConfig.className} flex-1 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed group`}
+            className={`${buttonConfig.className} flex-1 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 ${getAnimationClass('', !buttonConfig.disabled ? 'hover:scale-[1.02]' : '')} group`}
           >
             <ButtonIcon
               className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''} transition-transform duration-200 ${getAnimationClass('', !isLoading && !buttonConfig.disabled ? 'group-hover:scale-110' : '')}`}
@@ -567,7 +567,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
                 setShowProfileOptionsModal(true);
               }}
               disabled={isLoading}
-              className="btn-secondary px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed group"
+              className={`btn-secondary px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 ${getAnimationClass('', 'hover:scale-[1.02]')} group`}
               title="Profile Options"
             >
               <Settings className={`w-4 h-4 transition-transform duration-200 ${getAnimationClass('', 'group-hover:rotate-90')}`} />
@@ -582,7 +582,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
                 handleOpenInstanceFolder();
               }}
               disabled={isLoading}
-              className="btn-secondary px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed group"
+              className={`btn-secondary px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 ${getAnimationClass('', 'hover:scale-[1.02]')} group`}
               title={t('modpacks.openFolderTooltip')}
             >
               <FolderOpen className={`w-4 h-4 transition-transform duration-200 ${getAnimationClass('', 'group-hover:scale-110')}`} />
@@ -598,7 +598,7 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
                 setShowRemoveDialog(true);
               }}
               disabled={isLoading}
-              className="btn-danger px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed group"
+              className={`btn-danger px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 ${getAnimationClass('', 'hover:scale-[1.02]')} group`}
               title={t('modpacks.removeTooltip')}
             >
               <Trash2 className={`w-4 h-4 transition-transform duration-200 ${getAnimationClass('', 'group-hover:scale-110')}`} />
