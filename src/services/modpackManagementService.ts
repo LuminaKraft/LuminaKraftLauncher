@@ -155,6 +155,7 @@ export class ModpackManagementService {
     gamemode?: string;
     serverIp?: string;
     primaryColor?: string;
+    isComingSoon?: boolean;
   }): Promise<{ success: boolean; modpackId?: string; error?: string }> {
     try {
       if (!this.microsoftAccount) {
@@ -213,6 +214,7 @@ export class ModpackManagementService {
           partner_id: userData.partner_id, // Save partner_id if available
           upload_status: 'pending',
           is_active: false, // Activate after uploading files
+          is_coming_soon: modpackData.isComingSoon || false,
         } as any)
         .select('id')
         .single();
@@ -379,6 +381,7 @@ export class ModpackManagementService {
       serverIp: string;
       primaryColor: string;
       isActive: boolean;
+      isComingSoon: boolean;
     }>
   ): Promise<{ success: boolean; error?: string }> {
     try {
@@ -393,6 +396,7 @@ export class ModpackManagementService {
       if (updates.gamemode !== undefined) updateData.gamemode = updates.gamemode;
       if (updates.serverIp !== undefined) updateData.server_ip = updates.serverIp;
       if (updates.primaryColor !== undefined) updateData.primary_color = updates.primaryColor;
+      if (updates.isComingSoon !== undefined) updateData.is_coming_soon = updates.isComingSoon;
       if (updates.isActive !== undefined) {
         updateData.is_active = updates.isActive;
         // Set published_at when making modpack public for the first time
@@ -855,6 +859,39 @@ export class ModpackManagementService {
     } catch (error) {
       console.error('Error deleting modpack:', error);
       return { success: false, error: 'Failed to delete modpack' };
+    }
+  }
+
+  /**
+   * Validate if a modpack can be activated (Coming Soon → Active transition)
+   */
+  async validateActivation(modpackId: string): Promise<{ canActivate: boolean; error?: string }> {
+    try {
+      const { data: modpack } = await supabase
+        .from('modpacks')
+        .select('modpack_file_url, logo_url, banner_url')
+        .eq('id', modpackId)
+        .single();
+
+      if (!modpack) {
+        return { canActivate: false, error: 'Modpack not found' };
+      }
+
+      // Validate required fields for activation
+      if (!(modpack as any).modpack_file_url) {
+        return { canActivate: false, error: 'ZIP file is required to activate modpack' };
+      }
+      if (!(modpack as any).logo_url) {
+        return { canActivate: false, error: 'Logo is required' };
+      }
+      if (!(modpack as any).banner_url) {
+        return { canActivate: false, error: 'Banner is required' };
+      }
+
+      return { canActivate: true };
+    } catch (error) {
+      console.error('Error validating activation:', error);
+      return { canActivate: false, error: 'Failed to validate activation' };
     }
   }
 }
