@@ -223,7 +223,7 @@ class LauncherService {
         ip: modpack.server_ip,
         logo: modpack.logo_url,
         banner: modpack.banner_url,
-        backgroundImage: modpack.background_image_url,
+        backgroundImage: modpack.banner_url, // Use banner as background
         urlModpackZip: modpack.modpack_file_url,
         primaryColor: modpack.primary_color,
         isNew: modpack.is_new,
