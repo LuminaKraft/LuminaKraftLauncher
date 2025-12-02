@@ -121,6 +121,7 @@ export interface UserSettings {
   discordAccount?: DiscordAccount; // NEW: Discord account info
   enablePrereleases?: boolean;
   enableAnimations?: boolean;
+  autoUpdate?: boolean; // Automatic updates (default: true)
   clientToken?: string; // launcher-generated token to authenticate offline users
   supabaseAccessToken?: string; // Supabase session token for anonymous/authenticated users
 }

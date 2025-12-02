@@ -38,18 +38,37 @@ function AppContent() {
         try {
           console.log('Checking for updates on startup...');
           const update = await updateService.checkForUpdates();
-          
+
           if (update.hasUpdate) {
             console.log('Update available:', update);
             setUpdateInfo(update);
-            setShowUpdateDialog(true);
+
+            // Check if auto-update is enabled (default: true)
+            const autoUpdateEnabled = launcherService.getUserSettings().autoUpdate !== false;
+
+            // Auto-install stable releases if enabled, always show dialog for prereleases
+            if (!update.isPrerelease && autoUpdateEnabled) {
+              console.log('Auto-installing stable update...');
+              try {
+                await updateService.downloadAndInstallUpdate((progress, total) => {
+                  setUpdateProgress({ current: progress, total });
+                });
+              } catch (error) {
+                console.error('Auto-install failed, showing dialog instead:', error);
+                setShowUpdateDialog(true);
+              }
+            } else {
+              // Show dialog for prereleases or if auto-update is disabled
+              console.log(update.isPrerelease ? 'Prerelease detected, showing dialog for manual approval' : 'Auto-update disabled, showing dialog');
+              setShowUpdateDialog(true);
+            }
           } else {
             console.log('No updates available');
           }
         } catch (error) {
           console.error('Failed to check for updates on startup:', error);
         }
-        
+
         // Start automatic checking for future updates
         updateService.startAutomaticChecking();
       }

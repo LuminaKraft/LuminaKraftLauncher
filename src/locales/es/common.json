@@ -319,6 +319,8 @@
     "discardChanges": "Descartar cambios",
     "changesDiscarded": "Cambios descartados exitosamente",
     "prereleases": "Actualizaciones Experimentales",
+    "autoUpdate": "Actualizaciones automáticas",
+    "autoUpdateDesc": "Instalar automáticamente actualizaciones estables sin preguntar. Las actualizaciones experimentales siempre requerirán aprobación manual",
     "enablePrereleases": "Recibir actualizaciones experimentales",
     "enablePrereleasesDesc": "Permite recibir versiones alpha, beta y release candidates. Estas versiones pueden contener errores y están destinadas para pruebas.",
     "prereleaseWarning": "Las versiones experimentales pueden ser inestables",

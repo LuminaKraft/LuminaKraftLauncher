@@ -33,21 +33,31 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
     }
   }, [isPinned]);
 
-  // Check for updates
+  // Check for updates (respecting experimental updates setting)
   useEffect(() => {
     const checkUpdates = async () => {
       try {
+        // Check if prereleases are enabled
+        const enablePrereleases = userSettings?.enablePrereleases ?? false;
+
         const update = await check();
         if (update?.available) {
-          setHasUpdate(true);
-          setLatestVersion(update.version);
+          const isPrerelease = update.version.includes('alpha') || update.version.includes('beta') || update.version.includes('rc');
+
+          // Only show update notification if:
+          // - It's a stable release, OR
+          // - It's a prerelease AND experimental updates are enabled
+          if (!isPrerelease || enablePrereleases) {
+            setHasUpdate(true);
+            setLatestVersion(update.version);
+          }
         }
       } catch (error) {
         console.error('Error checking for updates:', error);
       }
     };
     checkUpdates();
-  }, []);
+  }, [userSettings?.enablePrereleases]);
 
   // Version is automatically updated by release.js
   const currentVersion = "0.0.9-alpha.6";

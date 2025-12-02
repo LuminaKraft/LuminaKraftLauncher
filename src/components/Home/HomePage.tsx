@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowRight, Newspaper, Clock } from 'lucide-react';
 import ModpackCard from '../Modpacks/ModpackCard';
-import { ModpackWithDetails } from '../../types/launcher';
+import { Modpack } from '../../types/launcher';
 import LauncherService from '../../services/launcherService';
 import { useLauncher } from '../../contexts/LauncherContext';
 
@@ -13,8 +13,8 @@ interface HomePageProps {
 export function HomePage({ onNavigate }: HomePageProps) {
   const { t } = useTranslation();
   const { modpackStates } = useLauncher();
-  const [comingSoonModpacks, setComingSoonModpacks] = useState<ModpackWithDetails[]>([]);
-  const [featuredModpacks, setFeaturedModpacks] = useState<ModpackWithDetails[]>([]);
+  const [comingSoonModpacks, setComingSoonModpacks] = useState<Modpack[]>([]);
+  const [featuredModpacks, setFeaturedModpacks] = useState<Modpack[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

@@ -321,6 +321,8 @@
     "discardChanges": "Discard changes",
     "changesDiscarded": "Changes discarded successfully",
     "prereleases": "Experimental Updates",
+    "autoUpdate": "Automatic updates",
+    "autoUpdateDesc": "Automatically install stable updates without asking. Prerelease updates will always require manual approval",
     "enablePrereleases": "Receive experimental updates",
     "enablePrereleasesDesc": "Allow receiving alpha, beta, and release candidate versions. These versions may contain bugs and are intended for testing.",
     "prereleaseWarning": "Experimental versions may be unstable",
