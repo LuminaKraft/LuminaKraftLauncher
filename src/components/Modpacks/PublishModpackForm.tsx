@@ -357,7 +357,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
     try {
       const { success, modpackId, error } = await service.createModpack({
         slug: formData.name.en.toLowerCase().replace(/\s+/g, '-'),
-        category: formData.category || 'community', // Default to community if not set
+        category: formData.category!, // Category is required (admin or partner only)
         name: formData.name,
         shortDescription: formData.shortDescription,
         description: formData.description,
@@ -714,24 +714,14 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                     </p>
                   </div>
                 )}
+              </div>
 
-                <div
-                  onClick={() => updateFormData('category', 'community')}
-                  className={`p-6 rounded-lg border-2 cursor-pointer transition-all ${formData.category === 'community'
-                    ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
-                    : 'border-gray-200 dark:border-gray-700 hover:border-green-300'
-                    }`}
-                >
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg text-green-600 dark:text-green-400">
-                      <Package className="w-6 h-6" />
-                    </div>
-                    <h3 className="font-semibold text-gray-900 dark:text-white">Community Modpack</h3>
-                  </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Standard community modpack available to everyone.
-                  </p>
-                </div>
+              {/* Community publishing disabled notice */}
+              <div className="mt-6 bg-gray-50 dark:bg-gray-700/30 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
+                  <span className="font-medium text-gray-700 dark:text-gray-300">Community modpack publishing</span> is temporarily disabled.
+                  Only admins and verified partners can publish modpacks at this time.
+                </p>
               </div>
             </div>
 

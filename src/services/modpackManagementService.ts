@@ -60,8 +60,8 @@ export class ModpackManagementService {
 
       const role = profile.role as 'admin' | 'partner' | 'user';
 
-      // Only admin, partner, and authenticated users (community) can manage
-      const canManage = ['admin', 'partner', 'user'].includes(role);
+      // Only admin and partner can manage modpacks (community publishing disabled temporarily)
+      const canManage = ['admin', 'partner'].includes(role);
 
       let partnerName: string | undefined;
       if (role === 'partner' && profile.partner_id) {
