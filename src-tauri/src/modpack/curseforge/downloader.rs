@@ -246,7 +246,12 @@ where
             _ => {
                 let file_name = file_info.file_name.as_deref().unwrap_or("unknown_file");
                 let mod_path = mods_dir.join(file_name);
-                
+
+                // Also check resourcepacks folder for files that might be resourcepacks instead of mods
+                let resourcepacks_dir = instance_dir.join("resourcepacks");
+                let resourcepack_path = resourcepacks_dir.join(file_name);
+
+                // Check if file exists in mods/ folder
                 if verify_file_hash(&mod_path, &file_info.hashes) {
                     emit_progress(
                         format!("mod_exists:{}", file_name),
@@ -254,22 +259,33 @@ where
                         "mod_already_exists".to_string()
                     );
                     continue;
-                } else {
-                    let project_id = file_id_to_project.get(&file_info.id).copied().unwrap_or(file_info.mod_id.unwrap_or(-1));
-                    let failed_mod = serde_json::json!({
-                        "projectId": project_id,
-                        "fileId": file_info.id,
-                        "fileName": file_name
-                    });
-                    failed_mods.push(failed_mod);
-                    
+                }
+
+                // Check if file exists in resourcepacks/ folder
+                if verify_file_hash(&resourcepack_path, &file_info.hashes) {
                     emit_progress(
-                        format!("mod_unavailable:{}", file_name),
+                        format!("resourcepack_exists:{}", file_name),
                         mod_progress,
-                        "mod_unavailable".to_string()
+                        "mod_already_exists".to_string()
                     );
                     continue;
                 }
+
+                // File doesn't exist in either location - mark as failed
+                let project_id = file_id_to_project.get(&file_info.id).copied().unwrap_or(file_info.mod_id.unwrap_or(-1));
+                let failed_mod = serde_json::json!({
+                    "projectId": project_id,
+                    "fileId": file_info.id,
+                    "fileName": file_name
+                });
+                failed_mods.push(failed_mod);
+
+                emit_progress(
+                    format!("mod_unavailable:{}", file_name),
+                    mod_progress,
+                    "mod_unavailable".to_string()
+                );
+                continue;
             }
         };
 
