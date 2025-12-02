@@ -30,7 +30,9 @@
     "myModpacks": "My Modpacks",
     "myModpacksDesc": "Manage your local modpack instances",
     "publishedModpacks": "Publish Modpacks",
-    "publishedModpacksDesc": "Publish and manage your modpacks"
+    "publishedModpacksDesc": "Publish and manage your modpacks",
+    "account": "Account",
+    "accountDesc": "Manage your account and linked providers"
   },
   "sidebar": {
     "expand": "Expand sidebar",
@@ -627,5 +629,22 @@
       "deleteFailed": "Failed to delete modpack",
       "loadFailed": "Failed to load modpacks"
     }
+  },
+  "profileOptions": {
+    "title": "Profile Options",
+    "name": "Name",
+    "memorySettings": "Memory Settings",
+    "recommendedByAuthor": "Recommended by Author",
+    "default": "(Default)",
+    "recommendedDescription": "Use the memory allocation recommended by the modpack author",
+    "globalFallback": "Use global memory allocation (no specific recommendation from author)",
+    "globalSettings": "Global Settings",
+    "globalDescription": "Use your global memory allocation from settings",
+    "customAllocation": "Custom RAM Allocation",
+    "memory": "Memory",
+    "effectiveAllocation": "Effective Memory Allocation:",
+    "cancel": "Cancel",
+    "done": "Done",
+    "saving": "Saving..."
   }
 }

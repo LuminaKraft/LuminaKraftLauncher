@@ -85,7 +85,7 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
       <div className="bg-dark-800 rounded-lg p-6 max-w-2xl w-full my-auto border border-dark-600">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-white">Profile Options</h2>
+          <h2 className="text-xl font-semibold text-white">{t('profileOptions.title')}</h2>
           <button
             onClick={onClose}
             className="text-dark-400 hover:text-white transition-colors"
@@ -98,7 +98,7 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
         {/* Name Section */}
         <div className="mb-6">
           <label className="block text-dark-300 text-sm font-medium mb-2">
-            Name
+            {t('profileOptions.name')}
           </label>
           <input
             type="text"
@@ -112,7 +112,7 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
         <div className="mb-6">
           <div className="flex items-center space-x-3 mb-4">
             <HardDrive className="w-5 h-5 text-lumina-500" />
-            <h3 className="text-white text-lg font-semibold">Memory Settings</h3>
+            <h3 className="text-white text-lg font-semibold">{t('profileOptions.memorySettings')}</h3>
           </div>
 
           <div className="space-y-3">
@@ -128,13 +128,13 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
               />
               <div className="flex-1">
                 <div className="text-white font-medium">
-                  Recommended by Author - {metadata?.recommendedRam || userSettings.allocatedRam * 1024}MB
-                  {ramMode === 'recommended' && <span className="text-lumina-400 ml-2">(Default)</span>}
+                  {t('profileOptions.recommendedByAuthor')} - {metadata?.recommendedRam || userSettings.allocatedRam * 1024}MB
+                  {ramMode === 'recommended' && <span className="text-lumina-400 ml-2">{t('profileOptions.default')}</span>}
                 </div>
                 <div className="text-dark-300 text-sm">
                   {metadata?.recommendedRam
-                    ? 'Use the memory allocation recommended by the modpack author'
-                    : 'Use global memory allocation (no specific recommendation from author)'}
+                    ? t('profileOptions.recommendedDescription')
+                    : t('profileOptions.globalFallback')}
                 </div>
               </div>
             </label>
@@ -151,9 +151,9 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
               />
               <div className="flex-1">
                 <div className="text-white font-medium">
-                  Global Settings - {userSettings.allocatedRam * 1024}MB
+                  {t('profileOptions.globalSettings')} - {userSettings.allocatedRam * 1024}MB
                 </div>
-                <div className="text-dark-300 text-sm">Use your global memory allocation from settings</div>
+                <div className="text-dark-300 text-sm">{t('profileOptions.globalDescription')}</div>
               </div>
             </label>
 
@@ -169,12 +169,12 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
                   className="mt-1 w-4 h-4 text-lumina-600 bg-dark-700 border-dark-600 focus:ring-lumina-500 focus:ring-2"
                 />
                 <div className="flex-1">
-                  <div className="text-white font-medium mb-3">Custom RAM Allocation</div>
+                  <div className="text-white font-medium mb-3">{t('profileOptions.customAllocation')}</div>
 
                   {/* Custom RAM Slider */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-dark-300 text-sm">Memory:</span>
+                      <span className="text-dark-300 text-sm">{t('profileOptions.memory')}:</span>
                       <div className="flex items-center space-x-2">
                         <input
                           type="number"
@@ -222,7 +222,7 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
           {/* Current Allocation Display */}
           <div className="mt-4 p-3 bg-dark-700 rounded-lg">
             <div className="flex justify-between items-center">
-              <span className="text-dark-300 text-sm">Effective Memory Allocation:</span>
+              <span className="text-dark-300 text-sm">{t('profileOptions.effectiveAllocation')}</span>
               <span className="text-lumina-400 font-semibold">{getEffectiveRam()} MB ({(getEffectiveRam() / 1024).toFixed(1)} GB)</span>
             </div>
           </div>
@@ -235,7 +235,7 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
             className="btn-secondary"
             disabled={isSaving}
           >
-            Cancel
+            {t('profileOptions.cancel')}
           </button>
           <button
             onClick={handleSave}
@@ -245,10 +245,10 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
             {isSaving ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Saving...
+                {t('profileOptions.saving')}
               </>
             ) : (
-              'Done'
+              t('profileOptions.done')
             )}
           </button>
         </div>

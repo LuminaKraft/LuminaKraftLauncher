@@ -89,9 +89,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
     },
     {
       id: 'account',
-      label: 'Account',
+      label: t('navigation.account'),
       icon: User,
-      description: 'Manage your account and linked providers'
+      description: t('navigation.accountDesc')
     },
     {
       id: 'settings',
