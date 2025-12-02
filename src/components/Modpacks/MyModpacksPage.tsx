@@ -313,8 +313,31 @@ export function MyModpacksPage() {
 
   // If a modpack is selected, show its details
   if (selectedModpackId) {
-    const modpack = modpackDetails.get(selectedModpackId);
     const state = modpackStates[selectedModpackId];
+    let modpack = modpackDetails.get(selectedModpackId);
+
+    // If no details from Supabase, create a temporary placeholder for local imports
+    if (!modpack && state) {
+      modpack = {
+        id: selectedModpackId,
+        name: t('myModpacks.importing.name'),
+        description: t('myModpacks.importing.description'),
+        shortDescription: t('myModpacks.importing.shortDescription'),
+        version: '1.0.0',
+        minecraftVersion: '1.20.1',
+        modloader: 'forge',
+        modloaderVersion: '47.0.0',
+        logo: '',
+        backgroundImage: '',
+        urlModpackZip: '',
+        category: 'community',
+        isActive: false,
+        isNew: false,
+        isComingSoon: false,
+        gamemode: undefined,
+        ip: undefined
+      };
+    }
 
     if (modpack && state) {
       return (
@@ -444,7 +467,7 @@ export function MyModpacksPage() {
                   key={`importing-${id}`}
                   modpack={tempModpack}
                   state={state}
-                  onSelect={() => {}}
+                  onSelect={() => handleModpackSelect(id)}
                   index={index}
                 />
               );
