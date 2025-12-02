@@ -304,6 +304,14 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
       toast.error('Name is required in both languages');
       return false;
     }
+    if (!formData.shortDescription.en || !formData.shortDescription.es) {
+      toast.error('Short description is required in both languages');
+      return false;
+    }
+    if (!formData.description.en || !formData.description.es) {
+      toast.error('Full description is required in both languages');
+      return false;
+    }
     if (!formData.version) {
       toast.error('Version is required');
       return false;
@@ -431,6 +439,14 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
       if (currentEffectiveStep?.title === 'Basic Info') {
         if (!formData.name.en || !formData.name.es) {
           toast.error('Name is required in both languages');
+          return;
+        }
+        if (!formData.shortDescription.en || !formData.shortDescription.es) {
+          toast.error('Short description is required in both languages');
+          return;
+        }
+        if (!formData.description.en || !formData.description.es) {
+          toast.error('Full description is required in both languages');
           return;
         }
         if (!formData.version || !formData.minecraftVersion || !formData.modloaderVersion) {
@@ -945,10 +961,11 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                 </div>
                 <div className="mb-4">
                   <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-                    Short Description
+                    Short Description <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
+                    required
                     value={formData.shortDescription[currentLang]}
                     onChange={(e) => updateI18nField('shortDescription', currentLang, e.target.value)}
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
@@ -958,9 +975,10 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                 </div>
                 <div className="mb-4">
                   <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-                    Full Description
+                    Full Description <span className="text-red-500">*</span>
                   </label>
                   <textarea
+                    required
                     value={formData.description[currentLang]}
                     onChange={(e) => updateI18nField('description', currentLang, e.target.value)}
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 min-h-[150px] transition-shadow"
