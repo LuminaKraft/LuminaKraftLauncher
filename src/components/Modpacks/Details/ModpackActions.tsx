@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Download, Play, RefreshCw, Wrench, FolderOpen, Trash2,
-  Loader2, StopCircle, Globe, AlertTriangle
+  Loader2, StopCircle, Globe, AlertTriangle, Settings
 } from 'lucide-react';
+import { invoke } from '@tauri-apps/api/core';
 import type { Modpack, ModpackState, ProgressInfo } from '../../../types/launcher';
 import { useLauncher } from '../../../contexts/LauncherContext';
 import { useAnimation } from '../../../contexts/AnimationContext';
 import ConfirmDialog from '../../ConfirmDialog';
 import LauncherService from '../../../services/launcherService';
+import ProfileOptionsModal from '../ProfileOptionsModal';
 
 interface ModpackActionsProps {
   modpack: Modpack;
@@ -23,6 +25,8 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state }) => {
   const { getAnimationClass, getAnimationStyle } = useAnimation();
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
+  const [showProfileOptions, setShowProfileOptions] = useState(false);
+  const [instanceMetadata, setInstanceMetadata] = useState<any>(null);
 
   const requiresModpack = !!modpack.urlModpackZip;
 
@@ -210,6 +214,27 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state }) => {
     };
   }, [state.status]);
 
+  // Load instance metadata when installed
+  useEffect(() => {
+    const loadMetadata = async () => {
+      if (state.installed) {
+        try {
+          const metadataJson = await invoke<string | null>('get_instance_metadata', {
+            modpackId: modpack.id
+          });
+
+          if (metadataJson) {
+            setInstanceMetadata(JSON.parse(metadataJson));
+          }
+        } catch (error) {
+          console.error('Failed to load instance metadata:', error);
+        }
+      }
+    };
+
+    loadMetadata();
+  }, [state.installed, modpack.id]);
+
   const displayedPercentage = state.status === 'launching'
     ? fakeLaunchProgress
     : state.progress?.percentage ?? 0;
@@ -308,31 +333,48 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state }) => {
 
         {/* Secondary Actions */}
         {['installed', 'outdated', 'error'].includes(state.status) && (
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2">
+            {/* Profile Options Button (Full Width) */}
             <button
-              onClick={() => LauncherService.getInstance().openInstanceFolder(modpack.id)}
-              className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2.5 rounded-lg bg-dark-700 hover:bg-dark-600 text-dark-300 hover:text-white transition-all duration-200 ${
+              onClick={() => setShowProfileOptions(true)}
+              className={`w-full flex items-center justify-center space-x-2 px-3 py-2.5 rounded-lg bg-lumina-600 hover:bg-lumina-700 text-white transition-all duration-200 ${
                 getAnimationClass('', 'hover:scale-[1.02]')
-              } min-w-0 group`}
+              } group`}
               style={getAnimationStyle({})}
             >
-              <FolderOpen className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${
-                getAnimationClass('', 'group-hover:scale-110')
+              <Settings className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${
+                getAnimationClass('', 'group-hover:rotate-90')
               }`} />
-              <span className="truncate text-sm">{t('modpacks.openFolder')}</span>
+              <span className="text-sm font-medium">Profile Options</span>
             </button>
-            <button
-              onClick={() => setShowRemoveDialog(true)}
-              className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white transition-all duration-200 ${
-                getAnimationClass('', 'hover:scale-[1.02]')
-              } min-w-0 group`}
-              style={getAnimationStyle({})}
-            >
-              <Trash2 className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${
-                getAnimationClass('', 'group-hover:scale-110')
-              }`} />
-              <span className="truncate text-sm">{t('modpacks.remove')}</span>
-            </button>
+
+            {/* Other Actions Row */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => LauncherService.getInstance().openInstanceFolder(modpack.id)}
+                className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2.5 rounded-lg bg-dark-700 hover:bg-dark-600 text-dark-300 hover:text-white transition-all duration-200 ${
+                  getAnimationClass('', 'hover:scale-[1.02]')
+                } min-w-0 group`}
+                style={getAnimationStyle({})}
+              >
+                <FolderOpen className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${
+                  getAnimationClass('', 'group-hover:scale-110')
+                }`} />
+                <span className="truncate text-sm">{t('modpacks.openFolder')}</span>
+              </button>
+              <button
+                onClick={() => setShowRemoveDialog(true)}
+                className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white transition-all duration-200 ${
+                  getAnimationClass('', 'hover:scale-[1.02]')
+                } min-w-0 group`}
+                style={getAnimationStyle({})}
+              >
+                <Trash2 className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${
+                  getAnimationClass('', 'group-hover:scale-110')
+                }`} />
+                <span className="truncate text-sm">{t('modpacks.remove')}</span>
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -350,6 +392,15 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state }) => {
           type="danger"
         />
       )}
+
+      {/* Profile Options Modal */}
+      <ProfileOptionsModal
+        modpackId={modpack.id}
+        modpackName={modpack.name}
+        isOpen={showProfileOptions}
+        onClose={() => setShowProfileOptions(false)}
+        metadata={instanceMetadata}
+      />
     </>
   );
 };
