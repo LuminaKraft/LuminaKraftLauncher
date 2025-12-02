@@ -196,9 +196,6 @@ export class ModpackManagementService {
         category = 'community';
       }
 
-      // Coming Soon modpacks should be active immediately since they don't need file uploads
-      const shouldActivate = modpackData.isComingSoon || false;
-
       const insertResult = await supabase
         .from('modpacks')
         .insert({
@@ -217,8 +214,8 @@ export class ModpackManagementService {
           primary_color: modpackData.primaryColor || null,
           author_id: userData.id,
           partner_id: userData.partner_id, // Save partner_id if available
-          upload_status: shouldActivate ? 'complete' : 'pending',
-          is_active: shouldActivate, // Activate Coming Soon modpacks immediately
+          upload_status: 'pending',
+          is_active: false, // Activate after uploading files
           is_coming_soon: modpackData.isComingSoon || false,
         } as any)
         .select('id')
