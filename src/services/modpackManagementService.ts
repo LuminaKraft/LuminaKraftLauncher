@@ -805,14 +805,22 @@ export class ModpackManagementService {
       const filePaths: string[] = [];
       if (modpack.modpack_file_path) filePaths.push(modpack.modpack_file_path);
       if (modpack.logo_url) {
-        // Extract path from URL
-        const logoPath = modpack.logo_url.split('/').slice(3).join('/');
-        filePaths.push(logoPath);
+        // Extract path from URL (e.g., "https://r2.example.com/bucket/modpacks/logo.png" -> "modpacks/logo.png")
+        try {
+          const logoPath = modpack.logo_url.split('/').slice(3).join('/');
+          if (logoPath) filePaths.push(logoPath);
+        } catch (e) {
+          console.warn('Failed to parse logo_url:', modpack.logo_url);
+        }
       }
       if (modpack.banner_url) {
         // Extract path from URL
-        const bannerPath = modpack.banner_url.split('/').slice(3).join('/');
-        filePaths.push(bannerPath);
+        try {
+          const bannerPath = modpack.banner_url.split('/').slice(3).join('/');
+          if (bannerPath) filePaths.push(bannerPath);
+        } catch (e) {
+          console.warn('Failed to parse banner_url:', modpack.banner_url);
+        }
       }
       if (images) {
         images.forEach(img => {
@@ -822,27 +830,37 @@ export class ModpackManagementService {
 
       console.log('📁 Files to delete:', filePaths);
 
-      // Delete files from R2 using Edge Function
+      // Delete files from R2 using Edge Function (only if there are files to delete)
       if (filePaths.length > 0) {
-        const { data: { session } } = await supabase.auth.getSession();
-        const functionUrl = `${supabaseUrl}/functions/v1/delete-modpack-files`;
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          const functionUrl = `${supabaseUrl}/functions/v1/delete-modpack-files`;
 
-        const response = await fetch(functionUrl, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${session?.access_token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            modpackId,
-            filePaths
-          })
-        });
+          const response = await fetch(functionUrl, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${session?.access_token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              modpackId,
+              filePaths
+            })
+          });
 
-        if (!response.ok) {
-          console.error('Failed to delete files from R2');
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Failed to delete files from R2:', response.status, errorText);
+            // Continue with database deletion even if R2 deletion fails
+          } else {
+            console.log('✅ Files deleted from R2');
+          }
+        } catch (error) {
+          console.error('Error calling delete-modpack-files function:', error);
           // Continue with database deletion even if R2 deletion fails
         }
+      } else {
+        console.log('ℹ️ No files to delete from R2');
       }
 
       // Delete modpack from database (cascade will delete related records)
