@@ -136,10 +136,10 @@ export function HomePage({ onNavigate }: HomePageProps) {
           </h2>
           <button
             onClick={() => onNavigate?.('explore')}
-            className="flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:underline font-medium"
+            className="flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:underline font-medium group"
           >
             {t('home.viewAll')}
-            <ArrowRight className="w-4 h-4" />
+            <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
           </button>
         </div>
         {featuredModpacks.length > 0 ? (

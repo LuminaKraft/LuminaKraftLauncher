@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Download, Play, RefreshCw, Wrench, AlertTriangle, Loader2, Globe, Trash2, FolderOpen, StopCircle, Clock } from 'lucide-react';
+import { Download, Play, RefreshCw, Wrench, AlertTriangle, Loader2, Globe, Trash2, FolderOpen, StopCircle, Clock, Settings } from 'lucide-react';
+import { invoke } from '@tauri-apps/api/core';
 import type { Modpack, ModpackState, ProgressInfo } from '../../types/launcher';
 import { useLauncher } from '../../contexts/LauncherContext';
 import { useAnimation } from '../../contexts/AnimationContext';
 import ConfirmDialog from '../ConfirmDialog';
+import ProfileOptionsModal from './ProfileOptionsModal';
 import LauncherService from '../../services/launcherService';
 
 interface ModpackCardProps {
@@ -23,6 +25,8 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
   const { installModpack, updateModpack, launchModpack, repairModpack, removeModpack, stopInstance } = useLauncher();
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
+  const [showProfileOptionsModal, setShowProfileOptionsModal] = useState(false);
+  const [instanceMetadata, setInstanceMetadata] = useState<any>(null);
 
 
 
@@ -210,6 +214,27 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
       if (intervalId) clearInterval(intervalId);
     };
   }, [state.status]);
+
+  // Load instance metadata when installed
+  useEffect(() => {
+    const loadMetadata = async () => {
+      if (state.installed) {
+        try {
+          const metadataJson = await invoke<string | null>('get_instance_metadata', {
+            modpackId: modpack.id
+          });
+
+          if (metadataJson) {
+            setInstanceMetadata(JSON.parse(metadataJson));
+          }
+        } catch (error) {
+          console.error('Failed to load instance metadata:', error);
+        }
+      }
+    };
+
+    loadMetadata();
+  }, [state.installed, modpack.id]);
 
   const displayedPercentage = state.status === 'launching'
     ? fakeLaunchProgress
@@ -526,13 +551,28 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
               buttonConfig.onClick();
             }}
             disabled={buttonConfig.disabled}
-            className={`${buttonConfig.className} flex-1 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed`}
+            className={`${buttonConfig.className} flex-1 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed group`}
           >
             <ButtonIcon
-              className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`}
+              className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''} transition-transform duration-200 ${getAnimationClass('', !isLoading && !buttonConfig.disabled ? 'group-hover:scale-110' : '')}`}
             />
             <span>{buttonConfig.text}</span>
           </button>
+
+          {/* Settings/Profile Options button */}
+          {['installed', 'outdated', 'error'].includes(state.status) && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowProfileOptionsModal(true);
+              }}
+              disabled={isLoading}
+              className="btn-secondary px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed group"
+              title="Profile Options"
+            >
+              <Settings className={`w-4 h-4 transition-transform duration-200 ${getAnimationClass('', 'group-hover:rotate-90')}`} />
+            </button>
+          )}
 
           {/* Open folder button */}
           {['installed', 'outdated', 'error'].includes(state.status) && (
@@ -542,10 +582,10 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
                 handleOpenInstanceFolder();
               }}
               disabled={isLoading}
-              className="btn-secondary px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-secondary px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed group"
               title={t('modpacks.openFolderTooltip')}
             >
-              <FolderOpen className="w-4 h-4" />
+              <FolderOpen className={`w-4 h-4 transition-transform duration-200 ${getAnimationClass('', 'group-hover:scale-110')}`} />
             </button>
           )}
 
@@ -558,10 +598,10 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
                 setShowRemoveDialog(true);
               }}
               disabled={isLoading}
-              className="btn-danger px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-danger px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed group"
               title={t('modpacks.removeTooltip')}
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className={`w-4 h-4 transition-transform duration-200 ${getAnimationClass('', 'group-hover:scale-110')}`} />
             </button>
           )}
         </div>
@@ -580,6 +620,15 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
           type="danger"
         />
       )}
+
+      {/* Profile Options Modal */}
+      <ProfileOptionsModal
+        modpackId={modpack.id}
+        modpackName={displayName}
+        isOpen={showProfileOptionsModal}
+        onClose={() => setShowProfileOptionsModal(false)}
+        metadata={instanceMetadata}
+      />
     </div>
   );
 };

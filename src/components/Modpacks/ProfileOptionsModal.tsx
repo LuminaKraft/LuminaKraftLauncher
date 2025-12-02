@@ -84,8 +84,8 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
   const MAX_RAM = 32768; // 32GB maximum
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-dark-800 rounded-lg p-6 max-w-2xl w-full mx-4 border border-dark-600">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <div className="bg-dark-800 rounded-lg p-6 max-w-2xl w-full my-8 border border-dark-600">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-white">Profile Options</h2>
