@@ -489,15 +489,17 @@ class AuthService {
             // Emit profile update event (listeners will handle fetching user)
             this.emitProfileUpdate();
 
-            // Run Discord sync in background
+            // Run Discord and Microsoft sync in background
             setTimeout(async () => {
               try {
                 const { data: { user } } = await supabase.auth.getUser();
                 if (user && provider_token) {
                   await this.syncDiscordData(provider_token, provider_refresh_token);
                 }
+                // Sync Microsoft data if available locally (for new accounts created via Discord)
+                await this.syncMicrosoftData();
               } catch (err) {
-                console.error('SyncDiscordData failed:', err);
+                console.error('Background sync failed:', err);
               }
             }, 1000);
           } catch (e) {
