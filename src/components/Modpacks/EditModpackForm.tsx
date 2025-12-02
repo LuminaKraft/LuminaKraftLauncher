@@ -38,6 +38,7 @@ interface FormData {
   serverIp: string;
   primaryColor: string;
   isActive: boolean;
+  isComingSoon: boolean;
   logoUrl?: string;
   bannerUrl?: string;
 }
@@ -120,6 +121,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
         serverIp: modpackData.server_ip || '',
         primaryColor: modpackData.primary_color || '#3b82f6',
         isActive: modpackData.is_active || false,
+        isComingSoon: modpackData.is_coming_soon || false,
         logoUrl: modpackData.logo_url,
         bannerUrl: modpackData.banner_url
       });
@@ -402,6 +404,21 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
       toast.success(newStatus ? 'Modpack is now visible' : 'Modpack is now hidden');
     } catch (error) {
       toast.error('Failed to update visibility');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleToggleComingSoon = async () => {
+    if (!formData) return;
+    const newStatus = !formData.isComingSoon;
+    setIsUpdating(true);
+    try {
+      await service.updateModpack(modpackId, { isComingSoon: newStatus });
+      setFormData(prev => prev ? ({ ...prev, isComingSoon: newStatus }) : null);
+      toast.success(newStatus ? 'Modpack marked as Coming Soon' : 'Coming Soon status removed');
+    } catch (error) {
+      toast.error('Failed to update Coming Soon status');
     } finally {
       setIsUpdating(false);
     }
@@ -931,25 +948,48 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
             <div className="space-y-6 animate-fade-in">
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
                 <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">Visibility</h2>
-                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <div>
-                    <h3 className="font-medium text-gray-900 dark:text-white">Modpack Status</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {formData.isActive
-                        ? 'Your modpack is currently visible to all users.'
-                        : 'Your modpack is currently hidden from users.'}
-                    </p>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <div>
+                      <h3 className="font-medium text-gray-900 dark:text-white">Modpack Status</h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {formData.isActive
+                          ? 'Your modpack is currently visible to all users.'
+                          : 'Your modpack is currently hidden from users.'}
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleToggleVisibility}
+                      disabled={isUpdating}
+                      className={`px-4 py-2 rounded-lg font-medium transition-colors ${formData.isActive
+                        ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:hover:bg-yellow-900/50'
+                        : 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50'
+                        }`}
+                    >
+                      {formData.isActive ? 'Hide Modpack' : 'Publish Modpack'}
+                    </button>
                   </div>
-                  <button
-                    onClick={handleToggleVisibility}
-                    disabled={isUpdating}
-                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${formData.isActive
-                      ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:hover:bg-yellow-900/50'
-                      : 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50'
-                      }`}
-                  >
-                    {formData.isActive ? 'Hide Modpack' : 'Publish Modpack'}
-                  </button>
+
+                  <div className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <div>
+                      <h3 className="font-medium text-gray-900 dark:text-white">Coming Soon Status</h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {formData.isComingSoon
+                          ? 'Modpack appears on homepage but cannot be downloaded yet.'
+                          : 'Modpack is fully available for download.'}
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleToggleComingSoon}
+                      disabled={isUpdating}
+                      className={`px-4 py-2 rounded-lg font-medium transition-colors ${formData.isComingSoon
+                        ? 'bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:hover:bg-orange-900/50'
+                        : 'bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50'
+                        }`}
+                    >
+                      {formData.isComingSoon ? 'Remove Coming Soon' : 'Mark as Coming Soon'}
+                    </button>
+                  </div>
                 </div>
               </div>
 
