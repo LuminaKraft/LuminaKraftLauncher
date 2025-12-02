@@ -14,7 +14,7 @@ interface SettingsPageProps {
 
 const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
   const { t } = useTranslation();
-  const { userSettings, updateUserSettings, currentLanguage, changeLanguage, setIsAuthenticating, hasActiveOperations } = useLauncher();
+  const { userSettings, updateUserSettings, currentLanguage, changeLanguage, hasActiveOperations } = useLauncher();
   
   const [formData, setFormData] = useState(userSettings);
   const [hasChanges, setHasChanges] = useState(false);
@@ -34,8 +34,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showUnlinkConfirm, setShowUnlinkConfirm] = useState(false);
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
-  
-  const canUnlink = (luminaKraftUser?.identities?.length || 0) > 1;
   // Java runtime handled internally by Lyceris; no user-facing settings.
 
   useEffect(() => {
@@ -56,18 +54,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
         const fetchUserWithProfile = async (retries = 3) => {
           const { data: { user } } = await supabase.auth.getUser();
           if (!user) {
-            setDiscordAccount(null);
             return null;
           }
-
-          // Fetch Discord account status
-          const authService = AuthService.getInstance();
-          const discord = await authService.getDiscordAccount();
-          setDiscordAccount(discord);
-
-          // Fetch all linked providers
-          const providers = await authService.getLinkedProviders();
-          setLinkedProviders(providers);
 
           // Fetch public profile to get up-to-date display_name
           // We implement a retry mechanism because on new sign-ups, the trigger
@@ -101,7 +89,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
         // Load initial session
         const user = await fetchUserWithProfile(1); // No need to retry heavily on initial load
         setLuminaKraftUser(user);
-        setIsLoadingLuminaKraft(false);
 
         // Listen for auth state changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -131,7 +118,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
         };
       } catch (error) {
         console.error('Error loading LuminaKraft session:', error);
-        setIsLoadingLuminaKraft(false);
       }
     };
 
@@ -420,18 +406,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
             {t('settings.settingsDescription')}
           </p>
         </div>
-
-        {/* Error notification */}
-        {authError && (
-          <div className="mb-6 p-4 bg-red-600/20 border border-red-600/30 rounded-lg">
-            <div className="flex items-center space-x-2">
-              <XCircle className="w-5 h-5 text-red-500" />
-              <span className="text-red-400 font-medium">
-                {authError}
-              </span>
-            </div>
-          </div>
-        )}
 
         <div className="space-y-8">
           {/* Language Settings */}

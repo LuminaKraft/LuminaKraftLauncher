@@ -142,7 +142,6 @@ const MinecraftAccountDropdown: React.FC<MinecraftAccountDropdownProps> = ({
       username: offlineUsername.trim()
     };
     onUpdateSettings(newSettings);
-    setIsEditingUsername(false);
     toast.success('Username updated');
   };
 
