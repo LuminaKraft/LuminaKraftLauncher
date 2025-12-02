@@ -772,9 +772,18 @@ export class ModpackManagementService {
       console.log('✅ User authenticated, fetching modpack details...');
 
       // Get modpack details to verify ownership and get file paths
+      // Note: file_url is in modpack_versions, not modpacks table
       const { data: modpack, error: modpackError } = await supabase
         .from('modpacks')
-        .select('id, author_id, modpack_file_path, logo_url, banner_url')
+        .select(`
+          id,
+          author_id,
+          logo_url,
+          banner_url,
+          modpack_versions (
+            file_url
+          )
+        `)
         .eq('id', modpackId)
         .single() as { data: any; error: any };
 
@@ -832,7 +841,16 @@ export class ModpackManagementService {
 
       // Collect all file paths to delete
       const filePaths: string[] = [];
-      if (modpack.modpack_file_path) filePaths.push(modpack.modpack_file_path);
+
+      // Get file_url from modpack versions (there could be multiple versions)
+      if (modpack.modpack_versions && Array.isArray(modpack.modpack_versions)) {
+        modpack.modpack_versions.forEach((version: any) => {
+          if (version.file_url) {
+            filePaths.push(version.file_url);
+          }
+        });
+      }
+
       if (modpack.logo_url) {
         // Extract path from URL (e.g., "https://r2.example.com/bucket/modpacks/logo.png" -> "modpacks/logo.png")
         try {
@@ -858,7 +876,7 @@ export class ModpackManagementService {
       }
 
       console.log('📁 Files to delete:', filePaths);
-      console.log('📦 Modpack data:', { modpackId, modpack_file_path: modpack.modpack_file_path, logo_url: modpack.logo_url, banner_url: modpack.banner_url });
+      console.log('📦 Modpack data:', { modpackId, versions_count: modpack.modpack_versions?.length || 0, logo_url: modpack.logo_url, banner_url: modpack.banner_url });
 
       // Delete files from R2 using Edge Function (only if there are files to delete)
       if (filePaths.length > 0) {
