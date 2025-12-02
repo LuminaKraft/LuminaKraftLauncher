@@ -9,7 +9,11 @@ import LauncherService from '../../services/launcherService';
 
 import type { Modpack } from '../../types/launcher';
 
-const ModpacksPage: React.FC = () => {
+interface ModpacksPageProps {
+  initialModpackId?: string;
+}
+
+const ModpacksPage: React.FC<ModpacksPageProps> = ({ initialModpackId }) => {
   const { t } = useTranslation();
   const { getAnimationClass, getAnimationStyle, withDelay } = useAnimation();
   const {
@@ -28,6 +32,16 @@ const ModpacksPage: React.FC = () => {
   const [isRefreshAnimating, setIsRefreshAnimating] = useState(false);
   const [showingDetails, setShowingDetails] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+
+  // Handle initial modpack selection from navigation
+  React.useEffect(() => {
+    if (initialModpackId && modpacksData) {
+      const modpack = modpacksData.modpacks.find(m => m.id === initialModpackId);
+      if (modpack) {
+        handleModpackSelect(modpack);
+      }
+    }
+  }, [initialModpackId, modpacksData]);
 
   // Check if any modpack is currently installing/updating
   const hasActiveInstallation = Object.values(modpackStates).some(state =>

@@ -108,9 +108,13 @@ function AppContent() {
       if (newSection === 'home') {
         setModpacksPageKey(prev => prev + 1);
       }
+      if (newSection === 'explore') {
+        setSelectedModpackId(null);
+        setModpacksPageKey(prev => prev + 1);
+      }
       return;
     }
-    
+
     // Check for unsaved changes before allowing navigation
     if ((window as any).blockNavigation) {
       const shouldBlock = (window as any).blockNavigation();
@@ -118,7 +122,7 @@ function AppContent() {
         return; // Block navigation
       }
     }
-    
+
     setIsTransitioning(true);
     withDelay(() => {
       setActiveSection(newSection);
@@ -130,6 +134,10 @@ function AppContent() {
           refreshData();
         }
       }
+      // Clear selected modpack ID when leaving explore section
+      if (activeSection === 'explore' && newSection !== 'explore') {
+        setSelectedModpackId(null);
+      }
       withDelay(() => {
         setIsTransitioning(false);
       }, 50);
@@ -139,6 +147,8 @@ function AppContent() {
   const handleModpackNavigation = (section: string, modpackId?: string) => {
     if (section === 'edit-modpack' && modpackId) {
       setSelectedModpackId(modpackId);
+    } else if (section === 'explore' && modpackId) {
+      setSelectedModpackId(modpackId);
     }
     handleSectionChange(section);
   };
@@ -146,11 +156,11 @@ function AppContent() {
   const renderContent = () => {
     switch (activeSection) {
       case 'home':
-        return <HomePage onNavigate={handleSectionChange} />;
+        return <HomePage onNavigate={handleModpackNavigation} />;
       case 'explore':
-        return <ModpacksPage key={modpacksPageKey} />;
+        return <ModpacksPage key={modpacksPageKey} initialModpackId={selectedModpackId || undefined} />;
       case 'my-modpacks':
-        return <MyModpacksPage />;
+        return <MyModpacksPage onNavigate={handleModpackNavigation} />;
       case 'published-modpacks':
         return <PublishedModpacksPage onNavigate={handleModpackNavigation} />;
       case 'publish-modpack':

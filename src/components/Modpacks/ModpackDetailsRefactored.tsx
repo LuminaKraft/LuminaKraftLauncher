@@ -382,7 +382,7 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
             >
               <ModpackActions modpack={modpack} state={liveState} />
               <ModpackInfo modpack={modpack} />
-              <ModpackRequirements />
+              <ModpackRequirements modpack={modpack} />
             </div>
           </div>
         </div>

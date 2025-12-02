@@ -8,6 +8,7 @@ import ModpackValidationDialog from './ModpackValidationDialog';
 import ModpackCard from './ModpackCard';
 import { useLauncher } from '../../contexts/LauncherContext';
 import { ConfirmDialog } from '../Common/ConfirmDialog';
+import LauncherService from '../../services/launcherService';
 import type { Modpack } from '../../types/launcher';
 
 interface LocalModpack {
@@ -22,13 +23,19 @@ interface LocalModpack {
   lastPlayed?: string;
 }
 
-export function MyModpacksPage() {
+interface MyModpacksPageProps {
+  onNavigate?: (section: string, modpackId?: string) => void;
+}
+
+export function MyModpacksPage({ onNavigate }: MyModpacksPageProps = {}) {
   const { t } = useTranslation();
   const validationService = ModpackValidationService.getInstance();
   const { installModpackFromZip, modpackStates } = useLauncher();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const launcherService = LauncherService.getInstance();
 
   const [localModpacks, setLocalModpacks] = useState<LocalModpack[]>([]);
+  const [modpackDetails, setModpackDetails] = useState<Map<string, Modpack>>(new Map());
   const [loading, setLoading] = useState(true);
   const [validating, setValidating] = useState(false);
   const [showValidationDialog, setShowValidationDialog] = useState(false);
@@ -71,6 +78,23 @@ export function MyModpacksPage() {
       }));
 
       setLocalModpacks(modpacks);
+
+      // Fetch details for each modpack from Supabase (in parallel)
+      const detailsMap = new Map<string, Modpack>();
+      await Promise.all(
+        modpacks.map(async (localModpack) => {
+          try {
+            const details = await launcherService.fetchModpackDetails(localModpack.id);
+            if (details) {
+              detailsMap.set(localModpack.id, details);
+            }
+          } catch (error) {
+            console.log(`Could not fetch details for ${localModpack.id}:`, error);
+            // Silently fail - modpack might be imported and not in database
+          }
+        })
+      );
+      setModpackDetails(detailsMap);
     } catch (error) {
       console.error('Error loading local modpacks:', error);
       toast.error('Failed to load local modpacks');
@@ -350,8 +374,20 @@ export function MyModpacksPage() {
 
             {/* Installed Modpacks */}
             {localModpacks.map((localModpack, index) => {
+              // Check if we have details from Supabase for this modpack
+              const details = modpackDetails.get(localModpack.id);
+
               // Convert LocalModpack to Modpack format for ModpackCard
-              const modpack: Modpack = {
+              const modpack: Modpack = details ? {
+                // If we have details from Supabase, use them
+                ...details,
+                // But override version info with local installed version
+                version: localModpack.version,
+                minecraftVersion: localModpack.minecraftVersion,
+                modloader: localModpack.modloader,
+                modloaderVersion: localModpack.modloaderVersion,
+              } : {
+                // If no details (imported modpack), use local data only
                 id: localModpack.id,
                 name: localModpack.name,
                 description: '',
@@ -382,7 +418,7 @@ export function MyModpacksPage() {
                   key={localModpack.id}
                   modpack={modpack}
                   state={state}
-                  onSelect={() => {}}
+                  onSelect={() => onNavigate?.('explore', localModpack.id)}
                   index={index + importingModpackIds.length}
                   hideServerBadges={true}
                 />
