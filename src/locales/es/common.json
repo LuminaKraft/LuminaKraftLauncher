@@ -24,6 +24,9 @@
     "about": "Acerca de",
     "backToList": "Volver a la Lista",
     "home": "Inicio",
+    "homeDesc": "Modpacks destacados y próximos",
+    "explore": "Explorar",
+    "exploreDesc": "Explora todos los modpacks disponibles",
     "myModpacks": "Mis Modpacks",
     "myModpacksDesc": "Gestiona tus instancias locales de modpacks",
     "publishedModpacks": "Publicar Modpacks",
@@ -32,6 +35,24 @@
   "sidebar": {
     "expand": "Expandir barra lateral",
     "collapse": "Contraer barra lateral"
+  },
+  "home": {
+    "hero": {
+      "title": "Bienvenido a LuminaKraft Launcher",
+      "subtitle": "Descubre modpacks increíbles y únete a nuestra comunidad"
+    },
+    "news": {
+      "title": "Noticias y Anuncios",
+      "placeholder": "Sección de noticias próximamente..."
+    },
+    "comingSoon": {
+      "title": "Próximamente"
+    },
+    "featured": {
+      "title": "Modpacks Destacados",
+      "empty": "No hay modpacks destacados disponibles en este momento"
+    },
+    "viewAll": "Ver Todo"
   },
   "modpacks": {
     "title": "Modpacks",
@@ -57,6 +78,7 @@
     "downloading": "Descargando...",
     "extracting": "Extrayendo...",
     "progress": "Progreso: {{percent}}%",
+    "comingSoon": "Próximamente",
     "version": "Versión",
     "minecraftVersion": "Minecraft {{version}}",
     "modloader": "Modloader",

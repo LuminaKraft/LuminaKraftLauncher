@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { LauncherProvider, useLauncher } from './contexts/LauncherContext';
 import { AnimationProvider, useAnimation } from './contexts/AnimationContext';
 import Sidebar from './components/Layout/Sidebar';
+import HomePage from './components/Home/HomePage';
 import ModpacksPage from './components/Modpacks/ModpacksPage';
 import MyModpacksPage from './components/Modpacks/MyModpacksPage';
 import PublishModpackForm from './components/Modpacks/PublishModpackForm';
@@ -126,6 +127,8 @@ function AppContent() {
   const renderContent = () => {
     switch (activeSection) {
       case 'home':
+        return <HomePage onNavigate={handleSectionChange} />;
+      case 'explore':
         return <ModpacksPage key={modpacksPageKey} />;
       case 'my-modpacks':
         return <MyModpacksPage />;
@@ -146,7 +149,7 @@ function AppContent() {
       case 'about':
         return <AboutPage />;
       default:
-        return <ModpacksPage key={modpacksPageKey} />;
+        return <HomePage onNavigate={handleSectionChange} />;
     }
   };
 

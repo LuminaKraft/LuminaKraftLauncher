@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Home, Settings, Info, AlertCircle, Pin, PinOff, FolderOpen, UploadCloud, User } from 'lucide-react';
+import { Home, Settings, Info, AlertCircle, Pin, PinOff, FolderOpen, UploadCloud, User, Compass } from 'lucide-react';
 import { useLauncher } from '../../contexts/LauncherContext';
 import PlayerHeadLoader from '../PlayerHeadLoader';
 import { check } from '@tauri-apps/plugin-updater';
@@ -55,9 +55,15 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
   const menuItems = [
     {
       id: 'home',
-      label: t('navigation.modpacks'),
+      label: t('navigation.home'),
       icon: Home,
-      description: 'Explora y gestiona tus modpacks'
+      description: t('navigation.homeDesc')
+    },
+    {
+      id: 'explore',
+      label: t('navigation.explore'),
+      icon: Compass,
+      description: t('navigation.exploreDesc')
     },
     {
       id: 'my-modpacks',
