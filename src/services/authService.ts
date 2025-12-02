@@ -439,8 +439,6 @@ class AuthService {
     try {
       console.log('Linking/Signing in with Discord account...');
 
-      const { supabase } = await import('./supabaseClient');
-
       // Check if user is already logged in
       const { data: { session } } = await supabase.auth.getSession();
 
@@ -1079,8 +1077,6 @@ class AuthService {
   async linkProvider(provider: 'github' | 'google' | 'azure'): Promise<boolean> {
     try {
       console.log(`Linking ${provider} account...`);
-
-      const { supabase } = await import('./supabaseClient');
 
       // Check if user is already logged in
       const { data: { session } } = await supabase.auth.getSession();

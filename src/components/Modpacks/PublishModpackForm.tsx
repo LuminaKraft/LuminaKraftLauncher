@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { Plus, X, Upload, FileArchive, AlertCircle, RefreshCw, Check, ChevronRight, ChevronLeft, Info, Image as ImageIcon, FileText, Package, Layers } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
 import ModpackManagementService from '../../services/modpackManagementService';
 import { useModpackValidation } from '../../hooks/useModpackValidation';
 import { ModpackValidationDialog } from './ModpackValidationDialog';
@@ -225,6 +224,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
     const loadingToast = toast.loading('Preparing files...');
     try {
       const { downloadDir } = await import('@tauri-apps/api/path');
+      const { listen } = await import('@tauri-apps/api/event');
       const unlisten = await listen<{ current: number, total: number, stage: string, message: string }>('zip-progress', (event) => {
         const { current, total, stage, message } = event.payload;
         const percentage = Math.round((current / total) * 100);

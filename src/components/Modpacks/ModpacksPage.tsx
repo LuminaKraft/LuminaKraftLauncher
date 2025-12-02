@@ -5,6 +5,7 @@ import { useLauncher } from '../../contexts/LauncherContext';
 import { useAnimation } from '../../contexts/AnimationContext';
 import ModpackCard from './ModpackCard';
 import ModpackDetailsRefactored from './ModpackDetailsRefactored';
+import LauncherService from '../../services/launcherService';
 
 import type { Modpack } from '../../types/launcher';
 
@@ -44,7 +45,7 @@ const ModpacksPage: React.FC = () => {
       setSelectedModpack(modpack);
       setShowingDetails(true);
       try {
-        const launcherService = (await import('../../services/launcherService')).default.getInstance();
+        const launcherService = LauncherService.getInstance();
         const details = await launcherService.fetchModpackDetails(modpack.id);
         setSelectedModpackDetails(details);
       } catch {
@@ -72,7 +73,7 @@ const ModpacksPage: React.FC = () => {
     setIsRefreshAnimating(true);
     try {
       // Limpia caché completa antes de refrescar
-      const launcherService = (await import('../../services/launcherService')).default.getInstance();
+      const launcherService = LauncherService.getInstance();
       launcherService.clearCache();
       await refreshData();
     } finally {

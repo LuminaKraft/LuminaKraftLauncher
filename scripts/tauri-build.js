@@ -7,7 +7,7 @@ async function runCommand(command, args = []) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
       stdio: 'inherit',
-      shell: true
+      shell: process.platform === 'win32' // Only use shell on Windows for .cmd/.bat files
     });
 
     child.on('close', (code) => {

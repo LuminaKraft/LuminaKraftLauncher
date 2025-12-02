@@ -11,6 +11,8 @@ export default defineConfig(async () => ({
   build: {
     // Don't clear the output directory to preserve artifacts from different platform builds
     emptyOutDir: false,
+    // Increase chunk size warning limit for desktop app (1.5MB)
+    chunkSizeWarningLimit: 1500,
   },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`

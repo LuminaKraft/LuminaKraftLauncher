@@ -2,6 +2,8 @@ import { invoke } from '@tauri-apps/api/core';
 import axios from 'axios';
 import { supabase } from './supabaseClient';
 import i18next from 'i18next';
+import AuthService from './authService';
+import JSZip from 'jszip';
 import type {
   ModpacksData,
   InstanceMetadata,
@@ -528,7 +530,7 @@ class LauncherService {
   // Transform frontend UserSettings structure to backend-expected structure
   private async transformUserSettingsForBackend(settings: UserSettings) {
     // Get the current Supabase access token
-    const authService = (await import('./authService')).default.getInstance();
+    const authService = AuthService.getInstance();
     const supabaseAccessToken = await authService.getSupabaseAccessToken();
 
     const transformed = {
@@ -1126,7 +1128,6 @@ class LauncherService {
       const zipBytes = Array.from(new Uint8Array(arrayBuffer));
 
       // Extract and parse manifest from ZIP using JSZip
-      const JSZip = (await import('jszip')).default;
       const zip = await JSZip.loadAsync(file);
       const manifestFile = zip.file('manifest.json');
 

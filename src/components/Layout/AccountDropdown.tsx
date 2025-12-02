@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import type { UserSettings } from '../../types/launcher';
 import AuthService from '../../services/authService';
 import toast from 'react-hot-toast';
+import { supabase } from '../../services/supabaseClient';
+import { ModpackManagementService } from '../../services/modpackManagementService';
 
 interface MinecraftAccountDropdownProps {
   isOpen: boolean;
@@ -49,7 +51,6 @@ const MinecraftAccountDropdown: React.FC<MinecraftAccountDropdownProps> = ({
   useEffect(() => {
     const loadLuminaKraftUser = async () => {
       try {
-        const { supabase } = await import('../../services/supabaseClient');
         const { data: { user } } = await supabase.auth.getUser();
         setLuminaKraftUser(user);
       } catch (error) {
@@ -97,9 +98,8 @@ const MinecraftAccountDropdown: React.FC<MinecraftAccountDropdownProps> = ({
     try {
       const authService = AuthService.getInstance();
       const account = await authService.authenticateWithMicrosoftModal();
-      
+
       // Update ModpackManagementService with Microsoft account
-      const { ModpackManagementService } = await import('../../services/modpackManagementService');
       ModpackManagementService.getInstance().setMicrosoftAccount(account);
 
       const newSettings = {

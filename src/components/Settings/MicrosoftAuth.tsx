@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { UserIcon, CheckCircleIcon, XCircleIcon } from 'lucide-react';
 import AuthService from '../../services/authService';
 import type { MicrosoftAccount, UserSettings } from '../../types/launcher';
+import { ModpackManagementService } from '../../services/modpackManagementService';
 
 interface MicrosoftAuthProps {
   userSettings: UserSettings;
@@ -43,7 +44,6 @@ export default function MicrosoftAuth({
       const account = await authService.authenticateWithMicrosoftModal();
 
       // Update ModpackManagementService with Microsoft account
-      const { ModpackManagementService } = await import('../../services/modpackManagementService');
       ModpackManagementService.getInstance().setMicrosoftAccount(account);
 
       onAuthSuccess(account);

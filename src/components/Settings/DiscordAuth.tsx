@@ -4,6 +4,7 @@ import { CheckCircleIcon, XCircleIcon, RefreshCw, AlertCircle } from 'lucide-rea
 import toast from 'react-hot-toast';
 import AuthService from '../../services/authService';
 import type { DiscordAccount } from '../../types/launcher';
+import { supabase } from '../../services/supabaseClient';
 
 interface DiscordAuthProps {
   onAuthSuccess: (account: DiscordAccount) => void;
@@ -109,7 +110,6 @@ export default function DiscordAuth({
       }
 
       // Set session
-      const { supabase } = await import('../../services/supabaseClient');
       const { error: sessionError } = await supabase.auth.setSession({
         access_token: accessToken,
         refresh_token: refreshToken

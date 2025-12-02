@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { User as UserIcon, Pencil, X, Check } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 import type { DiscordAccount } from '../../types/launcher';
+import { supabase, updateUser } from '../../services/supabaseClient';
 
 interface ProfileEditorProps {
   luminaKraftUser: User;
@@ -34,7 +35,6 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ luminaKraftUser, discordA
     }
 
     try {
-      const { supabase, updateUser } = await import('../../services/supabaseClient');
       const { error } = await supabase.auth.updateUser({
         data: { display_name: tempDisplayName }
       });

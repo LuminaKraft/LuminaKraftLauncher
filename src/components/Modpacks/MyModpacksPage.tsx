@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Download, FolderOpen } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
 import toast from 'react-hot-toast';
 import ModpackValidationService, { ModFileInfo } from '../../services/modpackValidationService';
 import ModpackValidationDialog from './ModpackValidationDialog';
@@ -176,6 +175,7 @@ export function MyModpacksPage() {
             const { downloadDir } = await import('@tauri-apps/api/path');
 
             // Set up progress listener first
+            const { listen } = await import('@tauri-apps/api/event');
             const unlisten = await listen<{current: number, total: number, stage: string, message: string}>('zip-progress', (event) => {
               const { current, total, stage, message } = event.payload;
               setZipProgress({ current, total, stage, message });

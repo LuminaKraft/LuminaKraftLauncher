@@ -6,6 +6,7 @@ import ModpackManagementService from '../../services/modpackManagementService';
 import AuthService from '../../services/authService';
 import { ConfirmDialog } from '../Common/ConfirmDialog';
 import { LoadingModal } from '../Common/LoadingModal';
+import { supabase } from '../../services/supabaseClient';
 
 interface Modpack {
   id: string;
@@ -54,7 +55,6 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
     // Also listen for auth state changes from Supabase
     let cleanup: (() => void) | undefined;
     (async () => {
-      const { supabase } = await import('../../services/supabaseClient');
       const { data: { subscription } } = supabase.auth.onAuthStateChange(
         async (event) => {
           if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {

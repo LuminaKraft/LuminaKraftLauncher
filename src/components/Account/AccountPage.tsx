@@ -7,6 +7,7 @@ import { ConfirmDialog } from '../Common/ConfirmDialog';
 import { LoadingModal } from '../Common/LoadingModal';
 import type { DiscordAccount } from '../../types/launcher';
 import toast from 'react-hot-toast';
+import { supabase } from '../../services/supabaseClient';
 
 const AccountPage: React.FC = () => {
   const { t } = useTranslation();
@@ -24,7 +25,6 @@ const AccountPage: React.FC = () => {
   useEffect(() => {
     const setupAuth = async () => {
       try {
-        const { supabase } = await import('../../services/supabaseClient');
 
         const fetchUserWithProfile = async (retries = 3) => {
           // Use Promise.race to timeout getUser() if it takes too long
@@ -167,7 +167,6 @@ const AccountPage: React.FC = () => {
   };
 
   const handleProfileUpdate = async () => {
-    const { supabase } = await import('../../services/supabaseClient');
     const { data: { user } } = await supabase.auth.getUser();
     setLuminaKraftUser(user);
   };

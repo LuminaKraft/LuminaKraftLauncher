@@ -22,6 +22,8 @@ interface LauncherState {
 import LauncherService from '../services/launcherService';
 import { FailedModsDialog } from '../components/FailedModsDialog';
 import AuthService from '../services/authService';
+import JSZip from 'jszip';
+import { ModpackManagementService } from '../services/modpackManagementService';
 
 interface LauncherContextType {
   modpacksData: ModpacksData | null;
@@ -239,7 +241,6 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
         // If user has Microsoft account, set it in modpack management service (for Minecraft launching)
         if (settings.authMethod === 'microsoft' && settings.microsoftAccount) {
           // Set Microsoft account in modpack management service
-          const ModpackManagementService = (await import('../services/modpackManagementService')).ModpackManagementService;
           ModpackManagementService.getInstance().setMicrosoftAccount(settings.microsoftAccount);
         }
 
@@ -956,7 +957,6 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
   const installModpackFromZip = async (file: File) => {
     try {
       // Extract manifest to create a temporary modpack object
-      const JSZip = (await import('jszip')).default;
       const zip = await JSZip.loadAsync(file);
       const manifestFile = zip.file('manifest.json');
 
