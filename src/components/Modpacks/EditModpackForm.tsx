@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
+import { invoke } from '@tauri-apps/api/core';
 import {
   Save, Upload, Plus, X, Trash2, Image as ImageIcon,
   FileText, Package, Settings, Layers, History,
@@ -806,14 +807,19 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                               Released on {new Date(v.created_at).toLocaleDateString()}
                             </p>
                           </div>
-                          <a
-                            href={v.file_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                          <button
+                            onClick={async () => {
+                              try {
+                                await invoke('open_url', { url: v.file_url });
+                              } catch (error) {
+                                console.error('Failed to open URL:', error);
+                                toast.error('Failed to open download link');
+                              }
+                            }}
+                            className="text-blue-600 hover:text-blue-700 text-sm font-medium hover:underline"
                           >
                             Download ZIP
-                          </a>
+                          </button>
                         </div>
                         {v.changelog_i18n && (
                           <div className="mt-3 text-sm text-gray-600 dark:text-gray-300">
