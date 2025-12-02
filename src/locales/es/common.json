@@ -450,10 +450,10 @@
     "minecraftClosed": "Minecraft se ha cerrado"
   },
   "failedMods": {
-    "title": "Mods no disponibles",
-    "description": "Los siguientes mods no se pudieron descargar porque no están disponibles para descarga pública. Haz clic en cada enlace para ir directamente a la página de descarga del mod y agrégalo manualmente a la carpeta mods/ de la instancia:",
-    "loading": "Obteniendo información de los mods...",
-    "error": "No se pudo obtener la información de los mods",
+    "title": "Archivos no disponibles",
+    "description": "Los siguientes archivos (mods/paquetes de recursos) no se pudieron descargar porque no están disponibles para descarga pública. Haz clic en cada enlace para ir directamente a la página de descarga y agrégalos manualmente a las carpetas correspondientes (mods/ o resourcepacks/):",
+    "loading": "Obteniendo información de los archivos...",
+    "error": "No se pudo obtener la información de los archivos",
     "fileName": "Archivo:",
     "close": "Cerrar"
   },
