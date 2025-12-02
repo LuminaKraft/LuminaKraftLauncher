@@ -578,6 +578,25 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
         </div>
       )}
 
+      {!isCheckingAccess && discordAccount && discordAccount.isMember && userRole === 'user' && (
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6 shadow-md mb-6">
+          <div className="flex items-start space-x-3">
+            <Info className="w-6 h-6 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-1" />
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-2">
+                Community Publishing Coming Soon
+              </h3>
+              <p className="text-blue-700 dark:text-blue-300 mb-2">
+                Community modpack publishing is currently disabled while we finalize the feature.
+              </p>
+              <p className="text-blue-700 dark:text-blue-300">
+                Currently, only <span className="font-semibold">Partners</span> and <span className="font-semibold">Admins</span> can publish modpacks. Stay tuned for updates!
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <form className="space-y-8">
         {/* Step 1: Upload ZIP File */}
         {currentStep === 1 && (
