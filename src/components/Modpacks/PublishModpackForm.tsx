@@ -28,6 +28,7 @@ interface FormData {
   primaryColor: string;
   features: Feature[];
   category?: 'official' | 'partner' | 'community';
+  isComingSoon?: boolean;
 }
 
 interface PublishModpackFormProps {
@@ -53,7 +54,8 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
     modloader: 'forge',
     modloaderVersion: '47.2.0',
     primaryColor: '#3b82f6',
-    features: []
+    features: [],
+    isComingSoon: false
   });
 
   const [zipFile, setZipFile] = useState<File | null>(null);
@@ -314,8 +316,16 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
       toast.error('Modloader version is required');
       return false;
     }
-    if (!zipFile) {
-      toast.error('Modpack ZIP file is required');
+    if (!formData.isComingSoon && !zipFile) {
+      toast.error('Modpack ZIP file is required for active modpacks');
+      return false;
+    }
+    if (!logoFile) {
+      toast.error('Logo is required for all modpacks');
+      return false;
+    }
+    if (!bannerFile) {
+      toast.error('Banner is required for all modpacks');
       return false;
     }
     if ((userRole === 'admin' || userRole === 'partner') && !formData.category) {
@@ -357,7 +367,8 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
         modloaderVersion: formData.modloaderVersion,
         gamemode: formData.gamemode,
         serverIp: formData.serverIp,
-        primaryColor: formData.primaryColor
+        primaryColor: formData.primaryColor,
+        isComingSoon: formData.isComingSoon
       });
 
       if (!success || !modpackId) {
@@ -409,8 +420,8 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
     if (currentStep < effectiveSteps.length) {
       // Validation for current step before moving to next
       const currentEffectiveStep = effectiveSteps.find(s => s.id === currentStep);
-      if (currentEffectiveStep?.title === 'Upload' && !zipFile) {
-        toast.error('Please upload a modpack ZIP file');
+      if (currentEffectiveStep?.title === 'Upload' && !formData.isComingSoon && !zipFile) {
+        toast.error('Please upload a modpack ZIP file (optional for Coming Soon modpacks)');
         return;
       }
       if (currentEffectiveStep?.title === 'Category' && !formData.category) {
@@ -424,6 +435,16 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
         }
         if (!formData.version || !formData.minecraftVersion || !formData.modloaderVersion) {
           toast.error('All version fields are required');
+          return;
+        }
+      }
+      if (currentEffectiveStep?.title === 'Media') {
+        if (!logoFile) {
+          toast.error('Logo is required for all modpacks');
+          return;
+        }
+        if (!bannerFile) {
+          toast.error('Banner is required for all modpacks');
           return;
         }
       }
@@ -541,7 +562,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
         {currentStep === 1 && (
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md animate-fade-in">
             <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-              Step 1: Upload Modpack ZIP
+              Step 1: Upload Modpack ZIP {formData.isComingSoon && <span className="text-sm text-gray-500 dark:text-gray-400 font-normal">(Optional for Coming Soon)</span>}
             </h2>
             <div
               onDragOver={handleDragOver}
@@ -711,6 +732,25 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                     Standard community modpack available to everyone.
                   </p>
                 </div>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm mt-6">
+              <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Coming Soon Status</h3>
+              <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  id="isComingSoon"
+                  checked={formData.isComingSoon || false}
+                  onChange={(e) => updateFormData('isComingSoon', e.target.checked)}
+                  className="mt-1 w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                />
+                <label htmlFor="isComingSoon" className="flex-1 text-sm text-gray-700 dark:text-gray-300">
+                  <span className="font-medium text-gray-900 dark:text-white">Mark as Coming Soon</span>
+                  <p className="text-gray-600 dark:text-gray-400 mt-1">
+                    Coming Soon modpacks appear on the homepage but cannot be downloaded yet. The modpack ZIP file is optional for Coming Soon status.
+                  </p>
+                </label>
               </div>
             </div>
           </div>
@@ -1040,7 +1080,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-                      Logo (Optional)
+                      Logo <span className="text-red-500">*</span>
                     </label>
                     <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer relative group h-48 flex flex-col items-center justify-center">
                       <input
@@ -1070,7 +1110,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                   </div>
                   <div>
                     <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-                      Banner (Optional)
+                      Banner <span className="text-red-500">*</span>
                     </label>
                     <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer relative group h-48 flex flex-col items-center justify-center">
                       <input
