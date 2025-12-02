@@ -28,6 +28,14 @@ export function HomePage({ onNavigate }: HomePageProps) {
       if (result.success && result.data) {
         const allModpacks = result.data as ModpackWithDetails[];
 
+        console.log('All modpacks:', allModpacks.map(m => ({
+          name: m.name,
+          category: m.category,
+          isActive: m.isActive,
+          isComingSoon: m.isComingSoon,
+          isNew: m.isNew
+        })));
+
         // Filter Coming Soon modpacks (active + coming soon)
         const comingSoon = allModpacks.filter(
           modpack => modpack.isActive && modpack.isComingSoon
@@ -41,6 +49,13 @@ export function HomePage({ onNavigate }: HomePageProps) {
             (modpack.category === 'official' || modpack.category === 'partner' || modpack.isNew)
           )
           .sort((a, b) => (b.downloads || 0) - (a.downloads || 0)); // Sort by downloads descending
+
+        console.log('Featured modpacks:', featured.map(m => ({
+          name: m.name,
+          category: m.category,
+          downloads: m.downloads
+        })));
+
         setFeaturedModpacks(featured);
       }
     } catch (error) {
