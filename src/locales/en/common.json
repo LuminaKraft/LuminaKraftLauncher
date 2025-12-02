@@ -539,6 +539,11 @@
     "import": "Import Modpack",
     "validating": "Validating...",
     "importedOn": "Imported on",
+    "importing": {
+      "name": "Importing modpack...",
+      "description": "Please wait while the modpack is being imported",
+      "shortDescription": "Imported from local ZIP file"
+    },
     "empty": {
       "title": "No local modpacks yet",
       "description": "Import a CurseForge modpack to get started",

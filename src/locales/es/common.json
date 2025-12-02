@@ -536,6 +536,11 @@
     "import": "Importar Modpack",
     "validating": "Validando...",
     "importedOn": "Importado el",
+    "importing": {
+      "name": "Importando modpack...",
+      "description": "Por favor espera mientras se importa el modpack",
+      "shortDescription": "Importado desde archivo ZIP local"
+    },
     "empty": {
       "title": "Aún no hay modpacks locales",
       "description": "Importa un modpack de CurseForge para comenzar",

@@ -387,9 +387,9 @@ export function MyModpacksPage() {
               // Create a temporary modpack object for display
               const tempModpack: Modpack = {
                 id,
-                name: id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-                description: 'Importing modpack...',
-                shortDescription: 'Imported from local ZIP file',
+                name: t('myModpacks.importing.name'),
+                description: t('myModpacks.importing.description'),
+                shortDescription: t('myModpacks.importing.shortDescription'),
                 version: '1.0.0',
                 minecraftVersion: '1.20.1',
                 modloader: 'forge',
