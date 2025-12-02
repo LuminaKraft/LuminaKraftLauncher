@@ -560,16 +560,38 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
       <form className="space-y-8">
         {/* Step 1: Upload ZIP File */}
         {currentStep === 1 && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md animate-fade-in">
-            <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-              Step 1: Upload Modpack ZIP {formData.isComingSoon && <span className="text-sm text-gray-500 dark:text-gray-400 font-normal">(Optional for Coming Soon)</span>}
-            </h2>
-            <div
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-              className={`
+          <div className="space-y-6 animate-fade-in">
+            {/* Coming Soon Status Checkbox */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
+              <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Modpack Status</h3>
+              <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  id="isComingSoon"
+                  checked={formData.isComingSoon || false}
+                  onChange={(e) => updateFormData('isComingSoon', e.target.checked)}
+                  className="mt-1 w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                />
+                <label htmlFor="isComingSoon" className="flex-1 text-sm text-gray-700 dark:text-gray-300">
+                  <span className="font-medium text-gray-900 dark:text-white">Mark as Coming Soon</span>
+                  <p className="text-gray-600 dark:text-gray-400 mt-1">
+                    Coming Soon modpacks appear on the homepage but cannot be downloaded yet. The modpack ZIP file is optional for Coming Soon status.
+                  </p>
+                </label>
+              </div>
+            </div>
+
+            {/* Upload ZIP Section */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
+              <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+                Upload Modpack ZIP {formData.isComingSoon && <span className="text-sm text-gray-500 dark:text-gray-400 font-normal">(Optional)</span>}
+              </h2>
+              <div
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`
               relative border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-all duration-300
               ${isDragging
                   ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 scale-[1.02]'
@@ -643,6 +665,8 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                 )}
               </div>
             </div>
+            </div>
+
             {isUploading && (
               <div className="mt-6">
                 <div className="flex justify-between mb-2">
@@ -722,25 +746,6 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                   <span className="font-medium text-gray-700 dark:text-gray-300">Community modpack publishing</span> is temporarily disabled.
                   Only admins and verified partners can publish modpacks at this time.
                 </p>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm mt-6">
-              <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Coming Soon Status</h3>
-              <div className="flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  id="isComingSoon"
-                  checked={formData.isComingSoon || false}
-                  onChange={(e) => updateFormData('isComingSoon', e.target.checked)}
-                  className="mt-1 w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                />
-                <label htmlFor="isComingSoon" className="flex-1 text-sm text-gray-700 dark:text-gray-300">
-                  <span className="font-medium text-gray-900 dark:text-white">Mark as Coming Soon</span>
-                  <p className="text-gray-600 dark:text-gray-400 mt-1">
-                    Coming Soon modpacks appear on the homepage but cannot be downloaded yet. The modpack ZIP file is optional for Coming Soon status.
-                  </p>
-                </label>
               </div>
             </div>
           </div>
