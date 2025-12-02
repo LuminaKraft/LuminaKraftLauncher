@@ -23,6 +23,7 @@ interface FormData {
   minecraftVersion: string;
   modloader: 'forge' | 'fabric' | 'neoforge' | 'quilt';
   modloaderVersion: string;
+  recommendedRam?: number;
   gamemode?: string;
   serverIp?: string;
   primaryColor: string;
@@ -105,7 +106,8 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
         version: data.version || prev.version,
         minecraftVersion: data.minecraftVersion || prev.minecraftVersion,
         modloader: data.modloader || prev.modloader,
-        modloaderVersion: data.modloaderVersion || prev.modloaderVersion
+        modloaderVersion: data.modloaderVersion || prev.modloaderVersion,
+        recommendedRam: data.recommendedRam
       }));
     }
   });
@@ -373,6 +375,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
         minecraftVersion: formData.minecraftVersion,
         modloader: formData.modloader,
         modloaderVersion: formData.modloaderVersion,
+        recommendedRam: formData.recommendedRam,
         gamemode: formData.gamemode,
         serverIp: formData.serverIp,
         primaryColor: formData.primaryColor,

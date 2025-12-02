@@ -152,6 +152,7 @@ export class ModpackManagementService {
     minecraftVersion: string;
     modloader: 'forge' | 'fabric' | 'neoforge' | 'quilt';
     modloaderVersion: string;
+    recommendedRam?: number;
     gamemode?: string;
     serverIp?: string;
     primaryColor?: string;
@@ -207,6 +208,7 @@ export class ModpackManagementService {
           minecraft_version: modpackData.minecraftVersion,
           modloader: modpackData.modloader,
           modloader_version: modpackData.modloaderVersion,
+          recommended_ram: modpackData.recommendedRam || null,
           gamemode: modpackData.gamemode || null,
           server_ip: modpackData.serverIp || null,
           primary_color: modpackData.primaryColor || null,
