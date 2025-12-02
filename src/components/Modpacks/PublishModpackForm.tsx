@@ -448,12 +448,14 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
           toast.error('Short description is required in both languages');
           return;
         }
-        if (!formData.description.en || !formData.description.es) {
-          toast.error('Full description is required in both languages');
-          return;
-        }
         if (!formData.version || !formData.minecraftVersion || !formData.modloaderVersion) {
           toast.error('All version fields are required');
+          return;
+        }
+      }
+      if (currentEffectiveStep?.title === 'Details') {
+        if (!formData.description.en || !formData.description.es) {
+          toast.error('Full description is required in both languages');
           return;
         }
       }
