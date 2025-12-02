@@ -11,6 +11,7 @@ export interface Modpack {
   minecraftVersion: string;
   modloader: string;
   modloaderVersion: string;
+  recommendedRam?: number; // Recommended RAM in MB (from CurseForge manifest.json)
   logo: string;
   backgroundImage: string; // First image from images array
   banner?: string;
