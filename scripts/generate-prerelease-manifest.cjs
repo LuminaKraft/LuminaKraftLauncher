@@ -119,7 +119,15 @@ async function generatePrereleaseManifest() {
           url: `https://github.com/LuminaKraft/LuminakraftLauncher/releases/download/v${version}/${encodeURIComponent(fileName)}`
         };
       }
-      
+
+      // Add windows-aarch64 using same signature/URL as windows-x86_64 (ARM can run x86_64)
+      if (manifest.platforms['windows-x86_64']) {
+        manifest.platforms['windows-aarch64'] = {
+          signature: manifest.platforms['windows-x86_64'].signature,
+          url: manifest.platforms['windows-x86_64'].url
+        };
+      }
+
       console.log(`✅ Successfully downloaded and fixed signed manifest`);
       
     } catch (error) {
@@ -139,6 +147,14 @@ async function generatePrereleaseManifest() {
         manifest.platforms[platform] = {
           signature: '', // No signature available
           url: `https://github.com/LuminaKraft/LuminakraftLauncher/releases/download/v${version}/${encodeURIComponent(fileName)}`
+        };
+      }
+
+      // Add windows-aarch64 using same signature/URL as windows-x86_64 (ARM can run x86_64)
+      if (manifest.platforms['windows-x86_64']) {
+        manifest.platforms['windows-aarch64'] = {
+          signature: manifest.platforms['windows-x86_64'].signature,
+          url: manifest.platforms['windows-x86_64'].url
         };
       }
     }
