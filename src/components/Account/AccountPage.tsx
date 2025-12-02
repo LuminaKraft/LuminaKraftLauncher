@@ -53,7 +53,7 @@ const AccountPage: React.FC = () => {
 
           // Fetch public profile to get up-to-date display_name
           for (let i = 0; i < retries; i++) {
-            const { data: profile, error } = await supabase
+            const { data: profile } = await supabase
               .from('users')
               .select('display_name, avatar_url')
               .eq('id', user.id)
@@ -63,8 +63,8 @@ const AccountPage: React.FC = () => {
               // Merge DB profile into user metadata for UI consistency
               user.user_metadata = {
                 ...user.user_metadata,
-                display_name: profile.display_name,
-                avatar_url: profile.avatar_url
+                display_name: (profile as any).display_name,
+                avatar_url: (profile as any).avatar_url
               };
               return user;
             }
@@ -83,7 +83,7 @@ const AccountPage: React.FC = () => {
 
         // Listen for auth state changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          async (event, session) => {
+          async (event) => {
             if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
               // Show loading state while fetching user profile
               setIsLoadingLuminaKraft(true);

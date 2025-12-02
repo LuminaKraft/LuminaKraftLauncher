@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User as UserIcon, LogOut, LogIn, WifiOff, Gamepad2, Settings } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import type { UserSettings, MicrosoftAccount } from '../../types/launcher';
+import type { UserSettings } from '../../types/launcher';
 import AuthService from '../../services/authService';
 import toast from 'react-hot-toast';
 
@@ -25,7 +25,6 @@ const MinecraftAccountDropdown: React.FC<MinecraftAccountDropdownProps> = ({
   const { t } = useTranslation();
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [offlineUsername, setOfflineUsername] = useState(userSettings.username || 'Player');
-  const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [luminaKraftUser, setLuminaKraftUser] = useState<any>(null);
 
   useEffect(() => {

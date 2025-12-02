@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, HardDrive, Save, Wifi, WifiOff, RefreshCw, Trash2, Server, Languages, Shield, XCircle, Zap, CheckCircle as CheckCircleIcon } from 'lucide-react';
+import { User, HardDrive, Save, Wifi, WifiOff, RefreshCw, Trash2, Server, Languages, Shield, XCircle, Zap } from 'lucide-react';
 import { useLauncher } from '../../contexts/LauncherContext';
 import LauncherService from '../../services/launcherService';
 import AuthService from '../../services/authService';
 import MetaStorageSettings from './MetaStorageSettings';
-import ProfileEditor from './ProfileEditor';
 import { ConfirmDialog } from '../Common/ConfirmDialog';
-import type { MicrosoftAccount, DiscordAccount } from '../../types/launcher';
 import toast from 'react-hot-toast';
 
 interface SettingsPageProps {
@@ -32,11 +30,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
     return saved ? Number(saved) : null;
   });
   const [isTestingConnection, setIsTestingConnection] = useState(false);
-  const [authError, setAuthError] = useState<string | null>(null);
   const [luminaKraftUser, setLuminaKraftUser] = useState<any>(null);
-  const [discordAccount, setDiscordAccount] = useState<DiscordAccount | null>(null);
-  const [linkedProviders, setLinkedProviders] = useState<{ provider: string; email?: string; id: string }[]>([]);
-  const [isLoadingLuminaKraft, setIsLoadingLuminaKraft] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showUnlinkConfirm, setShowUnlinkConfirm] = useState(false);
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
@@ -79,7 +73,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
           // We implement a retry mechanism because on new sign-ups, the trigger
           // creating the public.users record might have a slight delay.
           for (let i = 0; i < retries; i++) {
-            const { data: profile, error } = await supabase
+            const { data: profile } = await supabase
               .from('users')
               .select('display_name, avatar_url')
               .eq('id', user.id)
@@ -89,8 +83,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
               // Merge DB profile into user metadata for UI consistency
               user.user_metadata = {
                 ...user.user_metadata,
-                display_name: profile.display_name,
-                avatar_url: profile.avatar_url
+                display_name: (profile as any).display_name,
+                avatar_url: (profile as any).avatar_url
               };
               return user;
             }
@@ -224,46 +218,18 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
     toast.success(t('settings.saved'));
   };
 
-  const handleAuthError = (error: string) => {
-    setAuthError(error);
-    setIsAuthenticating(false);
-    setTimeout(() => setAuthError(null), 5000);
-  };
-
-  const handleAuthStart = () => {
-    setIsAuthenticating(true);
-    setAuthError(null);
-  };
-
-  const handleAuthStop = () => {
-    setIsAuthenticating(false);
-  };
-
-  const handleSignInToLuminaKraft = async () => {
-    try {
-      const authService = AuthService.getInstance();
-      await authService.signInToLuminaKraftAccount();
-      // The auth state change listener will update the UI automatically
-    } catch (error) {
-      console.error('Sign in error:', error);
-      toast.error('Failed to sign in to LuminaKraft Account');
-    }
-  };
-
-  const handleSignUpToLuminaKraft = async () => {
-    try {
-      const authService = AuthService.getInstance();
-      await authService.signUpLuminaKraftAccount();
-      // The auth state change listener will update the UI automatically
-    } catch (error) {
-      console.error('Sign up error:', error);
-      toast.error('Failed to create LuminaKraft Account');
-    }
-  };
-
-  const handleSignOutFromLuminaKraft = async () => {
-    setShowSignOutConfirm(true);
-  };
+  // Unused handlers - kept for future use
+  // const handleAuthError = (error: string) => { ... };
+  // const handleAuthStart = () => { ... };
+  // const handleAuthStop = () => { ... };
+  // const handleSignInToLuminaKraft = async () => { ... };
+  // const handleSignUpToLuminaKraft = async () => { ... };
+  // const handleSignOutFromLuminaKraft = async () => { ... };
+  // const handleProfileUpdate = async () => { ... };
+  // const handleLinkDiscord = async () => { ... };
+  // const handleLinkProvider = async (provider: 'github' | 'google') => { ... };
+  // const handleUnlinkProvider = async (provider: 'github' | 'google' | 'discord') => { ... };
+  // const handleUnlinkDiscord = async () => { ... };
 
   const performSignOut = async () => {
     try {
@@ -271,84 +237,23 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
       await authService.signOutSupabase();
       // Force state update to ensure UI reflects sign out immediately
       setLuminaKraftUser(null);
-      setDiscordAccount(null);
-      setLinkedProviders([]);
     } catch (error) {
       console.error('Sign out error:', error);
       toast.error('Failed to sign out');
     }
   };
 
-  const handleProfileUpdate = async () => {
-    const { supabase } = await import('../../services/supabaseClient');
-    const { data: { user } } = await supabase.auth.getUser();
-    setLuminaKraftUser(user);
-  };
-
-  const handleLinkDiscord = async () => {
-    const authService = AuthService.getInstance();
-    await authService.linkDiscordAccount();
-    // Reload providers after linking
-    setTimeout(async () => {
-      const providers = await authService.getLinkedProviders();
-      setLinkedProviders(providers);
-      const discord = await authService.getDiscordAccount();
-      setDiscordAccount(discord);
-    }, 2000);
-  };
-
-  const handleLinkProvider = async (provider: 'github' | 'google') => {
-    const authService = AuthService.getInstance();
-    await authService.linkProvider(provider);
-    // Reload providers after linking
-    setTimeout(async () => {
-      const providers = await authService.getLinkedProviders();
-      setLinkedProviders(providers);
-    }, 2000);
-  };
-
-  const handleUnlinkProvider = async (provider: 'github' | 'google' | 'discord') => {
-    if (!canUnlink) {
-      toast.error(t('auth.cannotUnlinkOnlyProvider') || 'Cannot unlink your only provider');
-      return;
-    }
-
-    const authService = AuthService.getInstance();
-    const success = await authService.unlinkProvider(provider);
-
-    if (success) {
-      toast.success(`${provider.charAt(0).toUpperCase() + provider.slice(1)} account unlinked`);
-      // Reload providers after unlinking
-      const providers = await authService.getLinkedProviders();
-      setLinkedProviders(providers);
-      if (provider === 'discord') {
-        setDiscordAccount(null);
-      }
-    } else {
-      toast.error(`Failed to unlink ${provider} account`);
-    }
-  };
-
-  const handleUnlinkDiscord = async () => {
-    const identities = luminaKraftUser?.identities || [];
-    if (identities.length <= 1) {
-      toast.error(t('auth.cannotUnlinkOnlyProvider') || 'Cannot unlink your only sign-in method');
-      return;
-    }
-    setShowUnlinkConfirm(true);
-  };
-
   const performUnlinkDiscord = async () => {
     const authService = AuthService.getInstance();
     const success = await authService.unlinkDiscordAccount();
-    
+
     if (success) {
       toast.success('Discord account unlinked');
       // Refresh user data
       const { supabase } = await import('../../services/supabaseClient');
       const { data: { user } } = await supabase.auth.getUser();
       setLuminaKraftUser(user);
-      
+
       // Update local settings
       const newSettings = {
         ...formData,
@@ -361,14 +266,12 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
     }
   };
 
-  const handleDeleteAccount = async () => {
-    setShowDeleteConfirm(true);
-  };
+  // const handleDeleteAccount = async () => { ... };
 
   const performDeleteAccount = async () => {
     const authService = AuthService.getInstance();
     const success = await authService.deleteAccount();
-    
+
     if (success) {
       toast.success(t('auth.accountDeleted') || 'Account deleted successfully');
       setLuminaKraftUser(null);

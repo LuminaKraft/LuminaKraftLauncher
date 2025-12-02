@@ -404,7 +404,7 @@ export class ModpackManagementService {
             .eq('id', modpackId)
             .single();
 
-          if (modpack && !modpack.published_at) {
+          if (modpack && !(modpack as any).published_at) {
             updateData.published_at = new Date().toISOString();
           }
         }

@@ -1043,14 +1043,14 @@ class AuthService {
         'User';
 
       // Clear ALL Discord data in database (including roles and partner status)
-      const unlinkData = {
+      const unlinkData: any = {
         discord_id: null,
         discord_username: null,
         discord_global_name: null,
         discord_avatar: null,
         discord_linked_at: null,
-        is_discord_member: null,
-        has_partner_role: null,
+        is_discord_member: false,
+        has_partner_role: false,
         partner_id: null,
         discord_roles: null,
         last_discord_sync: null,
