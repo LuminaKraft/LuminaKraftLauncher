@@ -765,8 +765,11 @@ export class ModpackManagementService {
       console.log('🗑️ Deleting modpack:', modpackId);
 
       if (!this.microsoftAccount) {
+        console.error('❌ User not authenticated with Microsoft');
         return { success: false, error: 'User not authenticated with Microsoft' };
       }
+
+      console.log('✅ User authenticated, fetching modpack details...');
 
       // Get modpack details to verify ownership and get file paths
       const { data: modpack, error: modpackError } = await supabase
@@ -775,31 +778,57 @@ export class ModpackManagementService {
         .eq('id', modpackId)
         .single() as { data: any; error: any };
 
-      if (modpackError || !modpack) {
+      if (modpackError) {
+        console.error('❌ Error fetching modpack:', modpackError);
+        return { success: false, error: `Modpack query failed: ${modpackError.message}` };
+      }
+
+      if (!modpack) {
+        console.error('❌ Modpack not found');
         return { success: false, error: 'Modpack not found' };
       }
 
+      console.log('✅ Modpack found:', modpack.id);
+      console.log('📊 Fetching user data...');
+
       // Get user ID
-      const { data: userData } = await supabase
+      const { data: userData, error: userError } = await supabase
         .from('users')
         .select('id, role')
         .eq('microsoft_id', this.microsoftAccount.xuid)
-        .single() as { data: any };
+        .single() as { data: any; error: any };
+
+      if (userError) {
+        console.error('❌ Error fetching user data:', userError);
+        return { success: false, error: `User query failed: ${userError.message}` };
+      }
 
       if (!userData) {
+        console.error('❌ User profile not found');
         return { success: false, error: 'User profile not found' };
       }
 
+      console.log('✅ User data found:', userData.id, 'Role:', userData.role);
+
       // Check permissions (owner or admin)
       if (modpack.author_id !== userData.id && userData.role !== 'admin') {
+        console.error('❌ Insufficient permissions. Author:', modpack.author_id, 'User:', userData.id);
         return { success: false, error: 'Insufficient permissions to delete this modpack' };
       }
 
+      console.log('✅ Permissions verified, fetching images...');
+
       // Get all screenshot paths
-      const { data: images } = await supabase
+      const { data: images, error: imagesError } = await supabase
         .from('modpack_images')
         .select('image_path')
-        .eq('modpack_id', modpackId) as { data: any[] | null };
+        .eq('modpack_id', modpackId) as { data: any[] | null; error: any };
+
+      if (imagesError) {
+        console.warn('⚠️ Error fetching images (continuing anyway):', imagesError);
+      }
+
+      console.log('📸 Images found:', images?.length || 0);
 
       // Collect all file paths to delete
       const filePaths: string[] = [];
