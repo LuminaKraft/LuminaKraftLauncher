@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, HardDrive, Save, Wifi, WifiOff, RefreshCw, Trash2, Server, Languages, Shield, XCircle, Zap } from 'lucide-react';
+import { User, HardDrive, Save, Wifi, WifiOff, RefreshCw, Trash2, Server, Languages, XCircle, Zap, Shield } from 'lucide-react';
 import { useLauncher } from '../../contexts/LauncherContext';
 import LauncherService from '../../services/launcherService';
-import AuthService from '../../services/authService';
 import MetaStorageSettings from './MetaStorageSettings';
-import { ConfirmDialog } from '../Common/ConfirmDialog';
 import toast from 'react-hot-toast';
 
 interface SettingsPageProps {
@@ -30,9 +28,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
     return saved ? Number(saved) : null;
   });
   const [isTestingConnection, setIsTestingConnection] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showUnlinkConfirm, setShowUnlinkConfirm] = useState(false);
-  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   // Java runtime handled internally by Lyceris; no user-facing settings.
 
   useEffect(() => {
@@ -43,83 +38,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
     const isDifferent = JSON.stringify(formData) !== JSON.stringify(userSettings);
     setHasChanges(isDifferent);
   }, [formData, userSettings]);
-
-  // Load LuminaKraft account session and listen for changes
-  useEffect(() => {
-    const setupAuth = async () => {
-      try {
-        const { supabase } = await import('../../services/supabaseClient');
-
-        const fetchUserWithProfile = async (retries = 3) => {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (!user) {
-            return null;
-          }
-
-          // Fetch public profile to get up-to-date display_name
-          // We implement a retry mechanism because on new sign-ups, the trigger
-          // creating the public.users record might have a slight delay.
-          for (let i = 0; i < retries; i++) {
-            const { data: profile } = await supabase
-              .from('users')
-              .select('display_name, avatar_url')
-              .eq('id', user.id)
-              .single();
-
-            if (profile) {
-              // Merge DB profile into user metadata for UI consistency
-              user.user_metadata = {
-                ...user.user_metadata,
-                display_name: (profile as any).display_name,
-                avatar_url: (profile as any).avatar_url
-              };
-              return user;
-            }
-
-            if (i < retries - 1) {
-              await new Promise(resolve => setTimeout(resolve, 1000));
-            }
-          }
-          
-          // If still no profile after retries, return user as is (fallback)
-          return user;
-        };
-
-        // Load initial session
-        await fetchUserWithProfile(1); // No need to retry heavily on initial load
-
-        // Listen for auth state changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          (event, _session) => {
-            console.log('Auth state changed:', event);
-            // Retry fetching profile on sign-in to ensure DB trigger has finished
-            // Fire-and-forget to avoid blocking the auth flow
-            fetchUserWithProfile(event === 'SIGNED_IN' ? 5 : 1);
-          }
-        );
-
-        // Listen for custom profile update events (triggered by authService after sync)
-        const handleProfileUpdateEvent = () => {
-          console.log('Profile update event received, refreshing user...');
-          fetchUserWithProfile(1);
-        };
-        window.addEventListener('luminakraft:profile-updated', handleProfileUpdateEvent);
-
-        // Cleanup subscription on unmount
-        return () => {
-          subscription.unsubscribe();
-          window.removeEventListener('luminakraft:profile-updated', handleProfileUpdateEvent);
-        };
-      } catch (error) {
-        console.error('Error loading LuminaKraft session:', error);
-      }
-    };
-
-    const cleanup = setupAuth();
-    return () => {
-      cleanup.then(unsub => unsub?.());
-    };
-  }, []);
 
   const checkAPIStatus = async () => {
     setApiStatus('checking');
@@ -196,49 +114,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
   const handleClearCache = () => {
     LauncherService.getInstance().clearCache();
     toast.success(t('settings.saved'));
-  };
-
-  const performSignOut = async () => {
-    try {
-      const authService = AuthService.getInstance();
-      await authService.signOutSupabase();
-    } catch (error) {
-      console.error('Sign out error:', error);
-      toast.error('Failed to sign out');
-    }
-  };
-
-  const performUnlinkDiscord = async () => {
-    const authService = AuthService.getInstance();
-    const success = await authService.unlinkDiscordAccount();
-
-    if (success) {
-      toast.success('Discord account unlinked');
-      // Update local settings
-      const newSettings = {
-        ...formData,
-        discordAccount: undefined
-      };
-      setFormData(newSettings);
-      updateUserSettings(newSettings);
-    } else {
-      toast.error('Failed to unlink Discord account');
-    }
-  };
-
-  const performDeleteAccount = async () => {
-    const authService = AuthService.getInstance();
-    const success = await authService.deleteAccount();
-
-    if (success) {
-      toast.success(t('auth.accountDeleted') || 'Account deleted successfully');
-      setFormData(prev => ({
-        ...prev,
-        discordAccount: undefined
-      }));
-    } else {
-      toast.error(t('auth.deleteAccountFailed') || 'Failed to delete account');
-    }
   };
 
   const triggerShake = () => {
@@ -663,36 +538,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
           )}
         </div>
       </div>
-
-      <ConfirmDialog
-        isOpen={showDeleteConfirm}
-        onClose={() => setShowDeleteConfirm(false)}
-        onConfirm={performDeleteAccount}
-        title={t('settings.deleteAccount')}
-        message={t('auth.confirmDeleteAccount')}
-        confirmText={t('app.delete')}
-        variant="danger"
-      />
-
-      <ConfirmDialog
-        isOpen={showUnlinkConfirm}
-        onClose={() => setShowUnlinkConfirm(false)}
-        onConfirm={performUnlinkDiscord}
-        title={t('auth.unlinkDiscord')}
-        message={t('auth.confirmUnlinkDiscord')}
-        confirmText={t('auth.unlinkDiscord')}
-        variant="warning"
-      />
-
-      <ConfirmDialog
-        isOpen={showSignOutConfirm}
-        onClose={() => setShowSignOutConfirm(false)}
-        onConfirm={performSignOut}
-        title={t('auth.signOut')}
-        message="Are you sure you want to sign out from your LuminaKraft account?"
-        confirmText={t('auth.signOut')}
-        variant="info"
-      />
     </div>
   );
 };
