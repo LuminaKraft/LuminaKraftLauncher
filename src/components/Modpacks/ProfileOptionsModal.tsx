@@ -119,7 +119,7 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
           </div>
 
           <div className="space-y-3">
-            {/* CurseForge Settings Option */}
+            {/* Default Settings Option */}
             <label className="flex items-start space-x-3 p-4 rounded-lg border border-dark-600 hover:border-lumina-500/50 transition-colors cursor-pointer">
               <input
                 type="radio"
@@ -130,8 +130,8 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
                 className="mt-1 w-4 h-4 text-lumina-600 bg-dark-700 border-dark-600 focus:ring-lumina-500 focus:ring-2"
               />
               <div className="flex-1">
-                <div className="text-white font-medium">CurseForge Settings - 4096MB</div>
-                <div className="text-dark-300 text-sm">Use CurseForge default memory allocation</div>
+                <div className="text-white font-medium">Default Settings - 4096MB</div>
+                <div className="text-dark-300 text-sm">Use default memory allocation (4GB)</div>
               </div>
             </label>
 
