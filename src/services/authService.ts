@@ -437,17 +437,16 @@ class AuthService {
    */
   async linkDiscordAccount(): Promise<boolean> {
     try {
-      console.log('Linking Discord account...');
+      console.log('Linking/Signing in with Discord account...');
 
       const { supabase } = await import('./supabaseClient');
 
       // Check if user is already logged in
       const { data: { session } } = await supabase.auth.getSession();
 
-      if (!session) {
-        console.error('No active session. User must sign in first.');
-        return false;
-      }
+      // Allow both scenarios:
+      // 1. No session → Sign up/Sign in with Discord (creates new account or logs in)
+      // 2. Has session → Link Discord to existing account
 
       // 1. Start HTTP server and get port
       const port = await invoke<number>('start_oauth_server');
