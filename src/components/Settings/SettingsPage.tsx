@@ -30,7 +30,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
     return saved ? Number(saved) : null;
   });
   const [isTestingConnection, setIsTestingConnection] = useState(false);
-  const [luminaKraftUser, setLuminaKraftUser] = useState<any>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showUnlinkConfirm, setShowUnlinkConfirm] = useState(false);
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
@@ -87,8 +86,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
         };
 
         // Load initial session
-        const user = await fetchUserWithProfile(1); // No need to retry heavily on initial load
-        setLuminaKraftUser(user);
+        await fetchUserWithProfile(1); // No need to retry heavily on initial load
 
         // Listen for auth state changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -96,18 +94,14 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
             console.log('Auth state changed:', event);
             // Retry fetching profile on sign-in to ensure DB trigger has finished
             // Fire-and-forget to avoid blocking the auth flow
-            fetchUserWithProfile(event === 'SIGNED_IN' ? 5 : 1).then(updatedUser => {
-              setLuminaKraftUser(updatedUser);
-            });
+            fetchUserWithProfile(event === 'SIGNED_IN' ? 5 : 1);
           }
         );
 
         // Listen for custom profile update events (triggered by authService after sync)
         const handleProfileUpdateEvent = () => {
           console.log('Profile update event received, refreshing user...');
-          fetchUserWithProfile(1).then(updatedUser => {
-            setLuminaKraftUser(updatedUser);
-          });
+          fetchUserWithProfile(1);
         };
         window.addEventListener('luminakraft:profile-updated', handleProfileUpdateEvent);
 
@@ -204,25 +198,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
     toast.success(t('settings.saved'));
   };
 
-  // Unused handlers - kept for future use
-  // const handleAuthError = (error: string) => { ... };
-  // const handleAuthStart = () => { ... };
-  // const handleAuthStop = () => { ... };
-  // const handleSignInToLuminaKraft = async () => { ... };
-  // const handleSignUpToLuminaKraft = async () => { ... };
-  // const handleSignOutFromLuminaKraft = async () => { ... };
-  // const handleProfileUpdate = async () => { ... };
-  // const handleLinkDiscord = async () => { ... };
-  // const handleLinkProvider = async (provider: 'github' | 'google') => { ... };
-  // const handleUnlinkProvider = async (provider: 'github' | 'google' | 'discord') => { ... };
-  // const handleUnlinkDiscord = async () => { ... };
-
   const performSignOut = async () => {
     try {
       const authService = AuthService.getInstance();
       await authService.signOutSupabase();
-      // Force state update to ensure UI reflects sign out immediately
-      setLuminaKraftUser(null);
     } catch (error) {
       console.error('Sign out error:', error);
       toast.error('Failed to sign out');
@@ -235,11 +214,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
 
     if (success) {
       toast.success('Discord account unlinked');
-      // Refresh user data
-      const { supabase } = await import('../../services/supabaseClient');
-      const { data: { user } } = await supabase.auth.getUser();
-      setLuminaKraftUser(user);
-
       // Update local settings
       const newSettings = {
         ...formData,
@@ -252,15 +226,12 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
     }
   };
 
-  // const handleDeleteAccount = async () => { ... };
-
   const performDeleteAccount = async () => {
     const authService = AuthService.getInstance();
     const success = await authService.deleteAccount();
 
     if (success) {
       toast.success(t('auth.accountDeleted') || 'Account deleted successfully');
-      setLuminaKraftUser(null);
       setFormData(prev => ({
         ...prev,
         discordAccount: undefined
