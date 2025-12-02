@@ -34,11 +34,13 @@ export function HomePage({ onNavigate }: HomePageProps) {
         );
         setComingSoonModpacks(comingSoon);
 
-        // Filter Featured modpacks (active + NOT coming soon + (official OR new))
-        const featured = allModpacks.filter(
-          modpack => modpack.isActive && !modpack.isComingSoon &&
-          (modpack.category === 'official' || modpack.isNew)
-        );
+        // Filter Featured modpacks (active + NOT coming soon + (official OR partner OR new))
+        const featured = allModpacks
+          .filter(
+            modpack => modpack.isActive && !modpack.isComingSoon &&
+            (modpack.category === 'official' || modpack.category === 'partner' || modpack.isNew)
+          )
+          .sort((a, b) => (b.downloads || 0) - (a.downloads || 0)); // Sort by downloads descending
         setFeaturedModpacks(featured);
       }
     } catch (error) {
