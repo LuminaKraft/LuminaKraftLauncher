@@ -9,6 +9,7 @@ export interface CurseForgeManifest {
   minecraft: {
     version: string;
     modLoaders: CurseForgeModLoader[];
+    recommendedRam?: number; // Recommended RAM in MB
   };
   manifestType: string;
   manifestVersion: number;

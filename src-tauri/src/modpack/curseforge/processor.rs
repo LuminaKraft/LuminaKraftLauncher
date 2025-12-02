@@ -11,7 +11,7 @@ pub async fn process_curseforge_modpack_with_failed_tracking<F>(
     instance_dir: &PathBuf,
     emit_progress: F,
     auth_token: Option<&str>,
-) -> Result<(String, String, Vec<serde_json::Value>)> 
+) -> Result<(String, String, Option<u32>, Vec<serde_json::Value>)>
 where
     F: Fn(String, f32, String) + Send + Sync + 'static + Clone,
 {
@@ -94,14 +94,17 @@ where
     
     // Get modloader info
     let (modloader, modloader_version) = get_modloader_info(&manifest)?;
-    
+
+    // Extract recommended RAM from manifest (optional field)
+    let recommended_ram = manifest.minecraft.recommended_ram;
+
     emit_progress(
         "curseforge_completed".to_string(),
         100.0,
         "curseforge_completed".to_string()
     );
-    
-    Ok((modloader, modloader_version, failed_mods))
+
+    Ok((modloader, modloader_version, recommended_ram, failed_mods))
 }
 
 

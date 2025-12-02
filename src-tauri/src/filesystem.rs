@@ -305,6 +305,9 @@ pub fn create_instance_metadata(
         modloader,
         modloader_version,
         minecraft_version,
+        recommended_ram: None,
+        ram_allocation: Some("global".to_string()),
+        custom_ram: None,
     }
 }
 

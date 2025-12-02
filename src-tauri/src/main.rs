@@ -108,6 +108,12 @@ pub struct InstanceMetadata {
     pub modloader_version: String,
     #[serde(rename = "minecraftVersion")]
     pub minecraft_version: String,
+    #[serde(rename = "recommendedRam", skip_serializing_if = "Option::is_none")]
+    pub recommended_ram: Option<u32>, // Recommended RAM in MB from manifest.json
+    #[serde(rename = "ramAllocation", skip_serializing_if = "Option::is_none")]
+    pub ram_allocation: Option<String>, // "curseforge" | "recommended" | "custom" | "global"
+    #[serde(rename = "customRam", skip_serializing_if = "Option::is_none")]
+    pub custom_ram: Option<u32>, // Custom RAM in MB (only used when ramAllocation is "custom")
 }
 
 #[tauri::command]

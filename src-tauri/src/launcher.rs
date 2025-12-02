@@ -45,6 +45,9 @@ pub async fn install_modpack(modpack: Modpack) -> Result<()> {
         modloader: modpack.modloader.clone(),
         modloader_version: modpack.modloader_version.clone(),
         minecraft_version: modpack.minecraft_version.clone(),
+        recommended_ram: None,
+        ram_allocation: Some("global".to_string()), // Use global RAM by default
+        custom_ram: None,
     };
     
     filesystem::save_instance_metadata(&metadata).await?;
@@ -152,6 +155,9 @@ where
     // Install modpack files
     emit_progress("progress.installingModpackFiles".to_string(), 70.0, "installing_modpack_files".to_string());
     
+    // Variable to store recommended RAM from manifest
+    let mut recommended_ram_from_manifest: Option<u32> = None;
+
     let failed_mods = if !modpack.url_modpack_zip.is_empty() {
         // Download and extract modpack
         let temp_zip_path = app_data_dir.join("temp").join(format!("{}.zip", modpack.id));
@@ -170,13 +176,13 @@ where
             emit_progress("progress.downloadingModpackFiles".to_string(), 75.0, "downloading_modpack".to_string());
             download_file(&modpack.url_modpack_zip, &temp_zip_path).await?;
         }
-        
+
         // Check if it's a CurseForge modpack
         let is_curseforge_modpack = match lyceris::util::extract::read_file_from_jar(&temp_zip_path, "manifest.json") {
             Ok(_) => true,
             Err(_) => false,
         };
-        
+
         if is_curseforge_modpack {
             emit_progress("progress.processingCurseforge".to_string(), 70.0, "processing_curseforge".to_string());
             
@@ -190,8 +196,8 @@ where
                 settings.client_token.clone()
             };
             
-            let (_cf_modloader, _cf_version, failed_mods) = curseforge::process_curseforge_modpack_with_failed_tracking(
-                &temp_zip_path, 
+            let (_cf_modloader, _cf_version, recommended_ram, failed_mods) = curseforge::process_curseforge_modpack_with_failed_tracking(
+                &temp_zip_path,
                 &instance_dirs.instance_dir,
                 {
                     let emit_progress = emit_progress.clone();
@@ -202,7 +208,10 @@ where
                 },
                 auth_token.as_deref()
             ).await?;
-    
+
+            // Store recommended RAM from manifest
+            recommended_ram_from_manifest = recommended_ram;
+
             // Clean up temp file
             cleanup_temp_file(&temp_zip_path);
             failed_mods
@@ -229,6 +238,9 @@ where
         modloader: modpack.modloader.clone(),
         modloader_version: modpack.modloader_version.clone(),
         minecraft_version: modpack.minecraft_version.clone(),
+        recommended_ram: recommended_ram_from_manifest,
+        ram_allocation: Some("recommended".to_string()), // Default to recommended RAM
+        custom_ram: None,
     };
     
     filesystem::save_instance_metadata(&metadata).await?;
