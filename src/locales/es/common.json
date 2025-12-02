@@ -571,7 +571,19 @@
       },
       "signIn": "Vincular Cuenta de Discord",
       "localAlternative": "¿Solo quieres gestionar modpacks localmente?",
-      "goToMyModpacks": "Ir a Mis Modpacks →"
+      "goToMyModpacks": "Ir a Mis Modpacks →",
+      "joinServer": {
+        "title": "Únete a Nuestro Servidor de Discord",
+        "description": "Debes ser miembro del servidor de Discord de LuminaKraft para publicar modpacks.",
+        "descriptionCta": "¡Únete a nuestra comunidad para desbloquear funciones de publicación!",
+        "button": "Unirse al Servidor de Discord",
+        "refreshButton": "Ya me uní - Actualizar Estado"
+      },
+      "communityComingSoon": {
+        "title": "Publicación Comunitaria Próximamente",
+        "description": "La publicación de modpacks comunitarios está actualmente deshabilitada mientras finalizamos la función.",
+        "descriptionPartners": "Actualmente, solo <strong>Partners</strong> y <strong>Admins</strong> pueden publicar modpacks. ¡Mantente atento a las actualizaciones!"
+      }
     },
     "empty": {
       "title": "Aún no has publicado modpacks",

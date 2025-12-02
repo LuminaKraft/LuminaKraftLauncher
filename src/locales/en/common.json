@@ -574,7 +574,19 @@
       },
       "signIn": "Link Discord Account",
       "localAlternative": "Just want to manage modpacks locally?",
-      "goToMyModpacks": "Go to My Modpacks →"
+      "goToMyModpacks": "Go to My Modpacks →",
+      "joinServer": {
+        "title": "Join Our Discord Server",
+        "description": "You must be a member of the LuminaKraft Discord server to publish modpacks.",
+        "descriptionCta": "Join our community to unlock publishing features!",
+        "button": "Join Discord Server",
+        "refreshButton": "I've Joined - Refresh Status"
+      },
+      "communityComingSoon": {
+        "title": "Community Publishing Coming Soon",
+        "description": "Community modpack publishing is currently disabled while we finalize the feature.",
+        "descriptionPartners": "Currently, only <strong>Partners</strong> and <strong>Admins</strong> can publish modpacks. Stay tuned for updates!"
+      }
     },
     "empty": {
       "title": "No published modpacks yet",
