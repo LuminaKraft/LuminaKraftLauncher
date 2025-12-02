@@ -529,6 +529,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
         </div>
       )}
 
+      {/* No Discord Account Linked */}
       {!isCheckingAccess && !discordAccount && (
         <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6 shadow-md mb-6">
           <div className="flex items-start space-x-3">
@@ -552,6 +553,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
         </div>
       )}
 
+      {/* Has Discord but Not Member of Server */}
       {!isCheckingAccess && discordAccount && !discordAccount.isMember && (
         <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6 shadow-md mb-6">
           <div className="flex items-start space-x-3">
@@ -563,22 +565,21 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
               <p className="text-yellow-700 dark:text-yellow-300 mb-4">
                 You must be a member of the LuminaKraft Discord server to publish modpacks.
               </p>
-              <div className="flex gap-3">
-                <a
-                  href="https://discord.gg/UJZRrcUFMj"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
-                >
-                  Join Discord Server
-                </a>
-              </div>
+              <a
+                href="https://discord.gg/UJZRrcUFMj"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+              >
+                Join Discord Server
+              </a>
             </div>
           </div>
         </div>
       )}
 
-      {!isCheckingAccess && discordAccount && discordAccount.isMember && userRole === 'user' && (
+      {/* Is Member but Not Partner/Admin (Regular User) */}
+      {!isCheckingAccess && discordAccount && discordAccount.isMember && (userRole === 'user' || userRole === null) && (
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6 shadow-md mb-6">
           <div className="flex items-start space-x-3">
             <Info className="w-6 h-6 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-1" />
