@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ArrowRight, Newspaper, Clock } from 'lucide-react';
 import ModpackCard from '../Modpacks/ModpackCard';
 import { ModpackWithDetails } from '../../types/launcher';
-import ModpackManagementService from '../../services/modpackManagementService';
+import LauncherService from '../../services/launcherService';
 
 interface HomePageProps {
   onNavigate?: (_section: string, _modpackId?: string) => void;
@@ -22,11 +22,11 @@ export function HomePage({ onNavigate }: HomePageProps) {
   const loadHomePageData = async () => {
     setLoading(true);
     try {
-      const service = ModpackManagementService.getInstance();
-      const result = await service.getModpacks();
+      const service = LauncherService.getInstance();
+      const data = await service.fetchModpacksData();
+      const allModpacks = data.modpacks;
 
-      if (result.success && result.data) {
-        const allModpacks = result.data as ModpackWithDetails[];
+      if (allModpacks && allModpacks.length > 0) {
 
         console.log('All modpacks:', allModpacks.map(m => ({
           name: m.name,
