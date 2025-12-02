@@ -4,6 +4,7 @@ import { ArrowRight, Newspaper, Clock } from 'lucide-react';
 import ModpackCard from '../Modpacks/ModpackCard';
 import { ModpackWithDetails } from '../../types/launcher';
 import LauncherService from '../../services/launcherService';
+import { useLauncher } from '../../contexts/LauncherContext';
 
 interface HomePageProps {
   onNavigate?: (_section: string, _modpackId?: string) => void;
@@ -11,6 +12,7 @@ interface HomePageProps {
 
 export function HomePage({ onNavigate }: HomePageProps) {
   const { t } = useTranslation();
+  const { modpackStates } = useLauncher();
   const [comingSoonModpacks, setComingSoonModpacks] = useState<ModpackWithDetails[]>([]);
   const [featuredModpacks, setFeaturedModpacks] = useState<ModpackWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
@@ -106,13 +108,22 @@ export function HomePage({ onNavigate }: HomePageProps) {
             </h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {comingSoonModpacks.map(modpack => (
-              <ModpackCard
-                key={modpack.id}
-                modpack={modpack}
-                onNavigate={onNavigate}
-              />
-            ))}
+            {comingSoonModpacks.map(modpack => {
+              const state = modpackStates[modpack.id] || {
+                installed: false,
+                downloading: false,
+                progress: { percentage: 0 },
+                status: 'not_installed' as const
+              };
+              return (
+                <ModpackCard
+                  key={modpack.id}
+                  modpack={modpack}
+                  state={state}
+                  onSelect={() => onNavigate?.('explore', modpack.id)}
+                />
+              );
+            })}
           </div>
         </section>
       )}
@@ -133,13 +144,22 @@ export function HomePage({ onNavigate }: HomePageProps) {
         </div>
         {featuredModpacks.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featuredModpacks.slice(0, 6).map(modpack => (
-              <ModpackCard
-                key={modpack.id}
-                modpack={modpack}
-                onNavigate={onNavigate}
-              />
-            ))}
+            {featuredModpacks.slice(0, 6).map(modpack => {
+              const state = modpackStates[modpack.id] || {
+                installed: false,
+                downloading: false,
+                progress: { percentage: 0 },
+                status: 'not_installed' as const
+              };
+              return (
+                <ModpackCard
+                  key={modpack.id}
+                  modpack={modpack}
+                  state={state}
+                  onSelect={() => onNavigate?.('explore', modpack.id)}
+                />
+              );
+            })}
           </div>
         ) : (
           <div className="bg-white dark:bg-gray-800 rounded-lg p-8 shadow-sm border border-gray-200 dark:border-gray-700">
