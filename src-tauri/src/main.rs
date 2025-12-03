@@ -41,6 +41,8 @@ pub struct Modpack {
     pub images: Vec<String>,
     #[serde(default)]
     pub logo: String,
+    #[serde(rename = "backgroundImage", alias = "banner_url", alias = "bannerUrl", default)]
+    pub banner_url: String,
     #[serde(rename = "featureIcons", default)]
     pub feature_icons: Vec<String>,
     #[serde(default)]
@@ -130,6 +132,28 @@ async fn get_instance_metadata(modpack_id: String) -> Result<Option<String>, Str
             }
         }
         Err(e) => Err(format!("Failed to get instance metadata: {}", e)),
+    }
+}
+
+#[tauri::command]
+async fn get_cached_modpack_data(modpack_id: String) -> Result<Option<String>, String> {
+    let launcher_dir = match dirs::data_dir() {
+        Some(dir) => dir.join("LKLauncher"),
+        None => return Err("Failed to get app data directory".to_string()),
+    };
+
+    let cache_path = launcher_dir
+        .join("cache")
+        .join("modpacks")
+        .join(format!("{}.json", modpack_id));
+
+    if !cache_path.exists() {
+        return Ok(None);
+    }
+
+    match std::fs::read_to_string(cache_path) {
+        Ok(content) => Ok(Some(content)),
+        Err(e) => Err(format!("Failed to read cached modpack data: {}", e)),
     }
 }
 
@@ -1050,6 +1074,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             get_system_ram,
             get_instance_metadata,
+            get_cached_modpack_data,
             update_instance_ram_settings,
             get_local_modpacks,
             install_modpack,

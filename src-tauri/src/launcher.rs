@@ -247,6 +247,11 @@ where
     
     filesystem::save_instance_metadata(&metadata).await?;
 
+    // Save rich modpack metadata for UI display (non-fatal if fails)
+    if let Err(e) = filesystem::save_modpack_metadata(&modpack).await {
+        eprintln!("⚠️  Warning: Failed to save modpack metadata cache: {}", e);
+    }
+
     emit_progress("progress.finalizingInstallation".to_string(), 98.0, "finalizing_installation".to_string());
 
     emit_progress("progress.installationCompleted".to_string(), 100.0, "completed".to_string());

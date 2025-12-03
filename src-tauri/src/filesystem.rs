@@ -99,16 +99,57 @@ pub fn get_instance_dir(modpack_id: &str) -> Result<PathBuf> {
 /// Save instance metadata to disk
 pub async fn save_instance_metadata(metadata: &InstanceMetadata) -> Result<()> {
     let instance_dir = get_instance_dir(&metadata.id)?;
-    
+
     // Ensure the instance directory exists
     fs::create_dir_all(&instance_dir)?;
-    
+
     let metadata_path = instance_dir.join("instance.json");
     let metadata_json = serde_json::to_string_pretty(metadata)?;
-    
+
     let mut file = fs::File::create(metadata_path)?;
     file.write_all(metadata_json.as_bytes())?;
-    
+
+    Ok(())
+}
+
+/// Save rich modpack metadata to cache for display purposes
+/// This is separate from InstanceMetadata and contains UI-relevant data
+pub async fn save_modpack_metadata(modpack: &crate::Modpack) -> Result<()> {
+    let launcher_dir = get_launcher_data_dir()?;
+    let cache_dir = launcher_dir.join("cache").join("modpacks");
+
+    // Ensure cache directory exists
+    tokio::fs::create_dir_all(&cache_dir).await?;
+
+    let metadata_path = cache_dir.join(format!("{}.json", modpack.id));
+
+    // Create a subset of modpack data for caching (only UI-relevant fields)
+    let cache_data = serde_json::json!({
+        "id": modpack.id,
+        "name": modpack.name,
+        "description": modpack.description,
+        "version": modpack.version,
+        "minecraftVersion": modpack.minecraft_version,
+        "modloader": modpack.modloader,
+        "modloaderVersion": modpack.modloader_version,
+        "logo": modpack.logo,
+        "backgroundImage": modpack.banner_url, // Use banner_url field
+        "images": modpack.images,
+        "gamemode": modpack.gamemode,
+        "isNew": modpack.is_new,
+        "isActive": modpack.is_active,
+        "isComingSoon": modpack.is_coming_soon,
+        "featureIcons": modpack.feature_icons,
+        "collaborators": modpack.collaborators,
+        "youtubeEmbed": modpack.youtube_embed,
+        "tiktokEmbed": modpack.tiktok_embed,
+        "ip": modpack.ip,
+        "leaderboardPath": modpack.leaderboard_path,
+    });
+
+    let metadata_json = serde_json::to_string_pretty(&cache_data)?;
+    tokio::fs::write(&metadata_path, metadata_json).await?;
+
     Ok(())
 }
 
