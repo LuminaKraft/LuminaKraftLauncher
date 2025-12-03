@@ -83,20 +83,22 @@ export function HomePage({ onNavigate }: HomePageProps) {
         <p className="text-xl opacity-90">{t('home.hero.subtitle')}</p>
       </div>
 
-      {/* News Section (Placeholder) */}
-      <section>
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Newspaper className="w-6 h-6" />
-            {t('home.news.title')}
-          </h2>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-8 shadow-sm border border-gray-200 dark:border-gray-700">
-          <p className="text-gray-500 dark:text-gray-400 text-center">
-            {t('home.news.placeholder')}
-          </p>
-        </div>
-      </section>
+      {/* News Section (Placeholder) - Hidden for now */}
+      {false && (
+        <section>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <Newspaper className="w-6 h-6" />
+              {t('home.news.title')}
+            </h2>
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-8 shadow-sm border border-gray-200 dark:border-gray-700">
+            <p className="text-gray-500 dark:text-gray-400 text-center">
+              {t('home.news.placeholder')}
+            </p>
+          </div>
+        </section>
+      )}
 
       {/* Coming Soon Section */}
       {comingSoonModpacks.length > 0 && (
