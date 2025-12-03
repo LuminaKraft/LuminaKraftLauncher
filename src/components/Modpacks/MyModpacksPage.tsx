@@ -75,6 +75,15 @@ export function MyModpacksPage() {
         loadInstancesAndMetadata();
       }
     }
+
+    // Check if any modpack was removed (was in instances but no longer installed)
+    const recentlyRemoved = instances.some(
+      instance => !installedIds.includes(instance.id)
+    );
+
+    if (recentlyRemoved) {
+      loadInstancesAndMetadata();
+    }
   }, [modpackStates, instances]);
 
   /**
