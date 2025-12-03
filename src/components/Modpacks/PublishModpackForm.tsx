@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import { Plus, X, Upload, FileArchive, AlertCircle, RefreshCw, Check, ChevronRight, ChevronLeft, Info, Image as ImageIcon, FileText, Package, Layers } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import ModpackManagementService from '../../services/modpackManagementService';
@@ -37,6 +38,7 @@ interface PublishModpackFormProps {
 }
 
 export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
+  const { t } = useTranslation();
   const service = ModpackManagementService.getInstance();
   const authService = AuthService.getInstance();
 
@@ -70,19 +72,21 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const steps = [
-    { id: 1, title: 'Upload', icon: Upload, description: 'Upload modpack ZIP' },
-    { id: 2, title: 'Basic Info', icon: Package, description: 'Name & Version' },
-    { id: 3, title: 'Details', icon: FileText, description: 'Description & Features' },
-    { id: 4, title: 'Media', icon: ImageIcon, description: 'Logo & Screenshots' },
-    { id: 5, title: 'Review', icon: Check, description: 'Review & Publish' }
+  const getSteps = () => [
+    { id: 1, title: t('publishModpack.steps.upload'), icon: Upload, description: t('publishModpack.steps.uploadDesc') },
+    { id: 2, title: t('publishModpack.steps.basicInfo'), icon: Package, description: t('publishModpack.steps.basicInfoDesc') },
+    { id: 3, title: t('publishModpack.steps.details'), icon: FileText, description: t('publishModpack.steps.detailsDesc') },
+    { id: 4, title: t('publishModpack.steps.media'), icon: ImageIcon, description: t('publishModpack.steps.mediaDesc') },
+    { id: 5, title: t('publishModpack.steps.review'), icon: Check, description: t('publishModpack.steps.reviewDesc') }
   ];
+
+  const steps = getSteps();
 
   // Insert Category step if user is partner or admin
   const effectiveSteps = (userRole === 'admin' || userRole === 'partner')
     ? [
       steps[0],
-      { id: 1.5, title: 'Category', icon: Layers, description: 'Select Category' },
+      { id: 1.5, title: t('publishModpack.steps.category'), icon: Layers, description: t('publishModpack.steps.categoryDesc') },
       ...steps.slice(1)
     ].map((s, i) => ({ ...s, id: i + 1 }))
     : steps;
@@ -643,7 +647,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
             {/* Upload ZIP Section */}
             <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
               <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-                Upload Modpack ZIP {formData.isComingSoon && <span className="text-sm text-gray-500 dark:text-gray-400 font-normal">(Optional)</span>}
+                {t('publishModpack.steps.uploadDesc')} {formData.isComingSoon && <span className="text-sm text-gray-500 dark:text-gray-400 font-normal">(Optional)</span>}
               </h2>
               <div
                 onDragOver={handleDragOver}
@@ -751,7 +755,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
         {currentStep === 2 && (userRole === 'admin' || userRole === 'partner') && (
           <div className="space-y-6 animate-fade-in">
             <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
-              <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">Select Category</h2>
+              <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">{t('publishModpack.steps.categoryDesc')}</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {userRole === 'admin' && (
                   <div
@@ -816,7 +820,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
             <div className="space-y-6 animate-fade-in">
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
                 <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-                  Step {effectiveSteps.find(s => s.title === 'Basic Info')?.id}: Basic Information
+                  Step {effectiveSteps.find(s => s.id === 2)?.id}: {t('publishModpack.steps.basicInfo')}
                 </h2>
                 <div className="flex gap-2 mb-6 border-b border-gray-200 dark:border-gray-700">
                   <button
@@ -972,7 +976,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
             <div className="space-y-6 animate-fade-in">
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
                 <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-                  Step {effectiveSteps.find(s => s.title === 'Details')?.id}: Details
+                  Step {effectiveSteps.find(s => s.id === 3)?.id}: {t('publishModpack.steps.details')}
                 </h2>
                 <div className="flex gap-2 mb-6 border-b border-gray-200 dark:border-gray-700">
                   <button
@@ -1131,7 +1135,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
             <div className="space-y-6 animate-fade-in">
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
                 <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">
-                  Step {effectiveSteps.find(s => s.title === 'Media')?.id}: Media
+                  Step {effectiveSteps.find(s => s.id === 4)?.id}: {t('publishModpack.steps.media')}
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
@@ -1257,7 +1261,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
             ((userRole === 'admin' || userRole === 'partner') && currentStep === 6)) && (
             <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md animate-fade-in">
               <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">
-                Step 5: Review & Publish
+                Step {effectiveSteps.find(s => s.id === 5)?.id}: {t('publishModpack.steps.review')}
               </h2>
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

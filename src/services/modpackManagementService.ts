@@ -974,7 +974,7 @@ export class ModpackManagementService {
           .eq('modpack_id', modpackId)
           .limit(1);
 
-        if (!versions || versions.length === 0 || !versions[0].file_url) {
+        if (!versions || versions.length === 0 || !(versions[0] as any).file_url) {
           return { canActivate: false, error: 'ZIP file is required to activate modpack' };
         }
       }

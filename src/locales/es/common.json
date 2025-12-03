@@ -648,5 +648,21 @@
     "cancel": "Cancelar",
     "done": "Listo",
     "saving": "Guardando..."
+  },
+  "publishModpack": {
+    "steps": {
+      "upload": "Subir",
+      "uploadDesc": "Subir ZIP del modpack",
+      "basicInfo": "Información Básica",
+      "basicInfoDesc": "Nombre y Versión",
+      "details": "Detalles",
+      "detailsDesc": "Descripción y Características",
+      "media": "Multimedia",
+      "mediaDesc": "Logo y Capturas de Pantalla",
+      "category": "Categoría",
+      "categoryDesc": "Seleccionar Categoría",
+      "review": "Revisión",
+      "reviewDesc": "Revisar y Publicar"
+    }
   }
 }

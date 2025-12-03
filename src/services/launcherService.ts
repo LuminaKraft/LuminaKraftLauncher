@@ -235,9 +235,9 @@ class LauncherService {
       const statsMap = new Map<string, any>();
       if (data && data.length > 0) {
         console.log(`🔄 Fetching stats for ${data.length} modpacks...`);
-        const statsPromises = data.map((modpack: any) => {
+        const statsPromises: Promise<null>[] = data.map((modpack: any) => {
           console.log(`  Requesting stats for: ${modpack.name} (${modpack.id})`);
-          return supabase.rpc('get_modpack_aggregate_stats', { p_modpack_id: modpack.id } as any)
+          return (supabase.rpc('get_modpack_aggregate_stats', { p_modpack_id: modpack.id } as any) as unknown as Promise<any>)
             .then((result: any) => {
               console.log(`📊 Stats response for ${modpack.name}:`, { data: result.data, error: result.error });
               if (result.data) {

@@ -651,5 +651,21 @@
     "cancel": "Cancel",
     "done": "Done",
     "saving": "Saving..."
+  },
+  "publishModpack": {
+    "steps": {
+      "upload": "Upload",
+      "uploadDesc": "Upload modpack ZIP",
+      "basicInfo": "Basic Info",
+      "basicInfoDesc": "Name & Version",
+      "details": "Details",
+      "detailsDesc": "Description & Features",
+      "media": "Media",
+      "mediaDesc": "Logo & Screenshots",
+      "category": "Category",
+      "categoryDesc": "Select Category",
+      "review": "Review",
+      "reviewDesc": "Review & Publish"
+    }
   }
 }
