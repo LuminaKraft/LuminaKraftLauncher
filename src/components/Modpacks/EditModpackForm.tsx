@@ -67,6 +67,9 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
   const [zipFile, setZipFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [isDraggingLogo, setIsDraggingLogo] = useState(false);
+  const [isDraggingBanner, setIsDraggingBanner] = useState(false);
+  const [isDraggingScreenshots, setIsDraggingScreenshots] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -225,7 +228,6 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
   };
 
   const handleDeleteScreenshot = async (imageId: string) => {
-    if (!confirm('Delete this screenshot?')) return;
     setIsUpdating(true);
     try {
       await service.deleteModpackImage(imageId);
@@ -629,7 +631,22 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div>
                     <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Logo</label>
-                    <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center relative group">
+                    <div
+                      onDragOver={(e) => { e.preventDefault(); setIsDraggingLogo(true); }}
+                      onDragLeave={(e) => { e.preventDefault(); setIsDraggingLogo(false); }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setIsDraggingLogo(false);
+                        const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+                        if (files.length > 0) {
+                          handleImageUpload(files[0], 'logo');
+                        }
+                      }}
+                      className={`border-2 border-dashed rounded-lg p-4 text-center relative group ${isDraggingLogo
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                          : 'border-gray-300 dark:border-gray-600'
+                        }`}
+                    >
                       {formData.logoUrl ? (
                         <img src={formData.logoUrl} alt="Logo" className="w-32 h-32 object-contain mx-auto rounded-lg" />
                       ) : (
@@ -648,7 +665,22 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Banner</label>
-                    <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center relative group">
+                    <div
+                      onDragOver={(e) => { e.preventDefault(); setIsDraggingBanner(true); }}
+                      onDragLeave={(e) => { e.preventDefault(); setIsDraggingBanner(false); }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setIsDraggingBanner(false);
+                        const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+                        if (files.length > 0) {
+                          handleImageUpload(files[0], 'banner');
+                        }
+                      }}
+                      className={`border-2 border-dashed rounded-lg p-4 text-center relative group ${isDraggingBanner
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                          : 'border-gray-300 dark:border-gray-600'
+                        }`}
+                    >
                       {formData.bannerUrl ? (
                         <img src={formData.bannerUrl} alt="Banner" className="w-full h-32 object-cover mx-auto rounded-lg" />
                       ) : (
@@ -671,7 +703,20 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Screenshots</h2>
-                  <div className="relative overflow-hidden">
+                  <div
+                    onDragOver={(e) => { e.preventDefault(); setIsDraggingScreenshots(true); }}
+                    onDragLeave={(e) => { e.preventDefault(); setIsDraggingScreenshots(false); }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setIsDraggingScreenshots(false);
+                      const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+                      if (files.length > 0) {
+                        files.forEach(file => handleImageUpload(file, 'screenshot'));
+                      }
+                    }}
+                    className={`relative overflow-hidden rounded-lg ${isDraggingScreenshots ? 'ring-2 ring-blue-500' : ''
+                      }`}
+                  >
                     <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
                       <Upload className="w-4 h-4" />
                       Upload Screenshot
@@ -679,7 +724,12 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                     <input
                       type="file"
                       accept="image/*"
-                      onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0], 'screenshot')}
+                      multiple
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files || []);
+                        files.forEach(file => handleImageUpload(file, 'screenshot'));
+                        e.target.value = '';
+                      }}
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                     />
                   </div>
@@ -858,8 +908,8 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                     <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Modpack ZIP File</label>
                     <div
                       className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${isDragging
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                          : 'border-gray-300 dark:border-gray-600'
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                        : 'border-gray-300 dark:border-gray-600'
                         }`}
                       onDragOver={handleDragOver}
                       onDragLeave={handleDragLeave}
