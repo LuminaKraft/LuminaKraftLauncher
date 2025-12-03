@@ -718,10 +718,10 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                     </div>
                     <div>
                       <p className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                        Drop your modpack ZIP here
+                        {t('publishModpack.upload.dragDrop')}
                       </p>
                       <p className="text-gray-500 dark:text-gray-400">
-                        Supports CurseForge format
+                        {t('publishModpack.upload.formatInfo')}
                       </p>
                     </div>
                   </>
