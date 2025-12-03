@@ -507,7 +507,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
     <div className="max-w-5xl mx-auto p-6">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
-          Publish Modpack
+          {t('publishModpack.title')}
         </h1>
         <div className="relative flex justify-between items-center w-full mb-8">
           <div className="absolute top-1/2 left-0 w-full h-1 bg-gray-200 dark:bg-gray-700 -z-10 rounded-full"></div>
@@ -547,7 +547,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
       {isCheckingAccess && (
         <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-8 shadow-md text-center mb-6">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Checking access permissions...</p>
+          <p className="text-gray-600 dark:text-gray-400">{t('publishModpack.checkingAccess')}</p>
         </div>
       )}
 
@@ -558,17 +558,17 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
             <AlertCircle className="w-6 h-6 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-1" />
             <div className="flex-1">
               <h3 className="text-lg font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
-                Discord Account Required
+                {t('publishModpack.alerts.discordRequired')}
               </h3>
               <p className="text-yellow-700 dark:text-yellow-300 mb-4">
-                You need to link your Discord account to publish modpacks.
+                {t('publishModpack.alerts.discordRequiredDesc')}
               </p>
               <button
                 onClick={handleLinkDiscord}
                 disabled={isLinkingDiscord}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 disabled:bg-yellow-500 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
               >
-                {isLinkingDiscord ? 'Linking Discord...' : 'Link Discord Account'}
+                {isLinkingDiscord ? t('publishModpack.buttons.linking') : t('publishModpack.buttons.linkDiscord')}
               </button>
             </div>
           </div>
@@ -582,10 +582,10 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
             <AlertCircle className="w-6 h-6 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-1" />
             <div className="flex-1">
               <h3 className="text-lg font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
-                Join Our Discord Server
+                {t('publishModpack.alerts.joinServer')}
               </h3>
               <p className="text-yellow-700 dark:text-yellow-300 mb-4">
-                You must be a member of the LuminaKraft Discord server to publish modpacks.
+                {t('publishModpack.alerts.joinServerDesc')}
               </p>
               <a
                 href="https://discord.gg/UJZRrcUFMj"
@@ -593,7 +593,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
               >
-                Join Discord Server
+                {t('publishModpack.buttons.joinDiscord')}
               </a>
             </div>
           </div>
@@ -607,13 +607,13 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
             <Info className="w-6 h-6 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-1" />
             <div className="flex-1">
               <h3 className="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-2">
-                Community Publishing Coming Soon
+                {t('publishModpack.alerts.comingSoonTitle')}
               </h3>
               <p className="text-blue-700 dark:text-blue-300 mb-2">
-                Community modpack publishing is currently disabled while we finalize the feature.
+                {t('publishModpack.alerts.comingSoonDesc')}
               </p>
               <p className="text-blue-700 dark:text-blue-300">
-                Currently, only <span className="font-semibold">Partners</span> and <span className="font-semibold">Admins</span> can publish modpacks. Stay tuned for updates!
+                {t('publishModpack.alerts.comingSoonNote')}
               </p>
             </div>
           </div>
@@ -626,7 +626,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
           <div className="space-y-6 animate-fade-in">
             {/* Coming Soon Status Checkbox */}
             <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
-              <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Modpack Status</h3>
+              <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">{t('publishModpack.status.title')}</h3>
               <div className="flex items-start gap-3">
                 <input
                   type="checkbox"
@@ -636,9 +636,9 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                   className="mt-1 w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
                 />
                 <label htmlFor="isComingSoon" className="flex-1 text-sm text-gray-700 dark:text-gray-300">
-                  <span className="font-medium text-gray-900 dark:text-white">Mark as Coming Soon</span>
+                  <span className="font-medium text-gray-900 dark:text-white">{t('publishModpack.status.comingSoon')}</span>
                   <p className="text-gray-600 dark:text-gray-400 mt-1">
-                    Coming Soon modpacks appear on the homepage but cannot be downloaded yet. The modpack ZIP file is optional for Coming Soon status.
+                    {t('publishModpack.status.comingSoonDesc')}
                   </p>
                 </label>
               </div>
@@ -1224,7 +1224,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                     <div className="py-4">
                       <ImageIcon className="w-10 h-10 text-gray-400 mx-auto mb-2" />
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {screenshotFiles.length >= 5 ? 'Maximum screenshots reached' : 'Click to upload screenshots'}
+                        {screenshotFiles.length >= 5 ? t('publishModpack.media.screenshotMax') : t('publishModpack.media.screenshotUpload')}
                       </p>
                       <p className="text-xs text-gray-500 mt-1">Select multiple files (Max 5)</p>
                     </div>

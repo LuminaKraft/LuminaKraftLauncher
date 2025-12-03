@@ -650,6 +650,8 @@
     "saving": "Guardando..."
   },
   "publishModpack": {
+    "title": "Publicar Modpack",
+    "checkingAccess": "Verificando permisos de acceso...",
     "steps": {
       "upload": "Subir",
       "uploadDesc": "Subir ZIP del modpack",
@@ -663,6 +665,173 @@
       "categoryDesc": "Seleccionar Categoría",
       "review": "Revisión",
       "reviewDesc": "Revisar y Publicar"
+    },
+    "status": {
+      "title": "Estado del Modpack",
+      "comingSoon": "Marcar como Próximamente",
+      "comingSoonDesc": "Los modpacks de próxima llegada aparecen en la página de inicio pero no se pueden descargar aún. El archivo ZIP es opcional para el estado de próxima llegada."
+    },
+    "upload": {
+      "title": "Subir ZIP del modpack",
+      "optional": "(Opcional)",
+      "parsing": "Analizando manifest.json...",
+      "parseSuccess": "Manifest analizado exitosamente",
+      "dragDrop": "Suelta tu ZIP del modpack aquí",
+      "dragDropAlt": "Arrastra y suelta tu archivo ZIP del modpack aquí, o haz clic para seleccionar",
+      "uploading": "Subiendo...",
+      "remove": "Eliminar archivo",
+      "formatInfo": "Soporta formato CurseForge"
+    },
+    "category": {
+      "title": "Categoría",
+      "official": "Modpack Oficial",
+      "officialDesc": "Modpacks oficiales de LuminaKraft gestionados por el equipo.",
+      "partner": "Modpack Partner",
+      "partnerDesc": "Modpacks exclusivos de partners verificados.",
+      "partnerInfo": "Partner: {{name}}",
+      "note": "La publicación de modpacks comunitarios está temporalmente deshabilitada. Solo administradores y partners verificados pueden publicar modpacks en este momento."
+    },
+    "basicInfo": {
+      "title": "Información Básica",
+      "name": "Nombre",
+      "nameRequired": "Nombre *",
+      "version": "Versión",
+      "versionRequired": "Versión *",
+      "minecraftVersion": "Versión de Minecraft",
+      "minecraftVersionRequired": "Versión de Minecraft *",
+      "modloader": "Modloader",
+      "modloaderRequired": "Modloader *",
+      "modloaderVersion": "Versión del Modloader",
+      "modloaderVersionRequired": "Versión del Modloader *",
+      "gamemode": "Modo de Juego (Opcional)",
+      "serverIp": "IP del Servidor (Opcional)",
+      "primaryColor": "Color Primario",
+      "autoFilled": "Completado automáticamente desde manifest.json",
+      "autoFilledOnUpload": "Se completarán automáticamente cuando subas un ZIP",
+      "example": "P.ej. 1.0.0"
+    },
+    "details": {
+      "title": "Detalles",
+      "technicalDetails": "Detalles Técnicos",
+      "shortDescription": "Descripción Corta",
+      "shortDescriptionRequired": "Descripción Corta *",
+      "shortDescriptionPlaceholder": "Una breve descripción...",
+      "shortDescriptionHelper": "Se muestra en las tarjetas de modpack",
+      "fullDescription": "Descripción Completa",
+      "fullDescriptionRequired": "Descripción Completa *",
+      "fullDescriptionPlaceholder": "Descripción completa...",
+      "fullDescriptionHelper": "Se soporta Markdown",
+      "features": "Características (Opcional)",
+      "noFeatures": "Sin características añadidas aún. Añade características para destacar qué hace único tu modpack.",
+      "addFeature": "Añadir Característica",
+      "featureTitle": "Título de la Característica",
+      "featureIcon": "Icono (FontAwesome)",
+      "featureIconExample": "p.ej. fa-star",
+      "featureDescription": "Descripción de la Característica"
+    },
+    "media": {
+      "title": "Multimedia",
+      "logo": "Logo",
+      "logoRequired": "Logo *",
+      "logoUpload": "Haz clic para subir logo",
+      "logoPreview": "Vista previa del logo",
+      "logoSize": "Recomendado: 512x512px",
+      "banner": "Banner",
+      "bannerRequired": "Banner *",
+      "bannerUpload": "Haz clic para subir banner",
+      "bannerPreview": "Vista previa del banner",
+      "bannerSize": "Recomendado: 1920x1080px",
+      "screenshots": "Capturas de Pantalla (Opcional) - Máx 5",
+      "screenshotUpload": "Haz clic para subir capturas de pantalla",
+      "screenshotMax": "Se ha alcanzado el máximo de capturas de pantalla",
+      "screenshotHelper": "Selecciona múltiples archivos (Máx 5)",
+      "maxScreenshots": "Solo puedes subir un máximo de 5 capturas de pantalla"
+    },
+    "review": {
+      "title": "Revisión",
+      "basicInfo": "Información Básica",
+      "files": "Archivos",
+      "description": "Descripción",
+      "features": "Características",
+      "name": "Nombre:",
+      "version": "Versión:",
+      "minecraft": "Minecraft:",
+      "modloader": "Modloader:",
+      "zip": "ZIP:",
+      "noZip": "Sin ZIP seleccionado",
+      "logo": "Logo:",
+      "logoUploaded": "Subido",
+      "logoNone": "Ninguno",
+      "banner": "Banner:",
+      "bannerUploaded": "Subido",
+      "bannerNone": "Ninguno",
+      "screenshots": "Capturas de Pantalla:",
+      "noDescription": "Sin descripción proporcionada.",
+      "noFeatures": "Sin características añadidas."
+    },
+    "language": {
+      "english": "English",
+      "spanish": "Español"
+    },
+    "modloaders": {
+      "forge": "Forge",
+      "fabric": "Fabric",
+      "neoforge": "NeoForge",
+      "quilt": "Quilt"
+    },
+    "buttons": {
+      "linkDiscord": "Vincular Cuenta de Discord",
+      "linking": "Vinculando Discord...",
+      "joinDiscord": "Unirse al Servidor Discord",
+      "cancel": "Cancelar",
+      "back": "Volver",
+      "nextStep": "Siguiente Paso",
+      "publish": "Publicar Modpack",
+      "downloading": "Descargando ZIP Actualizado",
+      "skipDownload": "Omitir Descarga",
+      "publishProgress": "Publicando... {{progress}}%"
+    },
+    "validation": {
+      "zipRequired": "Por favor selecciona un archivo ZIP",
+      "dropZip": "Por favor suelta un archivo ZIP",
+      "nameRequired": "El nombre es requerido en ambos idiomas",
+      "shortDescRequired": "La descripción corta es requerida en ambos idiomas",
+      "fullDescRequired": "La descripción completa es requerida en ambos idiomas",
+      "versionRequired": "La versión es requerida",
+      "minecraftVersionRequired": "La versión de Minecraft es requerida",
+      "modloaderVersionRequired": "La versión del modloader es requerida",
+      "zipFileRequired": "El archivo ZIP es requerido para modpacks activos",
+      "zipFileOptionalMessage": "Por favor sube un archivo ZIP del modpack (opcional para modpacks de próxima llegada)",
+      "logoRequired": "El logo es requerido para todos los modpacks",
+      "bannerRequired": "El banner es requerido para todos los modpacks",
+      "categoryRequired": "Por favor selecciona una categoría para el modpack",
+      "allVersionsRequired": "Todos los campos de versión son requeridos",
+      "discordMemberRequired": "Debes ser miembro del servidor Discord para publicar modpacks",
+      "permissionError": "Error al verificar permisos. Por favor intenta de nuevo."
+    },
+    "messages": {
+      "preparing": "Preparando archivos...",
+      "creating": "Creando ZIP del modpack actualizado...",
+      "success": "Modpack actualizado guardado en Descargas: {{filename}}",
+      "validatedWith": "Modpack validado con {{count}} archivo(s) adicional(es)",
+      "published": "¡Modpack publicado exitosamente!",
+      "createError": "Error creando modpack: {{error}}",
+      "uploadError": "Error subiendo archivo: {{error}}"
+    },
+    "dialogs": {
+      "downloadTitle": "¿Descargar Modpack Actualizado?",
+      "downloadMessage": "Has subido {{count}} archivo(s) para anular archivos en el modpack original. ¿Te gustaría descargar un ZIP actualizado con tus cambios?",
+      "downloadButton": "Descargar ZIP Actualizado",
+      "skipButton": "Omitir Descarga"
+    },
+    "alerts": {
+      "discordRequired": "Cuenta de Discord Requerida",
+      "discordRequiredDesc": "Necesitas vincular tu cuenta de Discord para publicar modpacks.",
+      "joinServer": "Unirse al Servidor de Discord",
+      "joinServerDesc": "Debes ser miembro del servidor Discord de LuminaKraft para publicar modpacks.",
+      "comingSoonTitle": "Publicación Comunitaria Próximamente",
+      "comingSoonDesc": "La publicación comunitaria de modpacks está actualmente deshabilitada mientras finalizamos la función.",
+      "comingSoonNote": "Actualmente, solo <strong>Partners</strong> y <strong>Administradores</strong> pueden publicar modpacks. ¡Mantente atento para actualizaciones!"
     }
   }
 }
