@@ -467,7 +467,7 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
           {canManage && (
             <button
               onClick={() => onNavigate?.('publish-modpack')}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+              className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
             >
               <Plus className="w-5 h-5" />
               {t('publishedModpacks.publishNew')}
