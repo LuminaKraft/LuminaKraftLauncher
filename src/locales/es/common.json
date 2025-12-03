@@ -748,11 +748,11 @@
       "bannerPreview": "Vista previa del banner",
       "bannerSize": "Recomendado: 1920x1080px",
       "screenshots": "Capturas de Pantalla",
-      "screenshotsOptional": "(Opcional) - Máx 5",
+      "screenshotsOptional": "(Opcional) - Máx 6",
       "screenshotUpload": "Haz clic para subir capturas de pantalla",
-      "screenshotMax": "Se ha alcanzado el máximo de capturas de pantalla",
-      "screenshotHelper": "Selecciona múltiples archivos (Máx 5)",
-      "maxScreenshots": "Solo puedes subir un máximo de 5 capturas de pantalla"
+      "screenshotMax": "Máximo de 6 capturas de pantalla alcanzado",
+      "screenshotHelper": "Selecciona múltiples archivos (Máx 6)",
+      "maxScreenshots": "Solo puedes subir un máximo de 6 capturas de pantalla"
     },
     "review": {
       "title": "Revisión",

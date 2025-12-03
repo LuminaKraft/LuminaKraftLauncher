@@ -749,11 +749,11 @@
       "bannerPreview": "Banner preview",
       "bannerSize": "Recommended: 1920x1080px",
       "screenshots": "Screenshots",
-      "screenshotsOptional": "(Optional) - Max 5",
+      "screenshotsOptional": "(Optional) - Max 6",
       "screenshotUpload": "Click to upload screenshots",
-      "screenshotMax": "Maximum screenshots reached",
-      "screenshotHelper": "Select multiple files (Max 5)",
-      "maxScreenshots": "You can only upload a maximum of 5 screenshots"
+      "screenshotMax": "Maximum 6 screenshots reached",
+      "screenshotHelper": "Select multiple files (Max 6)",
+      "maxScreenshots": "You can only upload a maximum of 6 screenshots"
     },
     "review": {
       "title": "Review",

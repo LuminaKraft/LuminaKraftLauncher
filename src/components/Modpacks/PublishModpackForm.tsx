@@ -68,6 +68,9 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isDraggingLogo, setIsDraggingLogo] = useState(false);
+  const [isDraggingBanner, setIsDraggingBanner] = useState(false);
+  const [isDraggingScreenshots, setIsDraggingScreenshots] = useState(false);
   const [currentLang, setCurrentLang] = useState<'en' | 'es'>('en');
   const [currentStep, setCurrentStep] = useState(1);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -666,77 +669,77 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                 className={`
               relative border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-all duration-200
               ${isDragging
-                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 scale-[1.02]'
-                  : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-gray-50 dark:hover:bg-gray-800/50'
-                }
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 scale-[1.02]'
+                    : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                  }
             `}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".zip"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleZipFile(file);
-                }}
-                className="hidden"
-                required
-              />
-              <div className="flex flex-col items-center gap-4">
-                {isParsing ? (
-                  <>
-                    <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600"></div>
-                    <p className="text-lg text-gray-600 dark:text-gray-400 font-medium">Parsing manifest.json...</p>
-                  </>
-                ) : zipFile ? (
-                  <>
-                    <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-2">
-                      <FileArchive className="w-10 h-10 text-green-600 dark:text-green-400" />
-                    </div>
-                    <div>
-                      <p className="text-xl font-bold text-gray-900 dark:text-white mb-1">
-                        {zipFile.name}
-                      </p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {(zipFile.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
-                      {manifestParsed && (
-                        <div className="flex items-center justify-center gap-2 mt-3 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-full text-sm font-medium">
-                          <Check className="w-4 h-4" />
-                          <span>Manifest parsed successfully</span>
-                        </div>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setZipFile(null);
-                        resetValidation();
-                        if (fileInputRef.current) fileInputRef.current.value = '';
-                      }}
-                      className="mt-4 px-4 py-2 text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                    >
-                      Remove file
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-                      <Upload className="w-10 h-10 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <div>
-                      <p className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                        {t('publishModpack.upload.dragDrop')}
-                      </p>
-                      <p className="text-gray-500 dark:text-gray-400">
-                        {t('publishModpack.upload.formatInfo')}
-                      </p>
-                    </div>
-                  </>
-                )}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".zip"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleZipFile(file);
+                  }}
+                  className="hidden"
+                  required
+                />
+                <div className="flex flex-col items-center gap-4">
+                  {isParsing ? (
+                    <>
+                      <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600"></div>
+                      <p className="text-lg text-gray-600 dark:text-gray-400 font-medium">Parsing manifest.json...</p>
+                    </>
+                  ) : zipFile ? (
+                    <>
+                      <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-2">
+                        <FileArchive className="w-10 h-10 text-green-600 dark:text-green-400" />
+                      </div>
+                      <div>
+                        <p className="text-xl font-bold text-gray-900 dark:text-white mb-1">
+                          {zipFile.name}
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {(zipFile.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                        {manifestParsed && (
+                          <div className="flex items-center justify-center gap-2 mt-3 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-full text-sm font-medium">
+                            <Check className="w-4 h-4" />
+                            <span>Manifest parsed successfully</span>
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setZipFile(null);
+                          resetValidation();
+                          if (fileInputRef.current) fileInputRef.current.value = '';
+                        }}
+                        className="mt-4 px-4 py-2 text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                      >
+                        Remove file
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                        <Upload className="w-10 h-10 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <div>
+                        <p className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                          {t('publishModpack.upload.dragDrop')}
+                        </p>
+                        <p className="text-gray-500 dark:text-gray-400">
+                          {t('publishModpack.upload.formatInfo')}
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
             </div>
 
             {isUploading && (
@@ -1150,7 +1153,22 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                     <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
                       Logo <span className="text-red-500">*</span>
                     </label>
-                    <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer relative group h-48 flex flex-col items-center justify-center">
+                    <div
+                      onDragOver={(e) => { e.preventDefault(); setIsDraggingLogo(true); }}
+                      onDragLeave={(e) => { e.preventDefault(); setIsDraggingLogo(false); }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setIsDraggingLogo(false);
+                        const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+                        if (files.length > 0) {
+                          setLogoFile(files[0]);
+                        }
+                      }}
+                      className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors cursor-pointer relative group h-48 flex flex-col items-center justify-center ${isDraggingLogo
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                          : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                        }`}
+                    >
                       <input
                         type="file"
                         accept="image/*"
@@ -1180,7 +1198,22 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                     <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
                       Banner <span className="text-red-500">*</span>
                     </label>
-                    <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer relative group h-48 flex flex-col items-center justify-center">
+                    <div
+                      onDragOver={(e) => { e.preventDefault(); setIsDraggingBanner(true); }}
+                      onDragLeave={(e) => { e.preventDefault(); setIsDraggingBanner(false); }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setIsDraggingBanner(false);
+                        const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+                        if (files.length > 0) {
+                          setBannerFile(files[0]);
+                        }
+                      }}
+                      className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors cursor-pointer relative group h-48 flex flex-col items-center justify-center ${isDraggingBanner
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                          : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                        }`}
+                    >
                       <input
                         type="file"
                         accept="image/*"
@@ -1212,27 +1245,38 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                   <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
                     {t('publishModpack.media.screenshots')} {t('publishModpack.media.screenshotsOptional')}
                   </label>
-                  <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer relative">
+                  <div
+                    onDragOver={(e) => { e.preventDefault(); setIsDraggingScreenshots(true); }}
+                    onDragLeave={(e) => { e.preventDefault(); setIsDraggingScreenshots(false); }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setIsDraggingScreenshots(false);
+                      const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+                      if (files.length > 0) {
+                        setScreenshotFiles(prev => [...prev, ...files].slice(0, 6));
+                      }
+                    }}
+                    className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer relative ${isDraggingScreenshots
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                      : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                      }`}
+                  >
                     <input
                       type="file"
                       accept="image/*"
                       multiple
                       onChange={(e) => {
                         const newFiles = Array.from(e.target.files || []);
-                        if (screenshotFiles.length + newFiles.length > 5) {
-                          toast.error('You can only upload a maximum of 5 screenshots');
-                        }
-                        setScreenshotFiles(prev => [...prev, ...newFiles].slice(0, 5));
-                        // Reset input value to allow selecting the same file again if needed
+                        setScreenshotFiles(prev => [...prev, ...newFiles].slice(0, 6));
                         e.target.value = '';
                       }}
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                      disabled={screenshotFiles.length >= 5}
+                      disabled={screenshotFiles.length >= 6}
                     />
                     <div className="py-4">
                       <ImageIcon className="w-10 h-10 text-gray-400 mx-auto mb-2" />
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {screenshotFiles.length >= 5 ? t('publishModpack.media.screenshotMax') : t('publishModpack.media.screenshotUpload')}
+                        {screenshotFiles.length >= 6 ? t('publishModpack.media.screenshotMax') : t('publishModpack.media.screenshotUpload')}
                       </p>
                       <p className="text-xs text-gray-500 mt-1">{t('publishModpack.media.screenshotHelper')}</p>
                     </div>
