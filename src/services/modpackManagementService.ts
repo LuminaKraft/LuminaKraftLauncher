@@ -214,7 +214,8 @@ export class ModpackManagementService {
           primary_color: modpackData.primaryColor || null,
           author_id: userData.id,
           partner_id: userData.partner_id, // Save partner_id if available
-          upload_status: 'pending',
+          // Coming soon modpacks don't need a ZIP file, so mark as completed immediately
+          upload_status: modpackData.isComingSoon ? 'completed' : 'pending',
           is_active: false, // Activate after uploading files
           is_coming_soon: modpackData.isComingSoon || false,
         } as any)
