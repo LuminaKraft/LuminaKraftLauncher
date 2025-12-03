@@ -53,6 +53,28 @@ export function MyModpacksPage() {
     loadInstancesAndMetadata();
   }, []);
 
+  // Listen for installation state changes and reload
+  useEffect(() => {
+    const installingIds = Object.entries(modpackStates)
+      .filter(([_, state]) => state.status === 'installing')
+      .map(([id]) => id);
+
+    const installedIds = Object.entries(modpackStates)
+      .filter(([_, state]) => state.status === 'installed')
+      .map(([id]) => id);
+
+    // If a modpack just finished installing, reload the list
+    if (installingIds.length === 0 && installedIds.length > 0) {
+      const recentlyInstalled = installedIds.some(
+        id => !instances.some(i => i.id === id)
+      );
+
+      if (recentlyInstalled) {
+        loadInstancesAndMetadata();
+      }
+    }
+  }, [modpackStates, instances]);
+
   /**
    * Load instances and their metadata (cache-first approach)
    */
@@ -67,33 +89,44 @@ export function MyModpacksPage() {
 
       // Step 2: Load metadata for each instance (cache-first)
       const dataMap = new Map<string, Modpack>();
+
+      // Also load data for currently installing modpacks
+      const installingIds = Object.entries(modpackStates)
+        .filter(([_, state]) => state.status === 'installing')
+        .map(([id]) => id);
+
+      const allIdsToLoad = [...new Set([
+        ...parsedInstances.map(i => i.id),
+        ...installingIds
+      ])];
+
       await Promise.all(
-        parsedInstances.map(async (instance) => {
+        allIdsToLoad.map(async (id) => {
           try {
             // Try cache first
             const cachedData = await invoke<string | null>('get_cached_modpack_data', {
-              modpackId: instance.id
+              modpackId: id
             });
 
             if (cachedData) {
               // Cache hit - use cached data
               const modpack = JSON.parse(cachedData) as Modpack;
-              dataMap.set(instance.id, modpack);
+              dataMap.set(id, modpack);
               return;
             }
 
             // Cache miss - try Supabase
             try {
-              const modpack = await launcherService.fetchModpackDetails(instance.id);
+              const modpack = await launcherService.fetchModpackDetails(id);
               if (modpack) {
-                dataMap.set(instance.id, modpack);
+                dataMap.set(id, modpack);
               }
             } catch (supabaseError) {
               // Supabase also failed - log but don't block
-              console.log(`Could not fetch details for ${instance.id} from cache or Supabase`);
+              console.log(`Could not fetch details for ${id} from cache or Supabase`);
             }
           } catch (error) {
-            console.error(`Error loading metadata for ${instance.id}:`, error);
+            console.error(`Error loading metadata for ${id}:`, error);
           }
         })
       );
@@ -419,9 +452,11 @@ export function MyModpacksPage() {
             {/* Installing modpacks */}
             {installingIds.map((id, index) => {
               const state = modpackStates[id];
-              const cachedData = modpackDataMap.get(id);
+              const modpackData = modpackDataMap.get(id);
 
-              const modpack: Modpack = cachedData || {
+              // If we have data from cache/Supabase (from Explore), use it
+              // Only show "Importing" placeholder if NO data (local ZIP import)
+              const modpack: Modpack = modpackData ? modpackData : {
                 id,
                 name: t('myModpacks.importing.name'),
                 description: t('myModpacks.importing.description'),
