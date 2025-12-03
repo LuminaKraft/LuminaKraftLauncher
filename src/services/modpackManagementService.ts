@@ -401,17 +401,21 @@ export class ModpackManagementService {
       if (updates.isComingSoon !== undefined) updateData.is_coming_soon = updates.isComingSoon;
       if (updates.isActive !== undefined) {
         updateData.is_active = updates.isActive;
-        // Set published_at when making modpack public for the first time
+        // Set published_at and upload_status when making modpack public for the first time
         if (updates.isActive) {
           // Check if published_at is already set
           const { data: modpack } = await supabase
             .from('modpacks')
-            .select('published_at')
+            .select('published_at, upload_status')
             .eq('id', modpackId)
             .single();
 
           if (modpack && !(modpack as any).published_at) {
             updateData.published_at = new Date().toISOString();
+          }
+          // Ensure upload_status is 'completed' so modpack is visible in public listings
+          if (modpack && (modpack as any).upload_status !== 'completed') {
+            updateData.upload_status = 'completed';
           }
         }
       }
@@ -945,7 +949,7 @@ export class ModpackManagementService {
     try {
       const { data: modpack } = await supabase
         .from('modpacks')
-        .select('modpack_file_url, logo_url, banner_url')
+        .select('logo_url, banner_url, is_coming_soon')
         .eq('id', modpackId)
         .single();
 
@@ -953,10 +957,20 @@ export class ModpackManagementService {
         return { canActivate: false, error: 'Modpack not found' };
       }
 
-      // Validate required fields for activation
-      if (!(modpack as any).modpack_file_url) {
-        return { canActivate: false, error: 'ZIP file is required to activate modpack' };
+      // Coming soon modpacks don't need a ZIP file
+      if (!(modpack as any).is_coming_soon) {
+        // For non-coming-soon modpacks, check if there's a modpack version with a file
+        const { data: versions } = await supabase
+          .from('modpack_versions')
+          .select('file_url')
+          .eq('modpack_id', modpackId)
+          .limit(1);
+
+        if (!versions || versions.length === 0 || !versions[0].file_url) {
+          return { canActivate: false, error: 'ZIP file is required to activate modpack' };
+        }
       }
+
       if (!(modpack as any).logo_url) {
         return { canActivate: false, error: 'Logo is required' };
       }

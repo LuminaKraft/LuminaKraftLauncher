@@ -225,6 +225,22 @@ class LauncherService {
         console.log('📦 Raw modpack data sample:', data[0]);
       }
 
+      // Fetch stats for all modpacks in parallel
+      const statsMap = new Map<string, any>();
+      if (data && data.length > 0) {
+        const statsPromises = data.map((modpack: any) =>
+          supabase.rpc('get_modpack_aggregate_stats', { p_modpack_id: modpack.id } as any)
+            .then((result: any) => {
+              if (result.data) {
+                statsMap.set(modpack.id, result.data);
+              }
+              return null;
+            })
+            .catch(() => null) // Silently fail for stats
+        );
+        await Promise.all(statsPromises);
+      }
+
       const modpacks = data?.map((modpack: any) => ({
         id: modpack.id,
         slug: modpack.slug,
@@ -251,6 +267,7 @@ class LauncherService {
         partnerId: modpack.partner_id || modpackPartnerMap.get(modpack.id),
         partnerName: (modpack.partner_id || modpackPartnerMap.get(modpack.id)) ? partnersMap.get(modpack.partner_id || modpackPartnerMap.get(modpack.id)) : undefined,
         publishedAt: modpack.published_at,
+        downloads: statsMap.get(modpack.id)?.total_downloads || 0,
       })) || [];
 
       this.modpacksData = { modpacks };
