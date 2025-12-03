@@ -117,7 +117,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
                   key={modpack.id}
                   modpack={modpack}
                   state={state}
-                  onSelect={() => onNavigate?.('explore', modpack.id)}
+                  onSelect={() => onNavigate?.('home-modpack-details', modpack.id)}
                   index={index}
                 />
               );
@@ -148,7 +148,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
                   key={modpack.id}
                   modpack={modpack}
                   state={state}
-                  onSelect={() => onNavigate?.('explore', modpack.id)}
+                  onSelect={() => onNavigate?.('home-modpack-details', modpack.id)}
                   index={index}
                 />
               );
@@ -185,7 +185,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
                   key={modpack.id}
                   modpack={modpack}
                   state={state}
-                  onSelect={() => onNavigate?.('explore', modpack.id)}
+                  onSelect={() => onNavigate?.('home-modpack-details', modpack.id)}
                   index={index}
                 />
               );
@@ -228,7 +228,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
                   key={modpack.id}
                   modpack={modpack}
                   state={state}
-                  onSelect={() => onNavigate?.('explore', modpack.id)}
+                  onSelect={() => onNavigate?.('home-modpack-details', modpack.id)}
                   index={index}
                 />
               );
