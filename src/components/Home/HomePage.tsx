@@ -117,7 +117,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
                   key={modpack.id}
                   modpack={modpack}
                   state={state}
-                  onSelect={() => onNavigate?.('explore', modpack.id)}
+                  onSelect={() => onNavigate?.('my-modpacks', modpack.id)}
                   index={index}
                   isReadOnly={false}
                   onNavigateToMyModpacks={() => onNavigate?.('my-modpacks')}
