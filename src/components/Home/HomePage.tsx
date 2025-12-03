@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowRight, Newspaper, Clock } from 'lucide-react';
+import { ArrowRight, Clock, Play } from 'lucide-react';
 import ModpackCard from '../Modpacks/ModpackCard';
 import { Modpack } from '../../types/launcher';
 import LauncherService from '../../services/launcherService';
@@ -15,6 +15,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
   const { modpackStates } = useLauncher();
   const [comingSoonModpacks, setComingSoonModpacks] = useState<Modpack[]>([]);
   const [featuredModpacks, setFeaturedModpacks] = useState<Modpack[]>([]);
+  const [discoverModpacks, setDiscoverModpacks] = useState<Modpack[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -29,15 +30,6 @@ export function HomePage({ onNavigate }: HomePageProps) {
       const allModpacks = data.modpacks;
 
       if (allModpacks && allModpacks.length > 0) {
-
-        console.log('All modpacks:', allModpacks.map(m => ({
-          name: m.name,
-          category: m.category,
-          isActive: m.isActive,
-          isComingSoon: m.isComingSoon,
-          isNew: m.isNew
-        })));
-
         // Filter Coming Soon modpacks (active + coming soon)
         const comingSoon = allModpacks.filter(
           modpack => modpack.isActive && modpack.isComingSoon
@@ -48,17 +40,21 @@ export function HomePage({ onNavigate }: HomePageProps) {
         const featured = allModpacks
           .filter(
             modpack => modpack.isActive && !modpack.isComingSoon &&
-            (modpack.category === 'official' || modpack.category === 'partner' || modpack.isNew)
+              (modpack.category === 'official' || modpack.category === 'partner' || modpack.isNew)
           )
           .sort((a, b) => (b.downloads || 0) - (a.downloads || 0)); // Sort by downloads descending
 
-        console.log('Featured modpacks:', featured.map(m => ({
-          name: m.name,
-          category: m.category,
-          downloads: m.downloads
-        })));
-
         setFeaturedModpacks(featured);
+
+        // Get random modpacks for discover section (active + NOT coming soon + NOT in featured)
+        const availableForDiscover = allModpacks.filter(
+          modpack => modpack.isActive && !modpack.isComingSoon &&
+            !featured.some(f => f.id === modpack.id)
+        );
+
+        // Shuffle and take 4
+        const shuffled = [...availableForDiscover].sort(() => Math.random() - 0.5);
+        setDiscoverModpacks(shuffled.slice(0, 4));
       }
     } catch (error) {
       console.error('Error loading homepage data:', error);
@@ -66,6 +62,16 @@ export function HomePage({ onNavigate }: HomePageProps) {
       setLoading(false);
     }
   };
+
+  // Get recently played instances
+  const recentInstances = useMemo(() => {
+    const installed = Object.entries(modpackStates)
+      .filter(([_, state]) => state.installed)
+      .map(([id]) => id)
+      .slice(0, 3); // Get top 3
+
+    return installed;
+  }, [modpackStates]);
 
   if (loading) {
     return (
@@ -76,26 +82,46 @@ export function HomePage({ onNavigate }: HomePageProps) {
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-12">
-      {/* Hero Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-8 text-white">
-        <h1 className="text-4xl font-bold mb-4">{t('home.hero.title')}</h1>
-        <p className="text-xl opacity-90">{t('home.hero.subtitle')}</p>
+    <div className="max-w-7xl mx-auto p-6 space-y-8">
+      {/* Minimal Hero Section - More professional */}
+      <div className="mb-2">
+        <h1 className="text-3xl font-bold text-white mb-1">{t('home.hero.title')}</h1>
+        <p className="text-sm text-gray-400">{t('home.hero.subtitle')}</p>
       </div>
 
-      {/* News Section (Placeholder) - Hidden for now */}
-      {false && (
+      {/* Jump back in Section */}
+      {recentInstances.length > 0 && (
         <section>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <Newspaper className="w-6 h-6" />
-              {t('home.news.title')}
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <Play className="w-5 h-5" />
+              {t('home.jumpBackIn.title')}
             </h2>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-8 shadow-sm border border-gray-200 dark:border-gray-700">
-            <p className="text-gray-500 dark:text-gray-400 text-center">
-              {t('home.news.placeholder')}
-            </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {recentInstances.map((modpackId, index) => {
+              const modpack = [...featuredModpacks, ...comingSoonModpacks, ...discoverModpacks]
+                .find(m => m.id === modpackId);
+
+              if (!modpack) return null;
+
+              const state = modpackStates[modpack.id] || {
+                installed: false,
+                downloading: false,
+                progress: { percentage: 0 },
+                status: 'not_installed' as const
+              };
+
+              return (
+                <ModpackCard
+                  key={modpack.id}
+                  modpack={modpack}
+                  state={state}
+                  onSelect={() => onNavigate?.('explore', modpack.id)}
+                  index={index}
+                />
+              );
+            })}
           </div>
         </section>
       )}
@@ -103,14 +129,14 @@ export function HomePage({ onNavigate }: HomePageProps) {
       {/* Coming Soon Section */}
       {comingSoonModpacks.length > 0 && (
         <section>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <Clock className="w-6 h-6" />
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <Clock className="w-5 h-5" />
               {t('home.comingSoon.title')}
             </h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {comingSoonModpacks.map(modpack => {
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {comingSoonModpacks.slice(0, 4).map((modpack, index) => {
               const state = modpackStates[modpack.id] || {
                 installed: false,
                 downloading: false,
@@ -123,6 +149,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
                   modpack={modpack}
                   state={state}
                   onSelect={() => onNavigate?.('explore', modpack.id)}
+                  index={index}
                 />
               );
             })}
@@ -132,21 +159,21 @@ export function HomePage({ onNavigate }: HomePageProps) {
 
       {/* Featured Section */}
       <section>
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-white">
             {t('home.featured.title')}
           </h2>
           <button
             onClick={() => onNavigate?.('explore')}
-            className="flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:underline font-medium group"
+            className="flex items-center gap-2 text-blue-400 hover:text-blue-300 font-medium group transition-colors duration-150"
           >
             {t('home.viewAll')}
-            <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
+            <ArrowRight className="w-4 h-4 transition-transform duration-150 group-hover:translate-x-1" />
           </button>
         </div>
         {featuredModpacks.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featuredModpacks.slice(0, 6).map(modpack => {
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {featuredModpacks.slice(0, 6).map((modpack, index) => {
               const state = modpackStates[modpack.id] || {
                 installed: false,
                 downloading: false,
@@ -159,18 +186,56 @@ export function HomePage({ onNavigate }: HomePageProps) {
                   modpack={modpack}
                   state={state}
                   onSelect={() => onNavigate?.('explore', modpack.id)}
+                  index={index}
                 />
               );
             })}
           </div>
         ) : (
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-8 shadow-sm border border-gray-200 dark:border-gray-700">
-            <p className="text-gray-500 dark:text-gray-400 text-center">
+          <div className="bg-dark-800 rounded-lg p-8 border border-dark-700">
+            <p className="text-gray-400 text-center">
               {t('home.featured.empty')}
             </p>
           </div>
         )}
       </section>
+
+      {/* Discover Section */}
+      {discoverModpacks.length > 0 && (
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-white">
+              {t('home.discover.title')}
+            </h2>
+            <button
+              onClick={() => onNavigate?.('explore')}
+              className="flex items-center gap-2 text-blue-400 hover:text-blue-300 font-medium group transition-colors duration-150"
+            >
+              {t('home.discover.viewAll')}
+              <ArrowRight className="w-4 h-4 transition-transform duration-150 group-hover:translate-x-1" />
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {discoverModpacks.map((modpack, index) => {
+              const state = modpackStates[modpack.id] || {
+                installed: false,
+                downloading: false,
+                progress: { percentage: 0 },
+                status: 'not_installed' as const
+              };
+              return (
+                <ModpackCard
+                  key={modpack.id}
+                  modpack={modpack}
+                  state={state}
+                  onSelect={() => onNavigate?.('explore', modpack.id)}
+                  index={index}
+                />
+              );
+            })}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

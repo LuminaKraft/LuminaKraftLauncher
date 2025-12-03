@@ -40,8 +40,18 @@
   },
   "home": {
     "hero": {
-      "title": "Bienvenido a LuminaKraft Launcher",
-      "subtitle": "Descubre modpacks increíbles y únete a nuestra comunidad"
+      "title": "¡Bienvenido de nuevo!",
+      "subtitle": "Continúa jugando"
+    },
+    "jumpBackIn": {
+      "title": "Continúa jugando",
+      "empty": "No hay instancias recientes",
+      "lastPlayed": "Última vez {{time}}",
+      "neverPlayed": "Nunca jugado"
+    },
+    "discover": {
+      "title": "Descubre un modpack",
+      "viewAll": "Ver todos los modpacks"
     },
     "news": {
       "title": "Noticias y Anuncios",
