@@ -112,9 +112,6 @@ export function HomePage({ onNavigate }: HomePageProps) {
                 status: 'not_installed' as const
               };
 
-              // Don't use read-only mode if the modpack is currently running
-              const isReadOnly = state.status !== 'running';
-
               return (
                 <ModpackCard
                   key={modpack.id}
@@ -122,7 +119,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
                   state={state}
                   onSelect={() => onNavigate?.('explore', modpack.id)}
                   index={index}
-                  isReadOnly={isReadOnly}
+                  isReadOnly={true}
                   onNavigateToMyModpacks={() => onNavigate?.('my-modpacks')}
                 />
               );
