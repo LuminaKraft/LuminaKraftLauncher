@@ -69,6 +69,16 @@ const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect
     }
   };
 
+  const handleInstall = () => {
+    // Save full modpack data to localStorage so MyModpacksPage can use it during installation
+    try {
+      localStorage.setItem(`installing_modpack_${modpack.id}`, JSON.stringify(modpack));
+    } catch (error) {
+      console.error('Failed to save modpack to localStorage:', error);
+    }
+    installModpack(modpack.id);
+  };
+
   const getButtonConfig = () => {
     const hasValidIp = modpack.ip && modpack.ip.trim() !== '';
 
@@ -100,7 +110,7 @@ const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect
         text: t('modpacks.install'),
         icon: Download,
         onClick: () => {
-          installModpack(modpack.id);
+          handleInstall();
           if (onNavigateToMyModpacks) {
             onNavigateToMyModpacks();
           }
@@ -116,7 +126,7 @@ const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect
         return {
           text: t('modpacks.install'),
           icon: Download,
-          onClick: () => installModpack(modpack.id),
+          onClick: () => handleInstall(),
           className: 'btn-primary',
           disabled: false
         };
@@ -204,7 +214,7 @@ const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect
         return {
           text: t('modpacks.install'),
           icon: Download,
-          onClick: () => installModpack(modpack.id),
+          onClick: () => handleInstall(),
           className: 'btn-primary',
           disabled: false
         };
