@@ -916,7 +916,12 @@ async fn install_modpack_from_local_zip(
 
             // Use existing install logic with progress
             launcher::install_modpack_with_shared_storage(local_modpack, settings, emit_progress).await?;
-            .map_err(|e: anyhow::Error| format!("Failed to install modpack from local ZIP: {}", e))
+            Ok(())
+        })
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
+    .map_err(|e: anyhow::Error| format!("Failed to install modpack from local ZIP: {}", e))
 }
 
 #[tauri::command]
