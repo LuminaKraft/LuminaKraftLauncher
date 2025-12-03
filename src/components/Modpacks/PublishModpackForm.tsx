@@ -172,6 +172,15 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
     initializeAndSync();
   }, []);
 
+  useEffect(() => {
+    // Set default category based on user role
+    if (userRole === 'admin' && !formData.category) {
+      setFormData(prev => ({ ...prev, category: 'official' }));
+    } else if (userRole === 'partner' && !formData.category) {
+      setFormData(prev => ({ ...prev, category: 'partner' }));
+    }
+  }, [userRole]);
+
   const updateFormData = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -769,10 +778,10 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                       <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg text-blue-600 dark:text-blue-400">
                         <Package className="w-6 h-6" />
                       </div>
-                      <h3 className="font-semibold text-gray-900 dark:text-white">Official Modpack</h3>
+                      <h3 className="font-semibold text-gray-900 dark:text-white">{t('publishModpack.category.official')}</h3>
                     </div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Official LuminaKraft modpacks managed by the team.
+                      {t('publishModpack.category.officialDesc')}
                     </p>
                   </div>
                 )}
@@ -789,13 +798,13 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                       <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg text-purple-600 dark:text-purple-400">
                         <Layers className="w-6 h-6" />
                       </div>
-                      <h3 className="font-semibold text-gray-900 dark:text-white">Partner Modpack</h3>
+                      <h3 className="font-semibold text-gray-900 dark:text-white">{t('publishModpack.category.partner')}</h3>
                     </div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Exclusive modpacks from verified partners.
+                      {t('publishModpack.category.partnerDesc')}
                       {partnerName && (
                         <span className="block mt-1 font-medium text-purple-600 dark:text-purple-400">
-                          Partner: {partnerName}
+                          {t('publishModpack.category.partnerInfo', { name: partnerName })}
                         </span>
                       )}
                     </p>
