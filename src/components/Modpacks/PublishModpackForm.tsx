@@ -806,8 +806,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
               {/* Community publishing disabled notice */}
               <div className="mt-6 bg-gray-50 dark:bg-gray-700/30 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
                 <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
-                  <span className="font-medium text-gray-700 dark:text-gray-300">Community modpack publishing</span> is temporarily disabled.
-                  Only admins and verified partners can publish modpacks at this time.
+                  {t('publishModpack.category.note')}
                 </p>
               </div>
             </div>
@@ -1268,10 +1267,10 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                   <div>
                     <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">{t('publishModpack.review.basicInfo')}</h3>
                     <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 space-y-2">
-                      <p><span className="font-medium">Name:</span> {formData.name.en}</p>
-                      <p><span className="font-medium">Version:</span> {formData.version}</p>
-                      <p><span className="font-medium">Minecraft:</span> {formData.minecraftVersion}</p>
-                      <p><span className="font-medium">Modloader:</span> {formData.modloader} {formData.modloaderVersion}</p>
+                      <p><span className="font-medium">{t('publishModpack.review.labels.name')}</span> {formData.name[currentLang]}</p>
+                      <p><span className="font-medium">{t('publishModpack.review.labels.version')}</span> {formData.version}</p>
+                      <p><span className="font-medium">{t('publishModpack.review.labels.minecraft')}</span> {formData.minecraftVersion}</p>
+                      <p><span className="font-medium">{t('publishModpack.review.labels.modloader')}</span> {formData.modloader} {formData.modloaderVersion}</p>
                     </div>
                   </div>
                   <div>
@@ -1283,15 +1282,15 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                       </p>
                       <p className="flex items-center gap-2">
                         <ImageIcon className="w-4 h-4" />
-                        Logo: {logoFile ? 'Uploaded' : 'None'}
+                        {t('publishModpack.review.labels.logo')} {logoFile ? t('publishModpack.review.values.uploaded') : t('publishModpack.review.values.none')}
                       </p>
                       <p className="flex items-center gap-2">
                         <ImageIcon className="w-4 h-4" />
-                        Banner: {bannerFile ? 'Uploaded' : 'None'}
+                        {t('publishModpack.review.labels.banner')} {bannerFile ? t('publishModpack.review.values.uploaded') : t('publishModpack.review.values.none')}
                       </p>
                       <p className="flex items-center gap-2">
                         <ImageIcon className="w-4 h-4" />
-                        Screenshots: {screenshotFiles.length}
+                        {t('publishModpack.review.labels.screenshots')} {screenshotFiles.length}
                       </p>
                     </div>
                   </div>
@@ -1299,7 +1298,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                 <div>
                   <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">{t('publishModpack.review.description')}</h3>
                   <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
-                    <p className="line-clamp-3 text-gray-600 dark:text-gray-300">{formData.description.en || t('publishModpack.review.noDescription')}</p>
+                    <p className="line-clamp-3 text-gray-600 dark:text-gray-300">{formData.description[currentLang] || t('publishModpack.review.noDescription')}</p>
                   </div>
                 </div>
                 <div>
@@ -1309,8 +1308,8 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                       <ul className="list-disc list-inside">
                         {formData.features.map((f, i) => (
                           <li key={i}>
-                            <span className="font-medium">{f.title.en}</span>
-                            {f.title.es && <span className="text-gray-500 text-sm ml-2">({f.title.es})</span>}
+                            <span className="font-medium">{f.title[currentLang]}</span>
+                            {f.title[currentLang !== 'en' ? 'en' : 'es'] && <span className="text-gray-500 text-sm ml-2">({f.title[currentLang !== 'en' ? 'en' : 'es']})</span>}
                           </li>
                         ))}
                       </ul>

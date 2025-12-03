@@ -750,19 +750,20 @@
       "files": "ARCHIVOS",
       "description": "DESCRIPCIÓN",
       "features": "CARACTERÍSTICAS",
-      "name": "Nombre:",
-      "version": "Versión:",
-      "minecraft": "Minecraft:",
-      "modloader": "Modloader:",
-      "zip": "ZIP:",
+      "labels": {
+        "name": "Nombre:",
+        "version": "Versión:",
+        "minecraft": "Minecraft:",
+        "modloader": "Modloader:",
+        "logo": "Logo:",
+        "banner": "Banner:",
+        "screenshots": "Capturas de Pantalla:"
+      },
+      "values": {
+        "uploaded": "Subido",
+        "none": "Ninguno"
+      },
       "noZip": "Sin ZIP seleccionado",
-      "logo": "Logo:",
-      "logoUploaded": "Subido",
-      "logoNone": "Ninguno",
-      "banner": "Banner:",
-      "bannerUploaded": "Subido",
-      "bannerNone": "Ninguno",
-      "screenshots": "Capturas de Pantalla:",
       "noDescription": "Sin descripción proporcionada.",
       "noFeatures": "Sin características añadidas."
     },
