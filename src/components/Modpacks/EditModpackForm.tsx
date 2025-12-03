@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import { invoke } from '@tauri-apps/api/core';
 import {
   Save, Upload, Plus, X, Trash2, Image as ImageIcon,
@@ -49,6 +50,7 @@ interface EditModpackFormProps {
 }
 
 export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps) {
+  const { t } = useTranslation();
   const service = ModpackManagementService.getInstance();
   const authService = AuthService.getInstance();
 
@@ -452,11 +454,11 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
   }
 
   const tabs = [
-    { id: 'general', label: 'General', icon: FileText },
-    { id: 'media', label: 'Media', icon: ImageIcon },
-    { id: 'features', label: 'Features', icon: Layers },
-    { id: 'versions', label: 'Versions', icon: History },
-    { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'general', label: t('editModpack.tabs.general'), icon: FileText },
+    { id: 'media', label: t('editModpack.tabs.media'), icon: ImageIcon },
+    { id: 'features', label: t('editModpack.tabs.features'), icon: Layers },
+    { id: 'versions', label: t('editModpack.tabs.versions'), icon: History },
+    { id: 'settings', label: t('editModpack.tabs.settings'), icon: Settings },
   ];
 
   return (
@@ -478,7 +480,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
           onClick={() => onNavigate?.('my-modpacks')}
           className="px-4 py-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 rounded-lg transition-colors"
         >
-          Back to List
+          {t('editModpack.backToList')}
         </button>
       </div>
 
@@ -508,10 +510,10 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
           {activeTab === 'general' && (
             <div className="space-y-6 animate-fade-in">
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
-                <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">Basic Information</h2>
+                <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">{t('editModpack.general.basicInfo')}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                   <div>
-                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Name (English)</label>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{t('editModpack.general.nameEnglish')}</label>
                     <input
                       type="text"
                       value={formData.name.en}
@@ -520,7 +522,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Nombre (Español)</label>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{t('editModpack.general.nameSpanish')}</label>
                     <input
                       type="text"
                       value={formData.name.es}
@@ -531,7 +533,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                   <div>
-                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Short Description (EN)</label>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{t('editModpack.general.shortDescEnglish')}</label>
                     <input
                       type="text"
                       value={formData.shortDescription.en}
@@ -540,7 +542,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Descripción Corta (ES)</label>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{t('editModpack.general.shortDescSpanish')}</label>
                     <input
                       type="text"
                       value={formData.shortDescription.es}
@@ -551,7 +553,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                 </div>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Description (EN)</label>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{t('editModpack.general.descriptionEnglish')}</label>
                     <textarea
                       value={formData.description.en}
                       onChange={(e) => updateI18nField('description', 'en', e.target.value)}
@@ -559,7 +561,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Descripción (ES)</label>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{t('editModpack.general.descriptionSpanish')}</label>
                     <textarea
                       value={formData.description.es}
                       onChange={(e) => updateI18nField('description', 'es', e.target.value)}
@@ -570,10 +572,10 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
               </div>
 
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
-                <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">Technical Details</h2>
+                <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">{t('editModpack.general.technicalDetails')}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Minecraft Version</label>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{t('editModpack.general.minecraftVersion')}</label>
                     <input
                       type="text"
                       value={formData.minecraftVersion}
@@ -582,7 +584,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Modloader Version</label>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{t('editModpack.general.modloaderVersion')}</label>
                     <input
                       type="text"
                       value={formData.modloaderVersion}
@@ -591,7 +593,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Primary Color</label>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{t('editModpack.general.primaryColor')}</label>
                     <div className="flex gap-3">
                       <input
                         type="color"
@@ -617,7 +619,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                   className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
                 >
                   <Save className="w-4 h-4" />
-                  Save Changes
+                  {t('editModpack.general.saveChanges')}
                 </button>
               </div>
             </div>
@@ -627,10 +629,10 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
           {activeTab === 'media' && (
             <div className="space-y-6 animate-fade-in">
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
-                <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">Branding</h2>
+                <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">{t('editModpack.media.branding')}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div>
-                    <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Logo</label>
+                    <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">{t('editModpack.media.logo')}</label>
                     <div
                       onDragOver={(e) => { e.preventDefault(); setIsDraggingLogo(true); }}
                       onDragLeave={(e) => { e.preventDefault(); setIsDraggingLogo(false); }}
@@ -650,7 +652,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                       {formData.logoUrl ? (
                         <img src={formData.logoUrl} alt="Logo" className="w-32 h-32 object-contain mx-auto rounded-lg" />
                       ) : (
-                        <div className="py-8 text-gray-400">No logo uploaded</div>
+                        <div className="py-8 text-gray-400">{t('editModpack.media.noLogoUploaded')}</div>
                       )}
                       <input
                         type="file"
@@ -659,7 +661,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                       />
                       <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg pointer-events-none">
-                        <p className="text-white font-medium">Click to replace</p>
+                        <p className="text-white font-medium">{t('editModpack.media.clickToReplace')}</p>
                       </div>
                     </div>
                   </div>

@@ -841,5 +841,83 @@
       "comingSoonDesc": "La publicación comunitaria de modpacks está actualmente deshabilitada mientras finalizamos la función.",
       "comingSoonNote": "Actualmente, solo <strong>Partners</strong> y <strong>Administradores</strong> pueden publicar modpacks. ¡Mantente atento para actualizaciones!"
     }
+  },
+  "editModpack": {
+    "title": "Editar Modpack",
+    "backToList": "Volver a la Lista",
+    "tabs": {
+      "general": "General",
+      "media": "Multimedia",
+      "features": "Características",
+      "versions": "Versiones",
+      "settings": "Configuración"
+    },
+    "general": {
+      "basicInfo": "Información Básica",
+      "technicalDetails": "Detalles Técnicos",
+      "nameEnglish": "Name (English)",
+      "nameSpanish": "Nombre (Español)",
+      "shortDescEnglish": "Short Description (EN)",
+      "shortDescSpanish": "Descripción Corta (ES)",
+      "descriptionEnglish": "Description (EN)",
+      "descriptionSpanish": "Descripción (ES)",
+      "minecraftVersion": "Versión de Minecraft",
+      "modloaderVersion": "Versión del Modloader",
+      "primaryColor": "Color Primario",
+      "saveChanges": "Guardar Cambios"
+    },
+    "media": {
+      "branding": "Marca",
+      "logo": "Logo",
+      "noLogoUploaded": "Sin logo subido",
+      "clickToReplace": "Haz clic para reemplazar",
+      "banner": "Banner",
+      "noBannerUploaded": "Sin banner subido",
+      "screenshots": "Capturas de Pantalla",
+      "uploadScreenshot": "Subir Captura de Pantalla",
+      "noScreenshots": "Sin capturas de pantalla subidas aún"
+    },
+    "features": {
+      "title": "Características del Modpack",
+      "addFeature": "Añadir Característica",
+      "noFeatures": "Sin características añadidas. Añade características para destacar qué hace único tu modpack.",
+      "titleEnglish": "Título (EN)",
+      "titleSpanish": "Título (ES)",
+      "icon": "Icono (FontAwesome)",
+      "descriptionEnglish": "Descripción (EN)",
+      "descriptionSpanish": "Descripción (ES)",
+      "saveFeatures": "Guardar Características"
+    },
+    "versions": {
+      "title": "Historial de Versiones",
+      "noVersions": "Sin versiones subidas aún.",
+      "uploadNew": "Subir Nueva Versión",
+      "downloadZip": "Descargar ZIP",
+      "modpackZipFile": "Archivo ZIP del Modpack",
+      "clickToUpload": "Haz clic para subir ZIP",
+      "validating": "Validando...",
+      "newVersionNumber": "Número de Nueva Versión",
+      "example": "p.ej. 1.1.0",
+      "changelogEnglish": "Registro de Cambios (EN)",
+      "changelogSpanish": "Registro de Cambios (ES)",
+      "publishVersion": "Publicar Versión"
+    },
+    "settings": {
+      "visibility": "Visibilidad",
+      "modpackStatus": "Estado del Modpack",
+      "publishModpack": "Publicar Modpack",
+      "hideModpack": "Ocultar Modpack",
+      "isVisible": "Tu modpack es actualmente visible para todos los usuarios.",
+      "isHidden": "Tu modpack está actualmente oculto para los usuarios.",
+      "comingSoonStatus": "Estado de Próxima Llegada",
+      "markComingSoon": "Marcar como Próxima Llegada",
+      "removeComingSoon": "Eliminar Estado de Próxima Llegada",
+      "comingSoonDesc": "El modpack aparece en la página de inicio pero no se puede descargar aún.",
+      "fullyAvailable": "El modpack está completamente disponible para descargar.",
+      "dangerZone": "Zona de Peligro",
+      "deleteModpack": "Eliminar Modpack",
+      "deleteForever": "Eliminar Para Siempre",
+      "deleteWarning": "Eliminar un modpack es permanente y no se puede deshacer. Se eliminarán todas las versiones, archivos e imágenes."
+    }
   }
 }
