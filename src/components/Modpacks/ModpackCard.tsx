@@ -433,10 +433,6 @@ const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect
               }`}>
               <span className={`bg-dark-700/50 px-2 py-0.5 rounded-full transition-all duration-150 ${getAnimationClass('', 'group-hover:bg-lumina-600/20')
                 }`}>
-                v{modpack.version}
-              </span>
-              <span className={`bg-dark-700/50 px-2 py-0.5 rounded-full transition-all duration-150 ${getAnimationClass('', 'group-hover:bg-lumina-600/20')
-                }`}>
                 MC {modpack.minecraftVersion}
               </span>
               <span className={`capitalize bg-dark-700/50 px-2 py-0.5 rounded-full transition-all duration-150 ${getAnimationClass('', 'group-hover:bg-lumina-600/20')
