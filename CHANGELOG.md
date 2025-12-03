@@ -5,6 +5,62 @@ All notable changes to the LuminaKraft Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-beta.1] - 2025-12-03
+
+### 🚀 **Major Features**
+- **Modpack Management System**
+  - Complete overhaul of modpack creation, validation, and publishing workflow
+  - Added "Publish Modpacks" section with drag & drop support for ZIP imports
+  - Implemented modpack versioning, status management (Active/Inactive), and deletion
+  - Added support for local modpack imports with progress tracking
+- **Supabase Migration**
+  - Migrated core services from legacy API to Supabase Edge Functions
+  - Implemented robust authentication with Supabase sessions (Authenticated & Anonymous)
+  - Added database types and client configuration for improved type safety
+- **Enhanced Modpack Installation**
+  - Added support for installing modpacks from local ZIP files
+  - Implemented real-time progress tracking with counters (downloaded/total)
+  - Added support for overrides and custom file handling
+
+### ✨ **Enhancements**
+- **User Interface**
+  - Complete internationalization (i18n) for My Modpacks and Published Modpacks pages
+  - Improved modpack card design with version tags and status badges
+  - Replaced native browser dialogs with custom `ConfirmDialog` component
+  - Added category badges to distinguish modpack types
+  - Integrated modpack management into main navigation
+- **Performance**
+  - Optimized ZIP creation with buffering and no recompression
+  - Improved ZIP merging with streaming and detailed logging
+  - Reduced bundle size by removing unused code and dependencies
+
+### 🐛 **Bug Fixes**
+- **Authentication**
+  - Fixed Microsoft authentication sync with Supabase
+  - Resolved issues with anonymous sessions for offline users
+  - Fixed token handling for CurseForge API requests
+- **Modpack Handling**
+  - Fixed SHA256 hash calculation for file uploads
+  - Resolved issues with local file paths during ZIP installation
+  - Fixed validation logic for modpack imports
+  - Corrected field name mapping for backend compatibility
+- **General**
+  - Resolved all ESLint and TypeScript errors across the codebase
+  - Fixed various translation keys and missing translations
+  - Fixed dialog overlay issues on scrolled pages
+
+### ♻️ **Refactors**
+- **Codebase Cleanup**
+  - Removed deprecated `api.luminakraft.com` references
+  - Cleaned up unused code and legacy translation logic
+  - Reorganized modpack management components for better maintainability
+  - Simplified modpack upload flow using single Edge Function
+
+### 📚 **Documentation**
+- Added backend architecture overview to README
+- Added user roles and permissions documentation
+- Added Supabase migration guide and development docs
+
 ## [0.0.9-alpha.6] - 2025-11-17
 
 ### 🐛 Bug Fixes
