@@ -41,7 +41,7 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state, isReadO
 
   const getStatusInfo = () => {
     const hasValidIp = modpack.ip && modpack.ip.trim() !== '';
-    
+
     // Handle servers without modpack and without IP (check this FIRST)
     if (!requiresModpack && !hasValidIp) {
       return {
@@ -62,6 +62,30 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state, isReadO
         bgColor: 'bg-blue-600 hover:bg-blue-700',
         textColor: 'text-white',
         action: () => copyToClipboard(modpack.ip!),
+        disabled: false
+      };
+    }
+
+    // Read-only mode (Home/Explore): Show Install or Installed only
+    if (isReadOnly) {
+      if (['installed', 'outdated', 'error'].includes(state.status)) {
+        return {
+          icon: Download,
+          label: t('modpacks.installed'),
+          bgColor: 'bg-gray-600/50 cursor-not-allowed',
+          textColor: 'text-gray-400',
+          action: () => {},
+          disabled: true
+        };
+      }
+
+      // Not installed in read-only mode
+      return {
+        icon: Download,
+        label: t('modpacks.install'),
+        bgColor: 'bg-lumina-500 hover:bg-lumina-600',
+        textColor: 'text-white',
+        action: () => installModpack(modpack.id),
         disabled: false
       };
     }
