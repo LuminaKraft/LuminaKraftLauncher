@@ -820,7 +820,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
             <div className="space-y-6 animate-fade-in">
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
                 <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-                  Step {effectiveSteps.find(s => s.id === 2)?.id}: {t('publishModpack.steps.basicInfo')}
+                  {t('publishModpack.steps.basicInfo')}
                 </h2>
                 <div className="flex gap-2 mb-6 border-b border-gray-200 dark:border-gray-700">
                   <button
@@ -953,7 +953,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                   </div>
                   <div>
                     <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-                      Primary Color
+                      {t('publishModpack.basicInfo.primaryColor')}
                     </label>
                     <div className="flex gap-4 items-center">
                       <input
@@ -976,7 +976,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
             <div className="space-y-6 animate-fade-in">
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
                 <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-                  Step {effectiveSteps.find(s => s.id === 3)?.id}: {t('publishModpack.steps.details')}
+                  {t('publishModpack.steps.details')}
                 </h2>
                 <div className="flex gap-2 mb-6 border-b border-gray-200 dark:border-gray-700">
                   <button
@@ -1135,7 +1135,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
             <div className="space-y-6 animate-fade-in">
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
                 <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">
-                  Step {effectiveSteps.find(s => s.id === 4)?.id}: {t('publishModpack.steps.media')}
+                  {t('publishModpack.steps.media')}
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
@@ -1162,8 +1162,8 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                       ) : (
                         <div className="py-2">
                           <ImageIcon className="w-10 h-10 text-gray-400 mx-auto mb-2" />
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Click to upload logo</p>
-                          <p className="text-xs text-gray-500 mt-1">Recommended: 512x512px</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">{t('publishModpack.media.logoUpload')}</p>
+                          <p className="text-xs text-gray-500 mt-1">{t('publishModpack.media.logoSize')}</p>
                         </div>
                       )}
                     </div>
@@ -1192,8 +1192,8 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                       ) : (
                         <div className="py-2">
                           <ImageIcon className="w-10 h-10 text-gray-400 mx-auto mb-2" />
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Click to upload banner</p>
-                          <p className="text-xs text-gray-500 mt-1">Recommended: 1920x1080px</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">{t('publishModpack.media.bannerUpload')}</p>
+                          <p className="text-xs text-gray-500 mt-1">{t('publishModpack.media.bannerSize')}</p>
                         </div>
                       )}
                     </div>
@@ -1226,7 +1226,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                       <p className="text-sm text-gray-600 dark:text-gray-400">
                         {screenshotFiles.length >= 5 ? t('publishModpack.media.screenshotMax') : t('publishModpack.media.screenshotUpload')}
                       </p>
-                      <p className="text-xs text-gray-500 mt-1">Select multiple files (Max 5)</p>
+                      <p className="text-xs text-gray-500 mt-1">{t('publishModpack.media.screenshotHelper')}</p>
                     </div>
                   </div>
                   {screenshotFiles.length > 0 && (
@@ -1261,7 +1261,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
             ((userRole === 'admin' || userRole === 'partner') && currentStep === 6)) && (
             <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md animate-fade-in">
               <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">
-                Step {effectiveSteps.find(s => s.id === 5)?.id}: {t('publishModpack.steps.review')}
+                {t('publishModpack.steps.review')}
               </h2>
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

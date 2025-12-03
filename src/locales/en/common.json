@@ -747,7 +747,6 @@
     },
     "review": {
       "title": "Review",
-      "step": "Step {{number}}: {{title}}",
       "basicInfo": "BASIC INFO",
       "files": "FILES",
       "description": "DESCRIPTION",
