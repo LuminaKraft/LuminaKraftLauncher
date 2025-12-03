@@ -251,8 +251,13 @@ class LauncherService {
         await Promise.all(statsPromises);
       }
 
-      // Helper function to check if modpack is new (published within last 7 days)
-      const isModpackNew = (publishedAt: string | null): boolean => {
+      // Helper function to check if modpack is new
+      // Priority: 1) Check DB is_new flag (admin override), 2) Calculate based on published_at date (7 days)
+      const isModpackNew = (dbIsNew: boolean, publishedAt: string | null): boolean => {
+        // If admin explicitly set is_new to true in DB, honor that
+        if (dbIsNew) return true;
+
+        // Otherwise, check if published within last 7 days
         if (!publishedAt) return false;
         const publishDate = new Date(publishedAt);
         const now = new Date();
@@ -278,7 +283,7 @@ class LauncherService {
         backgroundImage: modpack.banner_url, // Use banner as background
         urlModpackZip: modpack.modpack_file_url,
         primaryColor: modpack.primary_color,
-        isNew: isModpackNew(modpack.published_at),
+        isNew: isModpackNew(modpack.is_new, modpack.published_at),
         isActive: modpack.is_active,
         isComingSoon: modpack.is_coming_soon,
         youtubeEmbed: modpack.youtube_embed,
