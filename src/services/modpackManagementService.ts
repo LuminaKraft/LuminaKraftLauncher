@@ -651,13 +651,12 @@ export class ModpackManagementService {
       let query = supabase.from('modpacks').select('*');
 
       // Filter based on role
-      // Filter based on role
       if (profile.role === 'admin') {
-        // Admins see all modpacks (official, partner, and community)
-        // No filter needed to show everything
+        // Admins see only official modpacks
+        query = query.eq('category', 'official');
       } else if (profile.role === 'partner' && profile.partner_id) {
-        // Partners see modpacks from their partner organization AND their own personal modpacks
-        query = query.or(`partner_id.eq.${profile.partner_id},author_id.eq.${user.id}`);
+        // Partners see only modpacks from their partner organization
+        query = query.eq('partner_id', profile.partner_id);
       } else {
         // Community users see only their own modpacks
         query = query.eq('author_id', user.id);

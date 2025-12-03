@@ -916,12 +916,21 @@ async fn install_modpack_from_local_zip(
 
             // Use existing install logic with progress
             launcher::install_modpack_with_shared_storage(local_modpack, settings, emit_progress).await?;
-            Ok(())
-        })
-    })
-    .await
-    .map_err(|e| format!("Task join error: {}", e))?
-    .map_err(|e: anyhow::Error| format!("Failed to install modpack from local ZIP: {}", e))
+            .map_err(|e: anyhow::Error| format!("Failed to install modpack from local ZIP: {}", e))
+}
+
+#[tauri::command]
+async fn get_system_ram() -> Result<u32, String> {
+    use sysinfo::System;
+    
+    let mut sys = System::new_all();
+    sys.refresh_memory();
+    
+    // Get total memory in bytes and convert to GB
+    let total_memory_bytes = sys.total_memory();
+    let total_memory_gb = (total_memory_bytes as f64 / 1_073_741_824.0).ceil() as u32;
+    
+    Ok(total_memory_gb)
 }
 
 #[tauri::command]
@@ -1034,6 +1043,7 @@ fn main() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![
+            get_system_ram,
             get_instance_metadata,
             update_instance_ram_settings,
             get_local_modpacks,

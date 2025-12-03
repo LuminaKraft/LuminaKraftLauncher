@@ -13,7 +13,7 @@ interface SettingsPageProps {
 const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
   const { t } = useTranslation();
   const { userSettings, updateUserSettings, currentLanguage, changeLanguage, hasActiveOperations } = useLauncher();
-  
+
   const [formData, setFormData] = useState(userSettings);
   const [hasChanges, setHasChanges] = useState(false);
   const [usernameError, setUsernameError] = useState<string | null>(null);
@@ -28,6 +28,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
     return saved ? Number(saved) : null;
   });
   const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [systemRam, setSystemRam] = useState<number>(64); // Default to 64GB, will be updated
   // Java runtime handled internally by Lyceris; no user-facing settings.
 
   useEffect(() => {
@@ -38,6 +39,21 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
     const isDifferent = JSON.stringify(formData) !== JSON.stringify(userSettings);
     setHasChanges(isDifferent);
   }, [formData, userSettings]);
+
+  // Fetch system RAM on mount
+  useEffect(() => {
+    const fetchSystemRam = async () => {
+      try {
+        const { invoke } = await import('@tauri-apps/api/core');
+        const ram = await invoke<number>('get_system_ram');
+        setSystemRam(ram);
+      } catch (error) {
+        console.error('Failed to get system RAM:', error);
+        // Keep default of 64GB if fetch fails
+      }
+    };
+    fetchSystemRam();
+  }, []);
 
   const checkAPIStatus = async () => {
     setApiStatus('checking');
@@ -118,15 +134,15 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
 
   const triggerShake = () => {
     if (isShaking) return; // Prevent multiple simultaneous shakes
-    
+
     setShakeAttempts(prev => prev + 1);
     setIsShaking(true);
-    
+
     // Reset shake after animation completes
     setTimeout(() => {
       setIsShaking(false);
     }, 600); // Animation duration
-    
+
     // Reset attempts after 3 seconds of no attempts
     setTimeout(() => {
       setShakeAttempts(0);
@@ -143,15 +159,15 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
     } else {
       (window as any).blockNavigation = null;
     }
-    
+
     return () => {
       (window as any).blockNavigation = null;
     };
   }, [hasChanges, onNavigationBlocked]);
 
   const MIN_RAM = 1;
-  const MAX_RAM = 64;
-  
+  const MAX_RAM = systemRam; // Use system RAM as maximum
+
   const handleRamSliderChange = (value: number) => {
     const clampedValue = Math.max(MIN_RAM, Math.min(MAX_RAM, value));
     handleInputChange('allocatedRam', clampedValue);
@@ -162,7 +178,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
     if (value === '') {
       return;
     }
-    
+
     const numValue = parseFloat(value);
     if (!isNaN(numValue)) {
       const clampedValue = Math.max(MIN_RAM, Math.min(MAX_RAM, numValue));
@@ -260,7 +276,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
               <Languages className="w-6 h-6 text-lumina-500" />
               <h2 className="text-white text-xl font-semibold">{t('settings.language')}</h2>
             </div>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-dark-300 text-sm font-medium mb-2">
@@ -271,11 +287,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
                     value={currentLanguage}
                     onChange={(e) => handleLanguageChange(e.target.value)}
                     disabled={hasActiveOperations}
-                    className={`input-field w-full appearance-none pr-10 ${
-                      hasActiveOperations 
-                        ? 'cursor-not-allowed opacity-50' 
+                    className={`input-field w-full appearance-none pr-10 ${hasActiveOperations
+                        ? 'cursor-not-allowed opacity-50'
                         : 'cursor-pointer'
-                    }`}
+                      }`}
                   >
                     {languageOptions.map(option => (
                       <option key={option.value} value={option.value} className="bg-dark-800 text-white">
@@ -311,7 +326,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
               <Server className="w-6 h-6 text-lumina-500" />
               <h2 className="text-white text-xl font-semibold">{t('settings.api')}</h2>
             </div>
-            
+
             <div className="space-y-4">
               <div className="flex items-center justify-between p-4 bg-dark-700 rounded-lg">
                 <div className="flex items-center space-x-3">
@@ -355,7 +370,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
               <User className="w-6 h-6 text-lumina-500" />
               <h2 className="text-white text-xl font-semibold">{t('settings.general')}</h2>
             </div>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-dark-300 text-sm font-medium mb-2">
@@ -371,7 +386,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
                   maxLength={16}
                 />
                 <p className="text-dark-400 text-xs mt-1">
-                  {formData.authMethod === 'microsoft' 
+                  {formData.authMethod === 'microsoft'
                     ? t('auth.usernameFromMicrosoft')
                     : t('settings.usernameDescription')
                   }
@@ -389,13 +404,13 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
               <HardDrive className="w-6 h-6 text-lumina-500" />
               <h2 className="text-white text-xl font-semibold">{t('settings.performance')}</h2>
             </div>
-            
+
             <div className="space-y-6">
               <div>
                 <label className="block text-dark-300 text-sm font-medium mb-2">
                   {t('settings.ramAllocationLabel')}
                 </label>
-                
+
                 {/* RAM allocation display with inline editing */}
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-3">
@@ -445,7 +460,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
               <Zap className="w-6 h-6 text-lumina-500" />
               <h2 className="text-white text-xl font-semibold">{t('settings.animations')}</h2>
             </div>
-            
+
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
@@ -468,7 +483,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
                   </label>
                 </div>
               </div>
-              
+
               <div className={`p-3 rounded-lg ${formData.enableAnimations !== false ? 'bg-green-600/20 border border-green-600/30' : 'bg-orange-600/20 border border-orange-600/30'}`}>
                 <p className={`text-sm ${formData.enableAnimations !== false ? 'text-green-300' : 'text-orange-300'}`}>
                   {formData.enableAnimations !== false ? t('settings.animationsEnabled') : t('settings.animationsDisabled')}
@@ -483,7 +498,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
               <HardDrive className="w-6 h-6 text-lumina-500" />
               <h2 className="text-white text-xl font-semibold">{t('metaStorage.title')}</h2>
             </div>
-            
+
             <MetaStorageSettings />
           </div>
 

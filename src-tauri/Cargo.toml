@@ -38,6 +38,7 @@ zip = "2.1"
 md5 = "0.7"
 tiny_http = "0.12"
 portpicker = "0.1"
+sysinfo = "0.32"
 
 [features]
 # No features here, they're now in the tauri dependency
