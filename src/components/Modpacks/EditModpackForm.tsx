@@ -666,7 +666,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Banner</label>
+                    <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">{t('editModpack.media.banner')}</label>
                     <div
                       onDragOver={(e) => { e.preventDefault(); setIsDraggingBanner(true); }}
                       onDragLeave={(e) => { e.preventDefault(); setIsDraggingBanner(false); }}
@@ -686,7 +686,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                       {formData.bannerUrl ? (
                         <img src={formData.bannerUrl} alt="Banner" className="w-full h-32 object-cover mx-auto rounded-lg" />
                       ) : (
-                        <div className="py-8 text-gray-400">No banner uploaded</div>
+                        <div className="py-8 text-gray-400">{t('editModpack.media.noBannerUploaded')}</div>
                       )}
                       <input
                         type="file"
@@ -695,7 +695,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                       />
                       <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg pointer-events-none">
-                        <p className="text-white font-medium">Click to replace</p>
+                        <p className="text-white font-medium">{t('editModpack.media.clickToReplace')}</p>
                       </div>
                     </div>
                   </div>
@@ -704,7 +704,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
 
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
                 <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Screenshots</h2>
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{t('editModpack.media.screenshots')}</h2>
                   <div
                     onDragOver={(e) => { e.preventDefault(); setIsDraggingScreenshots(true); }}
                     onDragLeave={(e) => { e.preventDefault(); setIsDraggingScreenshots(false); }}
@@ -721,7 +721,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                   >
                     <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
                       <Upload className="w-4 h-4" />
-                      Upload Screenshot
+{t('editModpack.media.uploadScreenshot')}
                     </button>
                     <input
                       type="file"
@@ -739,7 +739,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
 
                 {images.length === 0 ? (
                   <div className="text-center py-12 text-gray-500 dark:text-gray-400 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg">
-                    No screenshots uploaded yet
+{t('editModpack.media.noScreenshotsUploaded')}
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -769,19 +769,19 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
             <div className="space-y-6 animate-fade-in">
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
                 <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Modpack Features</h2>
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{t('editModpack.features.title')}</h2>
                   <button
                     onClick={addFeature}
                     className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
                   >
                     <Plus className="w-4 h-4" />
-                    Add Feature
+{t('editModpack.features.addFeature')}
                   </button>
                 </div>
 
                 {features.length === 0 ? (
                   <div className="text-center py-12 text-gray-500 dark:text-gray-400 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg">
-                    No features added. Add features to highlight what makes your modpack unique.
+{t('editModpack.features.noFeaturesAdded')}
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -796,7 +796,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-xs font-medium mb-1 text-gray-500">Title (EN)</label>
+                            <label className="block text-xs font-medium mb-1 text-gray-500">{t('editModpack.features.titleEn')}</label>
                             <input
                               type="text"
                               value={feature.title.en}
@@ -805,7 +805,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                             />
                           </div>
                           <div>
-                            <label className="block text-xs font-medium mb-1 text-gray-500">Title (ES)</label>
+                            <label className="block text-xs font-medium mb-1 text-gray-500">{t('editModpack.features.titleEs')}</label>
                             <input
                               type="text"
                               value={feature.title.es}
@@ -814,7 +814,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                             />
                           </div>
                           <div className="md:col-span-2">
-                            <label className="block text-xs font-medium mb-1 text-gray-500">Icon (FontAwesome)</label>
+                            <label className="block text-xs font-medium mb-1 text-gray-500">{t('editModpack.features.icon')}</label>
                             <input
                               type="text"
                               value={feature.icon}
@@ -823,7 +823,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                             />
                           </div>
                           <div className="md:col-span-2">
-                            <label className="block text-xs font-medium mb-1 text-gray-500">Description (EN)</label>
+                            <label className="block text-xs font-medium mb-1 text-gray-500">{t('editModpack.features.descriptionEn')}</label>
                             <textarea
                               value={feature.description.en}
                               onChange={(e) => updateFeatureI18n(index, 'description', 'en', e.target.value)}
@@ -831,7 +831,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                             />
                           </div>
                           <div className="md:col-span-2">
-                            <label className="block text-xs font-medium mb-1 text-gray-500">Description (ES)</label>
+                            <label className="block text-xs font-medium mb-1 text-gray-500">{t('editModpack.features.descriptionEs')}</label>
                             <textarea
                               value={feature.description.es}
                               onChange={(e) => updateFeatureI18n(index, 'description', 'es', e.target.value)}
@@ -851,7 +851,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                     className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
                   >
                     <Save className="w-4 h-4" />
-                    Save Features
+{t('editModpack.features.saveFeatures')}
                   </button>
                 </div>
               </div>
@@ -862,9 +862,9 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
           {activeTab === 'versions' && (
             <div className="space-y-6 animate-fade-in">
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
-                <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">Version History</h2>
+                <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">{t('editModpack.versions.versionHistory')}</h2>
                 {versions.length === 0 ? (
-                  <p className="text-gray-500 dark:text-gray-400">No versions uploaded yet.</p>
+                  <p className="text-gray-500 dark:text-gray-400">{t('editModpack.versions.noVersionsUploaded')}</p>
                 ) : (
                   <div className="space-y-4">
                     {versions.map((v) => (
@@ -887,7 +887,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                             }}
                             className="text-blue-600 hover:text-blue-700 text-sm font-medium hover:underline"
                           >
-                            Download ZIP
+{t('editModpack.versions.downloadZip')}
                           </button>
                         </div>
                         {v.changelog_i18n && (
@@ -903,11 +903,11 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
               </div>
 
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
-                <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">Upload New Version</h2>
+                <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">{t('editModpack.versions.uploadNewVersion')}</h2>
 
                 <div className="space-y-6">
                   <div>
-                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Modpack ZIP File</label>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{t('editModpack.versions.modpackZipFile')}</label>
                     <div
                       className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${isDragging
                         ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
@@ -927,13 +927,13 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                       />
                       <label htmlFor="zip-upload" className="cursor-pointer flex flex-col items-center">
                         <Package className="w-12 h-12 text-gray-400 mb-2" />
-                        <span className="text-blue-600 font-medium hover:underline">Click to upload ZIP</span>
+                        <span className="text-blue-600 font-medium hover:underline">{t('editModpack.versions.clickToUploadZip')}</span>
                         {zipFile && (
                           <div className="mt-2 bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full text-blue-700 dark:text-blue-300 text-sm">
                             {zipFile.name} ({(zipFile.size / 1024 / 1024).toFixed(2)} MB)
                           </div>
                         )}
-                        {isParsing && <p className="text-sm text-gray-500 mt-2">Validating...</p>}
+                        {isParsing && <p className="text-sm text-gray-500 mt-2">{t('editModpack.versions.validating')}</p>}
                       </label>
                     </div>
                   </div>
@@ -941,19 +941,19 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                   {manifestParsed && (
                     <>
                       <div>
-                        <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">New Version Number</label>
+                        <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{t('editModpack.versions.newVersionNumber')}</label>
                         <input
                           type="text"
                           value={newVersion}
                           onChange={(e) => setNewVersion(e.target.value)}
-                          placeholder="e.g. 1.1.0"
+                          placeholder={t('editModpack.versions.versionPlaceholder')}
                           className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                         />
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                          <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Changelog (EN)</label>
+                          <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{t('editModpack.versions.changelogEn')}</label>
                           <textarea
                             value={changelog.en}
                             onChange={(e) => setChangelog(prev => ({ ...prev, en: e.target.value }))}
@@ -962,7 +962,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Changelog (ES)</label>
+                          <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{t('editModpack.versions.changelogEs')}</label>
                           <textarea
                             value={changelog.es}
                             onChange={(e) => setChangelog(prev => ({ ...prev, es: e.target.value }))}
@@ -985,7 +985,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                           className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
                         >
                           {isUpdating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                          Publish Version
+{t('editModpack.versions.publishVersion')}
                         </button>
                       </div>
                     </>
@@ -999,15 +999,15 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
           {activeTab === 'settings' && (
             <div className="space-y-6 animate-fade-in">
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
-                <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">Visibility</h2>
+                <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">{t('editModpack.settings.visibility')}</h2>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-700">
                     <div>
-                      <h3 className="font-medium text-gray-900 dark:text-white">Modpack Status</h3>
+                      <h3 className="font-medium text-gray-900 dark:text-white">{t('editModpack.settings.modpackStatus')}</h3>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         {formData.isActive
-                          ? 'Your modpack is currently visible to all users.'
-                          : 'Your modpack is currently hidden from users.'}
+                          ? t('editModpack.settings.visibleToAllUsers')
+                          : t('editModpack.settings.hiddenFromUsers')}
                       </p>
                     </div>
                     <button
@@ -1018,17 +1018,17 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                         : 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50'
                         }`}
                     >
-                      {formData.isActive ? 'Hide Modpack' : 'Publish Modpack'}
+                      {formData.isActive ? t('editModpack.settings.hideModpack') : t('editModpack.settings.publishModpack')}
                     </button>
                   </div>
 
                   <div className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                     <div>
-                      <h3 className="font-medium text-gray-900 dark:text-white">Coming Soon Status</h3>
+                      <h3 className="font-medium text-gray-900 dark:text-white">{t('editModpack.settings.comingSoonStatus')}</h3>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         {formData.isComingSoon
-                          ? 'Modpack appears on homepage but cannot be downloaded yet.'
-                          : 'Modpack is fully available for download.'}
+                          ? t('editModpack.settings.comingSoonDescription')
+                          : t('editModpack.settings.fullyAvailableDescription')}
                       </p>
                     </div>
                     <button
@@ -1039,14 +1039,14 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                         : 'bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50'
                         }`}
                     >
-                      {formData.isComingSoon ? 'Remove Coming Soon' : 'Mark as Coming Soon'}
+                      {formData.isComingSoon ? t('editModpack.settings.removeComingSoon') : t('editModpack.settings.markAsComingSoon')}
                     </button>
                   </div>
                 </div>
               </div>
 
               <div className="bg-red-50 dark:bg-red-900/10 rounded-lg p-6 border border-red-200 dark:border-red-900/30">
-                <h2 className="text-xl font-semibold mb-4 text-red-700 dark:text-red-400">Danger Zone</h2>
+                <h2 className="text-xl font-semibold mb-4 text-red-700 dark:text-red-400">{t('editModpack.settings.dangerZone')}</h2>
                 <p className="text-red-600 dark:text-red-300 mb-6">
                   Deleting a modpack is permanent and cannot be undone. All versions, files, and images will be removed.
                 </p>
@@ -1055,7 +1055,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                   className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"
                 >
                   <Trash2 className="w-4 h-4" />
-                  Delete Modpack
+{t('editModpack.settings.deleteModpack')}
                 </button>
               </div>
             </div>
@@ -1067,9 +1067,9 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
         isOpen={showDeleteDialog}
         onClose={() => setShowDeleteDialog(false)}
         onConfirm={handleDeleteModpack}
-        title="Delete Modpack?"
-        message={`Are you sure you want to delete "${formData.name.en}"? This action cannot be undone.`}
-        confirmText="Delete Forever"
+        title={t('editModpack.settings.deleteModpackTitle')}
+        message={t('editModpack.settings.deleteModpackMessage', { name: formData.name.en })}
+        confirmText={t('editModpack.settings.deleteForever')}
         variant="danger"
       />
 
