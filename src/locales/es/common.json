@@ -598,8 +598,8 @@
       "button": "Publica Tu Primer Modpack"
     },
     "status": {
-      "active": "Activo",
-      "inactive": "Inactivo"
+      "active": "Publicado",
+      "inactive": "Oculto"
     },
     "uploadStatus": {
       "pending": "Pendiente",
@@ -610,8 +610,8 @@
     },
     "actions": {
       "edit": "Editar",
-      "hide": "Ocultar",
-      "show": "Mostrar",
+      "hide": "Despublicar",
+      "show": "Publicar",
       "delete": "Eliminar"
     },
     "deleteDialog": {
@@ -621,8 +621,8 @@
       "cancel": "Cancelar"
     },
     "toast": {
-      "activated": "Modpack activado",
-      "deactivated": "Modpack desactivado",
+      "activated": "Modpack publicado",
+      "deactivated": "Modpack despublicado",
       "updateError": "Error: {{error}}",
       "updateFailed": "Error al actualizar modpack",
       "deleting": "Eliminando modpack...",

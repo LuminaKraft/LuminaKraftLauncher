@@ -601,8 +601,8 @@
       "button": "Publish Your First Modpack"
     },
     "status": {
-      "active": "Active",
-      "inactive": "Inactive"
+      "active": "Published",
+      "inactive": "Hidden"
     },
     "uploadStatus": {
       "pending": "Pending",
@@ -613,8 +613,8 @@
     },
     "actions": {
       "edit": "Edit",
-      "hide": "Hide",
-      "show": "Show",
+      "hide": "Unpublish",
+      "show": "Publish",
       "delete": "Delete"
     },
     "deleteDialog": {
@@ -624,8 +624,8 @@
       "cancel": "Cancel"
     },
     "toast": {
-      "activated": "Modpack activated",
-      "deactivated": "Modpack deactivated",
+      "activated": "Modpack published",
+      "deactivated": "Modpack unpublished",
       "updateError": "Error: {{error}}",
       "updateFailed": "Failed to update modpack",
       "deleting": "Deleting modpack...",
