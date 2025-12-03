@@ -114,32 +114,30 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
 
   // Get server status badge like in ModpackCard
   const getServerStatusBadge = () => {
+    // Priority: New > Coming Soon (don't show Active if it's New or Coming Soon)
     if (modpack.isNew) {
       return (
         <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-600/40 text-green-300 border border-green-600/60">
-          {t('progress.new', 'Nuevo')}
-        </span>
-      );
-    }
-    if (modpack.isActive) {
-      return (
-        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-600/40 text-green-300 border border-green-600/60">
-          {t('progress.active')}
+          {t('modpacks.status.new')}
         </span>
       );
     }
     if (modpack.isComingSoon) {
       return (
         <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-600/40 text-blue-300 border border-blue-600/60">
-          {t('modpack.comingSoon', 'Próximamente')}
+          {t('modpacks.status.coming_soon')}
         </span>
       );
     }
-    return (
-      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-600/40 text-gray-300 border border-gray-600/60">
-        {t('progress.inactive')}
-      </span>
-    );
+    // Only show Inactive badge if it's not active (hide Active badge by default)
+    if (!modpack.isActive) {
+      return (
+        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-600/40 text-gray-300 border border-gray-600/60">
+          {t('modpacks.status.inactive')}
+        </span>
+      );
+    }
+    return null; // Don't show badge for regular active modpacks
   };
 
   // Format playtime for display

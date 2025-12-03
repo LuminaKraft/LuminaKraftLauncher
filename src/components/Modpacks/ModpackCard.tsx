@@ -31,17 +31,11 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
 
 
   const getServerStatusBadge = () => {
+    // Priority: New > Coming Soon (don't show Active if it's New or Coming Soon)
     if (modpack.isNew) {
       return (
         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-600/40 text-green-300 border border-green-600/60">
           {t('modpacks.status.new')}
-        </span>
-      );
-    }
-    if (modpack.isActive) {
-      return (
-        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-600/40 text-green-300 border border-green-600/60">
-          {t('modpacks.status.active')}
         </span>
       );
     }
@@ -52,11 +46,15 @@ const ModpackCard: React.FC<ModpackCardProps> = ({ modpack, state, onSelect, ind
         </span>
       );
     }
-    return (
-      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-600/40 text-gray-300 border border-gray-600/60">
-        {t('modpacks.status.inactive')}
-      </span>
-    );
+    // Only show Inactive badge if it's not active (hide Active badge by default)
+    if (!modpack.isActive) {
+      return (
+        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-600/40 text-gray-300 border border-gray-600/60">
+          {t('modpacks.status.inactive')}
+        </span>
+      );
+    }
+    return null; // Don't show badge for regular active modpacks
   };
 
   const requiresModpack = !!modpack.urlModpackZip;

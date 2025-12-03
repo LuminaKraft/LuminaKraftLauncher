@@ -251,6 +251,15 @@ class LauncherService {
         await Promise.all(statsPromises);
       }
 
+      // Helper function to check if modpack is new (published within last 7 days)
+      const isModpackNew = (publishedAt: string | null): boolean => {
+        if (!publishedAt) return false;
+        const publishDate = new Date(publishedAt);
+        const now = new Date();
+        const daysOld = (now.getTime() - publishDate.getTime()) / (1000 * 60 * 60 * 24);
+        return daysOld <= 7;
+      };
+
       const modpacks = data?.map((modpack: any) => ({
         id: modpack.id,
         slug: modpack.slug,
@@ -269,7 +278,7 @@ class LauncherService {
         backgroundImage: modpack.banner_url, // Use banner as background
         urlModpackZip: modpack.modpack_file_url,
         primaryColor: modpack.primary_color,
-        isNew: modpack.is_new,
+        isNew: isModpackNew(modpack.published_at),
         isActive: modpack.is_active,
         isComingSoon: modpack.is_coming_soon,
         youtubeEmbed: modpack.youtube_embed,
