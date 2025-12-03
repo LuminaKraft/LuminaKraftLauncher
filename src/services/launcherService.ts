@@ -237,14 +237,17 @@ class LauncherService {
         const statsPromises = data.map((modpack: any) =>
           supabase.rpc('get_modpack_aggregate_stats', { p_modpack_id: modpack.id } as any)
             .then((result: any) => {
+              console.log(`📊 Stats response for ${modpack.name}:`, { data: result.data, error: result.error, status: result.status });
               if (result.data) {
                 statsMap.set(modpack.id, result.data);
-                console.log(`📊 Stats for ${modpack.name}:`, result.data);
+                console.log(`✅ Stats stored for ${modpack.name}:`, result.data);
+              } else if (result.error) {
+                console.warn(`⚠️ Stats error for ${modpack.name}:`, result.error);
               }
               return null;
             })
             .catch((error: any) => {
-              console.error(`⚠️ Failed to fetch stats for modpack ${modpack.id}:`, error);
+              console.error(`❌ Failed to fetch stats for modpack ${modpack.id}:`, error);
               return null;
             })
         );
