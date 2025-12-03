@@ -148,23 +148,32 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
     return `${hours.toFixed(1)}h`;
   };
 
-  const statsDisplay = [
-    {
-      icon: Download,
-      value: isLoadingStats ? '...' : stats.totalDownloads.toString(),
-      label: t('modpacks.downloads')
-    },
-    {
-      icon: Clock,
-      value: isLoadingStats ? '...' : formatPlaytime(stats.userPlaytime),
-      label: t('modpacks.playTime')
-    },
-    {
-      icon: Users,
-      value: isLoadingStats ? '...' : stats.activePlayers.toString(),
-      label: t('modpacks.activePlayers')
-    },
-  ];
+  // Different stats for read-only vs management mode
+  const statsDisplay = isReadOnly
+    ? [
+        {
+          icon: Download,
+          value: isLoadingStats ? '...' : stats.totalDownloads.toString(),
+          label: t('modpacks.downloads')
+        },
+        {
+          icon: Users,
+          value: isLoadingStats ? '...' : stats.activePlayers.toString(),
+          label: t('modpacks.activePlayers')
+        },
+      ]
+    : [
+        {
+          icon: Clock,
+          value: isLoadingStats ? '...' : formatPlaytime(stats.userPlaytime),
+          label: t('modpacks.playTime')
+        },
+        {
+          icon: Users,
+          value: isLoadingStats ? '...' : stats.activePlayers.toString(),
+          label: t('modpacks.activePlayers')
+        },
+      ];
 
   const renderContentTab = () => (
     <>
@@ -193,11 +202,11 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
         ))}
       </div>
 
-      {/* Screenshots */}
-      {modpack.images && modpack.images.length > 0 && (
-        <ModpackScreenshotGallery 
-          images={modpack.images} 
-          modpackName={displayName} 
+      {/* Screenshots - Only show in read-only mode */}
+      {isReadOnly && modpack.images && modpack.images.length > 0 && (
+        <ModpackScreenshotGallery
+          images={modpack.images}
+          modpackName={displayName}
         />
       )}
 
@@ -330,23 +339,25 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
                 <Info className="w-4 h-4" />
                 <span>{t('modpacks.information')}</span>
               </button>
-              {/* Screenshots Tab Button */}
-              <button
-                onClick={() => setActiveTab('screenshots')}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-all duration-200 ${
-                  activeTab === 'screenshots'
-                    ? 'bg-lumina-600 text-white shadow-lg'
-                    : 'text-dark-300 hover:text-white hover:bg-dark-700'
-                }`}
-              >
-                <Image className="w-4 h-4" />
-                <span>{t('modpacks.screenshots')}</span>
-                {modpack.images && modpack.images.length > 0 && (
-                  <span className="bg-lumina-400 text-black text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
-                    {modpack.images.length}
-                  </span>
-                )}
-              </button>
+              {/* Screenshots Tab Button - Only show in read-only mode */}
+              {isReadOnly && (
+                <button
+                  onClick={() => setActiveTab('screenshots')}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-all duration-200 ${
+                    activeTab === 'screenshots'
+                      ? 'bg-lumina-600 text-white shadow-lg'
+                      : 'text-dark-300 hover:text-white hover:bg-dark-700'
+                  }`}
+                >
+                  <Image className="w-4 h-4" />
+                  <span>{t('modpacks.screenshots')}</span>
+                  {modpack.images && modpack.images.length > 0 && (
+                    <span className="bg-lumina-400 text-black text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+                      {modpack.images.length}
+                    </span>
+                  )}
+                </button>
+              )}
               <button
                 onClick={() => setActiveTab('logs')}
                 className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-all duration-200 ${
@@ -381,7 +392,8 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
             >
               <ModpackActions modpack={modpack} state={liveState} isReadOnly={isReadOnly} />
               <ModpackInfo modpack={modpack} />
-              <ModpackRequirements modpack={modpack} />
+              {/* System Requirements - Only show in read-only mode */}
+              {isReadOnly && <ModpackRequirements modpack={modpack} />}
             </div>
           </div>
         </div>
