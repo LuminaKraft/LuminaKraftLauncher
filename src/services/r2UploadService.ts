@@ -52,23 +52,14 @@ export class R2UploadService {
       const fileSha256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
       console.log('✅ Hash calculated:', fileSha256);
 
-      // Build R2 upload path
-      const timestamp = Date.now();
-      const fileKey = this.buildFileKey(modpackId, fileType, file.name, timestamp);
-      const bucketName = 'luminakraft-modpacks'; // Match backend config
-      const accountId = import.meta.env.VITE_CLOUDFLARE_ACCOUNT_ID;
-      const r2PublicUrl = import.meta.env.VITE_R2_PUBLIC_URL;
 
-      if (!accountId) {
-        throw new Error('Cloudflare account ID not configured');
-      }
-
-      // For now: Upload using the Edge Function (we'll optimize later)
-      // This maintains compatibility while we test the new approach
+      // Upload using the Edge Function
+      // Edge Function handles AWS4 signing, R2 upload, and database registration
       const formData = new FormData();
       formData.append('file', file);
       formData.append('modpackId', modpackId);
       formData.append('fileType', fileType);
+      formData.append('fileSha256', fileSha256);
 
       // Report progress
       if (onProgress) {
@@ -98,9 +89,6 @@ export class R2UploadService {
 
       console.log('✅ File uploaded to R2:', result.fileUrl);
 
-      // Register upload in database
-      await this.registerUpload(modpackId, fileType, result.fileUrl, file.size, fileSha256, session.access_token);
-
       return {
         fileUrl: result.fileUrl,
         fileSize: file.size,
@@ -112,72 +100,6 @@ export class R2UploadService {
     }
   }
 
-  /**
-   * Register completed upload in database
-   */
-  private async registerUpload(
-    modpackId: string,
-    fileType: string,
-    fileUrl: string,
-    fileSize: number,
-    fileSha256: string,
-    accessToken: string
-  ): Promise<void> {
-    try {
-      const uploadUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/register-modpack-upload`;
-
-      const response = await fetch(uploadUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          modpackId,
-          fileType,
-          fileUrl,
-          fileSize,
-          fileSha256
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        console.error('❌ Registration failed:', error);
-        throw new Error(error.error || 'Failed to register upload');
-      }
-
-      console.log('✅ Upload registered in database');
-    } catch (error) {
-      console.error('❌ Failed to register upload:', error);
-      // Don't throw - file is already uploaded, just DB registration failed
-      // User can retry registration separately
-    }
-  }
-
-  /**
-   * Build R2 file key path
-   */
-  private buildFileKey(
-    modpackId: string,
-    fileType: string,
-    filename: string,
-    timestamp: number
-  ): string {
-    // Get user ID from auth (would need to be passed or retrieved)
-    const userIdPlaceholder = 'uploads'; // This should come from auth
-
-    switch (fileType) {
-      case 'screenshot':
-        return `modpacks/${userIdPlaceholder}/${modpackId}/screenshots/${timestamp}-${filename}`;
-      case 'logo':
-      case 'banner':
-        return `modpacks/${userIdPlaceholder}/${modpackId}/${fileType}-${filename}`;
-      case 'modpack':
-      default:
-        return `modpacks/${userIdPlaceholder}/${modpackId}/${filename}`;
-    }
-  }
 }
 
 export default R2UploadService.getInstance();
