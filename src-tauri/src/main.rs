@@ -158,6 +158,31 @@ async fn get_cached_modpack_data(modpack_id: String) -> Result<Option<String>, S
 }
 
 #[tauri::command]
+async fn save_modpack_metadata_json(
+    modpack_id: String,
+    modpack_json: String
+) -> Result<(), String> {
+    let launcher_dir = match dirs::data_dir() {
+        Some(dir) => dir.join("LKLauncher"),
+        None => return Err("Failed to get app data directory".to_string()),
+    };
+
+    let cache_dir = launcher_dir.join("cache").join("modpacks");
+
+    // Create cache directory if it doesn't exist
+    std::fs::create_dir_all(&cache_dir)
+        .map_err(|e| format!("Failed to create cache directory: {}", e))?;
+
+    let cache_path = cache_dir.join(format!("{}.json", modpack_id));
+
+    // Write the modpack JSON to file
+    std::fs::write(&cache_path, modpack_json)
+        .map_err(|e| format!("Failed to save modpack metadata: {}", e))?;
+
+    Ok(())
+}
+
+#[tauri::command]
 async fn update_instance_ram_settings(
     modpack_id: String,
     ram_allocation: String,
@@ -1075,6 +1100,7 @@ fn main() {
             get_system_ram,
             get_instance_metadata,
             get_cached_modpack_data,
+            save_modpack_metadata_json,
             update_instance_ram_settings,
             get_local_modpacks,
             install_modpack,

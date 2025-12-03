@@ -63,17 +63,49 @@ export function MyModpacksPage() {
       .filter(([_, state]) => state.status === 'installed')
       .map(([id]) => id);
 
-    // If a modpack just finished installing, reload the list
+    // If a modpack just finished installing, save correct metadata and reload
     if (installingIds.length === 0 && installedIds.length > 0) {
       const recentlyInstalled = installedIds.some(
         id => !instances.some(i => i.id === id)
       );
 
       if (recentlyInstalled) {
+        // Save correct modpack metadata before reloading
+        saveInstallingModpackMetadata();
         loadInstancesAndMetadata();
       }
     }
   }, [modpackStates, instances]);
+
+  /**
+   * Save complete modpack metadata from localStorage to override incomplete backend metadata
+   */
+  const saveInstallingModpackMetadata = async () => {
+    const installedIds = Object.entries(modpackStates)
+      .filter(([_, state]) => state.status === 'installed')
+      .map(([id]) => id);
+
+    for (const id of installedIds) {
+      if (!instances.some(i => i.id === id)) {
+        // This is a newly installed modpack
+        try {
+          const savedData = localStorage.getItem(`installing_modpack_${id}`);
+          if (savedData) {
+            const modpack = JSON.parse(savedData);
+            // Call Tauri to save the correct metadata file
+            await invoke('save_modpack_metadata_json', {
+              modpackId: id,
+              modpackJson: JSON.stringify(modpack)
+            });
+            // Clean up localStorage
+            localStorage.removeItem(`installing_modpack_${id}`);
+          }
+        } catch (error) {
+          console.error(`Failed to save metadata for ${id}:`, error);
+        }
+      }
+    }
+  };
 
   /**
    * Load instances and their metadata (cache-first approach)
@@ -452,9 +484,23 @@ export function MyModpacksPage() {
             {/* Installing modpacks */}
             {installingIds.map((id, index) => {
               const state = modpackStates[id];
-              const modpackData = modpackDataMap.get(id);
+              let modpackData = modpackDataMap.get(id);
 
-              // If we have data from cache/Supabase (from Explore), use it
+              // Try to get from localStorage first (saved before install was called)
+              if (!modpackData) {
+                try {
+                  const savedData = localStorage.getItem(`installing_modpack_${id}`);
+                  if (savedData) {
+                    modpackData = JSON.parse(savedData);
+                    // Clean up localStorage after using it
+                    localStorage.removeItem(`installing_modpack_${id}`);
+                  }
+                } catch (error) {
+                  console.error('Failed to load modpack from localStorage:', error);
+                }
+              }
+
+              // If we have data from cache/localStorage/Supabase (from Explore), use it
               // Only show "Importing" placeholder if NO data (local ZIP import)
               const modpack: Modpack = modpackData ? modpackData : {
                 id,
