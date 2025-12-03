@@ -148,7 +148,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
       }, 2000);
     } catch (error) {
       console.error('Failed to link Discord:', error);
-      toast.error('Failed to link Discord account');
+      toast.error(t('auth.discordLinkFailed'));
       setIsLinkingDiscord(false);
     }
   };
@@ -231,7 +231,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
 
   const handleZipFile = async (file: File) => {
     if (!file.name.endsWith('.zip')) {
-      toast.error('Please select a ZIP file');
+      toast.error(t('publishModpack.validation.zipRequired'));
       return;
     }
     setZipFile(file);
@@ -241,7 +241,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
 
   const handleDownloadUpdatedZip = async () => {
     if (!pendingUploadedFiles || !zipFile) return;
-    const loadingToast = toast.loading('Preparing files...');
+    const loadingToast = toast.loading(t('publishModpack.messages.preparing'));
     try {
       const { downloadDir } = await import('@tauri-apps/api/path');
       const { listen } = await import('@tauri-apps/api/event');
@@ -268,7 +268,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
       const outputFileName = zipFile.name.replace('.zip', '_updated.zip');
       const outputZipPath = `${downloadsFolder}/${outputFileName}`;
 
-      toast.loading('Creating updated modpack ZIP...', { id: loadingToast });
+      toast.loading(t('publishModpack.messages.creating'), { id: loadingToast });
       await invoke('create_modpack_with_overrides', {
         originalZipBytes: originalZipBytes,
         originalZipName: zipFile.name,
@@ -277,10 +277,10 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
       });
 
       unlisten();
-      toast.success(`Updated modpack saved to Downloads: ${outputFileName}`, { id: loadingToast, duration: 5000 });
+      toast.success(t('publishModpack.messages.success', { filename: outputFileName }), { id: loadingToast, duration: 5000 });
     } catch (error) {
       console.error('Error creating modpack with overrides:', error);
-      toast.error('Failed to create updated modpack', { id: loadingToast });
+      toast.error(t('publishModpack.messages.uploadError', { error: String(error) }), { id: loadingToast });
     } finally {
       setPendingUploadedFiles(null);
     }
@@ -288,7 +288,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
 
   const handleSkipDownload = () => {
     if (pendingUploadedFiles) {
-      toast.success(`Modpack validated with ${pendingUploadedFiles.size} additional file(s)`);
+      toast.success(t('publishModpack.messages.validatedWith', { count: pendingUploadedFiles.size }));
       setPendingUploadedFiles(null);
     }
   };
@@ -313,49 +313,49 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
     if (zipFile) {
       await handleZipFile(zipFile);
     } else {
-      toast.error('Please drop a ZIP file');
+      toast.error(t('publishModpack.validation.dropZip'));
     }
   };
 
   const validateForm = (): boolean => {
     if (!formData.name.en || !formData.name.es) {
-      toast.error('Name is required in both languages');
+      toast.error(t('publishModpack.validation.nameRequired'));
       return false;
     }
     if (!formData.shortDescription.en || !formData.shortDescription.es) {
-      toast.error('Short description is required in both languages');
+      toast.error(t('publishModpack.validation.shortDescRequired'));
       return false;
     }
     if (!formData.description.en || !formData.description.es) {
-      toast.error('Full description is required in both languages');
+      toast.error(t('publishModpack.validation.fullDescRequired'));
       return false;
     }
     if (!formData.version) {
-      toast.error('Version is required');
+      toast.error(t('publishModpack.validation.versionRequired'));
       return false;
     }
     if (!formData.minecraftVersion) {
-      toast.error('Minecraft version is required');
+      toast.error(t('publishModpack.validation.minecraftVersionRequired'));
       return false;
     }
     if (!formData.modloaderVersion) {
-      toast.error('Modloader version is required');
+      toast.error(t('publishModpack.validation.modloaderVersionRequired'));
       return false;
     }
     if (!formData.isComingSoon && !zipFile) {
-      toast.error('Modpack ZIP file is required for active modpacks');
+      toast.error(t('publishModpack.validation.zipFileRequired'));
       return false;
     }
     if (!logoFile) {
-      toast.error('Logo is required for all modpacks');
+      toast.error(t('publishModpack.validation.logoRequired'));
       return false;
     }
     if (!bannerFile) {
-      toast.error('Banner is required for all modpacks');
+      toast.error(t('publishModpack.validation.bannerRequired'));
       return false;
     }
     if ((userRole === 'admin' || userRole === 'partner') && !formData.category) {
-      toast.error('Please select a category for the modpack');
+      toast.error(t('publishModpack.validation.categoryRequired'));
       return false;
     }
     return true;
@@ -370,12 +370,12 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
       await authService.syncDiscordRoles();
       const freshAccount = await checkDiscordAccess();
       if (!freshAccount || !freshAccount.isMember) {
-        toast.error('You must be a Discord server member to publish modpacks');
+        toast.error(t('publishModpack.validation.discordMemberRequired'));
         return;
       }
     } catch (error) {
       console.error('Failed to sync roles before publishing:', error);
-      toast.error('Failed to verify permissions. Please try again.');
+      toast.error(t('publishModpack.validation.permissionError'));
       return;
     }
 
@@ -399,7 +399,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
       });
 
       if (!success || !modpackId) {
-        toast.error(`Error creating modpack: ${error}`);
+        toast.error(t('publishModpack.messages.createError', { error: error || 'Unknown error' }));
         return;
       }
 
@@ -427,7 +427,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
           (progress) => setUploadProgress(50 + (progress / 2))
         );
         if (!uploadResult.success) {
-          toast.error(`Error uploading file: ${uploadResult.error}`);
+          toast.error(t('publishModpack.messages.uploadError', { error: uploadResult.error || 'Unknown error' }));
           return;
         }
 
@@ -451,11 +451,11 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
         await service.updateModpack(modpackId, { isActive: false });
       }
 
-      toast.success('Modpack published successfully!');
+      toast.success(t('publishModpack.messages.published'));
       onNavigate?.('published-modpacks');
     } catch (error) {
       console.error('Error creating modpack:', error);
-      toast.error('Failed to create modpack');
+      toast.error(t('publishModpack.messages.createError', { error: String(error) }));
     } finally {
       setIsUploading(false);
     }
@@ -465,41 +465,41 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
     if (currentStep < effectiveSteps.length) {
       // Validation for current step before moving to next
       const currentEffectiveStep = effectiveSteps.find(s => s.id === currentStep);
-      if (currentEffectiveStep?.title === 'Upload' && !formData.isComingSoon && !zipFile) {
-        toast.error('Please upload a modpack ZIP file (optional for Coming Soon modpacks)');
+      if (currentEffectiveStep?.title === t('publishModpack.steps.upload') && !formData.isComingSoon && !zipFile) {
+        toast.error(t('publishModpack.validation.zipFileOptionalMessage'));
         return;
       }
-      if (currentEffectiveStep?.title === 'Category' && !formData.category) {
-        toast.error('Please select a category for the modpack');
+      if (currentEffectiveStep?.title === t('publishModpack.steps.category') && !formData.category) {
+        toast.error(t('publishModpack.validation.categoryRequired'));
         return;
       }
-      if (currentEffectiveStep?.title === 'Basic Info') {
+      if (currentEffectiveStep?.title === t('publishModpack.steps.basicInfo')) {
         if (!formData.name.en || !formData.name.es) {
-          toast.error('Name is required in both languages');
+          toast.error(t('publishModpack.validation.nameRequired'));
           return;
         }
         if (!formData.version || !formData.minecraftVersion || !formData.modloaderVersion) {
-          toast.error('All version fields are required');
+          toast.error(t('publishModpack.validation.allVersionsRequired'));
           return;
         }
       }
-      if (currentEffectiveStep?.title === 'Details') {
+      if (currentEffectiveStep?.title === t('publishModpack.steps.details')) {
         if (!formData.shortDescription.en || !formData.shortDescription.es) {
-          toast.error('Short description is required in both languages');
+          toast.error(t('publishModpack.validation.shortDescRequired'));
           return;
         }
         if (!formData.description.en || !formData.description.es) {
-          toast.error('Full description is required in both languages');
+          toast.error(t('publishModpack.validation.fullDescRequired'));
           return;
         }
       }
-      if (currentEffectiveStep?.title === 'Media') {
+      if (currentEffectiveStep?.title === t('publishModpack.steps.media')) {
         if (!logoFile) {
-          toast.error('Logo is required for all modpacks');
+          toast.error(t('publishModpack.validation.logoRequired'));
           return;
         }
         if (!bannerFile) {
-          toast.error('Banner is required for all modpacks');
+          toast.error(t('publishModpack.validation.bannerRequired'));
           return;
         }
       }
@@ -689,7 +689,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                   {isParsing ? (
                     <>
                       <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600"></div>
-                      <p className="text-lg text-gray-600 dark:text-gray-400 font-medium">Parsing manifest.json...</p>
+                      <p className="text-lg text-gray-600 dark:text-gray-400 font-medium">{t('publishModpack.upload.parsing')}</p>
                     </>
                   ) : zipFile ? (
                     <>
@@ -706,7 +706,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                         {manifestParsed && (
                           <div className="flex items-center justify-center gap-2 mt-3 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-full text-sm font-medium">
                             <Check className="w-4 h-4" />
-                            <span>Manifest parsed successfully</span>
+                            <span>{t('publishModpack.upload.parseSuccess')}</span>
                           </div>
                         )}
                       </div>
@@ -720,7 +720,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                         }}
                         className="mt-4 px-4 py-2 text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                       >
-                        Remove file
+                        {t('publishModpack.upload.remove')}
                       </button>
                     </>
                   ) : (
@@ -730,7 +730,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                       </div>
                       <div>
                         <p className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                          {t('publishModpack.upload.dragDrop')}
+                          {t('publishModpack.upload.dragDropAlt')}
                         </p>
                         <p className="text-gray-500 dark:text-gray-400">
                           {t('publishModpack.upload.formatInfo')}
@@ -746,7 +746,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
               <div className="mt-6">
                 <div className="flex justify-between mb-2">
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Uploading...
+                    {t('publishModpack.upload.uploading')}
                   </span>
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     {Math.round(uploadProgress)}%
@@ -1097,7 +1097,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                           type="button"
                           onClick={() => removeFeature(index)}
                           className="absolute top-2 right-2 p-1 text-red-600 hover:bg-red-100 dark:hover:bg-red-900 rounded transition-colors"
-                          title="Remove feature"
+                          title={t('publishModpack.upload.remove')}
                         >
                           <X className="w-5 h-5" />
                         </button>
@@ -1151,7 +1151,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-                      Logo <span className="text-red-500">*</span>
+                      {t('publishModpack.media.logo')} <span className="text-red-500">*</span>
                     </label>
                     <div
                       onDragOver={(e) => { e.preventDefault(); setIsDraggingLogo(true); }}
@@ -1179,7 +1179,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                         <div className="relative z-10 w-full h-full flex flex-col items-center justify-center">
                           <img
                             src={URL.createObjectURL(logoFile)}
-                            alt="Logo preview"
+                            alt={t('publishModpack.media.logoPreview')}
                             className="w-24 h-24 object-contain mb-2 rounded-lg"
                           />
                           <p className="text-sm font-medium text-gray-900 dark:text-white truncate max-w-full px-2">{logoFile.name}</p>
@@ -1196,7 +1196,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                   </div>
                   <div>
                     <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-                      Banner <span className="text-red-500">*</span>
+                      {t('publishModpack.media.banner')} <span className="text-red-500">*</span>
                     </label>
                     <div
                       onDragOver={(e) => { e.preventDefault(); setIsDraggingBanner(true); }}
@@ -1224,7 +1224,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                         <div className="relative z-10 w-full h-full flex flex-col items-center justify-center">
                           <img
                             src={URL.createObjectURL(bannerFile)}
-                            alt="Banner preview"
+                            alt={t('publishModpack.media.bannerPreview')}
                             className="w-full h-24 object-cover mb-2 rounded-lg"
                           />
                           <p className="text-sm font-medium text-gray-900 dark:text-white truncate max-w-full px-2">{bannerFile.name}</p>
@@ -1287,7 +1287,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                         <div key={index} className="relative group">
                           <img
                             src={URL.createObjectURL(file)}
-                            alt={`Screenshot ${index + 1}`}
+                            alt={t('modpacks.screenshots') + ` ${index + 1}`}
                             className="w-full h-24 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
                           />
                           <button
@@ -1409,12 +1409,12 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
               {isUploading ? (
                 <>
                   <RefreshCw className="w-4 h-4 animate-spin" />
-                  Publishing... {Math.round(uploadProgress)}%
+                  {t('publishModpack.buttons.publishProgress', { progress: Math.round(uploadProgress) })}
                 </>
               ) : (
                 <>
                   <Check className="w-4 h-4" />
-                  Publish Modpack
+                  {t('publishModpack.buttons.publish')}
                 </>
               )}
             </button>
@@ -1459,10 +1459,10 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
           setShowDownloadDialog(false);
           await handleDownloadUpdatedZip();
         }}
-        title="Download Updated Modpack?"
-        message={`You've uploaded ${pendingUploadedFiles?.size || 0} file(s) that were missing from this modpack.\n\nWould you like to download an updated version of the ZIP file with these files included in the overrides folder?\n\nYou can then use this updated ZIP to publish your modpack.`}
-        confirmText="Download Updated ZIP"
-        cancelText="Skip Download"
+        title={t('publishModpack.dialogs.downloadTitle')}
+        message={t('publishModpack.dialogs.downloadMessage', { count: pendingUploadedFiles?.size || 0 })}
+        confirmText={t('publishModpack.dialogs.downloadButton')}
+        cancelText={t('publishModpack.dialogs.skipButton')}
         variant="info"
       />
 
