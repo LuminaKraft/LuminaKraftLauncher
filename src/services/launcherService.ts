@@ -223,6 +223,12 @@ class LauncherService {
       // Transform Supabase data to match launcher format
       if (data && data.length > 0) {
         console.log('📦 Raw modpack data sample:', data[0]);
+        console.log(`📦 Total modpacks returned by RPC: ${data.length}`);
+        data.forEach((m: any) => {
+          console.log(`  - ${m.name} (active: ${m.is_active}, coming_soon: ${m.is_coming_soon}, upload_status: ${m.upload_status})`);
+        });
+      } else {
+        console.log('⚠️ No modpacks returned by modpacks_i18n RPC');
       }
 
       // Fetch stats for all modpacks in parallel
@@ -233,10 +239,14 @@ class LauncherService {
             .then((result: any) => {
               if (result.data) {
                 statsMap.set(modpack.id, result.data);
+                console.log(`📊 Stats for ${modpack.name}:`, result.data);
               }
               return null;
             })
-            .catch(() => null) // Silently fail for stats
+            .catch((error: any) => {
+              console.error(`⚠️ Failed to fetch stats for modpack ${modpack.id}:`, error);
+              return null;
+            })
         );
         await Promise.all(statsPromises);
       }
