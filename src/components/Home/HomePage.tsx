@@ -119,6 +119,8 @@ export function HomePage({ onNavigate }: HomePageProps) {
                   state={state}
                   onSelect={() => onNavigate?.('explore', modpack.id)}
                   index={index}
+                  isReadOnly={true}
+                  onNavigateToMyModpacks={() => onNavigate?.('my-modpacks')}
                 />
               );
             })}
@@ -150,6 +152,8 @@ export function HomePage({ onNavigate }: HomePageProps) {
                   state={state}
                   onSelect={() => onNavigate?.('explore', modpack.id)}
                   index={index}
+                  isReadOnly={true}
+                  onNavigateToMyModpacks={() => onNavigate?.('my-modpacks')}
                 />
               );
             })}
@@ -187,6 +191,8 @@ export function HomePage({ onNavigate }: HomePageProps) {
                   state={state}
                   onSelect={() => onNavigate?.('explore', modpack.id)}
                   index={index}
+                  isReadOnly={true}
+                  onNavigateToMyModpacks={() => onNavigate?.('my-modpacks')}
                 />
               );
             })}
@@ -230,6 +236,8 @@ export function HomePage({ onNavigate }: HomePageProps) {
                   state={state}
                   onSelect={() => onNavigate?.('explore', modpack.id)}
                   index={index}
+                  isReadOnly={true}
+                  onNavigateToMyModpacks={() => onNavigate?.('my-modpacks')}
                 />
               );
             })}

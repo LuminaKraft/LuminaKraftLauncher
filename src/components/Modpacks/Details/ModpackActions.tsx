@@ -17,9 +17,10 @@ interface ModpackActionsProps {
   state: ModpackState & {
     progress?: ProgressInfo;
   };
+  isReadOnly?: boolean; // Read-only mode: show Install/Installed only
 }
 
-const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state }) => {
+const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state, isReadOnly = false }) => {
   const { t } = useTranslation();
   const { installModpack, updateModpack, launchModpack, repairModpack, removeModpack, stopInstance } = useLauncher();
   const { getAnimationClass, getAnimationStyle } = useAnimation();
@@ -331,8 +332,8 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state }) => {
           </div>
         )}
 
-        {/* Secondary Actions */}
-        {['installed', 'outdated', 'error'].includes(state.status) && (
+        {/* Secondary Actions - only in full management mode */}
+        {!isReadOnly && ['installed', 'outdated', 'error'].includes(state.status) && (
           <div className="flex flex-col gap-2">
             {/* Profile Options Button (Full Width) */}
             <button

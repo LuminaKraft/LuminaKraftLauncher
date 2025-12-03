@@ -21,9 +21,10 @@ interface ModpackDetailsProps {
   };
   onBack: () => void;
   features?: any[] | null;
+  isReadOnly?: boolean; // Read-only mode: hide management actions
 }
 
-const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack }) => {
+const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack, isReadOnly = false }) => {
   const { t } = useTranslation();
   const { modpackStates } = useLauncher();
   const { getAnimationClass, getAnimationStyle } = useAnimation();
@@ -298,13 +299,13 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
       <div className="container mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Mobile Actions First */}
-          <div 
+          <div
             className={`lg:hidden ${getAnimationClass('transition-all duration-200')}`}
             style={getAnimationStyle({
               animation: `fadeInUp 0.3s ease-out 0.1s backwards`
             })}
           >
-            <ModpackActions modpack={modpack} state={liveState} />
+            <ModpackActions modpack={modpack} state={liveState} isReadOnly={isReadOnly} />
           </div>
 
           {/* Left Column - Main Info */}
@@ -372,13 +373,13 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
 
           {/* Right Column - Desktop Actions */}
           <div className="hidden lg:block">
-            <div 
+            <div
               className={`space-y-6 ${getAnimationClass('transition-all duration-200')}`}
               style={getAnimationStyle({
                 animation: `fadeInUp 0.3s ease-out 0.2s backwards`
               })}
             >
-              <ModpackActions modpack={modpack} state={liveState} />
+              <ModpackActions modpack={modpack} state={liveState} isReadOnly={isReadOnly} />
               <ModpackInfo modpack={modpack} />
               <ModpackRequirements modpack={modpack} />
             </div>

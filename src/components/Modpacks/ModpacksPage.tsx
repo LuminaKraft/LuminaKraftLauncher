@@ -11,9 +11,10 @@ import type { Modpack } from '../../types/launcher';
 
 interface ModpacksPageProps {
   initialModpackId?: string;
+  onNavigate?: (_section: string, _modpackId?: string) => void;
 }
 
-const ModpacksPage: React.FC<ModpacksPageProps> = ({ initialModpackId }) => {
+const ModpacksPage: React.FC<ModpacksPageProps> = ({ initialModpackId, onNavigate }) => {
   const { t } = useTranslation();
   const { getAnimationClass, getAnimationStyle, withDelay } = useAnimation();
   const {
@@ -143,6 +144,7 @@ const ModpacksPage: React.FC<ModpacksPageProps> = ({ initialModpackId }) => {
             modpack={selectedModpackDetails || selectedModpack}
             state={modpackState}
             onBack={handleBackToList}
+            isReadOnly={true}
           />
         )}
       </div>
@@ -292,6 +294,8 @@ const ModpacksPage: React.FC<ModpacksPageProps> = ({ initialModpackId }) => {
                             state={modpackState}
                             onSelect={() => handleModpackSelect(modpack)}
                             index={index}
+                            isReadOnly={true}
+                            onNavigateToMyModpacks={() => onNavigate?.('my-modpacks')}
                           />
                         </div>
                       );

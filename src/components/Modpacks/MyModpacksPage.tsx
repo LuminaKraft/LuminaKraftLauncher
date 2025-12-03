@@ -12,54 +12,32 @@ import { ConfirmDialog } from '../Common/ConfirmDialog';
 import LauncherService from '../../services/launcherService';
 import type { Modpack } from '../../types/launcher';
 
-interface LocalModpack {
+interface LocalInstance {
   id: string;
   name: string;
   version: string;
   minecraftVersion: string;
   modloader: string;
   modloaderVersion: string;
-  path: string;
-  createdAt: string;
-  lastPlayed?: string;
+  installedAt: string;
 }
 
 export function MyModpacksPage() {
   const { t } = useTranslation();
   const validationService = ModpackValidationService.getInstance();
+  const launcherService = LauncherService.getInstance();
   const { installModpackFromZip, modpackStates } = useLauncher();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const launcherService = LauncherService.getInstance();
 
-  const [localModpacks, setLocalModpacks] = useState<LocalModpack[]>([]);
-  const [modpackDetails, setModpackDetails] = useState<Map<string, Modpack>>(new Map());
+  // State management
+  const [instances, setInstances] = useState<LocalInstance[]>([]);
+  const [modpackDataMap, setModpackDataMap] = useState<Map<string, Modpack>>(new Map());
   const [selectedModpackId, setSelectedModpackId] = useState<string | null>(null);
-  const [isTransitioning, setIsTransitioning] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const [validating, setValidating] = useState(false);
 
-  // Animation helper with delay (faster animations - 100ms)
-  const withDelay = (callback: () => void | Promise<void>, delay = 100) => {
-    setTimeout(callback, delay);
-  };
-
-  const handleModpackSelect = (modpackId: string) => {
-    setIsTransitioning(true);
-    withDelay(() => {
-      setSelectedModpackId(modpackId);
-      withDelay(() => {
-        setIsTransitioning(false);
-      }, 100);
-    }, 100);
-  };
-
-  const handleBackToList = () => {
-    setIsTransitioning(true);
-    withDelay(() => {
-      setSelectedModpackId(null);
-      setIsTransitioning(false); // Reset immediately to avoid double animation
-    }, 100);
-  };
+  // Import/validation state
   const [showValidationDialog, setShowValidationDialog] = useState(false);
   const [validationData, setValidationData] = useState<{
     modpackName: string;
@@ -67,82 +45,60 @@ export function MyModpacksPage() {
     modsInOverrides: string[];
     file: File;
   } | null>(null);
-  const [_zipProgress, setZipProgress] = useState<{
-    current: number;
-    total: number;
-    stage: string;
-    message: string;
-  } | null>(null);
   const [showDownloadDialog, setShowDownloadDialog] = useState(false);
   const [pendingUploadedFiles, setPendingUploadedFiles] = useState<Map<string, File> | null>(null);
 
+  // Load instances on mount
   useEffect(() => {
-    loadLocalModpacks();
+    loadInstancesAndMetadata();
   }, []);
 
-  // Load details for installing modpacks (from Explore)
-  useEffect(() => {
-    const loadInstallingModpackDetails = async () => {
-      const installingIds = Object.entries(modpackStates)
-        .filter(([id, state]) => state.status === 'installing' && !localModpacks.some(m => m.id === id))
-        .map(([id]) => id);
-
-      for (const id of installingIds) {
-        // Skip if we already have details for this modpack
-        if (modpackDetails.has(id)) continue;
-
-        try {
-          const details = await launcherService.fetchModpackDetails(id);
-          if (details) {
-            setModpackDetails(prev => new Map(prev).set(id, details));
-          }
-        } catch (error) {
-          // Silently fail - modpack might be imported from local ZIP
-          console.log(`Could not fetch details for installing modpack ${id}`);
-        }
-      }
-    };
-
-    loadInstallingModpackDetails();
-  }, [modpackStates, localModpacks, modpackDetails]);
-
-  const loadLocalModpacks = async () => {
+  /**
+   * Load instances and their metadata (cache-first approach)
+   */
+  const loadInstancesAndMetadata = async () => {
     try {
       setLoading(true);
+
+      // Step 1: Load local instances
       const result = await invoke<string>('get_local_modpacks');
-      const instances = JSON.parse(result);
+      const parsedInstances: LocalInstance[] = JSON.parse(result);
+      setInstances(parsedInstances);
 
-      // Map instances to LocalModpack format
-      const modpacks: LocalModpack[] = instances.map((instance: any) => ({
-        id: instance.id,
-        name: instance.name || instance.id, // Use name from metadata, fallback to ID
-        version: instance.version,
-        minecraftVersion: instance.minecraftVersion, // Backend uses camelCase via serde rename
-        modloader: instance.modloader,
-        modloaderVersion: instance.modloaderVersion, // Backend uses camelCase via serde rename
-        path: '', // Path is not returned by backend, but we know it's in instances/{id}
-        createdAt: instance.installedAt, // Backend uses camelCase via serde rename
-        lastPlayed: undefined // We don't track last played yet
-      }));
-
-      setLocalModpacks(modpacks);
-
-      // Fetch details for each modpack from Supabase (in parallel)
-      const detailsMap = new Map<string, Modpack>();
+      // Step 2: Load metadata for each instance (cache-first)
+      const dataMap = new Map<string, Modpack>();
       await Promise.all(
-        modpacks.map(async (localModpack) => {
+        parsedInstances.map(async (instance) => {
           try {
-            const details = await launcherService.fetchModpackDetails(localModpack.id);
-            if (details) {
-              detailsMap.set(localModpack.id, details);
+            // Try cache first
+            const cachedData = await invoke<string | null>('get_cached_modpack_data', {
+              modpackId: instance.id
+            });
+
+            if (cachedData) {
+              // Cache hit - use cached data
+              const modpack = JSON.parse(cachedData) as Modpack;
+              dataMap.set(instance.id, modpack);
+              return;
+            }
+
+            // Cache miss - try Supabase
+            try {
+              const modpack = await launcherService.fetchModpackDetails(instance.id);
+              if (modpack) {
+                dataMap.set(instance.id, modpack);
+              }
+            } catch (supabaseError) {
+              // Supabase also failed - log but don't block
+              console.log(`Could not fetch details for ${instance.id} from cache or Supabase`);
             }
           } catch (error) {
-            console.log(`Could not fetch details for ${localModpack.id}:`, error);
-            // Silently fail - modpack might be imported and not in database
+            console.error(`Error loading metadata for ${instance.id}:`, error);
           }
         })
       );
-      setModpackDetails(detailsMap);
+
+      setModpackDataMap(dataMap);
     } catch (error) {
       console.error('Error loading local modpacks:', error);
       toast.error('Failed to load local modpacks');
@@ -151,17 +107,46 @@ export function MyModpacksPage() {
     }
   };
 
+  /**
+   * Handle modpack selection for details view
+   */
+  const handleModpackSelect = (modpackId: string) => {
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setSelectedModpackId(modpackId);
+      setTimeout(() => {
+        setIsTransitioning(false);
+      }, 100);
+    }, 100);
+  };
+
+  /**
+   * Handle back from details view
+   */
+  const handleBackToList = () => {
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setSelectedModpackId(null);
+      setIsTransitioning(false);
+    }, 100);
+  };
+
+  /**
+   * Handle import button click
+   */
   const handleImportModpack = () => {
-    // Reset validating state in case it got stuck
     setValidating(false);
     fileInputRef.current?.click();
   };
 
+  /**
+   * Handle file selection for import
+   */
   const handleFileSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Reset input so the same file can be selected again
+    // Reset input for reuse
     event.target.value = '';
 
     if (!file.name.endsWith('.zip')) {
@@ -182,14 +167,13 @@ export function MyModpacksPage() {
 
       toast.dismiss('validation');
 
-      // Check if there are missing mods (mods without URL that are NOT in overrides)
+      // Check for missing mods
       const missingMods = result.modsWithoutUrl.filter(
         mod => !result.modsInOverrides?.includes(mod.fileName)
       );
 
-      // If there are mods without URL but they're all in overrides, proceed directly
       if (result.modsWithoutUrl && result.modsWithoutUrl.length > 0 && missingMods.length > 0) {
-        // Some files are missing - show validation dialog
+        // Show validation dialog for missing files
         setValidationData({
           modpackName: result.manifest?.name || file.name,
           modsWithoutUrl: result.modsWithoutUrl,
@@ -198,7 +182,7 @@ export function MyModpacksPage() {
         });
         setShowValidationDialog(true);
       } else {
-        // No missing files (either no restricted files or all are in overrides), proceed directly
+        // No missing files - proceed directly
         await performImport(file);
       }
     } catch (error) {
@@ -209,114 +193,117 @@ export function MyModpacksPage() {
     }
   };
 
+  /**
+   * Perform the actual import
+   */
   const performImport = async (file: File) => {
     try {
-      // Use the context function which handles all state management
       await installModpackFromZip(file);
-
       toast.success('Modpack installed successfully!');
 
-      // Reload the list to show the newly installed modpack
-      await loadLocalModpacks();
+      // Reload instances
+      await loadInstancesAndMetadata();
     } catch (error) {
       console.error('Error installing modpack from ZIP:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to install modpack');
     }
   };
 
+  /**
+   * Handle validation dialog continue
+   */
   const handleValidationContinue = async (uploadedFiles?: Map<string, File>) => {
     setShowValidationDialog(false);
     if (validationData) {
       if (uploadedFiles && uploadedFiles.size > 0) {
-        // Ask user if they want to download an updated ZIP with the files in overrides
         setPendingUploadedFiles(uploadedFiles);
         setShowDownloadDialog(true);
       } else {
-        // No files uploaded, just import
         await performImport(validationData.file);
       }
     }
   };
 
+  /**
+   * Handle download dialog confirmation
+   */
   const handleDownloadDialogConfirm = async () => {
     if (validationData && pendingUploadedFiles) {
-        const uploadedFiles = pendingUploadedFiles;
-          const loadingToast = toast.loading('Preparing files...');
+      const loadingToast = toast.loading('Preparing files...');
+      try {
+        const { downloadDir } = await import('@tauri-apps/api/path');
+        const { listen } = await import('@tauri-apps/api/event');
 
-          try {
-            const { downloadDir } = await import('@tauri-apps/api/path');
+        const unlisten = await listen<{
+          current: number;
+          total: number;
+          stage: string;
+          message: string;
+        }>('zip-progress', (event) => {
+          const { current, total, stage, message } = event.payload;
+          const percentage = Math.round((current / total) * 100);
 
-            // Set up progress listener first
-            const { listen } = await import('@tauri-apps/api/event');
-            const unlisten = await listen<{current: number, total: number, stage: string, message: string}>('zip-progress', (event) => {
-              const { current, total, stage, message } = event.payload;
-              setZipProgress({ current, total, stage, message });
-
-              const percentage = Math.round((current / total) * 100);
-
-              if (stage === 'complete') {
-                toast.dismiss(loadingToast);
-              } else {
-                toast.loading(`${message} (${percentage}%)`, { id: loadingToast });
-              }
-            });
-
-            // Read original ZIP as bytes
-            const originalZipBuffer = await validationData.file.arrayBuffer();
-            const originalZipBytes = Array.from(new Uint8Array(originalZipBuffer));
-
-            // Read uploaded files as bytes
-            const uploadedFilesData: [string, number[]][] = [];
-            for (const file of uploadedFiles.values()) {
-              const buffer = await file.arrayBuffer();
-              const bytes = Array.from(new Uint8Array(buffer));
-              uploadedFilesData.push([file.name, bytes]);
-            }
-
-            // Create output ZIP path in Downloads folder
-            const downloadsFolder = await downloadDir();
-            const outputFileName = validationData.file.name.replace('.zip', '_updated.zip');
-            const outputZipPath = `${downloadsFolder}/${outputFileName}`;
-
-            toast.loading('Creating updated modpack ZIP...', { id: loadingToast });
-
-            // Call Tauri command with bytes directly
-            await invoke('create_modpack_with_overrides', {
-              originalZipBytes: originalZipBytes,
-              originalZipName: validationData.file.name,
-              uploadedFiles: uploadedFilesData,
-              outputZipPath: outputZipPath
-            });
-
-            unlisten();
-            setZipProgress(null);
-            toast.success(`Updated modpack saved to Downloads: ${outputFileName}`, { id: loadingToast, duration: 5000 });
-          } catch (error) {
-            console.error('Error creating modpack with overrides:', error);
-            setZipProgress(null);
-            toast.error('Failed to create updated modpack', { id: loadingToast });
+          if (stage === 'complete') {
+            toast.dismiss(loadingToast);
+          } else {
+            toast.loading(`${message} (${percentage}%)`, { id: loadingToast });
           }
+        });
 
-      // Now import the modpack (either original or with uploaded files in memory)
+        const originalZipBuffer = await validationData.file.arrayBuffer();
+        const originalZipBytes = Array.from(new Uint8Array(originalZipBuffer));
+
+        const uploadedFilesData: [string, number[]][] = [];
+        for (const file of pendingUploadedFiles.values()) {
+          const buffer = await file.arrayBuffer();
+          const bytes = Array.from(new Uint8Array(buffer));
+          uploadedFilesData.push([file.name, bytes]);
+        }
+
+        const downloadsFolder = await downloadDir();
+        const outputFileName = validationData.file.name.replace('.zip', '_updated.zip');
+        const outputZipPath = `${downloadsFolder}/${outputFileName}`;
+
+        toast.loading('Creating updated modpack ZIP...', { id: loadingToast });
+
+        await invoke('create_modpack_with_overrides', {
+          originalZipBytes,
+          originalZipName: validationData.file.name,
+          uploadedFiles: uploadedFilesData,
+          outputZipPath
+        });
+
+        unlisten();
+        toast.success(`Updated modpack saved to Downloads: ${outputFileName}`, {
+          id: loadingToast,
+          duration: 5000
+        });
+      } catch (error) {
+        console.error('Error creating modpack with overrides:', error);
+        toast.error('Failed to create updated modpack', { id: loadingToast });
+      }
+
+      // Now import
       await performImport(validationData.file);
       setPendingUploadedFiles(null);
     }
   };
 
+  // Loading state
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-xl text-gray-600 dark:text-gray-400">Loading...</div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lumina-500"></div>
       </div>
     );
   }
 
-  // If a modpack is selected, show its details
+  // Details view
   if (selectedModpackId) {
     const state = modpackStates[selectedModpackId];
-    let modpack = modpackDetails.get(selectedModpackId);
+    let modpack = modpackDataMap.get(selectedModpackId);
 
-    // If no details from Supabase, create a temporary placeholder for local imports
+    // Create placeholder if no metadata found
     if (!modpack && state) {
       modpack = {
         id: selectedModpackId,
@@ -329,35 +316,40 @@ export function MyModpacksPage() {
         modloaderVersion: '',
         logo: '',
         backgroundImage: '',
+        banner_url: '',
         urlModpackZip: '',
         category: 'community',
         isActive: false,
         isNew: false,
-        isComingSoon: false,
-        gamemode: undefined,
-        ip: undefined
-      };
+        isComingSoon: false
+      } as Modpack;
     }
 
     if (modpack && state) {
       return (
-        <div className={`h-full w-full transition-opacity duration-200 ease-out ${
-          isTransitioning ? 'opacity-0' : 'opacity-100'
-        }`}>
+        <div
+          className={`h-full w-full transition-opacity duration-200 ease-out ${
+            isTransitioning ? 'opacity-0' : 'opacity-100'
+          }`}
+        >
           <ModpackDetailsRefactored
             modpack={modpack}
             state={state}
             onBack={handleBackToList}
+            isReadOnly={false}
           />
         </div>
       );
     }
   }
 
+  // Main list view
   return (
-    <div className={`max-w-7xl mx-auto p-6 transition-opacity duration-200 ease-out ${
-      isTransitioning ? 'opacity-0' : 'opacity-100'
-    }`}>
+    <div
+      className={`max-w-7xl mx-auto p-6 transition-opacity duration-200 ease-out ${
+        isTransitioning ? 'opacity-0' : 'opacity-100'
+      }`}
+    >
       {/* Hidden file input */}
       <input
         ref={fileInputRef}
@@ -382,45 +374,39 @@ export function MyModpacksPage() {
       {/* Header */}
       <div className="mb-6">
         <div className="flex justify-between items-center mb-2">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            {t('myModpacks.title')}
-          </h1>
+          <h1 className="text-3xl font-bold text-white">{t('myModpacks.title')}</h1>
           <button
             onClick={handleImportModpack}
             disabled={validating}
-            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-6 py-3 bg-lumina-600 hover:bg-lumina-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Download className="w-5 h-5" />
             {validating ? t('myModpacks.validating') : t('myModpacks.import')}
           </button>
         </div>
-        <p className="text-gray-600 dark:text-gray-400">
-          {t('myModpacks.subtitle')}
-        </p>
+        <p className="text-dark-400">{t('myModpacks.subtitle')}</p>
       </div>
 
       {/* Modpacks List */}
       {(() => {
-        // Get importing modpacks from context (those with 'installing' status that aren't in localModpacks)
-        const importingModpackIds = Object.entries(modpackStates)
-          .filter(([id, state]) => state.status === 'installing' && !localModpacks.some(m => m.id === id))
+        // Get installing modpacks
+        const installingIds = Object.entries(modpackStates)
+          .filter(([id, state]) => state.status === 'installing' && !instances.some(i => i.id === id))
           .map(([id]) => id);
 
-        const hasImporting = importingModpackIds.length > 0;
+        const hasContent = instances.length > 0 || installingIds.length > 0;
 
-        if (localModpacks.length === 0 && !hasImporting) {
+        if (!hasContent) {
           return (
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-12 shadow-md text-center">
-              <FolderOpen className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+            <div className="bg-dark-800 rounded-lg p-12 border border-dark-700 text-center">
+              <FolderOpen className="w-16 h-16 mx-auto mb-4 text-dark-400" />
+              <h2 className="text-xl font-semibold text-white mb-2">
                 {t('myModpacks.empty.title')}
               </h2>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
-                {t('myModpacks.empty.description')}
-              </p>
+              <p className="text-dark-400 mb-6">{t('myModpacks.empty.description')}</p>
               <button
                 onClick={handleImportModpack}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors inline-block"
+                className="px-6 py-3 bg-lumina-600 hover:bg-lumina-700 text-white rounded-lg font-medium transition-colors"
               >
                 {t('myModpacks.empty.button')}
               </button>
@@ -430,19 +416,12 @@ export function MyModpacksPage() {
 
         return (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Importing Modpacks */}
-            {importingModpackIds.map((id, index) => {
+            {/* Installing modpacks */}
+            {installingIds.map((id, index) => {
               const state = modpackStates[id];
+              const cachedData = modpackDataMap.get(id);
 
-              // Check if we have details from Supabase (for modpacks from Explore)
-              const details = modpackDetails.get(id);
-
-              // Create a temporary modpack object for display
-              const tempModpack: Modpack = details ? {
-                // If installing from Explore, use server details
-                ...details,
-              } : {
-                // If importing from local ZIP, use generic placeholder
+              const modpack: Modpack = cachedData || {
                 id,
                 name: t('myModpacks.importing.name'),
                 description: t('myModpacks.importing.description'),
@@ -453,74 +432,78 @@ export function MyModpacksPage() {
                 modloaderVersion: '',
                 logo: '',
                 backgroundImage: '',
+                banner_url: '',
                 urlModpackZip: '',
                 category: 'community',
                 isActive: false,
                 isNew: false,
-                isComingSoon: false,
-                gamemode: undefined,
-                ip: undefined
-              };
+                isComingSoon: false
+              } as Modpack;
 
               return (
                 <ModpackCard
-                  key={`importing-${id}`}
-                  modpack={tempModpack}
+                  key={`installing-${id}`}
+                  modpack={modpack}
                   state={state}
                   onSelect={() => handleModpackSelect(id)}
                   index={index}
+                  hideServerBadges={true}
                 />
               );
             })}
 
-            {/* Installed Modpacks */}
-            {localModpacks.map((localModpack, index) => {
-              // Check if we have details from Supabase for this modpack
-              const details = modpackDetails.get(localModpack.id);
-
-              // Convert LocalModpack to Modpack format for ModpackCard
-              const modpack: Modpack = details ? {
-                // If we have details from Supabase, use them
-                ...details,
-                // But override version info with local installed version
-                version: localModpack.version,
-                minecraftVersion: localModpack.minecraftVersion,
-                modloader: localModpack.modloader,
-                modloaderVersion: localModpack.modloaderVersion,
-              } : {
-                // If no details (imported modpack), use local data only
-                id: localModpack.id,
-                name: localModpack.name,
-                description: '',
-                shortDescription: `${t('myModpacks.importedOn')} ${new Date(localModpack.createdAt).toLocaleDateString()}`,
-                version: localModpack.version,
-                minecraftVersion: localModpack.minecraftVersion,
-                modloader: localModpack.modloader,
-                modloaderVersion: localModpack.modloaderVersion,
-                logo: localModpack.name.charAt(0).toUpperCase(), // Use first letter as logo
-                backgroundImage: '', // Use default gradient background
-                urlModpackZip: '', // Local modpacks don't need download URL
-                category: 'community',
-                isActive: true,
-                isNew: false,
-                isComingSoon: false,
-              };
-
-              // Get or create state for this modpack
-              const state = modpackStates[localModpack.id] || {
+            {/* Installed modpacks */}
+            {instances.map((instance, index) => {
+              const cachedData = modpackDataMap.get(instance.id);
+              const state = modpackStates[instance.id] || {
                 installed: true,
                 downloading: false,
                 progress: { percentage: 0 },
-                status: 'installed' as const,
+                status: 'installed' as const
               };
+
+              let modpack: Modpack;
+
+              if (cachedData) {
+                // Use cached data, but override versions
+                modpack = {
+                  ...cachedData,
+                  version: instance.version,
+                  minecraftVersion: instance.minecraftVersion,
+                  modloader: instance.modloader,
+                  modloaderVersion: instance.modloaderVersion
+                };
+              } else {
+                // Use instance data only (local import)
+                modpack = {
+                  id: instance.id,
+                  name: instance.name,
+                  description: '',
+                  shortDescription: `${t('myModpacks.importedOn')} ${new Date(
+                    instance.installedAt
+                  ).toLocaleDateString()}`,
+                  version: instance.version,
+                  minecraftVersion: instance.minecraftVersion,
+                  modloader: instance.modloader,
+                  modloaderVersion: instance.modloaderVersion,
+                  logo: instance.name.charAt(0).toUpperCase(),
+                  backgroundImage: '',
+                  banner_url: '',
+                  urlModpackZip: '',
+                  category: 'community',
+                  isActive: true,
+                  isNew: false,
+                  isComingSoon: false
+                } as Modpack;
+              }
 
               return (
                 <ModpackCard
-                  key={localModpack.id}
+                  key={instance.id}
                   modpack={modpack}
                   state={state}
-                  onSelect={() => handleModpackSelect(localModpack.id)}
-                  index={index + importingModpackIds.length}
+                  onSelect={() => handleModpackSelect(instance.id)}
+                  index={index + installingIds.length}
                   hideServerBadges={true}
                 />
               );
@@ -529,18 +512,19 @@ export function MyModpacksPage() {
         );
       })()}
 
-      {/* Download Updated ZIP Dialog */}
+      {/* Download Dialog */}
       <ConfirmDialog
         isOpen={showDownloadDialog}
         onClose={() => setShowDownloadDialog(false)}
         onConfirm={handleDownloadDialogConfirm}
         title="Download Updated Modpack?"
-        message={`You've uploaded ${pendingUploadedFiles?.size || 0} file(s) that were missing from this modpack. Would you like to download an updated version of the ZIP file with these files included in the overrides folder? This way you can use the updated ZIP for publishing or sharing.`}
+        message={`You've uploaded ${
+          pendingUploadedFiles?.size || 0
+        } file(s) that were missing from this modpack. Would you like to download an updated version of the ZIP file with these files included in the overrides folder?`}
         confirmText="Download Updated ZIP"
         cancelText="Skip Download"
         variant="info"
       />
-
     </div>
   );
 }

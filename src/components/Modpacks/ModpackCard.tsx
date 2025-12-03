@@ -17,9 +17,11 @@ interface ModpackCardProps {
   onSelect: () => void;
   index?: number;
   hideServerBadges?: boolean; // Hide category and status badges for local modpacks
+  isReadOnly?: boolean; // Read-only mode: only show Install/Installed buttons (for Home/Explore)
+  onNavigateToMyModpacks?: () => void; // Callback to navigate to My Modpacks after install
 }
 
-const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect, index = 0, hideServerBadges = false }) => {
+const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect, index = 0, hideServerBadges = false, isReadOnly = false, onNavigateToMyModpacks }) => {
   const { t } = useTranslation();
   const { getAnimationClass, getAnimationStyle } = useAnimation();
   const { installModpack, updateModpack, launchModpack, repairModpack, removeModpack, stopInstance } = useLauncher();
@@ -81,7 +83,34 @@ const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect
       };
     }
 
-    // First check state status - this takes priority
+    // Read-only mode (Home/Explore): Show Install or Installed (disabled) only
+    if (isReadOnly) {
+      if (['installed', 'outdated', 'error'].includes(state.status)) {
+        return {
+          text: t('modpacks.installed'),
+          icon: Download,
+          onClick: () => { },
+          className: 'btn-secondary',
+          disabled: true
+        };
+      }
+
+      // Not installed in read-only mode: Show Install with navigation
+      return {
+        text: t('modpacks.install'),
+        icon: Download,
+        onClick: () => {
+          installModpack(modpack.id);
+          if (onNavigateToMyModpacks) {
+            onNavigateToMyModpacks();
+          }
+        },
+        className: 'btn-primary',
+        disabled: false
+      };
+    }
+
+    // Full management mode (My Modpacks): Regular button logic
     switch (state.status) {
       case 'not_installed':
         return {
@@ -554,8 +583,8 @@ const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect
             <span>{buttonConfig.text}</span>
           </button>
 
-          {/* Settings/Profile Options button */}
-          {['installed', 'outdated', 'error'].includes(state.status) && (
+          {/* Settings/Profile Options button - only in full management mode */}
+          {!isReadOnly && ['installed', 'outdated', 'error'].includes(state.status) && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -569,8 +598,8 @@ const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect
             </button>
           )}
 
-          {/* Open folder button */}
-          {['installed', 'outdated', 'error'].includes(state.status) && (
+          {/* Open folder button - only in full management mode */}
+          {!isReadOnly && ['installed', 'outdated', 'error'].includes(state.status) && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -584,8 +613,8 @@ const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect
             </button>
           )}
 
-          {/* Remove button */}
-          {['installed', 'outdated', 'error'].includes(state.status) && (
+          {/* Remove button - only in full management mode */}
+          {!isReadOnly && ['installed', 'outdated', 'error'].includes(state.status) && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
