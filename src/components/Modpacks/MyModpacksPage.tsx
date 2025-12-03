@@ -55,35 +55,42 @@ export function MyModpacksPage() {
 
   // Listen for installation state changes and reload
   useEffect(() => {
-    const installingIds = Object.entries(modpackStates)
-      .filter(([_, state]) => state.status === 'installing')
-      .map(([id]) => id);
+    const handleStateChange = async () => {
+      const installingIds = Object.entries(modpackStates)
+        .filter(([_, state]) => state.status === 'installing')
+        .map(([id]) => id);
 
-    const installedIds = Object.entries(modpackStates)
-      .filter(([_, state]) => state.status === 'installed')
-      .map(([id]) => id);
+      const installedIds = Object.entries(modpackStates)
+        .filter(([_, state]) => state.status === 'installed')
+        .map(([id]) => id);
 
-    // If a modpack just finished installing, save correct metadata and reload
-    if (installingIds.length === 0 && installedIds.length > 0) {
-      const recentlyInstalled = installedIds.some(
-        id => !instances.some(i => i.id === id)
+      // If a modpack just finished installing, save correct metadata and reload
+      if (installingIds.length === 0 && installedIds.length > 0) {
+        const recentlyInstalled = installedIds.some(
+          id => !instances.some(i => i.id === id)
+        );
+
+        if (recentlyInstalled) {
+          // Save correct modpack metadata before reloading
+          await saveInstallingModpackMetadata();
+          // Small delay to ensure file is written to disk
+          await new Promise(resolve => setTimeout(resolve, 100));
+          loadInstancesAndMetadata();
+          return;
+        }
+      }
+
+      // Check if any modpack was removed (was in instances but no longer installed)
+      const recentlyRemoved = instances.some(
+        instance => !installedIds.includes(instance.id)
       );
 
-      if (recentlyInstalled) {
-        // Save correct modpack metadata before reloading
-        saveInstallingModpackMetadata();
+      if (recentlyRemoved) {
         loadInstancesAndMetadata();
       }
-    }
+    };
 
-    // Check if any modpack was removed (was in instances but no longer installed)
-    const recentlyRemoved = instances.some(
-      instance => !installedIds.includes(instance.id)
-    );
-
-    if (recentlyRemoved) {
-      loadInstancesAndMetadata();
-    }
+    handleStateChange();
   }, [modpackStates, instances]);
 
   /**
@@ -101,11 +108,17 @@ export function MyModpacksPage() {
           const savedData = localStorage.getItem(`installing_modpack_${id}`);
           if (savedData) {
             const modpack = JSON.parse(savedData);
+            console.log(`📝 Saving metadata for ${id}:`, {
+              backgroundImage: modpack.backgroundImage,
+              logo: modpack.logo,
+              name: modpack.name
+            });
             // Call Tauri to save the correct metadata file
             await invoke('save_modpack_metadata_json', {
               modpackId: id,
               modpackJson: JSON.stringify(modpack)
             });
+            console.log(`✅ Saved metadata for ${id}`);
             // Clean up localStorage
             localStorage.removeItem(`installing_modpack_${id}`);
           }
@@ -152,6 +165,11 @@ export function MyModpacksPage() {
             if (cachedData) {
               // Cache hit - use cached data
               const modpack = JSON.parse(cachedData) as Modpack;
+              console.log(`📦 Loaded from cache ${id}:`, {
+                backgroundImage: modpack.backgroundImage,
+                logo: modpack.logo,
+                name: modpack.name
+              });
               dataMap.set(id, modpack);
               return;
             }
