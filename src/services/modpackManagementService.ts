@@ -228,8 +228,9 @@ export class ModpackManagementService {
         return { success: false, error: error.message };
       }
 
-      // Create initial version entry
-      if (data?.id) {
+      // Create initial version entry only for non-coming-soon modpacks
+      // Coming soon modpacks don't need a version entry until they have a file
+      if (data?.id && !modpackData.isComingSoon) {
         await supabase
           .from('modpack_versions')
           .insert({

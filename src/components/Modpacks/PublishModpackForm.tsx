@@ -414,6 +414,24 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
           toast.error(`Error uploading file: ${uploadResult.error}`);
           return;
         }
+
+        // Create version entry if it doesn't exist (for coming soon modpacks that now have a file)
+        const { supabase } = await import('../../services/supabaseClient');
+        const { data: versions } = await supabase
+          .from('modpack_versions')
+          .select('id')
+          .eq('modpack_id', modpackId)
+          .limit(1);
+
+        if (!versions || versions.length === 0) {
+          await supabase.from('modpack_versions').insert({
+            modpack_id: modpackId,
+            version: formData.version,
+            changelog_i18n: { en: 'Initial release', es: 'Lanzamiento inicial' },
+            file_url: uploadResult.fileUrl
+          } as any);
+        }
+
         await service.updateModpack(modpackId, { isActive: false });
       }
 
