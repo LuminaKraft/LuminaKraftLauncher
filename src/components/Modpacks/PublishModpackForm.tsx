@@ -400,7 +400,14 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
       });
 
       if (!success || !modpackId) {
-        toast.error(t('publishModpack.messages.createError', { error: error || 'Unknown error' }));
+        // Handle specific database constraint errors
+        if (error && typeof error === 'string' && error.includes('modpacks_slug_key')) {
+          toast.error(t('publishModpack.messages.createError', { error: 'A modpack with this name already exists. Please choose a different name.' }));
+        } else if (error && typeof error === 'string' && error.includes('duplicate key')) {
+          toast.error(t('publishModpack.messages.createError', { error: 'This modpack name is already taken.' }));
+        } else {
+          toast.error(t('publishModpack.messages.createError', { error: error || 'Unknown error' }));
+        }
         return;
       }
 
@@ -488,7 +495,19 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
       onNavigate?.('published-modpacks');
     } catch (error) {
       console.error('Error creating modpack:', error);
-      toast.error(t('publishModpack.messages.createError', { error: String(error) }));
+
+      // Handle specific error types
+      if (error instanceof Error) {
+        if (error.message.includes('modpacks_slug_key')) {
+          toast.error('A modpack with this name already exists. Please choose a different name.');
+        } else if (error.message.includes('duplicate key')) {
+          toast.error('This modpack name is already taken.');
+        } else {
+          toast.error(t('publishModpack.messages.createError', { error: error.message }));
+        }
+      } else {
+        toast.error(t('publishModpack.messages.createError', { error: String(error) }));
+      }
     } finally {
       setIsUploading(false);
     }
