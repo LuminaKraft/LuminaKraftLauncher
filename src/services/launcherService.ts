@@ -36,7 +36,7 @@ class LauncherService {
   private modpacksData: ModpacksData | null = null;
   private userSettings: UserSettings;
   private cache: Map<string, CacheEntry> = new Map();
-  private readonly cacheTTL = 1 * 60 * 1000; // 1 minute for all modpack data (reduced for debugging)
+  private readonly cacheTTL = 15 * 60 * 1000; // 15 minutes for all modpack data
   private readonly requestTimeout = 30000; // 30 seconds
 
   constructor() {
@@ -56,9 +56,6 @@ class LauncherService {
           // Ignore JSON parsing errors for legacy settings
         }
       }
-      // Clear persistent cache on startup to ensure fresh data fetches
-      localStorage.removeItem('launcherServiceCache_modpacks_data_en');
-      localStorage.removeItem('launcherServiceCache_modpacks_data_es');
     }
   }
 
@@ -244,8 +241,10 @@ class LauncherService {
             .then((result: any) => {
               console.log(`📊 Stats response for ${modpack.name}:`, { data: result.data, error: result.error });
               if (result.data) {
-                statsMap.set(modpack.id, result.data);
-                console.log(`✅ Stats stored for ${modpack.name}:`, result.data);
+                // RPC returns array, get first element
+                const stats = Array.isArray(result.data) ? result.data[0] : result.data;
+                statsMap.set(modpack.id, stats);
+                console.log(`✅ Stats stored for ${modpack.name}:`, stats);
               } else if (result.error) {
                 console.warn(`⚠️ Stats error for ${modpack.name}:`, result.error);
               }
