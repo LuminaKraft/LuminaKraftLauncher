@@ -852,7 +852,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                 </div>
                 <div className="mb-4">
                   <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-                    {t('publishModpack.basicInfo.nameRequired')} <span className="text-red-500">*</span>
+                    {t('publishModpack.basicInfo.name')} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -875,7 +875,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-                      {t('publishModpack.basicInfo.versionRequired')} <span className="text-red-500">*</span>
+                      {t('publishModpack.basicInfo.version')} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -888,7 +888,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                   </div>
                   <div>
                     <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-                      {t('publishModpack.basicInfo.minecraftVersionRequired')} <span className="text-red-500">*</span>
+                      {t('publishModpack.basicInfo.minecraftVersion')} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -901,7 +901,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                   </div>
                   <div>
                     <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-                      {t('publishModpack.basicInfo.modloaderRequired')} <span className="text-red-500">*</span>
+                      {t('publishModpack.basicInfo.modloader')} <span className="text-red-500">*</span>
                     </label>
                     <select
                       value={formData.modloader}
@@ -916,7 +916,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                   </div>
                   <div>
                     <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-                      {t('publishModpack.basicInfo.modloaderVersionRequired')} <span className="text-red-500">*</span>
+                      {t('publishModpack.basicInfo.modloaderVersion')} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -929,7 +929,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                   </div>
                   <div>
                     <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-                      t('publishModpack.basicInfo.gamemode')
+                      {t('publishModpack.basicInfo.gamemode')} {t('publishModpack.basicInfo.gamemodeOptional')}
                     </label>
                     <input
                       type="text"
@@ -941,7 +941,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                   </div>
                   <div>
                     <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-                      t('publishModpack.basicInfo.serverIp')
+                      {t('publishModpack.basicInfo.serverIp')} {t('publishModpack.basicInfo.serverIpOptional')}
                     </label>
                     <input
                       type="text"
@@ -1008,7 +1008,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                 </div>
                 <div className="mb-4">
                   <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-                    {t('publishModpack.details.shortDescriptionRequired')} <span className="text-red-500">*</span>
+                    {t('publishModpack.details.shortDescription')} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -1022,7 +1022,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                 </div>
                 <div className="mb-4">
                   <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-                    {t('publishModpack.details.fullDescriptionRequired')} <span className="text-red-500">*</span>
+                    {t('publishModpack.details.fullDescription')} <span className="text-red-500">*</span>
                   </label>
                   <textarea
                     required
@@ -1068,7 +1068,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                       className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
                     >
                       <Plus className="w-4 h-4" />
-                      Add Feature
+                      {t('publishModpack.details.addFeature')}
                     </button>
                   </div>
                 </div>
@@ -1092,17 +1092,17 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                         </button>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Title ({currentLang.toUpperCase()})</label>
+                            <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{t('publishModpack.details.featureTitle')} ({currentLang.toUpperCase()})</label>
                             <input
                               type="text"
                               value={feature.title[currentLang]}
                               onChange={(e) => updateFeature(index, 'title', currentLang, e.target.value)}
                               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                              placeholder={t('publishModpack.details.featureTitle')}
+                              placeholder={currentLang === 'en' ? 'Feature title' : 'Título de la característica'}
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Icon (FontAwesome)</label>
+                            <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{t('publishModpack.details.featureIcon')}</label>
                             <input
                               type="text"
                               value={feature.icon}
@@ -1112,12 +1112,12 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                             />
                           </div>
                           <div className="md:col-span-2">
-                            <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Description ({currentLang.toUpperCase()})</label>
+                            <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{t('publishModpack.details.featureDescription')} ({currentLang.toUpperCase()})</label>
                             <textarea
                               value={feature.description[currentLang]}
                               onChange={(e) => updateFeature(index, 'description', currentLang, e.target.value)}
                               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 h-20"
-                              placeholder={t('publishModpack.details.featureDescription')}
+                              placeholder={currentLang === 'en' ? 'Feature description' : 'Descripción de la característica'}
                             />
                           </div>
                         </div>
@@ -1202,7 +1202,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
 
                 <div className="mt-8">
                   <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
-                    t('publishModpack.media.screenshots')
+                    {t('publishModpack.media.screenshots')} {t('publishModpack.media.screenshotsOptional')}
                   </label>
                   <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer relative">
                     <input
@@ -1266,7 +1266,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Basic Info</h3>
+                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">{t('publishModpack.review.basicInfo')}</h3>
                     <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 space-y-2">
                       <p><span className="font-medium">Name:</span> {formData.name.en}</p>
                       <p><span className="font-medium">Version:</span> {formData.version}</p>
@@ -1275,7 +1275,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                     </div>
                   </div>
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Files</h3>
+                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">{t('publishModpack.review.files')}</h3>
                     <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 space-y-2">
                       <p className="flex items-center gap-2">
                         <FileArchive className="w-4 h-4" />
@@ -1297,13 +1297,13 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                   </div>
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Description</h3>
+                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">{t('publishModpack.review.description')}</h3>
                   <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
                     <p className="line-clamp-3 text-gray-600 dark:text-gray-300">{formData.description.en || t('publishModpack.review.noDescription')}</p>
                   </div>
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Features</h3>
+                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">{t('publishModpack.review.features')}</h3>
                   <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
                     {formData.features.length > 0 ? (
                       <ul className="list-disc list-inside">
