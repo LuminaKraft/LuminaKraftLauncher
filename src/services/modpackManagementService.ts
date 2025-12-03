@@ -432,6 +432,12 @@ export class ModpackManagementService {
         return { success: false, error: error.message };
       }
 
+      // Clear launcher cache if modpack status changed (isActive or isComingSoon updated)
+      if (updates.isActive !== undefined || updates.isComingSoon !== undefined) {
+        const { default: LauncherService } = await import('./launcherService');
+        LauncherService.getInstance().clearCache();
+      }
+
       return { success: true };
     } catch (error) {
       console.error('Error updating modpack:', error);
