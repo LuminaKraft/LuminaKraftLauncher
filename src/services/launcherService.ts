@@ -1257,9 +1257,8 @@ class LauncherService {
       const modpackName = manifest.name || file.name.replace('.zip', '');
       const tempModpack = {
         id: safeName,
-        name: modpackName,  // Add the name field for Rust
-        nombre: modpackName,
-        descripcion: manifest.description || '',
+        name: modpackName,
+        description: manifest.description || '',
         version: manifest.version || '1.0.0',
         minecraftVersion: manifest.minecraft?.version || manifest.minecraftVersion || '1.20.1',
         modloader: manifest.minecraft?.modLoaders?.[0]?.id?.split('-')[0] || 'forge',
