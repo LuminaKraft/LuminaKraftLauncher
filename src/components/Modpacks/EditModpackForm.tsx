@@ -8,6 +8,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import ModpackManagementService from '../../services/modpackManagementService';
+import R2UploadService from '../../services/r2UploadService';
 import AuthService from '../../services/authService';
 import { supabase } from '../../services/supabaseClient';
 import { ConfirmDialog } from '../Common/ConfirmDialog';
@@ -211,18 +212,28 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
     const toastId = toast.loading('Uploading image...');
     try {
       if (type === 'screenshot') {
-        await service.uploadModpackScreenshots(modpackId, [file]);
+        await R2UploadService.uploadToR2(file, modpackId, 'screenshot');
         // Refresh images
         const result = await service.getModpackImages(modpackId);
         if (result.success && result.data) setImages(result.data);
       } else {
-        const result = await service.uploadModpackImage(modpackId, file, type);
-        if (result.success && result.imageUrl) {
-          setFormData(prev => prev ? ({ ...prev, [`${type}Url`]: result.imageUrl }) : null);
+        const result = await R2UploadService.uploadToR2(file, modpackId, type);
+        // The register-modpack-upload function has already updated the database
+        // Fetch the updated modpack data to get the new image URL
+        const { data: modpackData } = await supabase
+          .from('modpacks')
+          .select('logo, backgroundImage')
+          .eq('id', modpackId)
+          .single();
+
+        if (modpackData) {
+          const imageUrl = type === 'logo' ? modpackData.logo : modpackData.backgroundImage;
+          setFormData(prev => prev ? ({ ...prev, [`${type}Url`]: imageUrl }) : null);
         }
       }
       toast.success('Image uploaded', { id: toastId });
     } catch (error) {
+      console.error('❌ Image upload failed:', error);
       toast.error('Upload failed', { id: toastId });
     } finally {
       setIsUpdating(false);
@@ -357,20 +368,40 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
     try {
       await authService.syncDiscordRoles();
 
-      // 1. Upload file
-      const uploadResult = await service.uploadModpackFile(modpackId, zipFile, setUploadProgress);
-      if (!uploadResult.success) throw new Error(uploadResult.error);
+      // 1. Upload file using r2UploadService
+      const uploadResult = await R2UploadService.uploadToR2(
+        zipFile,
+        modpackId,
+        'modpack',
+        (progress) => setUploadProgress(progress.percent)
+      );
 
       // 2. Update modpack version
       await service.updateModpack(modpackId, { version: newVersion });
 
-      // 3. Create version record
-      await supabase.from('modpack_versions').insert({
-        modpack_id: modpackId,
-        version: newVersion,
-        changelog_i18n: changelog,
-        file_url: uploadResult.fileUrl
-      } as any);
+      // 3. Create version record (register-modpack-upload should have created/updated it, but ensure changelog is set)
+      // Check if version already exists
+      const { data: existingVersion } = await supabase
+        .from('modpack_versions')
+        .select('id')
+        .eq('modpack_id', modpackId)
+        .eq('version', newVersion)
+        .single();
+
+      if (!existingVersion) {
+        await supabase.from('modpack_versions').insert({
+          modpack_id: modpackId,
+          version: newVersion,
+          changelog_i18n: changelog,
+          file_url: uploadResult.fileUrl
+        } as any);
+      } else {
+        // Update existing version with changelog
+        await supabase
+          .from('modpack_versions')
+          .update({ changelog_i18n: changelog })
+          .eq('id', existingVersion.id);
+      }
 
       toast.success('New version published!', { id: toastId });
       setNewVersion('');
