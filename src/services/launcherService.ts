@@ -234,10 +234,12 @@ class LauncherService {
       // Fetch stats for all modpacks in parallel
       const statsMap = new Map<string, any>();
       if (data && data.length > 0) {
-        const statsPromises = data.map((modpack: any) =>
-          supabase.rpc('get_modpack_aggregate_stats', { p_modpack_id: modpack.id } as any)
+        console.log(`🔄 Fetching stats for ${data.length} modpacks...`);
+        const statsPromises = data.map((modpack: any) => {
+          console.log(`  Requesting stats for: ${modpack.name} (${modpack.id})`);
+          return supabase.rpc('get_modpack_aggregate_stats', { p_modpack_id: modpack.id } as any)
             .then((result: any) => {
-              console.log(`📊 Stats response for ${modpack.name}:`, { data: result.data, error: result.error, status: result.status });
+              console.log(`📊 Stats response for ${modpack.name}:`, { data: result.data, error: result.error });
               if (result.data) {
                 statsMap.set(modpack.id, result.data);
                 console.log(`✅ Stats stored for ${modpack.name}:`, result.data);
@@ -250,8 +252,10 @@ class LauncherService {
               console.error(`❌ Failed to fetch stats for modpack ${modpack.id}:`, error);
               return null;
             })
-        );
+        });
+        console.log(`⏳ Waiting for ${statsPromises.length} stat requests...`);
         await Promise.all(statsPromises);
+        console.log(`✨ Stats fetch complete. Stored ${statsMap.size} results`);
       }
 
       // Helper function to check if modpack is new
@@ -346,11 +350,12 @@ class LauncherService {
 
     try {
       // Fetch modpack basic info with latest version
+      // Note: We don't filter by is_active=true because coming soon modpacks may not be active yet
       const { data: modpackData, error: modpackError } = await supabase
         .from('modpacks')
         .select(`
           *,
-          modpack_versions!inner (
+          modpack_versions (
             version,
             minecraft_version,
             modloader_version,
@@ -360,7 +365,6 @@ class LauncherService {
           )
         `)
         .eq('id', modpackId)
-        .eq('is_active', true)
         .order('created_at', { foreignTable: 'modpack_versions', ascending: false })
         .limit(1, { foreignTable: 'modpack_versions' })
         .single() as { data: any; error: any };
