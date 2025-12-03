@@ -56,6 +56,9 @@ class LauncherService {
           // Ignore JSON parsing errors for legacy settings
         }
       }
+      // Clear persistent cache on startup to ensure fresh data fetches
+      localStorage.removeItem('launcherServiceCache_modpacks_data_en');
+      localStorage.removeItem('launcherServiceCache_modpacks_data_es');
     }
   }
 
@@ -260,7 +263,11 @@ class LauncherService {
 
       // Helper function to check if modpack is new
       // Priority: 1) Check DB is_new flag (admin override), 2) Calculate based on published_at date (7 days)
-      const isModpackNew = (dbIsNew: boolean, publishedAt: string | null): boolean => {
+      // Note: Coming soon modpacks are never marked as "New" - they get their own badge
+      const isModpackNew = (dbIsNew: boolean, publishedAt: string | null, isComingSoon: boolean): boolean => {
+        // Coming soon modpacks don't get the "New" badge
+        if (isComingSoon) return false;
+
         // If admin explicitly set is_new to true in DB, honor that
         if (dbIsNew) return true;
 
@@ -290,7 +297,7 @@ class LauncherService {
         backgroundImage: modpack.banner_url, // Use banner as background
         urlModpackZip: modpack.modpack_file_url,
         primaryColor: modpack.primary_color,
-        isNew: isModpackNew(modpack.is_new, modpack.published_at),
+        isNew: isModpackNew(modpack.is_new, modpack.published_at, modpack.is_coming_soon),
         isActive: modpack.is_active,
         isComingSoon: modpack.is_coming_soon,
         youtubeEmbed: modpack.youtube_embed,
