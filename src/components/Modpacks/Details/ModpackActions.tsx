@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Download, Play, RefreshCw, Wrench, FolderOpen, Trash2,
-  Loader2, StopCircle, Globe, AlertTriangle, Settings
+  Loader2, StopCircle, Globe, AlertTriangle, Settings, Clock
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import type { Modpack, ModpackState, ProgressInfo } from '../../../types/launcher';
@@ -41,6 +41,18 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state, isReadO
 
   const getStatusInfo = () => {
     const hasValidIp = modpack.ip && modpack.ip.trim() !== '';
+
+    // Check if Coming Soon - disable downloads
+    if (modpack.isComingSoon) {
+      return {
+        icon: Clock,
+        label: t('modpacks.comingSoon'),
+        bgColor: 'bg-gray-600/50 cursor-not-allowed',
+        textColor: 'text-gray-400',
+        action: () => {},
+        disabled: true
+      };
+    }
 
     // Read-only mode (Home/Explore): Show Install or Installed only
     if (isReadOnly) {
@@ -87,24 +99,6 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state, isReadO
           textColor: 'text-white',
           action: () => installModpack(modpack.id)
         };
-      case 'installing':
-        return {
-          icon: Loader2,
-          label: t('modpacks.installing'),
-          bgColor: 'bg-lumina-500/50 cursor-not-allowed',
-          textColor: 'text-white/70',
-          spinning: true,
-          disabled: true
-        };
-      case 'launching':
-        return {
-          icon: Loader2,
-          label: t('modpacks.launching'),
-          bgColor: 'bg-green-600/50 cursor-not-allowed',
-          textColor: 'text-white/70',
-          spinning: true,
-          disabled: true
-        };
       case 'installed':
         return {
           icon: Play,
@@ -121,22 +115,24 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state, isReadO
           textColor: 'text-white',
           action: () => updateModpack(modpack.id)
         };
+      case 'installing':
       case 'updating':
         return {
           icon: Loader2,
-          label: t('modpacks.updating'),
-          bgColor: 'bg-orange-600/50 cursor-not-allowed',
+          label: state.status === 'installing' ? t('modpacks.installing') : t('modpacks.updating'),
+          bgColor: state.status === 'installing' ? 'bg-lumina-500/50 cursor-not-allowed' : 'bg-orange-600/50 cursor-not-allowed',
           textColor: 'text-white/70',
           spinning: true,
           disabled: true
         };
-      case 'error':
+      case 'launching':
         return {
-          icon: Wrench,
-          label: t('modpacks.repair'),
-          bgColor: 'bg-orange-600 hover:bg-orange-700',
-          textColor: 'text-white',
-          action: () => repairModpack(modpack.id)
+          icon: Loader2,
+          label: t('modpacks.launching'),
+          bgColor: 'bg-green-600/50 cursor-not-allowed',
+          textColor: 'text-white/70',
+          spinning: true,
+          disabled: true
         };
       case 'running':
         return {
@@ -155,6 +151,14 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state, isReadO
           textColor: 'text-white/70',
           spinning: true,
           disabled: true
+        };
+      case 'error':
+        return {
+          icon: Wrench,
+          label: t('modpacks.repair'),
+          bgColor: 'bg-orange-600 hover:bg-orange-700',
+          textColor: 'text-white',
+          action: () => repairModpack(modpack.id)
         };
 
       default:
@@ -183,7 +187,7 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state, isReadO
           };
         }
 
-        // Default: show install button
+        // Default: show install button for modpacks
         return {
           icon: Download,
           label: t('modpacks.install'),
