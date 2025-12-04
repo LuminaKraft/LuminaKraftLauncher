@@ -9,7 +9,6 @@ import LauncherService from './launcherService';
  */
 export class ModpackManagementService {
   private static instance: ModpackManagementService;
-  private microsoftAccount: MicrosoftAccount | null = null;
 
   public static getInstance(): ModpackManagementService {
     if (!ModpackManagementService.instance) {
