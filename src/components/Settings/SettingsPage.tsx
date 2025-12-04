@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { invoke } from '@tauri-apps/api/core';
 import { User, HardDrive, Save, Wifi, WifiOff, RefreshCw, Trash2, Server, Languages, XCircle, Zap, Shield } from 'lucide-react';
 import { useLauncher } from '../../contexts/LauncherContext';
 import LauncherService from '../../services/launcherService';
@@ -44,7 +45,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
   useEffect(() => {
     const fetchSystemRam = async () => {
       try {
-        const { invoke } = await import('@tauri-apps/api/core');
         const ram = await invoke<number>('get_system_ram');
         setSystemRam(ram);
       } catch (error) {
