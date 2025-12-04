@@ -77,16 +77,16 @@ export function useModpackValidation({ onManifestParsed }: UseModpackValidationP
                         duration: 5000
                     });
                 } else {
-                    toast.success('Manifest parsed! All required mods are in overrides.');
+                    toast.success(t('toast.manifestParsedAll'));
                 }
             } else {
-                toast.success('Manifest parsed! Form auto-filled with modpack data.');
+                toast.success(t('toast.manifestParsedAutoFilled'));
             }
 
             return true;
         } catch (error) {
             console.error('Error validating manifest:', error);
-            toast.error('Failed to validate modpack');
+            toast.error(t('errors.failedValidateModpack'));
             return false;
         } finally {
             setIsParsing(false);
