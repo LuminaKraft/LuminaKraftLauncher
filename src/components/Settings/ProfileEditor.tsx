@@ -30,7 +30,7 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ luminaKraftUser, discordA
 
   const handleUpdateDisplayName = async () => {
     if (!tempDisplayName.trim()) {
-      toast.error('Display name cannot be empty');
+      toast.error(t('validation.displayNameEmpty'));
       return;
     }
 
@@ -49,7 +49,7 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ luminaKraftUser, discordA
       onUpdate();
     } catch (error) {
       console.error('Error updating display name:', error);
-      toast.error('Failed to update display name');
+      toast.error(t('errors.failedUpdateDisplay'));
     }
   };
 
