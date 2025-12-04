@@ -47,12 +47,18 @@ const ModpacksPage: React.FC<ModpacksPageProps> = ({ initialModpackId, onNavigat
   // Listen for cache clear events from other components (e.g., Settings, HomePage)
   React.useEffect(() => {
     const handleCacheCleared = () => {
-      refreshData();
+      // Execute the same logic as the refresh button
+      setIsRefreshAnimating(true);
+      refreshData().finally(() => {
+        withDelay(() => {
+          setIsRefreshAnimating(false);
+        }, 200);
+      });
     };
 
     window.addEventListener('luminakraft:cache-cleared', handleCacheCleared);
     return () => window.removeEventListener('luminakraft:cache-cleared', handleCacheCleared);
-  }, [refreshData]);
+  }, []);
 
   // Check if any modpack is currently installing/updating
   const hasActiveInstallation = Object.values(modpackStates).some(state =>
