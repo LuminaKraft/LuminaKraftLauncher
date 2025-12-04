@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Plus, X, Upload, FileArchive, AlertCircle, RefreshCw, Check, ChevronRight, ChevronLeft, Info, Image as ImageIcon, FileText, Package, Layers } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import ModpackManagementService from '../../services/modpackManagementService';
+import R2UploadService from '../../services/r2UploadService';
 import { useModpackValidation } from '../../hooks/useModpackValidation';
 import { ModpackValidationDialog } from './ModpackValidationDialog';
 import { ConfirmDialog } from '../Common/ConfirmDialog';
@@ -399,63 +400,114 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
       });
 
       if (!success || !modpackId) {
-        toast.error(t('publishModpack.messages.createError', { error: error || 'Unknown error' }));
+        // Handle specific database constraint errors
+        if (error && typeof error === 'string' && error.includes('modpacks_slug_key')) {
+          toast.error(t('publishModpack.messages.createError', { error: 'A modpack with this name already exists. Please choose a different name.' }));
+        } else if (error && typeof error === 'string' && error.includes('duplicate key')) {
+          toast.error(t('publishModpack.messages.createError', { error: 'This modpack name is already taken.' }));
+        } else {
+          toast.error(t('publishModpack.messages.createError', { error: error || 'Unknown error' }));
+        }
         return;
       }
 
       if (logoFile) {
-        setUploadProgress(10);
-        await service.uploadModpackImage(modpackId, logoFile, 'logo');
+        try {
+          setUploadProgress(10);
+          await R2UploadService.uploadToR2(logoFile, modpackId, 'logo', (progress) => {
+            setUploadProgress(10 + (progress.percent * 0.1));
+          });
+        } catch (error) {
+          console.error('❌ Logo upload failed:', error);
+          toast.error(t('publishModpack.messages.uploadError', { error: String(error) }));
+          return;
+        }
       }
       if (bannerFile) {
-        setUploadProgress(20);
-        await service.uploadModpackImage(modpackId, bannerFile, 'banner');
+        try {
+          setUploadProgress(20);
+          await R2UploadService.uploadToR2(bannerFile, modpackId, 'banner', (progress) => {
+            setUploadProgress(20 + (progress.percent * 0.1));
+          });
+        } catch (error) {
+          console.error('❌ Banner upload failed:', error);
+          toast.error(t('publishModpack.messages.uploadError', { error: String(error) }));
+          return;
+        }
       }
       if (screenshotFiles.length > 0) {
-        setUploadProgress(30);
-        await service.uploadModpackScreenshots(modpackId, screenshotFiles);
+        try {
+          setUploadProgress(30);
+          for (let i = 0; i < screenshotFiles.length; i++) {
+            const startProgress = 30 + (i * (10 / screenshotFiles.length));
+            await R2UploadService.uploadToR2(screenshotFiles[i], modpackId, 'screenshot', (progress) => {
+              setUploadProgress(startProgress + (progress.percent * (10 / screenshotFiles.length) / 100));
+            });
+          }
+        } catch (error) {
+          console.error('❌ Screenshot upload failed:', error);
+          toast.error(t('publishModpack.messages.uploadError', { error: String(error) }));
+          return;
+        }
       }
       if (formData.features.length > 0) {
         setUploadProgress(40);
         await service.createModpackFeatures(modpackId, formData.features);
       }
       if (zipFile) {
-        setUploadProgress(50);
-        const uploadResult = await service.uploadModpackFile(
-          modpackId,
-          zipFile,
-          (progress) => setUploadProgress(50 + (progress / 2))
-        );
-        if (!uploadResult.success) {
-          toast.error(t('publishModpack.messages.uploadError', { error: uploadResult.error || 'Unknown error' }));
+        try {
+          setUploadProgress(50);
+          const uploadResult = await R2UploadService.uploadToR2(
+            zipFile,
+            modpackId,
+            'modpack',
+            (progress) => setUploadProgress(50 + (progress.percent / 2))
+          );
+
+          // uploadResult already contains fileUrl and fileSize
+          // The register-modpack-upload function has already been called by r2UploadService
+          // but we still need to create version entry for coming soon modpacks
+          const { supabase } = await import('../../services/supabaseClient');
+          const { data: versions } = await supabase
+            .from('modpack_versions')
+            .select('id')
+            .eq('modpack_id', modpackId)
+            .limit(1);
+
+          if (!versions || versions.length === 0) {
+            await supabase.from('modpack_versions').insert({
+              modpack_id: modpackId,
+              version: formData.version,
+              changelog_i18n: { en: 'Initial release', es: 'Lanzamiento inicial' },
+              file_url: uploadResult.fileUrl
+            } as any);
+          }
+
+          await service.updateModpack(modpackId, { isActive: false });
+        } catch (error) {
+          console.error('❌ Modpack file upload failed:', error);
+          toast.error(t('publishModpack.messages.uploadError', { error: String(error) }));
           return;
         }
-
-        // Create version entry if it doesn't exist (for coming soon modpacks that now have a file)
-        const { supabase } = await import('../../services/supabaseClient');
-        const { data: versions } = await supabase
-          .from('modpack_versions')
-          .select('id')
-          .eq('modpack_id', modpackId)
-          .limit(1);
-
-        if (!versions || versions.length === 0) {
-          await supabase.from('modpack_versions').insert({
-            modpack_id: modpackId,
-            version: formData.version,
-            changelog_i18n: { en: 'Initial release', es: 'Lanzamiento inicial' },
-            file_url: uploadResult.fileUrl
-          } as any);
-        }
-
-        await service.updateModpack(modpackId, { isActive: false });
       }
 
       toast.success(t('publishModpack.messages.published'));
       onNavigate?.('published-modpacks');
     } catch (error) {
       console.error('Error creating modpack:', error);
-      toast.error(t('publishModpack.messages.createError', { error: String(error) }));
+
+      // Handle specific error types
+      if (error instanceof Error) {
+        if (error.message.includes('modpacks_slug_key')) {
+          toast.error('A modpack with this name already exists. Please choose a different name.');
+        } else if (error.message.includes('duplicate key')) {
+          toast.error('This modpack name is already taken.');
+        } else {
+          toast.error(t('publishModpack.messages.createError', { error: error.message }));
+        }
+      } else {
+        toast.error(t('publishModpack.messages.createError', { error: String(error) }));
+      }
     } finally {
       setIsUploading(false);
     }
