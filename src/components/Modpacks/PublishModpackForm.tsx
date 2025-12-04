@@ -558,6 +558,19 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
             (progress) => setUploadProgress(65 + (progress.percent * 0.35))
           );
 
+          // Force update the version with the file URL to ensure it's saved
+          // This fixes the issue where modpacks with server IP were missing the ZIP URL
+          if (uploadResult.fileUrl) {
+            await (supabase as any)
+              .from('modpack_versions')
+              .update({
+                file_url: uploadResult.fileUrl,
+                file_size: uploadResult.fileSize
+              })
+              .eq('modpack_id', modpackId)
+              .eq('version', formData.version);
+          }
+
           // uploadResult already contains fileUrl and fileSize
           // The register-modpack-upload function has already been called by r2UploadService
           // but we still need to create version entry for coming soon modpacks
@@ -575,6 +588,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
               modpack_id: modpackId,
               version: formData.version,
               changelog_i18n: { en: 'Initial release', es: 'Lanzamiento inicial' },
+              file_path: uploadResult.fileUrl,
               file_url: uploadResult.fileUrl
             } as any);
           }
