@@ -649,6 +649,7 @@
   },
   "profileOptions": {
     "title": "Opciones de Perfil",
+    "button": "Opciones de Perfil",
     "name": "Nombre",
     "memorySettings": "Configuración de Memoria",
     "recommendedByAuthor": "Recomendado por el Autor",

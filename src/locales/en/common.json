@@ -652,6 +652,7 @@
   },
   "profileOptions": {
     "title": "Profile Options",
+    "button": "Profile Options",
     "name": "Name",
     "memorySettings": "Memory Settings",
     "recommendedByAuthor": "Recommended by Author",

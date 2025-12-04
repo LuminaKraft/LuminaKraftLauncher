@@ -388,7 +388,7 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state, isReadO
               <Settings className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${
                 getAnimationClass('', 'group-hover:rotate-90')
               }`} />
-              <span className="text-sm font-medium">Profile Options</span>
+              <span className="text-sm font-medium">{t('profileOptions.button')}</span>
             </button>
 
             {/* Other Actions Row */}
