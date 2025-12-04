@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Download, Clock, Users, Terminal, Info, Image } from 'lucide-react';
 import LogsSection from './Details/Sections/LogsSection';
 import ScreenshotsSection from './Details/Sections/ScreenshotsSection';
+import { listen } from '@tauri-apps/api/event';
 import type { Modpack, ModpackState, ProgressInfo } from '../../types/launcher';
 import { useLauncher } from '../../contexts/LauncherContext';
 import { useAnimation } from '../../contexts/AnimationContext';
@@ -76,7 +77,6 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
     let unlistenStart: (() => void) | null = null;
     const setup = async () => {
       try {
-        const { listen } = await import('@tauri-apps/api/event');
         unlisten = await listen<string>(`minecraft-log-${modpack.id}`, (event) => {
           setLogs((prev) => {
             // keep last 500 lines

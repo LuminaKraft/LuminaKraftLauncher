@@ -3,6 +3,10 @@ import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import { Plus, X, Upload, FileArchive, AlertCircle, RefreshCw, Check, ChevronRight, ChevronLeft, Info, Image as ImageIcon, FileText, Package, Layers } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
+import { downloadDir } from '@tauri-apps/api/path';
+import { listen } from '@tauri-apps/api/event';
+import JSZip from 'jszip';
+import { supabase } from '../../services/supabaseClient';
 import ModpackManagementService from '../../services/modpackManagementService';
 import R2UploadService from '../../services/r2UploadService';
 import { useModpackValidation } from '../../hooks/useModpackValidation';
@@ -198,7 +202,6 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
 
       setIsCheckingName(true);
       try {
-        const { supabase } = await import('../../services/supabaseClient');
         const slug = name.toLowerCase().replace(/\s+/g, '-');
 
         const { data, error } = await supabase
@@ -289,8 +292,6 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
     if (!pendingUploadedFiles || !zipFile) return;
     const loadingToast = toast.loading(t('publishModpack.messages.preparing'));
     try {
-      const { downloadDir } = await import('@tauri-apps/api/path');
-      const { listen } = await import('@tauri-apps/api/event');
       const unlisten = await listen<{ current: number, total: number, stage: string, message: string }>('zip-progress', (event) => {
         const { current, total, stage, message } = event.payload;
         const percentage = Math.round((current / total) * 100);
@@ -348,8 +349,6 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
 
     // Create updated ZIP with overrides using JSZip
     try {
-      const JSZip = (await import('jszip')).default;
-
       // Read original ZIP
       const originalZipBuffer = await zipFile.arrayBuffer();
       const originalZip = new JSZip();
@@ -564,7 +563,6 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
           // but we still need to create version entry for coming soon modpacks
           setUploadProgress(75);
 
-          const { supabase } = await import('../../services/supabaseClient');
           const { data: versions } = await supabase
             .from('modpack_versions')
             .select('id')

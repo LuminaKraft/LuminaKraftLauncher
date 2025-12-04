@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import type { MicrosoftAccount, DiscordAccount } from '../types/launcher';
 import { supabase, updateUser, type Tables } from './supabaseClient';
+import { listen } from '@tauri-apps/api/event';
 
 class AuthService {
   private static instance: AuthService;
@@ -138,7 +139,6 @@ class AuthService {
       const port = await invoke<number>('start_oauth_server');
 
       // 2. Set up event listener for oauth callback
-      const { listen } = await import('@tauri-apps/api/event');
       const unlisten = await listen<{ 
         access_token: string; 
         refresh_token: string; 
@@ -237,7 +237,6 @@ class AuthService {
       console.log(`OAuth server started on port ${port}`);
 
       // 2. Set up event listener for oauth callback
-      const { listen } = await import('@tauri-apps/api/event');
       const unlisten = await listen<{ 
         access_token: string; 
         refresh_token: string;
@@ -454,7 +453,6 @@ class AuthService {
       const redirectUrl = `https://luminakraft.com/auth-callback?launcher=true&port=${port}`;
 
       // 2. Set up event listener for oauth callback
-      const { listen } = await import('@tauri-apps/api/event');
       const unlisten = await listen<{ 
         access_token: string; 
         refresh_token: string;
@@ -1094,7 +1092,6 @@ class AuthService {
       const redirectUrl = `https://luminakraft.com/auth-callback?launcher=true&port=${port}`;
 
       // 2. Set up event listener for oauth callback
-      const { listen } = await import('@tauri-apps/api/event');
       const unlisten = await listen<{
         access_token: string;
         refresh_token: string;

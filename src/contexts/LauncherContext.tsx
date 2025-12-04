@@ -24,6 +24,7 @@ import { FailedModsDialog } from '../components/FailedModsDialog';
 import AuthService from '../services/authService';
 import JSZip from 'jszip';
 import { ModpackManagementService } from '../services/modpackManagementService';
+import { listen } from '@tauri-apps/api/event';
 
 interface LauncherContextType {
   modpacksData: ModpacksData | null;
@@ -330,7 +331,6 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const setupTokenRefreshListener = async () => {
       try {
-        const { listen } = await import('@tauri-apps/api/event');
         const unlisten = await listen<MicrosoftAccount>('microsoft-token-refreshed', (event) => {
           console.log('🔄 Received refreshed Microsoft token from backend');
           const refreshedAccount = event.payload;
@@ -617,8 +617,6 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
           // -----------------------------------------------------------------
           // Setup listeners BEFORE invoking launch to avoid missing early events
           // -----------------------------------------------------------------
-          const { listen } = await import('@tauri-apps/api/event');
-
           const startEvent = `minecraft-started-${modpackId}`;
           const exitEvent = `minecraft-exited-${modpackId}`;
 
@@ -715,9 +713,8 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
           // Setup listeners for stopping/stopped events
           let unlistenStopping: (() => void) | null = null;
           let unlistenStopped: (() => void) | null = null;
-          
+
           try {
-            const { listen } = await import('@tauri-apps/api/event');
             const stoppingEvent = `minecraft-stopping-${modpackId}`;
             const stoppedEvent = `minecraft-exited-${modpackId}`;
             

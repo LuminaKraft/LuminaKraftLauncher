@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Download, FolderOpen } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import toast from 'react-hot-toast';
+import { downloadDir } from '@tauri-apps/api/path';
+import { listen } from '@tauri-apps/api/event';
 import ModpackValidationService, { ModFileInfo } from '../../services/modpackValidationService';
 import ModpackValidationDialog from './ModpackValidationDialog';
 import ModpackCard from './ModpackCard';
@@ -323,9 +325,6 @@ export function MyModpacksPage() {
     if (validationData && pendingUploadedFiles) {
       const loadingToast = toast.loading('Preparing files...');
       try {
-        const { downloadDir } = await import('@tauri-apps/api/path');
-        const { listen } = await import('@tauri-apps/api/event');
-
         const unlisten = await listen<{
           current: number;
           total: number;

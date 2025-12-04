@@ -4,6 +4,7 @@ import { supabase } from './supabaseClient';
 import i18next from 'i18next';
 import AuthService from './authService';
 import JSZip from 'jszip';
+import { listen } from '@tauri-apps/api/event';
 import type {
   ModpacksData,
   InstanceMetadata,
@@ -670,7 +671,6 @@ class LauncherService {
       let unlistenProgress: (() => void) | null = null;
 
       if (isTauriContext()) {
-        const { listen } = await import('@tauri-apps/api/event');
         unlistenProgress = await listen(
           `modpack_progress_${modpackId}`,
           (_event: any) => {
@@ -951,8 +951,6 @@ class LauncherService {
 
     // Configurar listener de progreso si se proporciona callback
     if (_onProgress && isTauriContext()) {
-      const { listen } = await import('@tauri-apps/api/event');
-
       unlistenProgress = await listen(
         `modpack-progress-${modpackId}`,
         (_event: any) => {
@@ -1279,7 +1277,6 @@ class LauncherService {
       let unlistenProgress: (() => void) | null = null;
 
       if (onProgress) {
-        const { listen } = await import('@tauri-apps/api/event');
         unlistenProgress = await listen(
           `modpack_progress_${tempModpack.id}`,
           (event: any) => {

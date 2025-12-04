@@ -4,6 +4,8 @@ import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { supabase } from '../services/supabaseClient';
+import { writeFile, mkdir, exists } from '@tauri-apps/plugin-fs';
+import { appDataDir, join } from '@tauri-apps/api/path';
 
 
 interface FailedMod {
@@ -181,9 +183,6 @@ export const FailedModsDialog: React.FC<FailedModsDialogProps> = ({
     const loadingToast = toast.loading('Installing uploaded mods...');
     try {
       // Write files to temporary directory first, then call Tauri command
-      const { writeFile, mkdir, exists } = await import('@tauri-apps/plugin-fs');
-      const { appDataDir, join } = await import('@tauri-apps/api/path');
-
       const tempDir = await join(await appDataDir(), 'temp', 'uploaded_mods');
 
       // Create directory if it doesn't exist
