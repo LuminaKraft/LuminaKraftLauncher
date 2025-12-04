@@ -86,7 +86,7 @@ export default function DiscordAuth({
       // Extract hash from URL
       const hashPart = manualUrl.split('#')[1];
       if (!hashPart) {
-        toast.error('Invalid URL: no token found');
+        toast.error(t('errors.invalidUrlNoToken'));
         return;
       }
 
@@ -105,7 +105,7 @@ export default function DiscordAuth({
       });
 
       if (!accessToken || !refreshToken) {
-        toast.error('Invalid URL: missing tokens');
+        toast.error(t('errors.invalidUrlMissingTokens'));
         return;
       }
 
@@ -116,7 +116,7 @@ export default function DiscordAuth({
       });
 
       if (sessionError) {
-        toast.error('Failed to set session');
+        toast.error(t('errors.failedSetSession'));
         console.error(sessionError);
         return;
       }
@@ -136,7 +136,7 @@ export default function DiscordAuth({
       }
     } catch (error) {
       console.error('Manual auth error:', error);
-      toast.error('Error processing URL');
+      toast.error(t('errors.errorProcessingUrl'));
     } finally {
       setIsProcessingManual(false);
     }
@@ -145,7 +145,7 @@ export default function DiscordAuth({
   const handleSyncRoles = async () => {
     // Check cooldown
     if (cooldownRemaining > 0) {
-      toast.error(`Please wait ${Math.ceil(cooldownRemaining / 1000)} seconds before syncing again`);
+      toast.error(t('errors.discord.syncCooldown', { seconds: Math.ceil(cooldownRemaining / 1000) }));
       return;
     }
 
