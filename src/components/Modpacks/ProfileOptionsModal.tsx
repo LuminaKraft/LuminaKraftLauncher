@@ -183,7 +183,7 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
   const MAX_RAM = 32768; // 32GB maximum
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-8">
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-8 overflow-hidden">
       <div className="bg-dark-800 rounded-lg p-6 max-w-2xl w-full border border-dark-600 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -224,7 +224,11 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
               value={displayName}
               disabled
               onClick={() => isLocalModpack && setEditingName(true)}
-              className={`input-field w-full ${isLocalModpack ? 'cursor-pointer hover:border-lumina-400/50 bg-dark-700 hover:bg-dark-600' : 'cursor-not-allowed bg-dark-700'} opacity-${isLocalModpack ? 100 : 70} transition-colors`}
+              className={`input-field w-full transition-colors ${
+                isLocalModpack
+                  ? 'cursor-pointer hover:border-lumina-400/50 bg-dark-700 hover:bg-dark-600'
+                  : 'cursor-not-allowed bg-dark-700 opacity-70'
+              }`}
             />
           )}
         </div>

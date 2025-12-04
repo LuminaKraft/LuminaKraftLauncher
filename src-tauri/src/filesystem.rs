@@ -168,17 +168,55 @@ pub async fn get_instance_metadata(modpack_id: &str) -> Result<Option<InstanceMe
     Ok(Some(metadata))
 }
 
+/// Delete cache for a modpack (images and metadata)
+pub async fn delete_modpack_cache(modpack_id: &str) -> Result<()> {
+    let launcher_dir = dirs::data_dir()
+        .ok_or_else(|| anyhow!("Failed to get data directory"))?
+        .join("LKLauncher");
+
+    // Delete modpack cache directory
+    let cache_dir = launcher_dir
+        .join("caches")
+        .join("modpacks")
+        .join(modpack_id);
+
+    if cache_dir.exists() {
+        fs::remove_dir_all(&cache_dir)
+            .map_err(|e| anyhow!("Failed to delete modpack cache: {}", e))?;
+        println!("✓ Deleted cache for modpack: {}", modpack_id);
+    }
+
+    // Delete modpack metadata JSON
+    let metadata_path = launcher_dir
+        .join("caches")
+        .join("modpacks")
+        .join(format!("{}.json", modpack_id));
+
+    if metadata_path.exists() {
+        fs::remove_file(&metadata_path)
+            .map_err(|e| anyhow!("Failed to delete modpack metadata: {}", e))?;
+        println!("✓ Deleted metadata for modpack: {}", modpack_id);
+    }
+
+    Ok(())
+}
+
 /// Delete an instance and all its files
 pub async fn delete_instance(modpack_id: &str) -> Result<()> {
     let instance_dir = get_instance_dir(modpack_id)?;
-    
+
+    // Delete cache files first (non-fatal if fails)
+    if let Err(e) = delete_modpack_cache(modpack_id).await {
+        eprintln!("⚠️ Warning: Failed to clean cache: {}", e);
+    }
+
     if !instance_dir.exists() {
         println!("Directory doesn't exist, nothing to delete: {:?}", instance_dir);
         return Ok(());
     }
-    
+
     println!("Attempting to delete directory: {:?}", instance_dir);
-    
+
     // Try to get directory metadata to check permissions
     match fs::metadata(&instance_dir) {
         Ok(metadata) => {
@@ -188,7 +226,7 @@ pub async fn delete_instance(modpack_id: &str) -> Result<()> {
             println!("Could not read directory metadata: {}", e);
         }
     }
-    
+
     // Attempt deletion with detailed error reporting
     match fs::remove_dir_all(&instance_dir) {
         Ok(_) => {
@@ -199,7 +237,7 @@ pub async fn delete_instance(modpack_id: &str) -> Result<()> {
             let error_kind = e.kind();
             let error_msg = format!("Failed to delete directory: {} (kind: {:?})", e, error_kind);
             println!("❌ {}", error_msg);
-            
+
             // Try to provide more specific error information for macOS
             match error_kind {
                 std::io::ErrorKind::PermissionDenied => {
