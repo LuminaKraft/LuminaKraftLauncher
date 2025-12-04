@@ -266,17 +266,17 @@ function AppContent() {
                 <RefreshCw className="w-6 h-6 text-green-400" />
               </div>
               <h2 className="text-xl font-semibold text-white text-center">
-                {t('launcher.updateReady') || 'Update Ready'}
+                {t('update.updateReady')}
               </h2>
               <p className="text-gray-400 text-center text-sm">
-                {t('launcher.restartToApply') || 'The update has been installed. Please restart the launcher to apply the changes.'}
+                {t('update.restartToApply')}
               </p>
               <div className="flex gap-3 w-full mt-2">
                 <button
                   onClick={() => setShowRestartModal(false)}
                   className="flex-1 px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl font-medium transition-colors"
                 >
-                  {t('launcher.restartLater') || 'Restart Later'}
+                  {t('update.restartLater')}
                 </button>
                 <button
                   onClick={handleManualRestart}
@@ -286,12 +286,12 @@ function AppContent() {
                   {isRestarting ? (
                     <>
                       <RefreshCw className="w-4 h-4 animate-spin" />
-                      {t('launcher.restarting') || 'Restarting...'}
+                      {t('update.restarting')}
                     </>
                   ) : (
                     <>
                       <RefreshCw className="w-4 h-4" />
-                      {t('launcher.restartNow') || 'Restart Now'}
+                      {t('update.restartNow')}
                     </>
                   )}
                 </button>

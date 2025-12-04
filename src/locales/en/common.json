@@ -545,7 +545,12 @@
     "downloadPage": "Open download page",
     "installUpdate": "Install Update",
     "platform": "Platform: {{platform}}",
-    "viewOnGithub": "View on GitHub"
+    "viewOnGithub": "View on GitHub",
+    "updateReady": "Update Ready",
+    "restartToApply": "The update has been installed. Please restart the launcher to apply the changes.",
+    "restartNow": "Restart Now",
+    "restartLater": "Restart Later",
+    "restarting": "Restarting..."
   },
   "myModpacks": {
     "title": "My Modpacks",

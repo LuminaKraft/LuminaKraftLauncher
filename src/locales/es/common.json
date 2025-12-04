@@ -540,6 +540,11 @@
     "installUpdate": "Instalar actualización",
     "platform": "Plataforma: {{platform}}",
     "viewOnGithub": "Ver en GitHub",
+    "updateReady": "Actualización Lista",
+    "restartToApply": "La actualización ha sido instalada. Por favor reinicia el launcher para aplicar los cambios.",
+    "restartNow": "Reiniciar Ahora",
+    "restartLater": "Reiniciar Más Tarde",
+    "restarting": "Reiniciando...",
     "screenshots": {
       "noScreenshots": "No hay screenshots disponibles"
     }
