@@ -438,6 +438,7 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state, isReadO
         modpackName={modpack.name}
         isOpen={showProfileOptions}
         onClose={() => setShowProfileOptions(false)}
+        isLocalModpack={!modpack.urlModpackZip}
         metadata={instanceMetadata}
       />
     </>

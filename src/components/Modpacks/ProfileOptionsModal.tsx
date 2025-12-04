@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, HardDrive } from 'lucide-react';
+import { X, HardDrive, Image as ImageIcon } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import toast from 'react-hot-toast';
 import { useLauncher } from '../../contexts/LauncherContext';
@@ -10,6 +10,7 @@ interface ProfileOptionsModalProps {
   modpackName: string;
   isOpen: boolean;
   onClose: () => void;
+  isLocalModpack?: boolean; // True if imported locally, not from server
   metadata?: {
     recommendedRam?: number;
     ramAllocation?: string;
@@ -22,10 +23,13 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
   modpackName,
   isOpen,
   onClose,
+  isLocalModpack = false,
   metadata
 }) => {
   const { t } = useTranslation();
   const { userSettings } = useLauncher();
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
 
   const [ramMode, setRamMode] = useState<'recommended' | 'custom' | 'global'>(
     (metadata?.ramAllocation as 'recommended' | 'custom' | 'global') || 'recommended'
@@ -34,6 +38,7 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
     metadata?.customRam || metadata?.recommendedRam || userSettings.allocatedRam * 1024 || 4096
   );
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   useEffect(() => {
     if (metadata) {
@@ -77,6 +82,28 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
     }
   };
 
+  const handleImageUpload = async (imageType: 'logo' | 'banner', file: File) => {
+    setIsUploadingImage(true);
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const bytes = Array.from(new Uint8Array(arrayBuffer));
+
+      await invoke('save_modpack_image', {
+        modpackId,
+        imageType,
+        imageData: bytes,
+        fileName: file.name
+      });
+
+      toast.success(t(`settings.${imageType}Updated`));
+    } catch (error) {
+      console.error(`Failed to upload ${imageType}:`, error);
+      toast.error(t(`settings.${imageType}UpdateFailed`));
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
   const MIN_RAM = 512; // 512MB minimum
   const MAX_RAM = 32768; // 32GB maximum
 
@@ -107,6 +134,72 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
             className="input-field w-full bg-dark-700 cursor-not-allowed opacity-70"
           />
         </div>
+
+        {/* Image Settings for Local Modpacks */}
+        {isLocalModpack && (
+          <div className="mb-6">
+            <div className="flex items-center space-x-3 mb-4">
+              <ImageIcon className="w-5 h-5 text-lumina-500" />
+              <h3 className="text-white text-lg font-semibold">Personalización de imagen</h3>
+            </div>
+
+            <div className="space-y-4">
+              {/* Logo Upload */}
+              <div className="p-4 rounded-lg border border-dark-600">
+                <label className="block text-dark-300 text-sm font-medium mb-3">Logo</label>
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={() => logoInputRef.current?.click()}
+                    disabled={isUploadingImage}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm transition-colors"
+                  >
+                    Cambiar logo
+                  </button>
+                  <input
+                    ref={logoInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        handleImageUpload('logo', file);
+                      }
+                    }}
+                  />
+                  <span className="text-dark-400 text-sm">PNG, JPG, etc.</span>
+                </div>
+              </div>
+
+              {/* Banner Upload */}
+              <div className="p-4 rounded-lg border border-dark-600">
+                <label className="block text-dark-300 text-sm font-medium mb-3">Banner</label>
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={() => bannerInputRef.current?.click()}
+                    disabled={isUploadingImage}
+                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded-lg text-sm transition-colors"
+                  >
+                    Cambiar banner
+                  </button>
+                  <input
+                    ref={bannerInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        handleImageUpload('banner', file);
+                      }
+                    }}
+                  />
+                  <span className="text-dark-400 text-sm">PNG, JPG, etc.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Memory Settings */}
         <div className="mb-6">
