@@ -368,10 +368,21 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
       const originalZip = new JSZip();
       await originalZip.loadAsync(originalZipBuffer);
 
-      // Add uploaded files to overrides folder
+      // Add uploaded files to appropriate overrides folder based on file type
       for (const file of pendingUploadedFiles.values()) {
         const fileBuffer = await file.arrayBuffer();
-        const filePath = `overrides/mods/${file.name}`;
+
+        // Determine target folder based on file extension
+        let filePath: string;
+        if (file.name.endsWith('.jar')) {
+          filePath = `overrides/mods/${file.name}`;
+        } else if (file.name.endsWith('.zip')) {
+          filePath = `overrides/resourcepacks/${file.name}`;
+        } else {
+          console.warn(`[ZIP] Unknown file extension, skipping: ${file.name}`);
+          continue;
+        }
+
         originalZip.file(filePath, fileBuffer);
         console.log(`[ZIP] Added to ZIP: ${filePath}`);
       }
