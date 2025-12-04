@@ -33,12 +33,19 @@ interface ValidationResult {
   modsWithoutUrl: ModFileInfo[];
   modsInOverrides: string[];
   error?: string;
+  fileIds?: number[];
+}
+
+interface ValidationRequest {
+  file: File;
+  modsInfo?: ModFileInfo[];
+  getFileIds?: boolean;
 }
 
 // Listen for messages from the main thread
-self.onmessage = async (event: MessageEvent) => {
+self.onmessage = async (event: MessageEvent<ValidationRequest>) => {
   try {
-    const { file, modsInfo } = event.data;
+    const { file, modsInfo, getFileIds } = event.data;
 
     // Load and parse ZIP
     const zip = await JSZip.loadAsync(file);
@@ -50,6 +57,7 @@ self.onmessage = async (event: MessageEvent) => {
         success: false,
         modsWithoutUrl: [],
         modsInOverrides: [],
+        fileIds: [],
         error: 'No manifest.json found in ZIP file'
       } as ValidationResult);
       return;
@@ -58,30 +66,56 @@ self.onmessage = async (event: MessageEvent) => {
     const manifestText = await manifestFile.async('text');
     const manifest: ModpackManifest = JSON.parse(manifestText);
 
-    // Find mods without download URL
-    const modsWithoutUrl = modsInfo.filter((mod: ModFileInfo) => !mod.downloadUrl || mod.downloadUrl === '');
-
-    // Check which mods are in overrides/mods/
-    const modsInOverridesList: string[] = [];
-    for (const mod of modsWithoutUrl) {
-      const filePath = `overrides/mods/${mod.fileName}`;
-      if (zip.file(filePath)) {
-        modsInOverridesList.push(mod.fileName);
-      }
+    // If only getting file IDs, return early
+    if (getFileIds) {
+      const fileIds = manifest.files.map(f => f.fileID);
+      self.postMessage({
+        success: true,
+        manifest,
+        modsWithoutUrl: [],
+        modsInOverrides: [],
+        fileIds
+      } as ValidationResult);
+      return;
     }
 
-    // Send result back to main thread
-    self.postMessage({
-      success: true,
-      manifest,
-      modsWithoutUrl,
-      modsInOverrides: modsInOverridesList
-    } as ValidationResult);
+    // If we have modsInfo, find which ones don't have URLs and check overrides
+    if (modsInfo && modsInfo.length > 0) {
+      const modsWithoutUrl = modsInfo.filter((mod: ModFileInfo) => !mod.downloadUrl || mod.downloadUrl === '');
+
+      // Check which mods are in overrides/mods/
+      const modsInOverridesList: string[] = [];
+      for (const mod of modsWithoutUrl) {
+        const filePath = `overrides/mods/${mod.fileName}`;
+        if (zip.file(filePath)) {
+          modsInOverridesList.push(mod.fileName);
+        }
+      }
+
+      // Send result back to main thread
+      self.postMessage({
+        success: true,
+        manifest,
+        modsWithoutUrl,
+        modsInOverrides: modsInOverridesList
+      } as ValidationResult);
+    } else {
+      // Return manifest and file IDs only
+      const fileIds = manifest.files.map(f => f.fileID);
+      self.postMessage({
+        success: true,
+        manifest,
+        modsWithoutUrl: [],
+        modsInOverrides: [],
+        fileIds
+      } as ValidationResult);
+    }
   } catch (error) {
     self.postMessage({
       success: false,
       modsWithoutUrl: [],
       modsInOverrides: [],
+      fileIds: [],
       error: error instanceof Error ? error.message : 'Unknown error'
     } as ValidationResult);
   }

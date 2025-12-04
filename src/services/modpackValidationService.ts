@@ -53,37 +53,30 @@ class ModpackValidationService {
    */
   async validateModpackZip(file: File): Promise<ValidationResult> {
     try {
-      // First, load and parse just the manifest to get file IDs (quick operation)
-      const zip = await JSZip.loadAsync(file);
+      // Phase 1: Use Web Worker to extract file IDs without blocking UI
+      const phase1Result = await this.workerGetFileIds(file);
 
-      const manifestFile = zip.file('manifest.json');
-      if (!manifestFile) {
+      if (!phase1Result.success || !phase1Result.fileIds) {
         return {
           success: false,
           modsWithoutUrl: [],
           modsInOverrides: [],
-          error: 'No manifest.json found in ZIP file'
+          error: phase1Result.error || 'Failed to extract manifest from ZIP'
         };
       }
 
-      const manifestText = await manifestFile.async('text');
-      const manifest: ModpackManifest = JSON.parse(manifestText);
+      // Phase 2: Query Supabase Edge Function to get mod file info (async, non-blocking)
+      const modsInfo = await this.fetchModsInfo(phase1Result.fileIds);
 
-      // Extract file IDs
-      const fileIds = manifest.files.map(f => f.fileID);
-
-      // Query Supabase Edge Function to get mod file info (this is already async)
-      const modsInfo = await this.fetchModsInfo(fileIds);
-
-      // Now use Web Worker to check overrides without blocking the UI
-      const result = await this.validateZipWithWorker(file, modsInfo);
+      // Phase 3: Use Web Worker again to check overrides with mod info
+      const phase3Result = await this.workerValidateOverrides(file, modsInfo);
 
       return {
-        success: result.success,
-        manifest: result.manifest || manifest,
-        modsWithoutUrl: result.modsWithoutUrl,
-        modsInOverrides: result.modsInOverrides,
-        error: result.error
+        success: phase3Result.success,
+        manifest: phase3Result.manifest || phase1Result.manifest,
+        modsWithoutUrl: phase3Result.modsWithoutUrl,
+        modsInOverrides: phase3Result.modsInOverrides,
+        error: phase3Result.error
       };
     } catch (error) {
       console.error('Error validating modpack:', error);
@@ -97,41 +90,75 @@ class ModpackValidationService {
   }
 
   /**
-   * Use Web Worker to process ZIP file without blocking UI
+   * Use Web Worker to extract file IDs from manifest without blocking UI
    */
-  private validateZipWithWorker(file: File, modsInfo: ModFileInfo[]): Promise<ValidationResult> {
+  private workerGetFileIds(file: File): Promise<ValidationResult & { fileIds?: number[] }> {
     return new Promise((resolve, reject) => {
       try {
-        // Create worker
         const worker = new Worker(
           new URL('../workers/modpackValidationWorker.ts', import.meta.url),
           { type: 'module' }
         );
 
-        // Set timeout to prevent hanging
         const timeout = setTimeout(() => {
           worker.terminate();
-          reject(new Error('Validation timeout - ZIP file too large'));
-        }, 60000); // 60 second timeout
+          reject(new Error('Timeout extracting manifest from ZIP'));
+        }, 30000);
 
-        // Handle worker message
-        worker.onmessage = (event: MessageEvent<ValidationResult>) => {
+        worker.onmessage = (event: MessageEvent<ValidationResult & { fileIds?: number[] }>) => {
           clearTimeout(timeout);
           worker.terminate();
           resolve(event.data);
         };
 
-        // Handle worker error
         worker.onerror = (error: ErrorEvent) => {
           clearTimeout(timeout);
           worker.terminate();
           reject(error);
         };
 
-        // Send file and mods info to worker
         worker.postMessage({
           file,
-          modsInfo
+          getFileIds: true
+        });
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  /**
+   * Use Web Worker to validate overrides without blocking UI
+   */
+  private workerValidateOverrides(file: File, modsInfo: ModFileInfo[]): Promise<ValidationResult> {
+    return new Promise((resolve, reject) => {
+      try {
+        const worker = new Worker(
+          new URL('../workers/modpackValidationWorker.ts', import.meta.url),
+          { type: 'module' }
+        );
+
+        const timeout = setTimeout(() => {
+          worker.terminate();
+          reject(new Error('Timeout validating ZIP overrides'));
+        }, 60000);
+
+        worker.onmessage = (event: MessageEvent<ValidationResult>) => {
+          clearTimeout(timeout);
+          worker.terminate();
+          resolve(event.data);
+        };
+
+        worker.onerror = (error: ErrorEvent) => {
+          clearTimeout(timeout);
+          worker.terminate();
+          reject(error);
+        };
+
+        worker.postMessage({
+          file,
+          modsInfo,
+          getFileIds: false
         });
       } catch (error) {
         reject(error);
