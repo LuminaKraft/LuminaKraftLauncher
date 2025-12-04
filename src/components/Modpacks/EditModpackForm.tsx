@@ -642,6 +642,26 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                       />
                     </div>
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{t('editModpack.general.gamemode')} {t('editModpack.general.optional')}</label>
+                    <input
+                      type="text"
+                      value={formData.gamemode}
+                      onChange={(e) => updateFormData('gamemode', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      placeholder="survival, creative, pvp, rpg, etc."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{t('editModpack.general.serverIp')} {t('editModpack.general.optional')}</label>
+                    <input
+                      type="text"
+                      value={formData.serverIp}
+                      onChange={(e) => updateFormData('serverIp', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      placeholder="play.example.com"
+                    />
+                  </div>
                 </div>
               </div>
 
