@@ -823,6 +823,11 @@ class LauncherService {
       }
       keysToRemove.forEach(key => localStorage.removeItem(key));
     }
+
+    // Dispatch a custom event to notify all listeners that cache has been cleared
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('luminakraft:cache-cleared'));
+    }
   }
 
   // ---- Persistent cache helpers (localStorage) ----
