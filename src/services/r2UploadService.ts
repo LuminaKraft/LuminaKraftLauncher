@@ -135,18 +135,68 @@ export class R2UploadService {
         registerBody.sortOrder = sortOrder;
       }
 
-      const registerResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/register-modpack-upload`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(registerBody),
-      });
+      // Step 4: Register upload in database with retry logic
+      console.log('💾 Registering upload in database...');
+      const registerUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/register-modpack-upload`;
+      console.log('📍 Backend URL:', registerUrl);
+
+      let registerResponse: Response | null = null;
+      let lastError: Error | null = null;
+      const maxRetries = 2;
+
+      for (let retryCount = 0; retryCount <= maxRetries; retryCount++) {
+        try {
+          if (retryCount > 0) {
+            console.log(`🔄 Retry attempt ${retryCount}/${maxRetries}`);
+            // Wait before retrying
+            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+          }
+
+          // Create abort controller for timeout
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+          try {
+            registerResponse = await fetch(registerUrl, {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(registerBody),
+              signal: controller.signal,
+            });
+          } finally {
+            clearTimeout(timeoutId);
+          }
+
+          // If we get a response, break the retry loop
+          break;
+        } catch (error) {
+          lastError = error as Error;
+          console.error(`❌ Attempt ${retryCount + 1} failed:`, error);
+
+          // If this was the last retry, re-throw
+          if (retryCount === maxRetries) {
+            throw error;
+          }
+        }
+      }
+
+      if (!registerResponse) {
+        throw new Error('Failed to get response from backend after retries');
+      }
 
       if (!registerResponse.ok) {
-        const error = await registerResponse.json();
-        throw new Error(error.error || 'Failed to register upload');
+        let errorMessage = 'Failed to register upload';
+        try {
+          const errorData = await registerResponse.json();
+          errorMessage = errorData.error || errorData.details || errorMessage;
+        } catch {
+          errorMessage = `Server returned ${registerResponse.status}: ${registerResponse.statusText}`;
+        }
+        console.error('❌ Backend error response:', registerResponse.status, errorMessage);
+        throw new Error(errorMessage);
       }
 
       console.log('✅ Upload registered in database');
@@ -158,7 +208,18 @@ export class R2UploadService {
         fileSha256,
       };
     } catch (error) {
-      console.error('❌ Upload failed:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('❌ Upload failed:', errorMessage);
+
+      // Provide more specific error messages
+      if (errorMessage.includes('Failed to fetch')) {
+        throw new Error('Network error - Check your internet connection or try again later. If the problem persists, the backend server may be temporarily unavailable.');
+      } else if (errorMessage.includes('timeout')) {
+        throw new Error('Upload took too long to process - Try uploading a smaller file or check your connection');
+      } else if (errorMessage.includes('Unauthorized') || errorMessage.includes('401')) {
+        throw new Error('Authentication failed - Please login again');
+      }
+
       throw error;
     }
   }
