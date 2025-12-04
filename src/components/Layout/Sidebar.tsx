@@ -60,7 +60,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
   }, [userSettings?.enablePrereleases]);
 
   // Version is automatically updated by release.js
-  const currentVersion = "0.1.0-beta.3";
+  const currentVersion = "0.1.0-beta.4";
 
   const menuItems = [
     {
