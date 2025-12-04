@@ -115,25 +115,6 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Fix MSI version format (Windows only)
-        if: matrix.platform == 'windows-latest'
-        run: |
-          # Convert alpha.X to valid semver format for MSI compatibility
-          # Keep proper semver format but use patch version for MSI numbering
-          $version = (Get-Content package.json | ConvertFrom-Json).version
-          if ($version -match '(\d+)\.(\d+)\.(\d+)-alpha\.(\d+)') {
-            $major = $matches[1]; $minor=$matches[2]; $patch=$matches[3]
-            $msiVersion = "$major.$minor.$patch"
-            Write-Host "Alpha prerelease detected, using base semver $msiVersion for MSI"
-            (Get-Content src-tauri/tauri.conf.json) -replace '"version": "[^"]*"', "`"version`": `"$msiVersion`"" | Set-Content src-tauri/tauri.conf.json
-          } elseif ($version -match '(\d+)\.(\d+)\.(\d+)-beta\.(\d+)') {
-            $major = $matches[1]; $minor=$matches[2]; $patch=$matches[3]
-            $msiVersion = "$major.$minor.$patch"
-            Write-Host "Beta prerelease detected, using base semver $msiVersion for MSI"
-            (Get-Content src-tauri/tauri.conf.json) -replace '"version": "[^"]*"', "`"version`": `"$msiVersion`"" | Set-Content src-tauri/tauri.conf.json
-          }
-        shell: pwsh
-
       - uses: tauri-apps/tauri-action@v0.5.20
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
