@@ -234,13 +234,17 @@ jobs:
         run: |
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
+          # Sync with remote before making changes
+          git fetch origin main
+          git checkout main
+          git pull origin main
           git add latest.json || true
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
             TYPE="${{ env.IS_PRERELEASE == 'true' && 'prerelease' || 'stable' }}"
             git commit -m "chore(ci): update manifest for $TYPE v${{ env.PACKAGE_VERSION }}"
-            git push origin HEAD:main
+            git push origin main
           fi
 
  
