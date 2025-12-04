@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Download, FolderOpen } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
-import { convertFileSrc } from '@tauri-apps/api/core';
 import toast from 'react-hot-toast';
 import { downloadDir, appDataDir } from '@tauri-apps/api/path';
 import { listen } from '@tauri-apps/api/event';
@@ -60,16 +59,28 @@ export function MyModpacksPage() {
 
     const resolved = { ...modpack };
 
+    // Helper to convert file path to file:// URL with proper encoding
+    const pathToFileUrl = (filePath: string): string => {
+      // Encode the path, preserving slashes
+      const encoded = filePath
+        .split('/')
+        .map(segment => encodeURIComponent(segment))
+        .join('/');
+      return `file://${encoded}`;
+    };
+
     // Resolve logo if it's a relative path
     if (resolved.logo && resolved.logo.startsWith('caches/')) {
       const fullPath = `${launcherDataDirRef.current}/${resolved.logo}`;
-      resolved.logo = convertFileSrc(fullPath);
+      resolved.logo = pathToFileUrl(fullPath);
+      console.log('🖼️ Logo resolved to:', resolved.logo);
     }
 
     // Resolve backgroundImage if it's a relative path
     if (resolved.backgroundImage && resolved.backgroundImage.startsWith('caches/')) {
       const fullPath = `${launcherDataDirRef.current}/${resolved.backgroundImage}`;
-      resolved.backgroundImage = convertFileSrc(fullPath);
+      resolved.backgroundImage = pathToFileUrl(fullPath);
+      console.log('🖼️ Background resolved to:', resolved.backgroundImage);
     }
 
     return resolved;
