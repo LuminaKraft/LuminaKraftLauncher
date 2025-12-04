@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, HardDrive, Image as ImageIcon } from 'lucide-react';
+import { X, HardDrive } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
+import { appDataDir } from '@tauri-apps/api/path';
 import toast from 'react-hot-toast';
 import { useLauncher } from '../../contexts/LauncherContext';
 
@@ -30,6 +31,7 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
   const { userSettings } = useLauncher();
   const logoInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
+  const appDataDirRef = useRef<string | null>(null);
 
   const [displayName, setDisplayName] = useState(modpackName);
   const [ramMode, setRamMode] = useState<'recommended' | 'custom' | 'global'>(
@@ -39,8 +41,45 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
     metadata?.customRam || metadata?.recommendedRam || userSettings.allocatedRam * 1024 || 4096
   );
   const [isSaving, setIsSaving] = useState(false);
-  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [editingName, setEditingName] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [bannerUrl, setBannerUrl] = useState<string | null>(null);
+
+  // Load cached images when modal opens
+  useEffect(() => {
+    if (!isOpen || !isLocalModpack) return;
+
+    const loadImages = async () => {
+      try {
+        if (!appDataDirRef.current) {
+          const appData = await appDataDir();
+          appDataDirRef.current = appData.endsWith('/') ? appData.slice(0, -1) : appData;
+        }
+
+        // Try to load logo
+        const logoPath = `${appDataDirRef.current}/caches/modpacks/${modpackId}/images/logo.png`;
+        try {
+          const logo = await invoke<string>('get_file_as_data_url', { filePath: logoPath });
+          setLogoUrl(logo);
+        } catch {
+          setLogoUrl(null);
+        }
+
+        // Try to load banner
+        const bannerPath = `${appDataDirRef.current}/caches/modpacks/${modpackId}/images/banner.jpeg`;
+        try {
+          const banner = await invoke<string>('get_file_as_data_url', { filePath: bannerPath });
+          setBannerUrl(banner);
+        } catch {
+          setBannerUrl(null);
+        }
+      } catch (error) {
+        console.error('Failed to load images:', error);
+      }
+    };
+
+    loadImages();
+  }, [isOpen, isLocalModpack, modpackId]);
 
   useEffect(() => {
     setDisplayName(modpackName);
@@ -72,6 +111,20 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
   const handleSave = async () => {
     setIsSaving(true);
     try {
+      // Update name if it changed (for local modpacks only)
+      if (isLocalModpack && displayName !== modpackName) {
+        const metadata = await invoke<string>('get_instance_metadata', { modpackId });
+        if (metadata) {
+          const parsed = JSON.parse(metadata);
+          parsed.name = displayName;
+          await invoke('save_modpack_metadata_json', {
+            modpackId,
+            modpackJson: JSON.stringify(parsed)
+          });
+        }
+      }
+
+      // Update RAM settings
       await invoke('update_instance_ram_settings', {
         modpackId,
         ramAllocation: ramMode,
@@ -81,7 +134,7 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
       toast.success(t('settings.saved'));
       onClose();
     } catch (error) {
-      console.error('Failed to update RAM settings:', error);
+      console.error('Failed to save settings:', error);
       toast.error(t('settings.saveFailed'));
     } finally {
       setIsSaving(false);
@@ -89,7 +142,6 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
   };
 
   const handleImageUpload = async (imageType: 'logo' | 'banner', file: File) => {
-    setIsUploadingImage(true);
     try {
       const arrayBuffer = await file.arrayBuffer();
       const bytes = Array.from(new Uint8Array(arrayBuffer));
@@ -101,14 +153,29 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
         fileName: file.name
       });
 
+      // Refresh image after upload
+      if (appDataDirRef.current) {
+        try {
+          const imagePath = imageType === 'logo'
+            ? `${appDataDirRef.current}/caches/modpacks/${modpackId}/images/logo.png`
+            : `${appDataDirRef.current}/caches/modpacks/${modpackId}/images/banner.jpeg`;
+          const imageUrl = await invoke<string>('get_file_as_data_url', { filePath: imagePath });
+          if (imageType === 'logo') {
+            setLogoUrl(imageUrl);
+          } else {
+            setBannerUrl(imageUrl);
+          }
+        } catch {
+          // Silently fail, image will just show placeholder
+        }
+      }
+
       const key = imageType === 'logo' ? 'logoUpdated' : 'bannerUpdated';
       toast.success(t(`settings.${key}`));
     } catch (error) {
       console.error(`Failed to upload ${imageType}:`, error);
       const key = imageType === 'logo' ? 'logoUpdateFailed' : 'bannerUpdateFailed';
       toast.error(t(`settings.${key}`));
-    } finally {
-      setIsUploadingImage(false);
     }
   };
 
@@ -165,104 +232,63 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
         {/* Image Settings for Local Modpacks */}
         {isLocalModpack && (
           <div className="mb-6">
-            <div className="flex items-center space-x-3 mb-4">
-              <ImageIcon className="w-5 h-5 text-lumina-500" />
-              <h3 className="text-white text-lg font-semibold">Personalización de imagen</h3>
-            </div>
-
-            <div className="space-y-4">
-              {/* Logo Upload with Preview */}
-              <div className="p-4 rounded-lg border border-dark-600 hover:border-lumina-500/50 transition-colors">
-                <label className="block text-dark-300 text-sm font-medium mb-3">Logo</label>
-                <div className="flex items-center space-x-4">
-                  {/* Logo Preview */}
-                  <div
-                    className="relative w-20 h-20 rounded-lg bg-dark-700 flex items-center justify-center flex-shrink-0 group cursor-pointer"
-                    onClick={() => logoInputRef.current?.click()}
-                  >
-                    {/* Logo Display */}
-                    <div className="w-full h-full rounded-lg overflow-hidden flex items-center justify-center">
-                      {/* Placeholder or actual content would go here */}
-                      <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold">
-                        {displayName.charAt(0).toUpperCase()}
-                      </div>
-                    </div>
-
-                    {/* Hover Overlay */}
-                    <div className="absolute inset-0 bg-black/50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <span className="text-white text-xs font-medium">Cambiar</span>
-                    </div>
+            <label className="block text-dark-300 text-sm font-medium mb-3">
+              {t('profileOptions.images', 'Imágenes personalizadas')}
+            </label>
+            <div className="flex items-center gap-4">
+              {/* Logo */}
+              <div
+                className="relative w-16 h-16 rounded-lg bg-dark-700 flex-shrink-0 group cursor-pointer overflow-hidden"
+                onClick={() => logoInputRef.current?.click()}
+              >
+                {logoUrl ? (
+                  <img src={logoUrl} alt="Logo" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold">
+                    {displayName.charAt(0).toUpperCase()}
                   </div>
-
-                  {/* Upload Controls */}
-                  <div className="flex-1">
-                    <button
-                      onClick={() => logoInputRef.current?.click()}
-                      disabled={isUploadingImage}
-                      className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm transition-colors font-medium"
-                    >
-                      {isUploadingImage ? 'Subiendo...' : 'Cambiar logo'}
-                    </button>
-                    <input
-                      ref={logoInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          handleImageUpload('logo', file);
-                        }
-                      }}
-                    />
-                    <p className="text-dark-400 text-xs mt-2">PNG, JPG, GIF (Recomendado: 512x512px)</p>
-                  </div>
+                )}
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <span className="text-white text-xs font-medium">Cambiar</span>
                 </div>
               </div>
 
-              {/* Banner Upload */}
-              <div className="p-4 rounded-lg border border-dark-600 hover:border-lumina-500/50 transition-colors">
-                <label className="block text-dark-300 text-sm font-medium mb-3">Banner</label>
-                <div className="flex items-center space-x-4">
-                  {/* Banner Preview */}
-                  <div
-                    className="relative w-32 h-20 rounded-lg bg-dark-700 flex-shrink-0 group cursor-pointer overflow-hidden"
-                    onClick={() => bannerInputRef.current?.click()}
-                  >
-                    {/* Banner Display */}
-                    <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-600"></div>
-
-                    {/* Hover Overlay */}
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <span className="text-white text-xs font-medium">Cambiar</span>
-                    </div>
-                  </div>
-
-                  {/* Upload Controls */}
-                  <div className="flex-1">
-                    <button
-                      onClick={() => bannerInputRef.current?.click()}
-                      disabled={isUploadingImage}
-                      className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded-lg text-sm transition-colors font-medium"
-                    >
-                      {isUploadingImage ? 'Subiendo...' : 'Cambiar banner'}
-                    </button>
-                    <input
-                      ref={bannerInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          handleImageUpload('banner', file);
-                        }
-                      }}
-                    />
-                    <p className="text-dark-400 text-xs mt-2">PNG, JPG (Recomendado: 1920x480px)</p>
-                  </div>
+              {/* Banner */}
+              <div
+                className="relative flex-1 h-16 rounded-lg bg-dark-700 group cursor-pointer overflow-hidden"
+                onClick={() => bannerInputRef.current?.click()}
+              >
+                {bannerUrl ? (
+                  <img src={bannerUrl} alt="Banner" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-r from-purple-500 to-pink-600"></div>
+                )}
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <span className="text-white text-xs font-medium">Cambiar</span>
                 </div>
               </div>
+
+              {/* Hidden inputs */}
+              <input
+                ref={logoInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleImageUpload('logo', file);
+                }}
+              />
+              <input
+                ref={bannerInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleImageUpload('banner', file);
+                }}
+              />
             </div>
           </div>
         )}
