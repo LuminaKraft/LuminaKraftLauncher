@@ -45,6 +45,8 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
   const [hasDiscord, setHasDiscord] = useState(false);
   const [isDiscordMember, setIsDiscordMember] = useState(false);
   const [userRole, setUserRole] = useState<'admin' | 'partner' | 'user' | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [userPartnerId, setUserPartnerId] = useState<string | null>(null);
 
   const handleOpenUrl = async (url: string) => {
     try {
@@ -89,6 +91,23 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
   const loadData = async () => {
     try {
       setLoading(true);
+
+      // Get current user ID and partner ID
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser) {
+        setUserId(authUser.id);
+
+        // Get user's partner_id from users table
+        const { data: userData } = await supabase
+          .from('users')
+          .select('partner_id')
+          .eq('id', authUser.id)
+          .single();
+
+        if (userData) {
+          setUserPartnerId(userData.partner_id || null);
+        }
+      }
 
       // Check permissions
       const { canManage: hasPermission, role, partnerName } = await service.canManageModpacks();
