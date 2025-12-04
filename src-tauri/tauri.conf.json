@@ -30,7 +30,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis", "dmg", "appimage"],
+    "targets": ["nsis", "app", "dmg", "appimage"],
     "createUpdaterArtifacts": true,
     "publisher": "LuminaKraft",
     "icon": [
