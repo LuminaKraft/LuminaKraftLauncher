@@ -183,6 +183,41 @@ async fn save_modpack_metadata_json(
 }
 
 #[tauri::command]
+async fn get_file_as_data_url(file_path: String) -> Result<String, String> {
+    use std::fs;
+    use std::path::Path;
+    use base64::Engine;
+
+    let path = Path::new(&file_path);
+
+    // Validate path exists and is a file
+    if !path.is_file() {
+        return Err(format!("File not found: {}", file_path));
+    }
+
+    // Read the file
+    let data = fs::read(path)
+        .map_err(|e| format!("Failed to read file: {}", e))?;
+
+    // Determine MIME type from extension
+    let mime_type = match path.extension().and_then(|ext| ext.to_str()) {
+        Some("png") => "image/png",
+        Some("jpg") | Some("jpeg") => "image/jpeg",
+        Some("gif") => "image/gif",
+        Some("webp") => "image/webp",
+        Some("svg") => "image/svg+xml",
+        _ => "application/octet-stream",
+    };
+
+    // Encode to base64
+    let engine = base64::engine::general_purpose::STANDARD;
+    let encoded = engine.encode(&data);
+
+    // Return data URL
+    Ok(format!("data:{};base64,{}", mime_type, encoded))
+}
+
+#[tauri::command]
 async fn update_instance_ram_settings(
     modpack_id: String,
     ram_allocation: String,
@@ -1114,6 +1149,7 @@ fn main() {
             get_instance_metadata,
             get_cached_modpack_data,
             save_modpack_metadata_json,
+            get_file_as_data_url,
             update_instance_ram_settings,
             get_local_modpacks,
             install_modpack,

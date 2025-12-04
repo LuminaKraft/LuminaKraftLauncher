@@ -42,7 +42,7 @@ export function MyModpacksPage() {
   const [validating, setValidating] = useState(false);
 
   /**
-   * Resolve relative image paths to file:// URLs
+   * Resolve relative image paths to data URLs via Tauri
    */
   const resolveImagePaths = async (modpack: Modpack): Promise<Modpack> => {
     if (!launcherDataDirRef.current) {
@@ -59,28 +59,28 @@ export function MyModpacksPage() {
 
     const resolved = { ...modpack };
 
-    // Helper to convert file path to file:// URL with proper encoding
-    const pathToFileUrl = (filePath: string): string => {
-      // Encode the path, preserving slashes
-      const encoded = filePath
-        .split('/')
-        .map(segment => encodeURIComponent(segment))
-        .join('/');
-      return `file://${encoded}`;
-    };
-
     // Resolve logo if it's a relative path
     if (resolved.logo && resolved.logo.startsWith('caches/')) {
       const fullPath = `${launcherDataDirRef.current}/${resolved.logo}`;
-      resolved.logo = pathToFileUrl(fullPath);
-      console.log('🖼️ Logo resolved to:', resolved.logo);
+      try {
+        resolved.logo = await invoke<string>('get_file_as_data_url', { filePath: fullPath });
+        console.log('🖼️ Logo converted to data URL');
+      } catch (error) {
+        console.error('Failed to load logo:', error);
+        // Keep original path if conversion fails
+      }
     }
 
     // Resolve backgroundImage if it's a relative path
     if (resolved.backgroundImage && resolved.backgroundImage.startsWith('caches/')) {
       const fullPath = `${launcherDataDirRef.current}/${resolved.backgroundImage}`;
-      resolved.backgroundImage = pathToFileUrl(fullPath);
-      console.log('🖼️ Background resolved to:', resolved.backgroundImage);
+      try {
+        resolved.backgroundImage = await invoke<string>('get_file_as_data_url', { filePath: fullPath });
+        console.log('🖼️ Background converted to data URL');
+      } catch (error) {
+        console.error('Failed to load background:', error);
+        // Keep original path if conversion fails
+      }
     }
 
     return resolved;
