@@ -675,6 +675,7 @@ const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect
         modpackName={displayName}
         isOpen={showProfileOptionsModal}
         onClose={() => setShowProfileOptionsModal(false)}
+        isLocalModpack={!modpack.urlModpackZip}
         metadata={instanceMetadata}
       />
     </div>

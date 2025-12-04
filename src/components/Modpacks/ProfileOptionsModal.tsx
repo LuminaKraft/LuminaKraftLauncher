@@ -219,17 +219,16 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
               </button>
             </div>
           ) : (
-            <input
-              type="text"
-              value={displayName}
-              disabled
+            <div
               onClick={() => isLocalModpack && setEditingName(true)}
               className={`input-field w-full transition-colors ${
                 isLocalModpack
                   ? 'cursor-pointer hover:border-lumina-400/50 bg-dark-700 hover:bg-dark-600'
                   : 'cursor-not-allowed bg-dark-700 opacity-70'
-              }`}
-            />
+              } p-2`}
+            >
+              <span className={isLocalModpack ? 'text-white' : 'text-dark-400'}>{displayName}</span>
+            </div>
           )}
         </div>
 
