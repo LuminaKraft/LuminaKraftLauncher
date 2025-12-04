@@ -866,6 +866,7 @@
       "option2Step1": "Descarga los archivos de CurseForge",
       "option2Step2": "Agrega al carpeta overrides/mods/ u overrides/resourcepacks/ en tu ZIP",
       "option2Step3": "Reimporta el modpack",
+      "nameAlreadyExists": "Ya existe un modpack con este nombre. Por favor, elige un nombre diferente.",
       "buttons": {
         "continue": "Importar Modpack",
         "continueWithFiles": "Importar con {{count}} archivo(s)",
