@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { X, AlertTriangle, CheckCircle, ExternalLink, FileArchive, Package, Upload } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import toast from 'react-hot-toast';
+import { createPortal } from 'react-dom';
 import { ModFileInfo } from '../../services/modpackValidationService';
 import ModpackValidationService from '../../services/modpackValidationService';
 
@@ -121,7 +122,7 @@ export const ModpackValidationDialog: React.FC<ModpackValidationDialogProps> = (
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-3xl w-full max-h-[85vh] overflow-hidden flex flex-col">
         {/* Header */}
@@ -370,7 +371,8 @@ export const ModpackValidationDialog: React.FC<ModpackValidationDialogProps> = (
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

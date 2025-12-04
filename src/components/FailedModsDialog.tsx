@@ -3,6 +3,7 @@ import { X, ExternalLink, AlertTriangle, Upload, CheckCircle } from 'lucide-reac
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+import { createPortal } from 'react-dom';
 import { supabase } from '../services/supabaseClient';
 import { writeFile, mkdir, exists } from '@tauri-apps/plugin-fs';
 import { appDataDir, join } from '@tauri-apps/api/path';
@@ -219,7 +220,7 @@ export const FailedModsDialog: React.FC<FailedModsDialogProps> = ({
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
         {/* Header */}
@@ -412,6 +413,7 @@ export const FailedModsDialog: React.FC<FailedModsDialogProps> = ({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }; 
