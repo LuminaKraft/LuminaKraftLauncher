@@ -24,6 +24,8 @@ interface Modpack {
   created_at: string;
   updated_at: string;
   downloads?: number;
+  author_id?: string;
+  partner_id?: string;
 }
 
 interface PublishedModpacksPageProps {
@@ -205,6 +207,25 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
   const getTranslatedName = (nameI18n: Record<string, string>) => {
     const lang = i18n.language;
     return nameI18n[lang] || nameI18n['en'] || 'Unnamed Modpack';
+  };
+
+  const canDeleteModpack = (modpack: Modpack): boolean => {
+    // Owner can always delete their own modpack
+    if (modpack.author_id === userId) {
+      return true;
+    }
+
+    // Admin can delete any modpack
+    if (userRole === 'admin') {
+      return true;
+    }
+
+    // Partners can delete modpacks from the same partner
+    if (modpack.category === 'partner' && modpack.partner_id && userPartnerId && modpack.partner_id === userPartnerId) {
+      return true;
+    }
+
+    return false;
   };
 
   const getStatusBadge = (status: string) => {
@@ -653,16 +674,18 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
                     </button>
                   </div>
 
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(modpack);
-                    }}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    {t('publishedModpacks.actions.delete')}
-                  </button>
+                  {canDeleteModpack(modpack) && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(modpack);
+                      }}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      {t('publishedModpacks.actions.delete')}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
