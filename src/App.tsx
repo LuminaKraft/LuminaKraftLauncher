@@ -158,7 +158,7 @@ function AppContent() {
       case 'home':
         return <HomePage onNavigate={handleModpackNavigation} />;
       case 'explore':
-        return <ModpacksPage key={modpacksPageKey} initialModpackId={selectedModpackId || undefined} />;
+        return <ModpacksPage key={modpacksPageKey} initialModpackId={selectedModpackId || undefined} onNavigate={handleModpackNavigation} />;
       case 'my-modpacks':
         return <MyModpacksPage />;
       case 'published-modpacks':
