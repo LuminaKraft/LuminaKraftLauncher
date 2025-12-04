@@ -31,6 +31,7 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
   const logoInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
+  const [displayName, setDisplayName] = useState(modpackName);
   const [ramMode, setRamMode] = useState<'recommended' | 'custom' | 'global'>(
     (metadata?.ramAllocation as 'recommended' | 'custom' | 'global') || 'recommended'
   );
@@ -39,6 +40,11 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
   );
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+
+  useEffect(() => {
+    setDisplayName(modpackName);
+  }, [modpackName]);
 
   useEffect(() => {
     if (metadata) {
@@ -95,10 +101,12 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
         fileName: file.name
       });
 
-      toast.success(t(`settings.${imageType}Updated`));
+      const key = imageType === 'logo' ? 'logoUpdated' : 'bannerUpdated';
+      toast.success(t(`settings.${key}`));
     } catch (error) {
       console.error(`Failed to upload ${imageType}:`, error);
-      toast.error(t(`settings.${imageType}UpdateFailed`));
+      const key = imageType === 'logo' ? 'logoUpdateFailed' : 'bannerUpdateFailed';
+      toast.error(t(`settings.${key}`));
     } finally {
       setIsUploadingImage(false);
     }
@@ -125,14 +133,33 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
         {/* Name Section */}
         <div className="mb-6">
           <label className="block text-dark-300 text-sm font-medium mb-2">
-            {t('profileOptions.name')}
+            {t('profileOptions.name')} {isLocalModpack && !editingName && <span className="text-xs text-lumina-400">(Click para editar)</span>}
           </label>
-          <input
-            type="text"
-            value={modpackName}
-            disabled
-            className="input-field w-full bg-dark-700 cursor-not-allowed opacity-70"
-          />
+          {editingName && isLocalModpack ? (
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                className="input-field w-full flex-1"
+                autoFocus
+              />
+              <button
+                onClick={() => setEditingName(false)}
+                className="px-3 py-2 bg-lumina-600 hover:bg-lumina-700 text-white rounded-lg text-sm transition-colors"
+              >
+                {t('app.confirm')}
+              </button>
+            </div>
+          ) : (
+            <input
+              type="text"
+              value={displayName}
+              disabled
+              onClick={() => isLocalModpack && setEditingName(true)}
+              className={`input-field w-full ${isLocalModpack ? 'cursor-pointer hover:border-lumina-400/50 bg-dark-700 hover:bg-dark-600' : 'cursor-not-allowed bg-dark-700'} opacity-${isLocalModpack ? 100 : 70} transition-colors`}
+            />
+          )}
         </div>
 
         {/* Image Settings for Local Modpacks */}
@@ -144,57 +171,96 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
             </div>
 
             <div className="space-y-4">
-              {/* Logo Upload */}
-              <div className="p-4 rounded-lg border border-dark-600">
+              {/* Logo Upload with Preview */}
+              <div className="p-4 rounded-lg border border-dark-600 hover:border-lumina-500/50 transition-colors">
                 <label className="block text-dark-300 text-sm font-medium mb-3">Logo</label>
-                <div className="flex items-center space-x-3">
-                  <button
+                <div className="flex items-center space-x-4">
+                  {/* Logo Preview */}
+                  <div
+                    className="relative w-20 h-20 rounded-lg bg-dark-700 flex items-center justify-center flex-shrink-0 group cursor-pointer"
                     onClick={() => logoInputRef.current?.click()}
-                    disabled={isUploadingImage}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm transition-colors"
                   >
-                    Cambiar logo
-                  </button>
-                  <input
-                    ref={logoInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        handleImageUpload('logo', file);
-                      }
-                    }}
-                  />
-                  <span className="text-dark-400 text-sm">PNG, JPG, etc.</span>
+                    {/* Logo Display */}
+                    <div className="w-full h-full rounded-lg overflow-hidden flex items-center justify-center">
+                      {/* Placeholder or actual content would go here */}
+                      <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold">
+                        {displayName.charAt(0).toUpperCase()}
+                      </div>
+                    </div>
+
+                    {/* Hover Overlay */}
+                    <div className="absolute inset-0 bg-black/50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <span className="text-white text-xs font-medium">Cambiar</span>
+                    </div>
+                  </div>
+
+                  {/* Upload Controls */}
+                  <div className="flex-1">
+                    <button
+                      onClick={() => logoInputRef.current?.click()}
+                      disabled={isUploadingImage}
+                      className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm transition-colors font-medium"
+                    >
+                      {isUploadingImage ? 'Subiendo...' : 'Cambiar logo'}
+                    </button>
+                    <input
+                      ref={logoInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          handleImageUpload('logo', file);
+                        }
+                      }}
+                    />
+                    <p className="text-dark-400 text-xs mt-2">PNG, JPG, GIF (Recomendado: 512x512px)</p>
+                  </div>
                 </div>
               </div>
 
               {/* Banner Upload */}
-              <div className="p-4 rounded-lg border border-dark-600">
+              <div className="p-4 rounded-lg border border-dark-600 hover:border-lumina-500/50 transition-colors">
                 <label className="block text-dark-300 text-sm font-medium mb-3">Banner</label>
-                <div className="flex items-center space-x-3">
-                  <button
+                <div className="flex items-center space-x-4">
+                  {/* Banner Preview */}
+                  <div
+                    className="relative w-32 h-20 rounded-lg bg-dark-700 flex-shrink-0 group cursor-pointer overflow-hidden"
                     onClick={() => bannerInputRef.current?.click()}
-                    disabled={isUploadingImage}
-                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded-lg text-sm transition-colors"
                   >
-                    Cambiar banner
-                  </button>
-                  <input
-                    ref={bannerInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        handleImageUpload('banner', file);
-                      }
-                    }}
-                  />
-                  <span className="text-dark-400 text-sm">PNG, JPG, etc.</span>
+                    {/* Banner Display */}
+                    <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-600"></div>
+
+                    {/* Hover Overlay */}
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <span className="text-white text-xs font-medium">Cambiar</span>
+                    </div>
+                  </div>
+
+                  {/* Upload Controls */}
+                  <div className="flex-1">
+                    <button
+                      onClick={() => bannerInputRef.current?.click()}
+                      disabled={isUploadingImage}
+                      className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded-lg text-sm transition-colors font-medium"
+                    >
+                      {isUploadingImage ? 'Subiendo...' : 'Cambiar banner'}
+                    </button>
+                    <input
+                      ref={bannerInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          handleImageUpload('banner', file);
+                        }
+                      }}
+                    />
+                    <p className="text-dark-400 text-xs mt-2">PNG, JPG (Recomendado: 1920x480px)</p>
+                  </div>
                 </div>
               </div>
             </div>

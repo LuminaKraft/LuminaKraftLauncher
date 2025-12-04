@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Download, FolderOpen } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
+import { convertFileSrc } from '@tauri-apps/api/core';
 import toast from 'react-hot-toast';
-import { downloadDir } from '@tauri-apps/api/path';
+import { downloadDir, appDataDir } from '@tauri-apps/api/path';
 import { listen } from '@tauri-apps/api/event';
 import ModpackValidationService, { ModFileInfo } from '../../services/modpackValidationService';
 import ModpackValidationDialog from './ModpackValidationDialog';
@@ -31,6 +32,7 @@ export function MyModpacksPage() {
   const { installModpackFromZip, modpackStates } = useLauncher();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastProcessedStateRef = useRef<string>('');
+  const launcherDataDirRef = useRef<string | null>(null);
 
   // State management
   const [instances, setInstances] = useState<LocalInstance[]>([]);
@@ -39,6 +41,37 @@ export function MyModpacksPage() {
   const [loading, setLoading] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [validating, setValidating] = useState(false);
+
+  /**
+   * Resolve relative image paths to file:// URLs
+   */
+  const resolveImagePaths = async (modpack: Modpack): Promise<Modpack> => {
+    if (!launcherDataDirRef.current) {
+      try {
+        const appData = await appDataDir();
+        launcherDataDirRef.current = `${appData}LKLauncher`;
+      } catch (error) {
+        console.error('Failed to get app data directory:', error);
+        return modpack;
+      }
+    }
+
+    const resolved = { ...modpack };
+
+    // Resolve logo if it's a relative path
+    if (resolved.logo && resolved.logo.startsWith('cache/')) {
+      const fullPath = `${launcherDataDirRef.current}/${resolved.logo}`;
+      resolved.logo = convertFileSrc(fullPath);
+    }
+
+    // Resolve backgroundImage if it's a relative path
+    if (resolved.backgroundImage && resolved.backgroundImage.startsWith('cache/')) {
+      const fullPath = `${launcherDataDirRef.current}/${resolved.backgroundImage}`;
+      resolved.backgroundImage = convertFileSrc(fullPath);
+    }
+
+    return resolved;
+  };
 
   // Import/validation state
   const [showValidationDialog, setShowValidationDialog] = useState(false);
@@ -177,12 +210,14 @@ export function MyModpacksPage() {
 
             if (cachedData) {
               // Cache hit - use cached data
-              const modpack = JSON.parse(cachedData) as Modpack;
+              let modpack = JSON.parse(cachedData) as Modpack;
               console.log(`📦 Loaded from cache ${id}:`, {
                 backgroundImage: modpack.backgroundImage,
                 logo: modpack.logo,
                 name: modpack.name
               });
+              // Resolve relative image paths to file:// URLs
+              modpack = await resolveImagePaths(modpack);
               dataMap.set(id, modpack);
               return;
             }
