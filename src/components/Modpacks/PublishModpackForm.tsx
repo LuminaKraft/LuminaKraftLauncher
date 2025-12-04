@@ -294,6 +294,43 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
     }
   };
 
+  // Prepare ZIP with overrides if needed
+  const prepareZipForUpload = async (): Promise<File> => {
+    // If no pending files, return original ZIP
+    if (!pendingUploadedFiles || pendingUploadedFiles.size === 0 || !zipFile) {
+      return zipFile!;
+    }
+
+    // Create updated ZIP with overrides using JSZip
+    try {
+      const JSZip = (await import('jszip')).default;
+
+      // Read original ZIP
+      const originalZipBuffer = await zipFile.arrayBuffer();
+      const originalZip = new JSZip();
+      await originalZip.loadAsync(originalZipBuffer);
+
+      // Add uploaded files to overrides folder
+      for (const file of pendingUploadedFiles.values()) {
+        const fileBuffer = await file.arrayBuffer();
+        const filePath = `overrides/mods/${file.name}`;
+        originalZip.file(filePath, fileBuffer);
+        console.log(`✅ Added to ZIP: ${filePath}`);
+      }
+
+      // Generate new ZIP
+      const updatedZipBlob = await originalZip.generateAsync({ type: 'blob' });
+      const updatedFile = new File([updatedZipBlob], zipFile.name, { type: 'application/zip' });
+
+      console.log(`📦 Created updated ZIP with ${pendingUploadedFiles.size} file(s)`);
+      return updatedFile;
+    } catch (error) {
+      console.error('⚠️ Failed to create updated ZIP, using original:', error);
+      toast.warning('Could not create updated ZIP with overrides, using original file');
+      return zipFile!;
+    }
+  };
+
 
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -457,11 +494,20 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
       if (zipFile) {
         try {
           setUploadProgress(50);
+
+          // Prepare ZIP with overrides if needed
+          let zipToUpload = zipFile;
+          if (pendingUploadedFiles && pendingUploadedFiles.size > 0) {
+            setUploadProgress(60);
+            zipToUpload = await prepareZipForUpload();
+          }
+
+          setUploadProgress(65);
           const uploadResult = await R2UploadService.uploadToR2(
-            zipFile,
+            zipToUpload,
             modpackId,
             'modpack',
-            (progress) => setUploadProgress(50 + (progress.percent / 2))
+            (progress) => setUploadProgress(65 + (progress.percent * 0.35))
           );
 
           // uploadResult already contains fileUrl and fileSize
