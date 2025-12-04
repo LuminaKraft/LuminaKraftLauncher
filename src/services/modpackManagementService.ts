@@ -18,6 +18,14 @@ export class ModpackManagementService {
   }
 
   /**
+   * Set the Microsoft account for the current session
+   * This should be called after Microsoft authentication
+   */
+  public setMicrosoftAccount(account: MicrosoftAccount | null): void {
+    this.microsoftAccount = account;
+  }
+
+  /**
    * Check if the current user can create/edit modpacks
    * Requires Discord authentication only
    */
