@@ -109,11 +109,11 @@ const MinecraftAccountDropdown: React.FC<MinecraftAccountDropdownProps> = ({
         username: account.username
       };
       onUpdateSettings(newSettings);
-      toast.success('Logged in with Microsoft');
+      toast.success(t('toast.login'));
       onClose();
     } catch (error: any) {
       console.error('Microsoft login failed:', error);
-      toast.error(error.message || 'Failed to login with Microsoft');
+      toast.error(error.message || t('errors.failedLogin'));
     } finally {
       setIsAuthenticating(false);
     }
@@ -128,21 +128,21 @@ const MinecraftAccountDropdown: React.FC<MinecraftAccountDropdownProps> = ({
       username: offlineUsername || 'Player'
     };
     onUpdateSettings(newSettings);
-    toast.success('Switched to Offline Mode');
+    toast.success(t('toast.offlineMode'));
   };
 
   const handleSaveOfflineUsername = () => {
     if (!offlineUsername.trim()) {
-      toast.error('Username cannot be empty');
+      toast.error(t('validation.usernameEmpty'));
       return;
     }
-    
+
     const newSettings = {
       ...userSettings,
       username: offlineUsername.trim()
     };
     onUpdateSettings(newSettings);
-    toast.success('Username updated');
+    toast.success(t('toast.usernameUpdated'));
   };
 
   const isMicrosoft = userSettings.authMethod === 'microsoft' && userSettings.microsoftAccount;
