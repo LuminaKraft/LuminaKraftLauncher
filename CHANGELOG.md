@@ -5,6 +5,112 @@ All notable changes to the LuminaKraft Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-beta.2] - 2025-12-04
+
+### 🎯 **User Experience Improvements**
+- **Installation Flow Enhancement**
+  - Auto-navigate to My Modpacks immediately after clicking Install in Home/Explore pages
+  - Show "Installing" state in progress with animated spinner
+  - Improved visibility of ongoing installation processes
+- **Read-Only Mode Implementation**
+  - Home and Explore pages now show strict read-only interface (Install/Installed buttons only)
+  - Hide management buttons (Settings, Open Folder, Remove) in read-only mode
+  - Consistent state display across ModpackCard and ModpackDetailsRefactored
+
+### 🚀 **Features**
+- **Modpack Metadata Caching**
+  - Implemented backend modpack metadata cache system
+  - Save complete modpack data during installation for offline access
+  - No unnecessary Supabase calls for cached modpacks
+- **Banner URL Field Support**
+  - Added `banner_url` field to modpack struct with multiple alias support
+  - Accepts backgroundImage, banner_url, and bannerUrl variants
+  - Proper image handling in card and details views
+- **Enhanced ZIP Upload**
+  - ZIP download dialog appears when override files are provided
+  - User can download updated modpack with included overrides
+  - Automatic override file detection and integration
+
+### 🔧 **Technical Improvements**
+- **Build System**
+  - Converted all 17 dynamic imports to static imports
+  - Eliminated all Vite code splitting warnings
+  - Clean build with zero warnings
+- **Screenshot Management**
+  - Fixed screenshot storage to use modpack_images table
+  - Corrected sort_order field to use sequential numbering (prevents INTEGER overflow)
+  - Proper database schema alignment
+- **State Management**
+  - Improved cache-clear event listeners in LauncherProvider
+  - Auto-refresh My Modpacks list when modpack is removed
+  - Better state synchronization across components
+- **File Management**
+  - Improved override file handling and ZIP creation
+  - Enhanced modpack ZIP preparation with proper file merging
+  - Better error handling for file operations
+
+### 🐛 **Bug Fixes**
+- **Installation Issues**
+  - Fixed modpack not navigating to My Modpacks when installing from Explore
+  - Fixed missing onNavigate callback threading through ModpacksPage
+  - Corrected Explore page action buttons not triggering navigation
+- **Form Validation**
+  - Added real-time modpack name validation
+  - Show "Name already exists" error during typing
+  - Block form advancement with invalid names
+- **UI/UX**
+  - Removed unhelpful "no files selected" tooltip from screenshot upload
+  - Added cursor-pointer styling to screenshot upload button
+  - Improved visual feedback for form interactions
+- **Type Safety**
+  - Fixed TypeScript errors in Supabase queries
+  - Added proper type casting for complex query results
+  - Resolved undefined field errors in modpack interfaces
+- **Translation**
+  - Added missing nameAlreadyExists translation key
+  - Complete i18n coverage for ModpackValidationDialog
+  - All validation messages properly translated
+
+### ♻️ **Refactors**
+- **Import Optimization**
+  - Converted dynamic imports to static across 9 files
+  - Better Vite module bundling
+  - Improved code clarity and maintainability
+- **Component Structure**
+  - ModpackDetailsRefactored now properly handles isReadOnly prop chain
+  - ModpackActions respects read-only constraints
+  - Consistent prop passing through component hierarchy
+
+### 🎨 **UI Polish**
+- **Progress Tracking**
+  - Show modpack installation progress in My Modpacks page
+  - Real-time state updates during download/installation
+  - Clear "Installing" indication with spinning loader
+- **Card Management**
+  - Installed modpacks show disabled "Installed" button in read-only mode
+  - Install button shows animated progress state
+  - Consistent button styling across all modpack views
+
+### 📊 **Performance**
+- **Build Optimization**
+  - Reduced bundle size through better import handling
+  - Faster Vite build process with proper static imports
+  - Improved code splitting strategy
+- **Runtime**
+  - Reduced Supabase calls for cached modpacks
+  - Faster offline modpack loading
+  - Better memory management with proper state cleanup
+
+### 🔍 **Quality Assurance**
+- **Code Quality**
+  - All TypeScript errors resolved
+  - Zero build warnings
+  - ESLint/TypeScript compliance across codebase
+- **Testing**
+  - Installation flow tested end-to-end
+  - Read-only mode validated across all pages
+  - Cache system verified with offline scenarios
+
 ## [0.1.0-beta.1] - 2025-12-03
 
 ### 🚀 **Major Features**
