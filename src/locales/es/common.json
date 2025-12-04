@@ -555,6 +555,9 @@
     "import": "Importar Modpack",
     "validating": "Validando...",
     "importedOn": "Importado el",
+    "preparingModpack": "Preparando modpack con overrides...",
+    "installingModpack": "Instalando modpack con overrides...",
+    "failedPrepareModpack": "Error al preparar el modpack",
     "importing": {
       "name": "Importando modpack...",
       "description": "Por favor espera mientras se importa el modpack",

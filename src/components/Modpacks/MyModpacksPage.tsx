@@ -456,7 +456,7 @@ export function MyModpacksPage() {
       return updatedFile;
     } catch (error) {
       console.error('[ZIP] Failed to create updated ZIP, using original:', error);
-      toast.error('Could not create updated ZIP with overrides, using original file');
+      toast.error(t('errors.failedCreateZip'));
       return originalFile;
     }
   };
@@ -466,12 +466,12 @@ export function MyModpacksPage() {
    */
   const handleDownloadDialogConfirm = async () => {
     if (validationData && pendingUploadedFiles) {
-      const loadingToast = toast.loading('Preparing modpack with overrides...');
+      const loadingToast = toast.loading(t('myModpacks.preparingModpack'));
       try {
         // Prepare ZIP in memory with overrides
         const updatedZip = await prepareZipWithOverrides(validationData.file, pendingUploadedFiles);
 
-        toast.loading('Installing modpack with overrides...', { id: loadingToast });
+        toast.loading(t('myModpacks.installingModpack'), { id: loadingToast });
         setShowDownloadDialog(false);
 
         // Import the updated ZIP
@@ -479,7 +479,7 @@ export function MyModpacksPage() {
           await performImport(updatedZip);
           toast.dismiss(loadingToast);
         } catch (importError) {
-          toast.error('Failed to install modpack', { id: loadingToast });
+          toast.error(t('errors.failedInstallModpack'), { id: loadingToast });
           console.error('Import failed:', importError);
         }
 
@@ -487,7 +487,7 @@ export function MyModpacksPage() {
         setValidationData(null);
       } catch (error) {
         console.error('Error preparing modpack with overrides:', error);
-        toast.error('Failed to prepare modpack', { id: loadingToast });
+        toast.error(t('myModpacks.failedPrepareModpack'), { id: loadingToast });
         setShowDownloadDialog(false);
       }
     }
