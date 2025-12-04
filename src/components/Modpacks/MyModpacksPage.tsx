@@ -95,38 +95,33 @@ export function MyModpacksPage() {
   // Listen for installation state changes and reload
   useEffect(() => {
     const handleStateChange = async () => {
-      const installedIds = Object.entries(modpackStates)
-        .filter(([_, state]) => state.status === 'installed')
-        .map(([id]) => id);
-
-      // Create a hash of current state to prevent duplicate processing
-      const currentStateHash = JSON.stringify(installedIds.sort());
-
-      // Only process if state has actually changed
-      if (lastProcessedStateRef.current === currentStateHash) {
-        return;
-      }
-
-      lastProcessedStateRef.current = currentStateHash;
-
       const installingIds = Object.entries(modpackStates)
         .filter(([_, state]) => state.status === 'installing')
         .map(([id]) => id);
 
-      // If a modpack just finished installing, save correct metadata and reload
-      if (installingIds.length === 0 && installedIds.length > 0) {
-        const recentlyInstalled = installedIds.some(
-          id => !instances.some(i => i.id === id)
-        );
+      const installedIds = Object.entries(modpackStates)
+        .filter(([_, state]) => state.status === 'installed')
+        .map(([id]) => id);
 
-        if (recentlyInstalled) {
-          // Save correct modpack metadata before reloading
-          await saveInstallingModpackMetadata();
-          // Small delay to ensure file is written to disk
-          await new Promise(resolve => setTimeout(resolve, 100));
-          loadInstancesAndMetadata();
-          return;
-        }
+      // Create a hash of current installing state to detect when installations complete
+      const currentInstallingHash = JSON.stringify(installingIds.sort());
+
+      // Only process if state has actually changed
+      if (lastProcessedStateRef.current === currentInstallingHash) {
+        return;
+      }
+
+      lastProcessedStateRef.current = currentInstallingHash;
+
+      // If we just transitioned from installing to not installing, reload
+      // This handles all installation types (Supabase, local ZIP, etc.)
+      if (installingIds.length === 0 && installedIds.length > 0) {
+        // Save correct modpack metadata before reloading
+        await saveInstallingModpackMetadata();
+        // Small delay to ensure file is written to disk
+        await new Promise(resolve => setTimeout(resolve, 100));
+        loadInstancesAndMetadata();
+        return;
       }
 
       // Check if any modpack was removed (was in instances but no longer installed)
