@@ -428,9 +428,7 @@ class UpdateService {
           await relaunch();
         } catch (error) {
           console.error('Failed to relaunch application:', error);
-          toast.error('Update installed successfully! Please restart the application manually.', {
-            duration: 10000
-          });
+          // Silently fail - app will continue running with new version on next restart
         }
       }, 1000);
 

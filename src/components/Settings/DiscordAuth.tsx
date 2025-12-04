@@ -160,7 +160,7 @@ export default function DiscordAuth({
           setDiscordAccount(updatedAccount);
           onAuthSuccess(updatedAccount);
         }
-        toast.success(t('auth.discordSyncSuccess'));
+        // Silently succeed for background sync operation
       } else {
         // Sync failed - suggest relinking Discord account
         toast.error(t('auth.discordSyncFailed'), {

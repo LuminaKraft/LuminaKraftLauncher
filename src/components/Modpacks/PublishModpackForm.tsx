@@ -330,7 +330,6 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
 
       unlisten();
       setDownloadProgress(100);
-      toast.success(t('publishModpack.messages.success', { filename: outputFileName }), { duration: 5000 });
     } catch (error) {
       console.error('Error creating modpack with overrides:', error);
       toast.error(t('publishModpack.messages.uploadError', { error: String(error) }));
@@ -342,11 +341,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
   };
 
   const handleSkipDownload = () => {
-    if (pendingUploadedFiles) {
-      toast.success(t('publishModpack.messages.validatedWith', { count: pendingUploadedFiles.size }));
-      // Don't clear pendingUploadedFiles - they need to be used when publishing
-      // Only close the dialog
-    }
+    // Silently skip - don't show success toast for this background operation
   };
 
   // Calculate updated ZIP size with overrides

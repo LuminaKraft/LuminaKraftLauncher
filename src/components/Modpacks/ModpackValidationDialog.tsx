@@ -55,7 +55,6 @@ export const ModpackValidationDialog: React.FC<ModpackValidationDialogProps> = (
     const newFiles = new Map(uploadedFiles);
     newFiles.set(mod.fileName, file);
     setUploadedFiles(newFiles);
-    toast.success(`${file.name} uploaded`);
   };
 
   const handleBulkFileUpload = (files: FileList | File[]) => {
@@ -89,9 +88,6 @@ export const ModpackValidationDialog: React.FC<ModpackValidationDialogProps> = (
 
     setUploadedFiles(newFiles);
 
-    if (matchedCount > 0) {
-      toast.success(t('publishModpack.validation.filesMatched', { count: matchedCount }));
-    }
     if (validFiles.length > matchedCount) {
       toast.error(t('publishModpack.validation.filesNotMatched', { count: validFiles.length - matchedCount }));
     }
