@@ -83,11 +83,12 @@ self.onmessage = async (event: MessageEvent<ValidationRequest>) => {
     if (modsInfo && modsInfo.length > 0) {
       const modsWithoutUrl = modsInfo.filter((mod: ModFileInfo) => !mod.downloadUrl || mod.downloadUrl === '');
 
-      // Check which mods are in overrides/mods/
+      // Check which mods and resourcepacks are in overrides/
       const modsInOverridesList: string[] = [];
       for (const mod of modsWithoutUrl) {
-        const filePath = `overrides/mods/${mod.fileName}`;
-        if (zip.file(filePath)) {
+        const modsFilePath = `overrides/mods/${mod.fileName}`;
+        const resourcepackFilePath = `overrides/resourcepacks/${mod.fileName}`;
+        if (zip.file(modsFilePath) || zip.file(resourcepackFilePath)) {
           modsInOverridesList.push(mod.fileName);
         }
       }
