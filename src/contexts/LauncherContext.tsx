@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, useEffect, ReactNode, useState } from 'react';
+import { createContext, useContext, useReducer, useEffect, ReactNode, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { 
   ModpacksData, 
@@ -222,6 +222,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
   const [failedMods, setFailedMods] = useState<FailedMod[]>([]);
   const [showFailedModsDialog, setShowFailedModsDialog] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const refreshDataRef = useRef<(() => Promise<void>) | null>(null);
   const launcherService = LauncherService.getInstance();
   const { i18n, t } = useTranslation();
 
@@ -363,6 +364,22 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
       });
     };
   }, []); // Empty dependency array since this should only run once
+
+  // Listen for cache clear events from anywhere in the app
+  useEffect(() => {
+    const handleCacheCleared = () => {
+      console.log('🧹 Cache cleared event received in LauncherProvider, refreshing data...');
+      if (refreshDataRef.current) {
+        refreshDataRef.current();
+      }
+    };
+
+    window.addEventListener('luminakraft:cache-cleared', handleCacheCleared);
+
+    return () => {
+      window.removeEventListener('luminakraft:cache-cleared', handleCacheCleared);
+    };
+  }, []); // Empty dependency array - only register once at mount
 
   const refreshData = async (retryCount = 0) => {
     dispatch({ type: 'SET_LOADING', payload: true });
@@ -1054,6 +1071,11 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     changeLanguage,
     removeModpack,
   };
+
+  // Update ref with refreshData so the cache-clear listener can call it
+  useEffect(() => {
+    refreshDataRef.current = refreshData;
+  }, [refreshData]);
 
   return (
     <LauncherContext.Provider value={contextValue}>

@@ -22,16 +22,6 @@ export function HomePage({ onNavigate }: HomePageProps) {
     loadHomePageData();
   }, []);
 
-  // Listen for cache clear events from other components (e.g., Settings, Explore)
-  useEffect(() => {
-    const handleCacheCleared = () => {
-      loadHomePageData();
-    };
-
-    window.addEventListener('luminakraft:cache-cleared', handleCacheCleared);
-    return () => window.removeEventListener('luminakraft:cache-cleared', handleCacheCleared);
-  }, []);
-
   const loadHomePageData = async () => {
     setLoading(true);
     try {
