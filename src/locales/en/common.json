@@ -999,5 +999,94 @@
       "deleteModpackMessage": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone and will remove the modpack from the platform.",
       "deleteWarning": "Deleting a modpack is permanent and cannot be undone. All versions, files, and images will be removed."
     }
+  },
+  "toast": {
+    "login": "Logged in with Microsoft",
+    "offlineMode": "Switched to Offline Mode",
+    "usernameUpdated": "Username updated",
+    "manifestParsedAll": "Manifest parsed! All required mods are in overrides.",
+    "manifestParsedAutoFilled": "Manifest parsed! Form auto-filled with modpack data.",
+    "filesInstalledSuccessfully": "{{count}} file(s) installed successfully!",
+    "generalSettingsSaved": "General settings saved",
+    "imageUploaded": "Image uploaded",
+    "screenshotDeleted": "Screenshot deleted",
+    "featuresSaved": "Features saved",
+    "versionPublished": "New version published!",
+    "activatingModpack": "Activating modpack...",
+    "deactivatingModpack": "Deactivating modpack...",
+    "verifyingPermissions": "Verifying permissions...",
+    "uploadingImage": "Uploading image...",
+    "savingFeatures": "Saving features...",
+    "uploadingVersion": "Uploading new version...",
+    "installingMods": "Installing uploaded mods..."
+  },
+  "validation": {
+    "invalidFile": "Please upload a .jar or .zip file",
+    "noValidFiles": "No valid .jar or .zip files found",
+    "filesNotMatched": "{{count}} file(s) could not be matched",
+    "displayNameEmpty": "Display name cannot be empty",
+    "usernameEmpty": "Username cannot be empty",
+    "duplicateModpackName": "A modpack with this name already exists. Please choose a different name.",
+    "modpackNameTaken": "This modpack name is already taken.",
+    "manifestNotFound": "No manifest.json found in ZIP file",
+    "selectZipFile": "Please select a ZIP file",
+    "validZipRequired": "Please upload a valid ZIP file",
+    "versionAndZipRequired": "Version and ZIP file are required"
+  },
+  "errors": {
+    "failedValidate": "Failed to validate modpack",
+    "failedParseManifest": "Failed to parse manifest.json",
+    "failedLogin": "Failed to login with Microsoft",
+    "failedUpdateDisplay": "Failed to update display name",
+    "failedLoadModpacks": "Failed to load local modpacks",
+    "failedValidateModpack": "Failed to validate modpack",
+    "failedCreateZip": "Could not create updated ZIP with overrides, using original file",
+    "failedSaveChanges": "Failed to save changes",
+    "uploadFailed": "Upload failed",
+    "failedDeleteScreenshot": "Failed to delete screenshot",
+    "failedSaveFeatures": "Failed to save features",
+    "failedUploadVersion": "Failed to upload version",
+    "failedUpdateVisibility": "Failed to update visibility",
+    "failedUpdateComingSoon": "Failed to update Coming Soon status",
+    "failedDeleteModpack": "Failed to delete modpack",
+    "failedOpenLink": "Failed to open download link",
+    "failedCheckUpdates": "Failed to check for updates",
+    "failedAutoUpdate": "Failed to download and install update automatically",
+    "failedVerifyPermissions": "Failed to verify permissions. Please try again.",
+    "failedRefreshStatus": "Failed to refresh status",
+    "invalidUrlNoToken": "Invalid URL: no token found",
+    "invalidUrlMissingTokens": "Invalid URL: missing tokens",
+    "failedSetSession": "Failed to set session",
+    "errorProcessingUrl": "Error processing URL",
+    "discord": {
+      "syncCooldown": "Please wait {{seconds}} seconds before syncing again",
+      "authRequired": "Authorize Discord in your browser. The launcher will open automatically after.",
+      "linkSuccess": "Discord account linked",
+      "unlinkSuccess": "Discord account unlinked",
+      "syncFailed": "Discord sync failed"
+    },
+    "r2": {
+      "notAuthenticated": "Not authenticated",
+      "failedPresignedUrl": "Failed to get presigned URL",
+      "uploadFailed": "R2 upload failed: {{status}}",
+      "failedAfterRetries": "Failed to get response from backend after retries",
+      "networkError": "Network error - Check your internet connection or try again later. If the problem persists, the backend server may be temporarily unavailable.",
+      "uploadTimeout": "Upload took too long to process - Try uploading a smaller file or check your connection",
+      "authFailed": "Authentication failed - Please login again"
+    },
+    "tauri": {
+      "notAvailable": "This function requires running the application with Tauri. Please use 'npm run tauri:dev' instead of 'npm run dev'.",
+      "failedInstallModpack": "Error al instalar el modpack",
+      "failedLaunchModpack": "Error al lanzar el modpack",
+      "failedRemoveModpack": "Error al remover el modpack",
+      "failedOpenFolder": "Error al abrir la carpeta de la instancia",
+      "failedStopInstance": "Error stopping instance",
+      "failedCheckRateLimit": "Failed to check download rate limit"
+    },
+    "github": {
+      "invalidResponse": "Invalid releases response from GitHub API",
+      "noValidReleases": "No valid releases found",
+      "updateCheckFailed": "Update check failed"
+    }
   }
 }

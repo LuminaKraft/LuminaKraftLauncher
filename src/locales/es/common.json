@@ -998,5 +998,94 @@
       "deleteModpackMessage": "¿Estás seguro de que quieres eliminar \"{{name}}\"? Esta acción no se puede deshacer y removerá el modpack de la plataforma.",
       "deleteWarning": "Eliminar un modpack es permanente y no se puede deshacer. Se eliminarán todas las versiones, archivos e imágenes."
     }
+  },
+  "toast": {
+    "login": "Sesión iniciada con Microsoft",
+    "offlineMode": "Cambió a Modo Sin Conexión",
+    "usernameUpdated": "Nombre de usuario actualizado",
+    "manifestParsedAll": "¡Manifest analizado! Todos los mods requeridos están en overrides.",
+    "manifestParsedAutoFilled": "¡Manifest analizado! Formulario completado automáticamente con datos del modpack.",
+    "filesInstalledSuccessfully": "¡{{count}} archivo(s) instalado(s) exitosamente!",
+    "generalSettingsSaved": "Configuración general guardada",
+    "imageUploaded": "Imagen subida",
+    "screenshotDeleted": "Captura de pantalla eliminada",
+    "featuresSaved": "Características guardadas",
+    "versionPublished": "¡Nueva versión publicada!",
+    "activatingModpack": "Activando modpack...",
+    "deactivatingModpack": "Desactivando modpack...",
+    "verifyingPermissions": "Verificando permisos...",
+    "uploadingImage": "Subiendo imagen...",
+    "savingFeatures": "Guardando características...",
+    "uploadingVersion": "Subiendo nueva versión...",
+    "installingMods": "Instalando mods subidos..."
+  },
+  "validation": {
+    "invalidFile": "Por favor sube un archivo .jar o .zip",
+    "noValidFiles": "No se encontraron archivos .jar o .zip válidos",
+    "filesNotMatched": "{{count}} archivo(s) no pudieron ser emparejados",
+    "displayNameEmpty": "El nombre de usuario no puede estar vacío",
+    "usernameEmpty": "El nombre de usuario no puede estar vacío",
+    "duplicateModpackName": "Ya existe un modpack con este nombre. Por favor elige un nombre diferente.",
+    "modpackNameTaken": "Este nombre de modpack ya está en uso.",
+    "manifestNotFound": "No se encontró manifest.json en el archivo ZIP",
+    "selectZipFile": "Por favor selecciona un archivo ZIP",
+    "validZipRequired": "Por favor sube un archivo ZIP válido",
+    "versionAndZipRequired": "Se requieren versión y archivo ZIP"
+  },
+  "errors": {
+    "failedValidate": "Error al validar modpack",
+    "failedParseManifest": "Error al analizar manifest.json",
+    "failedLogin": "Error al iniciar sesión con Microsoft",
+    "failedUpdateDisplay": "Error al actualizar nombre de usuario",
+    "failedLoadModpacks": "Error al cargar modpacks locales",
+    "failedValidateModpack": "Error al validar modpack",
+    "failedCreateZip": "No se pudo crear ZIP actualizado con overrides, usando archivo original",
+    "failedSaveChanges": "Error al guardar cambios",
+    "uploadFailed": "Error al subir",
+    "failedDeleteScreenshot": "Error al eliminar captura de pantalla",
+    "failedSaveFeatures": "Error al guardar características",
+    "failedUploadVersion": "Error al subir versión",
+    "failedUpdateVisibility": "Error al actualizar visibilidad",
+    "failedUpdateComingSoon": "Error al actualizar estado de Próximamente",
+    "failedDeleteModpack": "Error al eliminar modpack",
+    "failedOpenLink": "Error al abrir enlace de descarga",
+    "failedCheckUpdates": "Error al verificar actualizaciones",
+    "failedAutoUpdate": "Error al descargar e instalar actualización automáticamente",
+    "failedVerifyPermissions": "Error al verificar permisos. Por favor intenta de nuevo.",
+    "failedRefreshStatus": "Error al actualizar estado",
+    "invalidUrlNoToken": "URL inválida: no se encontró token",
+    "invalidUrlMissingTokens": "URL inválida: faltan tokens",
+    "failedSetSession": "Error al establecer sesión",
+    "errorProcessingUrl": "Error al procesar URL",
+    "discord": {
+      "syncCooldown": "Por favor espera {{seconds}} segundos antes de sincronizar de nuevo",
+      "authRequired": "Autoriza Discord en tu navegador. El launcher se abrirá automáticamente después.",
+      "linkSuccess": "Cuenta de Discord vinculada",
+      "unlinkSuccess": "Cuenta de Discord desvinculada",
+      "syncFailed": "Error al sincronizar Discord"
+    },
+    "r2": {
+      "notAuthenticated": "No autenticado",
+      "failedPresignedUrl": "Error al obtener URL preasignada",
+      "uploadFailed": "Error en carga R2: {{status}}",
+      "failedAfterRetries": "Error al obtener respuesta del backend después de reintentos",
+      "networkError": "Error de red - Verifica tu conexión a internet o intenta más tarde. Si el problema persiste, el servidor backend puede estar temporalmente no disponible.",
+      "uploadTimeout": "La carga tomó demasiado tiempo para procesarse - Intenta cargar un archivo más pequeño o verifica tu conexión",
+      "authFailed": "Error de autenticación - Por favor inicia sesión de nuevo"
+    },
+    "tauri": {
+      "notAvailable": "Esta función requiere ejecutar la aplicación con Tauri. Por favor usa 'npm run tauri:dev' en lugar de 'npm run dev'.",
+      "failedInstallModpack": "Error al instalar el modpack",
+      "failedLaunchModpack": "Error al lanzar el modpack",
+      "failedRemoveModpack": "Error al remover el modpack",
+      "failedOpenFolder": "Error al abrir la carpeta de la instancia",
+      "failedStopInstance": "Error al detener la instancia",
+      "failedCheckRateLimit": "Error al verificar límite de descarga"
+    },
+    "github": {
+      "invalidResponse": "Respuesta inválida de GitHub API",
+      "noValidReleases": "No se encontraron releases válidas",
+      "updateCheckFailed": "Error al verificar actualizaciones"
+    }
   }
 }
