@@ -113,6 +113,27 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
   // Defensive: always use features from modpack details, fallback to []
   const resolvedFeatures = Array.isArray((modpack as any).features) ? (modpack as any).features : [];
 
+  // Get server status badge (only New and Coming Soon, not Active/Inactive)
+  const getServerStatusBadge = () => {
+    // Priority: New > Coming Soon (don't show Active if it's New or Coming Soon)
+    if (modpack.isNew) {
+      return (
+        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-600/40 text-green-300 border border-green-600/60">
+          {t('modpacks.status.new')}
+        </span>
+      );
+    }
+    if (modpack.isComingSoon) {
+      return (
+        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-600/40 text-blue-300 border border-blue-600/60">
+          {t('modpacks.status.coming_soon')}
+        </span>
+      );
+    }
+    // Don't show Inactive or Active badges
+    return null;
+  };
+
   // Format playtime for display
   const formatPlaytime = (hours: number): string => {
     if (hours === 0) return '0h';
@@ -284,6 +305,14 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
                 >
                   {displayDescription}
                 </p>
+              </div>
+              <div
+                className="flex-shrink-0"
+                style={getAnimationStyle({
+                  animation: `fadeInUp 0.4s ease-out 0.2s backwards`
+                })}
+              >
+                {getServerStatusBadge()}
               </div>
             </div>
           </div>
