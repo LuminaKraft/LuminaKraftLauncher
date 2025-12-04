@@ -196,10 +196,10 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
         primaryColor: formData.primaryColor
       });
 
-      if (success) toast.success('General settings saved');
-      else toast.error(`Error: ${error}`);
+      if (success) toast.success(t('toast.generalSettingsSaved'));
+      else toast.error(t('errors.failedSaveChanges'));
     } catch (error) {
-      toast.error('Failed to save changes');
+      toast.error(t('errors.failedSaveChanges'));
     } finally {
       setIsUpdating(false);
     }
@@ -209,7 +209,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
 
   const handleImageUpload = async (file: File, type: 'logo' | 'banner' | 'screenshot') => {
     setIsUpdating(true);
-    const toastId = toast.loading('Uploading image...');
+    const toastId = toast.loading(t('toast.uploadingImage'));
     try {
       if (type === 'screenshot') {
         // Pass current image count as sort order for new screenshots
@@ -233,10 +233,10 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
           setFormData(prev => prev ? ({ ...prev, [`${type}Url`]: imageUrl }) : null);
         }
       }
-      toast.success('Image uploaded', { id: toastId });
+      toast.success(t('toast.imageUploaded'), { id: toastId });
     } catch (error) {
       console.error('❌ Image upload failed:', error);
-      toast.error('Upload failed', { id: toastId });
+      toast.error(t('errors.uploadFailed'), { id: toastId });
     } finally {
       setIsUpdating(false);
     }
@@ -247,9 +247,9 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
     try {
       await service.deleteModpackImage(imageId);
       setImages(prev => prev.filter(img => img.id !== imageId));
-      toast.success('Screenshot deleted');
+      toast.success(t('toast.screenshotDeleted'));
     } catch (error) {
-      toast.error('Failed to delete screenshot');
+      toast.error(t('errors.failedDeleteScreenshot'));
     } finally {
       setIsUpdating(false);
     }
@@ -282,7 +282,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
 
   const handleSaveFeatures = async () => {
     setIsUpdating(true);
-    const toastId = toast.loading('Saving features...');
+    const toastId = toast.loading(t('toast.savingFeatures'));
     try {
       // 1. Delete existing features (simplest way to handle reordering/updates)
       // Get all current feature IDs from DB to delete them
@@ -311,10 +311,10 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
         })));
       }
 
-      toast.success('Features saved', { id: toastId });
+      toast.success(t('toast.featuresSaved'), { id: toastId });
     } catch (error) {
       console.error(error);
-      toast.error('Failed to save features', { id: toastId });
+      toast.error(t('errors.failedSaveFeatures'), { id: toastId });
     } finally {
       setIsUpdating(false);
     }
@@ -324,7 +324,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
 
   const handleZipFile = async (file: File) => {
     if (!file.name.endsWith('.zip')) {
-      toast.error('Please select a ZIP file');
+      toast.error(t('validation.selectZipFile'));
       return;
     }
     setZipFile(file);
@@ -349,13 +349,13 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
     if (file && file.name.endsWith('.zip')) {
       handleZipFile(file);
     } else {
-      toast.error('Please upload a valid ZIP file');
+      toast.error(t('validation.validZipRequired'));
     }
   };
 
   const handleUploadNewVersion = async () => {
     if (!zipFile || !newVersion) {
-      toast.error('Version and ZIP file are required');
+      toast.error(t('validation.versionAndZipRequired'));
       return;
     }
 
@@ -366,7 +366,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
     }
 
     setIsUpdating(true);
-    const toastId = toast.loading('Uploading new version...');
+    const toastId = toast.loading(t('toast.uploadingVersion'));
     try {
       await authService.syncDiscordRoles();
 
@@ -405,7 +405,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
           .eq('id', (existingVersion as any).id);
       }
 
-      toast.success('New version published!', { id: toastId });
+      toast.success(t('toast.versionPublished'), { id: toastId });
       setNewVersion('');
       setChangelog({ en: '', es: '' });
       setZipFile(null);
@@ -423,7 +423,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
       }
     } catch (error) {
       console.error(error);
-      toast.error('Failed to upload version', { id: toastId });
+      toast.error(t('errors.failedUploadVersion'), { id: toastId });
     } finally {
       setIsUpdating(false);
     }
