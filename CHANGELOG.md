@@ -5,6 +5,77 @@ All notable changes to the LuminaKraft Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-beta.5] - 2025-12-04
+
+### 🐛 **Critical Bug Fixes**
+- **Modpack Upload in Built App**
+  - Fixed "Load failed" TypeError when uploading files in production builds
+  - Fixed CSP blocking R2 presigned URL connections
+  - Added `https://*.r2.cloudflarestorage.com` to connect-src directive
+- **Image Preview Rendering**
+  - Fixed image previews not displaying in built application
+  - Added blob: URL support to CSP img-src directive
+  - Enables `URL.createObjectURL()` usage for preview functionality
+
+### 🔐 **Authentication & Permissions**
+- **Microsoft Authentication**
+  - Removed requirement for Microsoft account login when publishing modpacks
+  - Removed requirement for Microsoft account login when deleting modpacks
+  - Discord authentication only now required for modpack management
+  - Kept Microsoft account infrastructure for potential future features
+
+### 💾 **Installation & Deployment**
+- **Windows Installer Standardization**
+  - Switched from multi-format (NSIS + MSI) to NSIS-only for Windows
+  - Fixed duplicate installation issue (was: NSIS→AppData + MSI→Program Files)
+  - All users now install to consistent location: `%APPDATA%\Local\LuminaKraft Launcher`
+  - No administrator privileges required for installation or updates
+  - NSIS `installMode: "currentUser"` ensures per-user isolated installations
+- **Cross-Platform Bundle Standardization**
+  - Explicit bundle targets: NSIS (Windows) + DMG (macOS) + AppImage (Linux)
+  - Removed duplicate deb package to match updater configuration
+  - Consistent update paths across all platforms via latest.json
+- **Build Process Cleanup**
+  - Removed unnecessary MSI version format compatibility fixes
+  - Simplified tauri-build.js script for NSIS-only builds
+  - Removed MSI version fix step from GitHub Actions workflow
+
+### 🛠️ **Configuration & Metadata**
+- **Tauri Configuration**
+  - Added publisher field: "LuminaKraft" to tauri.conf.json
+  - Configured NSIS with language selector disabled for streamlined installation
+  - Set LZMA compression for optimized installer size
+
+### 📋 **Technical Improvements**
+- **Content Security Policy (CSP)**
+  - Enhanced CSP for production builds: `connect-src` now includes R2 domain
+  - Enhanced CSP for image handling: `img-src` now includes blob: protocol
+  - Ensures frontend can connect to all required services in built app
+- **Updater Consistency**
+  - Ensures users installing with one format get updates in same format
+  - Prevents installer type conflicts during automatic updates
+  - Maintains registry consistency across update cycles
+
+### 🔄 **What Changed from v0.1.0-beta.4**
+- Previously: Multiple installer types could cause installation conflicts
+- Now: Single, consistent installer per platform with reliable updates
+- Previously: "Load failed" errors when uploading in built app
+- Now: Full R2 upload support with blob image previews working
+- Previously: Microsoft auth required for modpack operations
+- Now: Discord auth only, Microsoft infrastructure retained
+
+### ⚠️ **Migration Notes**
+- Existing NSIS installations will automatically update to new version
+- Existing MSI installations will not receive updates (recommend reinstalling with new NSIS installer)
+- No data migration needed; all modpack data and settings preserved
+- **User Action Required**: Update R2 CORS policy to include `tauri://lklauncher` origin for full functionality
+
+### 🚀 **Performance & Reliability**
+- Faster build times with single installer format per platform
+- Cleaner release artifacts with no conflicting installer types
+- More reliable update mechanism with consistent installer paths
+- Reduced installation footprint (AppData per-user vs system-wide)
+
 ## [0.1.0-beta.4] - 2025-12-04
 
 ### ✨ **Features**
