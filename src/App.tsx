@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { relaunch } from '@tauri-apps/api/process';
 import { LauncherProvider, useLauncher } from './contexts/LauncherContext';
 import { AnimationProvider, useAnimation } from './contexts/AnimationContext';
 import Sidebar from './components/Layout/Sidebar';
@@ -12,7 +13,7 @@ import SettingsPage from './components/Settings/SettingsPage';
 import AboutPage from './components/About/AboutPage';
 import AccountPage from './components/Account/AccountPage';
 import UpdateDialog from './components/UpdateDialog';
-import { Loader2, AlertTriangle } from 'lucide-react';
+import { Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
 import LauncherService from './services/launcherService';
 import { updateService, UpdateInfo } from './services/updateService';
 import './App.css';
@@ -28,6 +29,8 @@ function AppContent() {
   const [isInstallingUpdate, setIsInstallingUpdate] = useState(false);
   const [updateProgress, setUpdateProgress] = useState<{ current: number; total: number }>({ current: 0, total: 0 });
   const [modpacksPageKey, setModpacksPageKey] = useState(0); // Key to force re-render of ModpacksPage
+  const [showRestartModal, setShowRestartModal] = useState(false);
+  const [isRestarting, setIsRestarting] = useState(false);
   const { isLoading, error, modpacksData, isAuthenticating, refreshData } = useLauncher();
   const { withDelay } = useAnimation();
   const { t } = useTranslation();
@@ -76,9 +79,17 @@ function AppContent() {
 
     checkForUpdatesOnStartup();
 
+    // Listen for restart failures
+    const handleRestartFailed = () => {
+      setShowRestartModal(true);
+    };
+
+    updateService.on('restart-failed', handleRestartFailed);
+
     // Cleanup on unmount
     return () => {
       updateService.stopAutomaticChecking();
+      updateService.off('restart-failed', handleRestartFailed);
     };
   }, [updateService, launcherService]);
 
@@ -99,6 +110,16 @@ function AppContent() {
 
   const handleCloseUpdateDialog = () => {
     setShowUpdateDialog(false);
+  };
+
+  const handleManualRestart = async () => {
+    setIsRestarting(true);
+    try {
+      await relaunch();
+    } catch (error) {
+      console.error('Failed to restart application:', error);
+      setIsRestarting(false);
+    }
   };
 
   const handleSectionChange = (newSection: string) => {
@@ -235,6 +256,50 @@ function AppContent() {
           {renderContent()}
         </div>
       </main>
+
+      {/* Restart Modal */}
+      {showRestartModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="relative w-full max-w-md bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl p-8">
+            <div className="flex flex-col items-center gap-4">
+              <div className="p-3 rounded-xl bg-green-500/10 border border-green-500/20">
+                <RefreshCw className="w-6 h-6 text-green-400" />
+              </div>
+              <h2 className="text-xl font-semibold text-white text-center">
+                {t('launcher.updateReady') || 'Update Ready'}
+              </h2>
+              <p className="text-gray-400 text-center text-sm">
+                {t('launcher.restartToApply') || 'The update has been installed. Please restart the launcher to apply the changes.'}
+              </p>
+              <div className="flex gap-3 w-full mt-2">
+                <button
+                  onClick={() => setShowRestartModal(false)}
+                  className="flex-1 px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl font-medium transition-colors"
+                >
+                  {t('launcher.restartLater') || 'Restart Later'}
+                </button>
+                <button
+                  onClick={handleManualRestart}
+                  disabled={isRestarting}
+                  className="flex-1 px-4 py-2.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  {isRestarting ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      {t('launcher.restarting') || 'Restarting...'}
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4" />
+                      {t('launcher.restartNow') || 'Restart Now'}
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Update Dialog */}
       {showUpdateDialog && updateInfo && (

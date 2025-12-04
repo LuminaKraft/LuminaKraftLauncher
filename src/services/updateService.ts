@@ -19,6 +19,7 @@ class UpdateService {
   private lastCheckTime: number = 0;
   private readonly CHECK_INTERVAL = 60 * 60 * 1000; // 1 hour
   private currentUpdate: Update | null = null;
+  private eventListeners: Map<string, Function[]> = new Map();
 
   private constructor() {}
 
@@ -428,7 +429,8 @@ class UpdateService {
           await relaunch();
         } catch (error) {
           console.error('Failed to relaunch application:', error);
-          // Silently fail - app will continue running with new version on next restart
+          // Emit event to show restart modal instead
+          this.emit('restart-failed', {});
         }
       }, 1000);
 
@@ -444,6 +446,40 @@ class UpdateService {
       }
 
       throw error;
+    }
+  }
+
+  /**
+   * Subscribe to an event
+   */
+  on(event: string, callback: Function): void {
+    if (!this.eventListeners.has(event)) {
+      this.eventListeners.set(event, []);
+    }
+    this.eventListeners.get(event)!.push(callback);
+  }
+
+  /**
+   * Unsubscribe from an event
+   */
+  off(event: string, callback: Function): void {
+    if (this.eventListeners.has(event)) {
+      const listeners = this.eventListeners.get(event)!;
+      const index = listeners.indexOf(callback);
+      if (index > -1) {
+        listeners.splice(index, 1);
+      }
+    }
+  }
+
+  /**
+   * Emit an event
+   */
+  private emit(event: string, data?: any): void {
+    if (this.eventListeners.has(event)) {
+      this.eventListeners.get(event)!.forEach(callback => {
+        callback(data);
+      });
     }
   }
 }
