@@ -752,21 +752,21 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                     className={`relative overflow-hidden rounded-lg ${isDraggingScreenshots ? 'ring-2 ring-blue-500' : ''
                       }`}
                   >
-                    <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 cursor-pointer">
+                    <label className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 cursor-pointer inline-flex">
                       <Upload className="w-4 h-4" />
 {t('editModpack.media.uploadScreenshot')}
-                    </button>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onChange={(e) => {
-                        const files = Array.from(e.target.files || []);
-                        files.forEach(file => handleImageUpload(file, 'screenshot'));
-                        e.target.value = '';
-                      }}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files || []);
+                          files.forEach(file => handleImageUpload(file, 'screenshot'));
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
                   </div>
                 </div>
 
