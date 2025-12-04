@@ -21,6 +21,19 @@ export class R2UploadService {
   }
 
   /**
+   * Calculate SHA256 hash of a file
+   * @param file - File to hash
+   * @returns SHA256 hash as hex string
+   */
+  private async calculateSha256(file: File): Promise<string> {
+    const buffer = await file.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex;
+  }
+
+  /**
    * Upload file directly to R2
    * @param file - File to upload
    * @param modpackId - Modpack ID
@@ -75,6 +88,15 @@ export class R2UploadService {
       }
 
       const fileBuffer = await file.arrayBuffer();
+
+      // Calculate SHA256 for modpack files (useful for integrity verification)
+      let fileSha256: string | undefined;
+      if (fileType === 'modpack') {
+        console.log('🔐 Calculating SHA256...');
+        fileSha256 = await this.calculateSha256(file);
+        console.log(`✅ SHA256: ${fileSha256}`);
+      }
+
       const uploadResponse = await fetch(url, {
         method: 'PUT',
         headers: {
@@ -109,6 +131,7 @@ export class R2UploadService {
           fileUrl: publicUrl,
           fileKey,
           fileSize: file.size,
+          fileSha256,
         }),
       });
 
@@ -123,6 +146,7 @@ export class R2UploadService {
       return {
         fileUrl: publicUrl,
         fileSize: file.size,
+        fileSha256,
       };
     } catch (error) {
       console.error('❌ Upload failed:', error);
