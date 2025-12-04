@@ -23,7 +23,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' https://iytnvsdsqvbdoqesyweo.supabase.co; img-src 'self' data: https: file:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' https://iytnvsdsqvbdoqesyweo.supabase.co https://cdn.luminakraft.com https://*.r2.cloudflarestorage.com file:"
+      "csp": "default-src 'self' https://iytnvsdsqvbdoqesyweo.supabase.co; img-src 'self' data: https: file: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' https://iytnvsdsqvbdoqesyweo.supabase.co https://cdn.luminakraft.com https://*.r2.cloudflarestorage.com file:"
     },
     "trayIcon": null,
     "withGlobalTauri": true
