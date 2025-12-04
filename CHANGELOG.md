@@ -42,9 +42,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🛠️ **Configuration & Metadata**
 - **Tauri Configuration**
-  - Added publisher field: "LuminaKraft" to tauri.conf.json
+  - Added publisher field: "LuminaKraft" to bundle configuration (not root level)
   - Configured NSIS with language selector disabled for streamlined installation
   - Set LZMA compression for optimized installer size
+  - Updated bundle targets to `["nsis", "app", "dmg", "appimage"]` for proper updater support
+  - Changed `createUpdaterArtifacts` from "v1Compatible" to `true` for v2 updater format
 
 ### 📋 **Technical Improvements**
 - **Content Security Policy (CSP)**
@@ -55,6 +57,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Ensures users installing with one format get updates in same format
   - Prevents installer type conflicts during automatic updates
   - Maintains registry consistency across update cycles
+  - Proper updater artifact generation with v2 updater support
+- **Build System**
+  - Simplified tauri-build.js script (removed MSI version compatibility logic)
+  - Cleaner build process with single installer type per platform
+  - Removed deprecated v1 compatible updater warnings
 
 ### 🔄 **What Changed from v0.1.0-beta.4**
 - Previously: Multiple installer types could cause installation conflicts
