@@ -796,6 +796,7 @@ export class ModpackManagementService {
         .select(`
           id,
           author_id,
+          category,
           logo_url,
           banner_url,
           modpack_versions (
@@ -821,7 +822,7 @@ export class ModpackManagementService {
       // Get user ID from users table
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('id, role')
+        .select('id, role, partner_id')
         .eq('id', authUser.id)
         .single() as { data: any; error: any };
 
@@ -835,11 +836,35 @@ export class ModpackManagementService {
         return { success: false, error: 'User profile not found' };
       }
 
-      console.log('✅ User data found:', userData.id, 'Role:', userData.role);
+      console.log('✅ User data found:', userData.id, 'Role:', userData.role, 'Partner:', userData.partner_id);
 
-      // Check permissions (owner or admin)
-      if (modpack.author_id !== userData.id && userData.role !== 'admin') {
-        console.error('❌ Insufficient permissions. Author:', modpack.author_id, 'User:', userData.id);
+      // Get author's partner_id if they're a partner (to check if same partner)
+      let authorPartnerId: string | null = null;
+      if (modpack.category === 'partner') {
+        const { data: authorData, error: authorError } = await supabase
+          .from('users')
+          .select('partner_id')
+          .eq('id', modpack.author_id)
+          .single() as { data: any; error: any };
+
+        if (!authorError && authorData) {
+          authorPartnerId = authorData.partner_id;
+        }
+      }
+
+      // Check permissions:
+      // - Owner can always delete their modpack
+      // - Admins can delete any modpack
+      // - Partners can delete modpacks from the same partner (if category is 'partner')
+      const isOwner = modpack.author_id === userData.id;
+      const isAdmin = userData.role === 'admin';
+      const isSamePartner = modpack.category === 'partner' &&
+                            userData.partner_id &&
+                            authorPartnerId &&
+                            userData.partner_id === authorPartnerId;
+
+      if (!isOwner && !isAdmin && !isSamePartner) {
+        console.error('❌ Insufficient permissions. Author:', modpack.author_id, 'User:', userData.id, 'Category:', modpack.category);
         return { success: false, error: 'Insufficient permissions to delete this modpack' };
       }
 
