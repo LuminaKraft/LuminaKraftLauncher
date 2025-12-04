@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { relaunch } from '@tauri-apps/api/process';
+import { relaunch } from '@tauri-apps/plugin-process';
 import { LauncherProvider, useLauncher } from './contexts/LauncherContext';
 import { AnimationProvider, useAnimation } from './contexts/AnimationContext';
 import Sidebar from './components/Layout/Sidebar';
