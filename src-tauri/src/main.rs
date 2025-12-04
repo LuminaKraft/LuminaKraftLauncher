@@ -143,7 +143,7 @@ async fn get_cached_modpack_data(modpack_id: String) -> Result<Option<String>, S
     };
 
     let cache_path = launcher_dir
-        .join("cache")
+        .join("caches")
         .join("modpacks")
         .join(format!("{}.json", modpack_id));
 
