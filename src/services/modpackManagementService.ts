@@ -9,7 +9,8 @@ import LauncherService from './launcherService';
  */
 export class ModpackManagementService {
   private static instance: ModpackManagementService;
-  private microsoftAccount: MicrosoftAccount | null = null;
+  // Kept for infrastructure/future use even though currently unused
+  private _microsoftAccount: MicrosoftAccount | null = null;
 
   public static getInstance(): ModpackManagementService {
     if (!ModpackManagementService.instance) {
@@ -23,7 +24,15 @@ export class ModpackManagementService {
    * This should be called after Microsoft authentication
    */
   public setMicrosoftAccount(account: MicrosoftAccount | null): void {
-    this.microsoftAccount = account;
+    this._microsoftAccount = account;
+  }
+
+  /**
+   * Get the Microsoft account for the current session
+   * Kept for infrastructure/future use
+   */
+  public getMicrosoftAccount(): MicrosoftAccount | null {
+    return this._microsoftAccount;
   }
 
   /**
