@@ -129,6 +129,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
   // Download confirmation state
   const [showDownloadDialog, setShowDownloadDialog] = useState(false);
   const [pendingUploadedFiles, setPendingUploadedFiles] = useState<Map<string, File> | null>(null);
+  const [isDownloadingZip, setIsDownloadingZip] = useState(false);
 
   const checkDiscordAccess = async () => {
     setIsCheckingAccess(true);
@@ -290,16 +291,11 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
 
   const handleDownloadUpdatedZip = async () => {
     if (!pendingUploadedFiles || !zipFile) return;
-    const loadingToast = toast.loading(t('publishModpack.messages.preparing'));
+
+    setIsDownloadingZip(true);
     try {
       const unlisten = await listen<{ current: number, total: number, stage: string, message: string }>('zip-progress', (event) => {
-        const { current, total, stage, message } = event.payload;
-        const percentage = Math.round((current / total) * 100);
-        if (stage === 'complete') {
-          toast.dismiss(loadingToast);
-        } else {
-          toast.loading(`${message} (${percentage}%)`, { id: loadingToast });
-        }
+        // Event listener for progress updates while downloading
       });
 
       const originalZipBuffer = await zipFile.arrayBuffer();
@@ -315,7 +311,6 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
       const outputFileName = zipFile.name.replace('.zip', '_updated.zip');
       const outputZipPath = `${downloadsFolder}/${outputFileName}`;
 
-      toast.loading(t('publishModpack.messages.creating'), { id: loadingToast });
       await invoke('create_modpack_with_overrides', {
         originalZipBytes: originalZipBytes,
         originalZipName: zipFile.name,
@@ -324,19 +319,21 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
       });
 
       unlisten();
-      toast.success(t('publishModpack.messages.success', { filename: outputFileName }), { id: loadingToast, duration: 5000 });
+      toast.success(t('publishModpack.messages.success', { filename: outputFileName }), { duration: 5000 });
     } catch (error) {
       console.error('Error creating modpack with overrides:', error);
-      toast.error(t('publishModpack.messages.uploadError', { error: String(error) }), { id: loadingToast });
+      toast.error(t('publishModpack.messages.uploadError', { error: String(error) }));
     } finally {
-      setPendingUploadedFiles(null);
+      setIsDownloadingZip(false);
     }
+    // Note: Don't clear pendingUploadedFiles here - they're still needed for publishing
   };
 
   const handleSkipDownload = () => {
     if (pendingUploadedFiles) {
       toast.success(t('publishModpack.messages.validatedWith', { count: pendingUploadedFiles.size }));
-      setPendingUploadedFiles(null);
+      // Don't clear pendingUploadedFiles - they need to be used when publishing
+      // Only close the dialog
     }
   };
 
@@ -605,9 +602,10 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
 
       setUploadProgress(100);
       toast.success(t('publishModpack.messages.published'));
-      // Reset progress after a short delay
+      // Reset state after a short delay
       setTimeout(() => {
         setUploadProgress(0);
+        setPendingUploadedFiles(null); // Clean up uploaded files
         onNavigate?.('published-modpacks');
       }, 500);
     } catch (error) {
@@ -1641,21 +1639,45 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
 
       {/* Download Updated Modpack Confirmation Dialog */}
       <ConfirmDialog
-        isOpen={showDownloadDialog}
+        isOpen={showDownloadDialog && !isDownloadingZip}
         onClose={() => {
           setShowDownloadDialog(false);
           handleSkipDownload();
         }}
-        onConfirm={async () => {
+        onConfirm={() => {
+          setShowDownloadDialog(false);
+          handleSkipDownload();
+        }}
+        onCancel={async () => {
           setShowDownloadDialog(false);
           await handleDownloadUpdatedZip();
         }}
         title={t('publishModpack.dialogs.downloadTitle')}
         message={t('publishModpack.dialogs.downloadMessage', { count: pendingUploadedFiles?.size || 0 })}
-        confirmText={t('publishModpack.dialogs.downloadButton')}
-        cancelText={t('publishModpack.dialogs.skipButton')}
+        confirmText={t('publishModpack.dialogs.skipButton')}
+        cancelText={t('publishModpack.dialogs.downloadButton')}
         variant="info"
       />
+
+      {/* Downloading ZIP Modal - Blocking */}
+      {isDownloadingZip && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="relative w-full max-w-md bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl p-8 text-center">
+            <div className="flex flex-col items-center gap-4">
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-600 border-t-transparent"></div>
+              <h2 className="text-xl font-semibold text-white">
+                {t('publishModpack.dialogs.downloadingTitle') || 'Descargando Modpack Actualizado'}
+              </h2>
+              <p className="text-gray-400">
+                {t('publishModpack.dialogs.downloadingMessage') || 'Por favor espera mientras se descarga y procesa el archivo con los mods en overrides...'}
+              </p>
+              <p className="text-sm text-gray-500 mt-2">
+                {t('publishModpack.dialogs.downloadingNote') || 'No cierres esta ventana durante el proceso'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div >
   );
