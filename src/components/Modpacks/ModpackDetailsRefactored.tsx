@@ -210,11 +210,11 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
   );
 
   return (
-    <div className="h-full w-full overflow-y-auto overflow-x-hidden bg-dark-900">
+    <div className="h-full w-full bg-dark-900 flex flex-col relative">
       {/* Back button - Fixed position */}
       <button
         onClick={onBack}
-        className={`fixed top-6 left-6 z-50 flex items-center space-x-2 px-3 py-2 bg-dark-800/80 backdrop-blur-sm text-dark-400 hover:text-white rounded-lg border border-dark-700/50 ${
+        className={`absolute top-6 left-6 z-40 flex items-center space-x-2 px-3 py-2 bg-dark-800/80 backdrop-blur-sm text-dark-400 hover:text-white rounded-lg border border-dark-700/50 ${
           getAnimationClass('transition-all duration-200', 'hover:scale-105 hover:bg-dark-700/90')
         }`}
         style={getAnimationStyle({})}
@@ -222,6 +222,9 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
         <ArrowLeft className="w-4 h-4" />
         <span className="text-sm font-medium">{t('navigation.backToList')}</span>
       </button>
+
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden">
 
       {/* Hero Section with banner or fallback gradient */}
       <div
@@ -413,6 +416,8 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
           </div>
         </div>
       </div>
+      </div>
+      {/* End of scrollable content */}
     </div>
   );
 };
