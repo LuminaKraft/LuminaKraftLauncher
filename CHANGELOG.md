@@ -5,6 +5,67 @@ All notable changes to the LuminaKraft Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-beta.3] - 2025-12-04
+
+### ✨ **Features**
+- **Image Preview & Customization**
+  - Added image preview functionality for modpack logos and banners
+  - Implemented custom image upload for local imported modpacks
+  - Visual image customization in modpack details view
+  - Generate random IDs for new modpack instances
+- **Auto-Refresh on Profile Changes**
+  - Automatically refresh My Modpacks page when modpack installation completes
+  - Improved state synchronization after modpack operations
+  - Real-time UI updates following profile modifications
+
+### 🎨 **UI/UX Improvements**
+- **Profile Management Enhancements**
+  - Restructured ModpackDetailsRefactored component for better modal positioning
+  - Fixed modal overlay coverage issues in modpack details view
+  - Moved ProfileOptionsModal outside scrollable container
+  - Improved name editing with enabled input field
+  - Standardized ProfileOptionsModal UI and layout
+- **Image Display Fixes**
+  - Use data URLs for loading cached images via Tauri backend
+  - Use file:// URLs for local image loading
+  - Resolved duplicate "LKLauncher" in image path construction
+  - Improved image fallback handling and load from cache paths
+
+### 🔧 **Technical Improvements**
+- **Cache Directory Management**
+  - Corrected cache directory in get_cached_modpack_data function
+  - Standardized cache directory naming to use 'caches' consistently
+  - Enhanced cache path resolution and fallback mechanisms
+  - Improved cache cleanup on modpack deletion
+- **Component Architecture**
+  - Simplified ModpackDetailsRefactored to fix modal positioning
+  - Unified button logic between ModpackCard and ModpackDetailsRefactored
+  - Improved hero section styling for modpack details
+  - Better handling of imported modpack states
+
+### 🐛 **Bug Fixes**
+- **Image Loading**
+  - Fixed image path resolution for cached modpack data
+  - Resolved file URL handling for local image loading
+  - Improved fallback behavior when images are unavailable
+- **Modal & UI**
+  - Fixed modal overlay positioning and coverage issues
+  - Resolved ProfileOptionsModal overlay problems
+  - Fixed scrollable container interaction with modals
+- **Data Management**
+  - Fixed automatic navigation to My Modpacks after installation completes
+  - Improved state updates when modpack installation finishes
+  - Better handling of profile-related cache updates
+  - Added missing profile options button translation
+
+### 📦 **Dependencies**
+- No new dependencies added
+
+### 🔄 **Migration Notes**
+- Cache directory structure automatically migrated to use 'caches' naming
+- Existing modpack images automatically updated to use new URL handling
+- No user action required, all improvements activate automatically
+
 ## [0.1.0-beta.2] - 2025-12-04
 
 ### 🎯 **User Experience Improvements**
