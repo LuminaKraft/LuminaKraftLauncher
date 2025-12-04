@@ -251,7 +251,7 @@ export function MyModpacksPage() {
       setModpackDataMap(dataMap);
     } catch (error) {
       console.error('Error loading local modpacks:', error);
-      toast.error('Failed to load local modpacks');
+      toast.error(t('errors.failedLoadModpacks'));
     } finally {
       setLoading(false);
     }
@@ -328,18 +328,18 @@ export function MyModpacksPage() {
     event.target.value = '';
 
     if (!file.name.endsWith('.zip')) {
-      toast.error('Please select a ZIP file');
+      toast.error(t('validation.selectZipFile'));
       return;
     }
 
     try {
       setValidating(true);
-      toast.loading('Validating modpack...', { id: 'validation' });
+      toast.loading(t('myModpacks.validating'), { id: 'validation' });
 
       const result = await validationService.validateModpackZip(file);
 
       if (!result.success) {
-        toast.error(result.error || 'Failed to validate modpack', { id: 'validation' });
+        toast.error(result.error || t('errors.failedValidateModpack'), { id: 'validation' });
         return;
       }
 

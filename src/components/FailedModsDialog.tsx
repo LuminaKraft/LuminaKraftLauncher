@@ -99,7 +99,7 @@ export const FailedModsDialog: React.FC<FailedModsDialogProps> = ({
   const handleFileUpload = (failedMod: FailedMod, file: File) => {
     // Validate it's a JAR or ZIP file
     if (!file.name.endsWith('.jar') && !file.name.endsWith('.zip')) {
-      toast.error('Please upload a .jar or .zip file');
+      toast.error(t('validation.invalidFile'));
       return;
     }
 
@@ -113,7 +113,7 @@ export const FailedModsDialog: React.FC<FailedModsDialogProps> = ({
     const validFiles = fileArray.filter(f => f.name.endsWith('.jar') || f.name.endsWith('.zip'));
 
     if (validFiles.length === 0) {
-      toast.error('No valid .jar or .zip files found');
+      toast.error(t('validation.noValidFiles'));
       return;
     }
 
@@ -143,7 +143,7 @@ export const FailedModsDialog: React.FC<FailedModsDialogProps> = ({
     setUploadedFiles(newFiles);
 
     if (validFiles.length > matchedCount) {
-      toast.error(`${validFiles.length - matchedCount} file(s) could not be matched`);
+      toast.error(t('validation.filesNotMatched', { count: validFiles.length - matchedCount }));
     }
   };
 
@@ -209,11 +209,11 @@ export const FailedModsDialog: React.FC<FailedModsDialogProps> = ({
         filePaths
       });
 
-      toast.success(`${uploadedFiles.size} file(s) installed successfully!`, { id: loadingToast });
+      toast.success(t('toast.filesInstalledSuccessfully', { count: uploadedFiles.size }), { id: loadingToast });
       onClose();
     } catch (error) {
       console.error('Error installing mods:', error);
-      toast.error('Failed to install mods', { id: loadingToast });
+      toast.error(t('errors.failedInstallModpack'), { id: loadingToast });
     }
   };
 
