@@ -117,17 +117,17 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
   const handleToggleActive = async (modpackId: string, currentState: boolean) => {
     try {
       // CRITICAL: Sync roles before modifying modpack to ensure fresh permissions
-      const toastId = toast.loading('Verifying permissions...');
+      const toastId = toast.loading(t('toast.verifyingPermissions'));
 
       try {
         await authService.syncDiscordRoles();
       } catch (syncError) {
         console.error('Failed to sync roles:', syncError);
-        toast.error('Failed to verify permissions. Please try again.', { id: toastId });
+        toast.error(t('errors.failedVerifyPermissions'), { id: toastId });
         return;
       }
 
-      toast.loading(!currentState ? 'Activating modpack...' : 'Deactivating modpack...', { id: toastId });
+      toast.loading(!currentState ? t('toast.activatingModpack') : t('toast.deactivatingModpack'), { id: toastId });
 
       const { success, error } = await service.updateModpack(modpackId, {
         isActive: !currentState
@@ -155,13 +155,13 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
 
     try {
       // CRITICAL: Sync roles before deleting to ensure fresh permissions
-      const toastId = toast.loading('Verifying permissions...');
+      const toastId = toast.loading(t('toast.verifyingPermissions'));
 
       try {
         await authService.syncDiscordRoles();
       } catch (syncError) {
         console.error('Failed to sync roles:', syncError);
-        toast.error('Failed to verify permissions. Please try again.', { id: toastId });
+        toast.error(t('errors.failedVerifyPermissions'), { id: toastId });
         return;
       }
 
