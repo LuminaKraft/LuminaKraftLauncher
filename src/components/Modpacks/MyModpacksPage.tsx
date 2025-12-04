@@ -5,6 +5,7 @@ import { invoke } from '@tauri-apps/api/core';
 import toast from 'react-hot-toast';
 import { downloadDir, appDataDir } from '@tauri-apps/api/path';
 import { listen } from '@tauri-apps/api/event';
+import JSZip from 'jszip';
 import ModpackValidationService, { ModFileInfo } from '../../services/modpackValidationService';
 import ModpackValidationDialog from './ModpackValidationDialog';
 import ModpackCard from './ModpackCard';
@@ -419,71 +420,74 @@ export function MyModpacksPage() {
   };
 
   /**
+   * Prepare ZIP with uploaded mods/resourcepacks in correct folders
+   */
+  const prepareZipWithOverrides = async (originalFile: File, uploadedFiles: Map<string, File>): Promise<File> => {
+    try {
+      // Read original ZIP
+      const originalZipBuffer = await originalFile.arrayBuffer();
+      const originalZip = new JSZip();
+      await originalZip.loadAsync(originalZipBuffer);
+
+      // Add uploaded files to appropriate overrides folder based on file type
+      for (const file of uploadedFiles.values()) {
+        const fileBuffer = await file.arrayBuffer();
+
+        // Determine target folder based on file extension
+        let filePath: string;
+        if (file.name.endsWith('.jar')) {
+          filePath = `overrides/mods/${file.name}`;
+        } else if (file.name.endsWith('.zip')) {
+          filePath = `overrides/resourcepacks/${file.name}`;
+        } else {
+          console.warn(`[ZIP] Unknown file extension, skipping: ${file.name}`);
+          continue;
+        }
+
+        originalZip.file(filePath, fileBuffer);
+        console.log(`[ZIP] Added to ZIP: ${filePath}`);
+      }
+
+      // Generate new ZIP
+      const updatedZipBlob = await originalZip.generateAsync({ type: 'blob' });
+      const updatedFile = new File([updatedZipBlob], originalFile.name, { type: 'application/zip' });
+
+      console.log(`[ZIP] Created updated ZIP with ${uploadedFiles.size} file(s)`);
+      return updatedFile;
+    } catch (error) {
+      console.error('[ZIP] Failed to create updated ZIP, using original:', error);
+      toast.error('Could not create updated ZIP with overrides, using original file');
+      return originalFile;
+    }
+  };
+
+  /**
    * Handle download dialog confirmation
    */
   const handleDownloadDialogConfirm = async () => {
     if (validationData && pendingUploadedFiles) {
-      const loadingToast = toast.loading('Preparing files...');
+      const loadingToast = toast.loading('Preparing modpack with overrides...');
       try {
-        const unlisten = await listen<{
-          current: number;
-          total: number;
-          stage: string;
-          message: string;
-        }>('zip-progress', (event) => {
-          const { current, total, stage, message } = event.payload;
-          const percentage = Math.round((current / total) * 100);
+        // Prepare ZIP in memory with overrides
+        const updatedZip = await prepareZipWithOverrides(validationData.file, pendingUploadedFiles);
 
-          if (stage === 'complete') {
-            toast.dismiss(loadingToast);
-          } else {
-            toast.loading(`${message} (${percentage}%)`, { id: loadingToast });
-          }
-        });
-
-        const originalZipBuffer = await validationData.file.arrayBuffer();
-        const originalZipBytes = Array.from(new Uint8Array(originalZipBuffer));
-
-        const uploadedFilesData: [string, number[]][] = [];
-        for (const file of pendingUploadedFiles.values()) {
-          const buffer = await file.arrayBuffer();
-          const bytes = Array.from(new Uint8Array(buffer));
-          uploadedFilesData.push([file.name, bytes]);
-        }
-
-        const downloadsFolder = await downloadDir();
-        const outputFileName = validationData.file.name.replace('.zip', '_updated.zip');
-        const outputZipPath = `${downloadsFolder}/${outputFileName}`;
-
-        toast.loading('Creating updated modpack ZIP...', { id: loadingToast });
-
-        await invoke('create_modpack_with_overrides', {
-          originalZipBytes,
-          originalZipName: validationData.file.name,
-          uploadedFiles: uploadedFilesData,
-          outputZipPath
-        });
-
-        unlisten();
-        toast.dismiss(loadingToast);
-
-        // Now import the original ZIP with the added overrides
+        toast.loading('Installing modpack with overrides...', { id: loadingToast });
         setShowDownloadDialog(false);
-        toast.loading('Installing modpack with overrides...', { id: 'import-toast' });
 
+        // Import the updated ZIP
         try {
-          await performImport(validationData.file);
-          toast.dismiss('import-toast');
+          await performImport(updatedZip);
+          toast.dismiss(loadingToast);
         } catch (importError) {
-          toast.error('Failed to install modpack', { id: 'import-toast' });
+          toast.error('Failed to install modpack', { id: loadingToast });
           console.error('Import failed:', importError);
         }
 
         setPendingUploadedFiles(null);
         setValidationData(null);
       } catch (error) {
-        console.error('Error creating modpack with overrides:', error);
-        toast.error('Failed to create updated modpack', { id: loadingToast });
+        console.error('Error preparing modpack with overrides:', error);
+        toast.error('Failed to prepare modpack', { id: loadingToast });
         setShowDownloadDialog(false);
       }
     }
