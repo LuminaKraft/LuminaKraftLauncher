@@ -911,6 +911,9 @@
       "minecraftVersion": "Versión de Minecraft",
       "modloaderVersion": "Versión del Modloader",
       "primaryColor": "Color Primario",
+      "gamemode": "Modo de Juego",
+      "serverIp": "IP del Servidor",
+      "optional": "(Opcional)",
       "saveChanges": "Guardar Cambios"
     },
     "media": {

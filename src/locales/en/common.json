@@ -912,6 +912,9 @@
       "minecraftVersion": "Minecraft Version",
       "modloaderVersion": "Modloader Version",
       "primaryColor": "Primary Color",
+      "gamemode": "Game Mode",
+      "serverIp": "Server IP",
+      "optional": "(Optional)",
       "saveChanges": "Save Changes"
     },
     "media": {
