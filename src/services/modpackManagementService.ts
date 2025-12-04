@@ -771,12 +771,14 @@ export class ModpackManagementService {
     try {
       console.log('🗑️ Deleting modpack:', modpackId);
 
-      if (!this.microsoftAccount) {
-        console.error('❌ User not authenticated with Microsoft');
-        return { success: false, error: 'User not authenticated with Microsoft' };
+      // Get authenticated user from Supabase
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+      if (authError || !authUser) {
+        console.error('❌ User not authenticated');
+        return { success: false, error: 'User not authenticated' };
       }
 
-      console.log('✅ User authenticated, fetching modpack details...');
+      console.log('📊 Fetching modpack details...');
 
       // Get modpack details to verify ownership and get file paths
       // Note: file_url is in modpack_versions, not modpacks table
@@ -807,11 +809,11 @@ export class ModpackManagementService {
       console.log('✅ Modpack found:', modpack.id);
       console.log('📊 Fetching user data...');
 
-      // Get user ID
+      // Get user ID from users table
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('id, role')
-        .eq('microsoft_id', this.microsoftAccount.xuid)
+        .eq('id', authUser.id)
         .single() as { data: any; error: any };
 
       if (userError) {
