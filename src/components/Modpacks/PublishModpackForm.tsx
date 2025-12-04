@@ -130,6 +130,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
   const [showDownloadDialog, setShowDownloadDialog] = useState(false);
   const [pendingUploadedFiles, setPendingUploadedFiles] = useState<Map<string, File> | null>(null);
   const [isDownloadingZip, setIsDownloadingZip] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
 
   const checkDiscordAccess = async () => {
     setIsCheckingAccess(true);
@@ -293,13 +294,20 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
     if (!pendingUploadedFiles || !zipFile) return;
 
     setIsDownloadingZip(true);
-    try {
-      const unlisten = await listen<{ current: number, total: number, stage: string, message: string }>('zip-progress', (event) => {
-        // Event listener for progress updates while downloading
-      });
+    setDownloadProgress(0);
 
+    try {
       const originalZipBuffer = await zipFile.arrayBuffer();
       const originalZipBytes = Array.from(new Uint8Array(originalZipBuffer));
+      const totalSize = (originalZipBuffer.byteLength +
+        Array.from(pendingUploadedFiles.values()).reduce((sum, file) => sum + file.size, 0)) / (1024 * 1024);
+
+      const unlisten = await listen<{ current: number, total: number, stage: string, message: string }>('zip-progress', (event) => {
+        const { current, total } = event.payload;
+        const percentage = Math.round((current / total) * 100);
+        setDownloadProgress(percentage);
+      });
+
       const uploadedFilesData: [string, number[]][] = [];
       for (const file of pendingUploadedFiles.values()) {
         const buffer = await file.arrayBuffer();
@@ -311,6 +319,8 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
       const outputFileName = zipFile.name.replace('.zip', '_updated.zip');
       const outputZipPath = `${downloadsFolder}/${outputFileName}`;
 
+      setDownloadProgress(10);
+
       await invoke('create_modpack_with_overrides', {
         originalZipBytes: originalZipBytes,
         originalZipName: zipFile.name,
@@ -319,12 +329,14 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
       });
 
       unlisten();
+      setDownloadProgress(100);
       toast.success(t('publishModpack.messages.success', { filename: outputFileName }), { duration: 5000 });
     } catch (error) {
       console.error('Error creating modpack with overrides:', error);
       toast.error(t('publishModpack.messages.uploadError', { error: String(error) }));
     } finally {
       setIsDownloadingZip(false);
+      setTimeout(() => setDownloadProgress(0), 500);
     }
     // Note: Don't clear pendingUploadedFiles here - they're still needed for publishing
   };
@@ -335,6 +347,15 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
       // Don't clear pendingUploadedFiles - they need to be used when publishing
       // Only close the dialog
     }
+  };
+
+  // Calculate updated ZIP size with overrides
+  const getUpdatedZipSize = (): number => {
+    if (!zipFile || !pendingUploadedFiles || pendingUploadedFiles.size === 0) {
+      return zipFile?.size || 0;
+    }
+    const uploadedFilesSize = Array.from(pendingUploadedFiles.values()).reduce((sum, file) => sum + file.size, 0);
+    return zipFile.size + uploadedFilesSize;
   };
 
   // Prepare ZIP with overrides if needed
@@ -871,9 +892,16 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                         <p className="text-xl font-bold text-gray-900 dark:text-white mb-1">
                           {zipFile.name}
                         </p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {(zipFile.size / 1024 / 1024).toFixed(2)} MB
-                        </p>
+                        <div className="flex items-center justify-center gap-2">
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            {(getUpdatedZipSize() / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                          {pendingUploadedFiles && pendingUploadedFiles.size > 0 && (
+                            <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full font-medium">
+                              +{pendingUploadedFiles.size}
+                            </span>
+                          )}
+                        </div>
                         {manifestParsed && (
                           <div className="flex items-center justify-center gap-2 mt-3 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-full text-sm font-medium">
                             <Check className="w-4 h-4" />
@@ -1666,13 +1694,27 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
             <div className="flex flex-col items-center gap-4">
               <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-600 border-t-transparent"></div>
               <h2 className="text-xl font-semibold text-white">
-                {t('publishModpack.dialogs.downloadingTitle') || 'Descargando Modpack Actualizado'}
+                {t('publishModpack.dialogs.downloadingTitle')}
               </h2>
-              <p className="text-gray-400">
-                {t('publishModpack.dialogs.downloadingMessage') || 'Por favor espera mientras se descarga y procesa el archivo con los mods en overrides...'}
+              <p className="text-gray-400 text-sm">
+                {t('publishModpack.dialogs.downloadingMessage')}
               </p>
-              <p className="text-sm text-gray-500 mt-2">
-                {t('publishModpack.dialogs.downloadingNote') || 'No cierres esta ventana durante el proceso'}
+
+              {/* Progress Bar */}
+              <div className="w-full mt-4">
+                <div className="flex justify-between mb-2">
+                  <span className="text-xs font-medium text-gray-300">{downloadProgress}%</span>
+                </div>
+                <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
+                  <div
+                    className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${downloadProgress}%` }}
+                  />
+                </div>
+              </div>
+
+              <p className="text-xs text-gray-500 mt-3">
+                {t('publishModpack.dialogs.downloadingNote')}
               </p>
             </div>
           </div>

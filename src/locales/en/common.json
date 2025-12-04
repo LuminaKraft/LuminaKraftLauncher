@@ -838,7 +838,11 @@
       "downloadTitle": "Download Updated Modpack?",
       "downloadMessage": "You've uploaded {{count}} file(s) to override files in the original modpack. Would you like to download an updated ZIP with your changes?",
       "downloadButton": "Download Updated ZIP",
-      "skipButton": "Skip Download"
+      "skipButton": "Skip Download",
+      "downloadingTitle": "Creating Updated Modpack",
+      "downloadingMessage": "Processing your files and creating the updated ZIP with mods in overrides...",
+      "downloadingProgress": "Progress: {{current}}% ({{currentSize}} of {{totalSize}} MB)",
+      "downloadingNote": "Please don't close this window or the launcher"
     },
     "validation": {
       "title": "Modpack Validation",

@@ -837,7 +837,11 @@
       "downloadTitle": "¿Descargar Modpack Actualizado?",
       "downloadMessage": "Has subido {{count}} archivo(s) para anular archivos en el modpack original. ¿Te gustaría descargar un ZIP actualizado con tus cambios?",
       "downloadButton": "Descargar ZIP Actualizado",
-      "skipButton": "Omitir Descarga"
+      "skipButton": "Omitir Descarga",
+      "downloadingTitle": "Creando Modpack Actualizado",
+      "downloadingMessage": "Procesando tus archivos y creando el ZIP actualizado con los mods en overrides...",
+      "downloadingProgress": "Progreso: {{current}}% ({{currentSize}} de {{totalSize}} MB)",
+      "downloadingNote": "Por favor no cierres esta ventana ni el launcher"
     },
     "validation": {
       "title": "Validación de Modpack",
