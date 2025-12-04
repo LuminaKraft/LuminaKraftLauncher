@@ -49,10 +49,9 @@ export function MyModpacksPage() {
     if (!launcherDataDirRef.current) {
       try {
         const appData = await appDataDir();
-        // appDataDir() returns path without trailing slash, so ensure we have proper path
-        launcherDataDirRef.current = appData.endsWith('/')
-          ? `${appData}LKLauncher`
-          : `${appData}/LKLauncher`;
+        // appDataDir() already returns the full app data directory including app name
+        // It returns /Users/.../Library/Application Support/LKLauncher
+        launcherDataDirRef.current = appData.endsWith('/') ? appData.slice(0, -1) : appData;
       } catch (error) {
         console.error('Failed to get app data directory:', error);
         return modpack;
