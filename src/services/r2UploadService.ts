@@ -1,4 +1,3 @@
-import { invoke } from '@tauri-apps/api/core';
 import { supabase } from './supabaseClient';
 
 interface UploadProgress {
@@ -9,7 +8,7 @@ interface UploadProgress {
 
 /**
  * Direct upload to Cloudflare R2 bucket
- * Uses presigned URLs from the backend
+ * Uses presigned URLs from the backend for secure, fast uploads
  */
 export class R2UploadService {
   private static instance: R2UploadService;
@@ -44,138 +43,89 @@ export class R2UploadService {
         throw new Error('Not authenticated');
       }
 
-      // Calculate SHA256 hash of file
-      console.log('🔐 Calculating file hash...');
-      const fileBuffer = await file.arrayBuffer();
-      const hashBuffer = await crypto.subtle.digest('SHA-256', fileBuffer);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const fileSha256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-      console.log('✅ Hash calculated:', fileSha256);
+      // Step 1: Get presigned URL from backend
+      console.log('🔗 Getting presigned URL from backend...');
+      const presignedUrlResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-r2-presigned-url`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          modpackId,
+          filename: file.name,
+          fileType,
+        }),
+      });
 
-      // Build R2 upload path
-      const timestamp = Date.now();
-      const fileKey = this.buildFileKey(modpackId, fileType, file.name, timestamp);
-      const bucketName = 'luminakraft-modpacks'; // Match backend config
-      const accountId = import.meta.env.VITE_CLOUDFLARE_ACCOUNT_ID;
-      const r2PublicUrl = import.meta.env.VITE_R2_PUBLIC_URL;
-
-      if (!accountId) {
-        throw new Error('Cloudflare account ID not configured');
+      if (!presignedUrlResponse.ok) {
+        const error = await presignedUrlResponse.json();
+        throw new Error(error.error || 'Failed to get presigned URL');
       }
 
-      // For now: Upload using the Edge Function (we'll optimize later)
-      // This maintains compatibility while we test the new approach
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('modpackId', modpackId);
-      formData.append('fileType', fileType);
+      const { presignedUrl, publicUrl, fileKey } = await presignedUrlResponse.json();
+      console.log('✅ Presigned URL obtained');
 
-      // Report progress
+      // Step 2: Upload file directly to R2 using presigned URL
+      console.log('📤 Uploading file to R2...');
+
+      // Report progress start
       if (onProgress) {
         onProgress({ loaded: 0, total: file.size, percent: 0 });
       }
 
-      const uploadUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-modpack-file`;
-      const response = await fetch(uploadUrl, {
-        method: 'POST',
+      const fileBuffer = await file.arrayBuffer();
+      const uploadResponse = await fetch(presignedUrl, {
+        method: 'PUT',
         headers: {
-          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': file.type || 'application/octet-stream',
         },
-        body: formData,
+        body: fileBuffer,
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Upload failed');
+      if (!uploadResponse.ok) {
+        throw new Error(`R2 upload failed: ${uploadResponse.statusText}`);
       }
 
-      const result = await response.json();
+      console.log('✅ File uploaded to R2');
 
-      // Report completion
+      // Report progress completion
       if (onProgress) {
         onProgress({ loaded: file.size, total: file.size, percent: 100 });
       }
 
-      console.log('✅ File uploaded to R2:', result.fileUrl);
-
-      // Register upload in database
-      await this.registerUpload(modpackId, fileType, result.fileUrl, file.size, fileSha256, session.access_token);
-
-      return {
-        fileUrl: result.fileUrl,
-        fileSize: file.size,
-        fileSha256
-      };
-    } catch (error) {
-      console.error('❌ Upload failed:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Register completed upload in database
-   */
-  private async registerUpload(
-    modpackId: string,
-    fileType: string,
-    fileUrl: string,
-    fileSize: number,
-    fileSha256: string,
-    accessToken: string
-  ): Promise<void> {
-    try {
-      const uploadUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/register-modpack-upload`;
-
-      const response = await fetch(uploadUrl, {
+      // Step 3: Register upload in database
+      console.log('💾 Registering upload in database...');
+      const registerResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/register-modpack-upload`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${accessToken}`,
+          Authorization: `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           modpackId,
           fileType,
-          fileUrl,
-          fileSize,
-          fileSha256
+          fileUrl: publicUrl,
+          fileKey,
+          fileSize: file.size,
         }),
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        console.error('❌ Registration failed:', error);
+      if (!registerResponse.ok) {
+        const error = await registerResponse.json();
         throw new Error(error.error || 'Failed to register upload');
       }
 
       console.log('✅ Upload registered in database');
+      console.log('✅ File uploaded to R2:', publicUrl);
+
+      return {
+        fileUrl: publicUrl,
+        fileSize: file.size,
+      };
     } catch (error) {
-      console.error('❌ Failed to register upload:', error);
-      // Don't throw - file is already uploaded, just DB registration failed
-      // User can retry registration separately
-    }
-  }
-
-  /**
-   * Build R2 file key path
-   */
-  private buildFileKey(
-    modpackId: string,
-    fileType: string,
-    filename: string,
-    timestamp: number
-  ): string {
-    // Get user ID from auth (would need to be passed or retrieved)
-    const userIdPlaceholder = 'uploads'; // This should come from auth
-
-    switch (fileType) {
-      case 'screenshot':
-        return `modpacks/${userIdPlaceholder}/${modpackId}/screenshots/${timestamp}-${filename}`;
-      case 'logo':
-      case 'banner':
-        return `modpacks/${userIdPlaceholder}/${modpackId}/${fileType}-${filename}`;
-      case 'modpack':
-      default:
-        return `modpacks/${userIdPlaceholder}/${modpackId}/${filename}`;
+      console.error('❌ Upload failed:', error);
+      throw error;
     }
   }
 }
