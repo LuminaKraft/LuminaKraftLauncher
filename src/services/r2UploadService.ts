@@ -141,7 +141,6 @@ export class R2UploadService {
       console.log('📍 Backend URL:', registerUrl);
 
       let registerResponse: Response | null = null;
-      let lastError: Error | null = null;
       const maxRetries = 2;
 
       for (let retryCount = 0; retryCount <= maxRetries; retryCount++) {
@@ -173,7 +172,6 @@ export class R2UploadService {
           // If we get a response, break the retry loop
           break;
         } catch (error) {
-          lastError = error as Error;
           console.error(`❌ Attempt ${retryCount + 1} failed:`, error);
 
           // If this was the last retry, re-throw
