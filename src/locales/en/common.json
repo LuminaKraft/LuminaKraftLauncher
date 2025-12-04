@@ -1076,11 +1076,11 @@
     },
     "tauri": {
       "notAvailable": "This function requires running the application with Tauri. Please use 'npm run tauri:dev' instead of 'npm run dev'.",
-      "failedInstallModpack": "Error al instalar el modpack",
-      "failedLaunchModpack": "Error al lanzar el modpack",
-      "failedRemoveModpack": "Error al remover el modpack",
-      "failedOpenFolder": "Error al abrir la carpeta de la instancia",
-      "failedStopInstance": "Error stopping instance",
+      "failedInstallModpack": "Failed to install modpack",
+      "failedLaunchModpack": "Failed to launch modpack",
+      "failedRemoveModpack": "Failed to remove modpack",
+      "failedOpenFolder": "Failed to open instance folder",
+      "failedStopInstance": "Failed to stop instance",
       "failedCheckRateLimit": "Failed to check download rate limit"
     },
     "github": {
