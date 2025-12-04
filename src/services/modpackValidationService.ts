@@ -46,17 +46,16 @@ class ModpackValidationService {
   }
 
   /**
-   * Validate a modpack ZIP file
+   * Validate a modpack ZIP file using Web Worker for non-blocking processing
    * - Parses manifest.json
    * - Checks which mods have empty downloadUrl
    * - Verifies if those mods are in overrides/mods/
    */
   async validateModpackZip(file: File): Promise<ValidationResult> {
     try {
-      // Load ZIP file
+      // First, load and parse just the manifest to get file IDs (quick operation)
       const zip = await JSZip.loadAsync(file);
 
-      // Extract manifest.json
       const manifestFile = zip.file('manifest.json');
       if (!manifestFile) {
         return {
@@ -73,20 +72,18 @@ class ModpackValidationService {
       // Extract file IDs
       const fileIds = manifest.files.map(f => f.fileID);
 
-      // Query Supabase Edge Function to get mod file info
+      // Query Supabase Edge Function to get mod file info (this is already async)
       const modsInfo = await this.fetchModsInfo(fileIds);
 
-      // Find mods without download URL
-      const modsWithoutUrl = modsInfo.filter(mod => !mod.downloadUrl || mod.downloadUrl === '');
-
-      // Check which mods are in overrides/mods/
-      const modsInOverrides = await this.checkModsInOverrides(zip, modsWithoutUrl);
+      // Now use Web Worker to check overrides without blocking the UI
+      const result = await this.validateZipWithWorker(file, modsInfo);
 
       return {
-        success: true,
-        manifest,
-        modsWithoutUrl,
-        modsInOverrides
+        success: result.success,
+        manifest: result.manifest || manifest,
+        modsWithoutUrl: result.modsWithoutUrl,
+        modsInOverrides: result.modsInOverrides,
+        error: result.error
       };
     } catch (error) {
       console.error('Error validating modpack:', error);
@@ -97,6 +94,49 @@ class ModpackValidationService {
         error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
+  }
+
+  /**
+   * Use Web Worker to process ZIP file without blocking UI
+   */
+  private validateZipWithWorker(file: File, modsInfo: ModFileInfo[]): Promise<ValidationResult> {
+    return new Promise((resolve, reject) => {
+      try {
+        // Create worker
+        const worker = new Worker(
+          new URL('../workers/modpackValidationWorker.ts', import.meta.url),
+          { type: 'module' }
+        );
+
+        // Set timeout to prevent hanging
+        const timeout = setTimeout(() => {
+          worker.terminate();
+          reject(new Error('Validation timeout - ZIP file too large'));
+        }, 60000); // 60 second timeout
+
+        // Handle worker message
+        worker.onmessage = (event: MessageEvent<ValidationResult>) => {
+          clearTimeout(timeout);
+          worker.terminate();
+          resolve(event.data);
+        };
+
+        // Handle worker error
+        worker.onerror = (error: ErrorEvent) => {
+          clearTimeout(timeout);
+          worker.terminate();
+          reject(error);
+        };
+
+        // Send file and mods info to worker
+        worker.postMessage({
+          file,
+          modsInfo
+        });
+      } catch (error) {
+        reject(error);
+      }
+    });
   }
 
   /**
