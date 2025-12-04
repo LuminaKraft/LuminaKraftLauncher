@@ -160,11 +160,7 @@ export class ModpackManagementService {
     isComingSoon?: boolean;
   }): Promise<{ success: boolean; modpackId?: string; error?: string }> {
     try {
-      if (!this.microsoftAccount) {
-        return { success: false, error: 'User not authenticated with Microsoft' };
-      }
-
-      // Check permissions
+      // Check permissions (Discord authentication is required, not Microsoft)
       const { canManage, role } = await this.canManageModpacks();
       if (!canManage) {
         return { success: false, error: 'Insufficient permissions' };
