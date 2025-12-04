@@ -3,6 +3,7 @@
   "productName": "LuminaKraft Launcher",
   "version": "0.1.0-beta.4",
   "identifier": "LKLauncher",
+  "publisher": "LuminaKraft",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
