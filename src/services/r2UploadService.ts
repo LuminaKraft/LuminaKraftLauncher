@@ -63,10 +63,10 @@ export class R2UploadService {
         throw new Error(error.error || 'Failed to get presigned URL');
       }
 
-      const { presignedUrl, publicUrl, fileKey } = await presignedUrlResponse.json();
-      console.log('✅ Presigned URL obtained');
+      const { url, signedHeaders, publicUrl, fileKey } = await presignedUrlResponse.json();
+      console.log('✅ Signed request obtained');
 
-      // Step 2: Upload file directly to R2 using presigned URL
+      // Step 2: Upload file directly to R2 using signed headers
       console.log('📤 Uploading file to R2...');
 
       // Report progress start
@@ -75,9 +75,10 @@ export class R2UploadService {
       }
 
       const fileBuffer = await file.arrayBuffer();
-      const uploadResponse = await fetch(presignedUrl, {
+      const uploadResponse = await fetch(url, {
         method: 'PUT',
         headers: {
+          ...signedHeaders,
           'Content-Type': file.type || 'application/octet-stream',
         },
         body: fileBuffer,
