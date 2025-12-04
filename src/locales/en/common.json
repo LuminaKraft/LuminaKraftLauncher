@@ -614,6 +614,7 @@
       "active": "Published",
       "inactive": "Hidden"
     },
+    "comingSoon": "Coming Soon",
     "uploadStatus": {
       "pending": "Pending",
       "uploading": "Uploading",

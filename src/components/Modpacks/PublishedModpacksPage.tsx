@@ -188,11 +188,15 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
   };
 
   const getStatusBadge = (status: string) => {
+    // Don't show badge for completed status (it's the normal state)
+    if (status === 'completed') {
+      return null;
+    }
+
     const statusColors: Record<string, string> = {
       pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
       uploading: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
       processing: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
-      completed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
       failed: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
     };
 
@@ -200,6 +204,14 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[status] || statusColors.pending}`}>
         {t(statusKey)}
+      </span>
+    );
+  };
+
+  const getComingSoonBadge = () => {
+    return (
+      <span className='px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'>
+        {t('publishedModpacks.comingSoon')}
       </span>
     );
   };
@@ -569,6 +581,7 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
                 {/* Badges */}
                 <div className="flex gap-2 mb-3">
                   {getCategoryBadge(modpack.category)}
+                  {modpack.is_coming_soon && getComingSoonBadge()}
                   {getStatusBadge(modpack.upload_status)}
                 </div>
 

@@ -611,6 +611,7 @@
       "active": "Publicado",
       "inactive": "Oculto"
     },
+    "comingSoon": "Próximamente",
     "uploadStatus": {
       "pending": "Pendiente",
       "uploading": "Subiendo",
@@ -924,10 +925,10 @@
       "isHidden": "Tu modpack está actualmente oculto para los usuarios.",
       "visibleToAllUsers": "Tu modpack es actualmente visible para todos los usuarios.",
       "hiddenFromUsers": "Tu modpack está actualmente oculto para los usuarios.",
-      "comingSoonStatus": "Estado de Próxima Llegada",
-      "markComingSoon": "Marcar como Próxima Llegada",
-      "markAsComingSoon": "Marcar como Próxima Llegada",
-      "removeComingSoon": "Eliminar Estado de Próxima Llegada",
+      "comingSoonStatus": "Proximamente",
+      "markComingSoon": "Marcar como Próximamente",
+      "markAsComingSoon": "Marcar como Próximamente",
+      "removeComingSoon": "Eliminar Estado de Próximamente",
       "comingSoonDesc": "El modpack aparece en la página de inicio pero no se puede descargar aún.",
       "comingSoonDescription": "El modpack aparece en la página de inicio pero no se puede descargar aún.",
       "fullyAvailable": "El modpack está completamente disponible para descargar.",

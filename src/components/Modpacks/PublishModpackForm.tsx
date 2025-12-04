@@ -467,6 +467,8 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
           // uploadResult already contains fileUrl and fileSize
           // The register-modpack-upload function has already been called by r2UploadService
           // but we still need to create version entry for coming soon modpacks
+          setUploadProgress(75);
+
           const { supabase } = await import('../../services/supabaseClient');
           const { data: versions } = await supabase
             .from('modpack_versions')
@@ -475,6 +477,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
             .limit(1);
 
           if (!versions || versions.length === 0) {
+            setUploadProgress(80);
             await supabase.from('modpack_versions').insert({
               modpack_id: modpackId,
               version: formData.version,
@@ -483,7 +486,9 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
             } as any);
           }
 
+          setUploadProgress(90);
           await service.updateModpack(modpackId, { isActive: false });
+          setUploadProgress(95);
         } catch (error) {
           console.error('❌ Modpack file upload failed:', error);
           toast.error(t('publishModpack.messages.uploadError', { error: String(error) }));
@@ -491,8 +496,13 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
         }
       }
 
+      setUploadProgress(100);
       toast.success(t('publishModpack.messages.published'));
-      onNavigate?.('published-modpacks');
+      // Reset progress after a short delay
+      setTimeout(() => {
+        setUploadProgress(0);
+        onNavigate?.('published-modpacks');
+      }, 500);
     } catch (error) {
       console.error('Error creating modpack:', error);
 
