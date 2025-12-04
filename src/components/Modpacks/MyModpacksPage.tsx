@@ -330,6 +330,22 @@ export function MyModpacksPage() {
   };
 
   /**
+   * Handle skip download - import without creating updated ZIP
+   */
+  const handleSkipDownload = async () => {
+    if (validationData) {
+      try {
+        await performImport(validationData.file);
+        setPendingUploadedFiles(null);
+        setValidationData(null);
+      } catch (error) {
+        console.error('Error importing modpack:', error);
+        toast.error('Failed to import modpack');
+      }
+    }
+  };
+
+  /**
    * Handle download dialog confirmation
    */
   const handleDownloadDialogConfirm = async () => {
@@ -647,6 +663,7 @@ export function MyModpacksPage() {
         isOpen={showDownloadDialog}
         onClose={() => setShowDownloadDialog(false)}
         onConfirm={handleDownloadDialogConfirm}
+        onCancel={handleSkipDownload}
         title="Download Updated Modpack?"
         message={`You've uploaded ${
           pendingUploadedFiles?.size || 0
