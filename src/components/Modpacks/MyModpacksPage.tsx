@@ -430,11 +430,11 @@ export function MyModpacksPage() {
 
   // Details view
   if (selectedModpackId) {
-    const state = modpackStates[selectedModpackId];
+    let state = modpackStates[selectedModpackId];
     let modpack = modpackDataMap.get(selectedModpackId);
 
     // Create placeholder if no metadata found
-    if (!modpack && state) {
+    if (!modpack) {
       modpack = {
         id: selectedModpackId,
         name: t('myModpacks.importing.name'),
@@ -453,6 +453,16 @@ export function MyModpacksPage() {
         isNew: false,
         isComingSoon: false
       } as Modpack;
+    }
+
+    // Create default state if not found
+    if (!state) {
+      state = {
+        status: 'installed' as const,
+        installed: true,
+        downloading: false,
+        progress: { percentage: 0 }
+      };
     }
 
     if (modpack && state) {

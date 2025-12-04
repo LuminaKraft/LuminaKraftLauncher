@@ -53,7 +53,9 @@ const ModpackInfo: React.FC<ModpackInfoProps> = ({ modpack }) => {
               <span>{t('modpacks.modloader')}</span>
             </div>
             <div className="text-right">
-              <div className="text-white font-medium">{getModloaderDisplayName(modpack.modloader)}</div>
+              <div className="text-white font-medium">
+                {getModloaderDisplayName(modpack.modloader)} {modpack.modloaderVersion && `${modpack.modloaderVersion}`}
+              </div>
               <div className="text-sm text-dark-400">Minecraft {modpack.minecraftVersion}</div>
             </div>
           </div>

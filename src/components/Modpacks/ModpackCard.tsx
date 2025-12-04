@@ -453,7 +453,12 @@ const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect
                   target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSIjMzc0MTUxIi8+CjxwYXRoIGQ9Ik0yNCAyNEg0MFY0MEgyNFYyNFoiIGZpbGw9IiM2Mzc1ODMiLz4KPC9zdmc+';
                 }}
               />
-            ) : null}
+            ) : (
+              // Show first letter of modpack name when no logo
+              <div className="text-5xl font-bold text-white opacity-20 relative z-10">
+                {displayName.charAt(0).toUpperCase()}
+              </div>
+            )}
           </div>
 
           {/* Modpack Info */}
