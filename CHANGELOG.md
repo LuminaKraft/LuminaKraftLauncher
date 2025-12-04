@@ -5,6 +5,41 @@ All notable changes to the LuminaKraft Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-beta.4] - 2025-12-04
+
+### ✨ **Features**
+- **Modpack Editing Enhancements**
+  - Added gamemode field to EditModpackForm for server mode specification
+  - Added server IP field to EditModpackForm for easier configuration
+  - Full internationalization support for new fields (English & Spanish)
+
+### 🐛 **Bug Fixes**
+- **Modpack Upload Issues**
+  - Fixed missing `file_path` in modpack_versions fallback insert that prevented ZIP registration
+  - Resolved "missing urlModpackZip" error when publishing modpacks with server IP
+  - Fixed fallback insert to guarantee database consistency
+- **Network Error Handling**
+  - Fixed vague "Failed to fetch" errors with specific, actionable error messages
+  - Added automatic retry logic (2 attempts with exponential backoff) for backend registration
+  - Added 30-second timeout for backend API calls to prevent hanging
+
+### 🔧 **Technical Improvements**
+- **Backend Robustness**
+  - Improved error handling in register-modpack-upload function
+  - Added proper validation for all required fields (modpackId, fileUrl, fileType)
+  - Added error checks for update operations (logo, banner, upload_status)
+  - Better sortOrder validation for screenshot registration
+  - Non-critical errors (like upload_status) no longer block version creation
+- **Frontend Error Handling**
+  - Added retry logic with exponential backoff for backend registration
+  - Improved error messages for network, timeout, and authentication errors
+  - Added detailed logging with backend URL and attempt tracking
+  - Better extraction of error details from backend responses
+
+### 📝 **Internationalization**
+- Added Spanish translations for new gamemode and serverIp fields
+- Added "optional" label translations for both languages
+
 ## [0.1.0-beta.3] - 2025-12-04
 
 ### ✨ **Features**
