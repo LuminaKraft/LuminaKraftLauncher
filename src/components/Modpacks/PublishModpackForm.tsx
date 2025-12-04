@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import { Plus, X, Upload, FileArchive, AlertCircle, RefreshCw, Check, ChevronRight, ChevronLeft, Info, Image as ImageIcon, FileText, Package, Layers } from 'lucide-react';
@@ -1678,7 +1679,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
       />
 
       {/* Downloading ZIP Modal - Blocking */}
-      {isDownloadingZip && (
+      {isDownloadingZip && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="relative w-full max-w-md bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl p-8 text-center">
             <div className="flex flex-col items-center gap-4">
@@ -1708,7 +1709,8 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
               </p>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div >

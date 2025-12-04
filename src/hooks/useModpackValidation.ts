@@ -65,23 +65,6 @@ export function useModpackValidation({ onManifestParsed }: UseModpackValidationP
                 onManifestParsed(parseResult.data);
             }
 
-            // 4. Show appropriate success/warning toast
-            if (validationResult.modsWithoutUrl && validationResult.modsWithoutUrl.length > 0) {
-                const missingCount = validationResult.modsWithoutUrl.filter(
-                    mod => !validationResult.modsInOverrides?.includes(mod.fileName)
-                ).length;
-
-                if (missingCount > 0) {
-                    toast(`Manifest parsed, but ${missingCount} mod(s) require manual download.`, {
-                        icon: '⚠️',
-                        duration: 5000
-                    });
-                } else {
-                    toast.success(t('toast.manifestParsedAll'));
-                }
-            } else {
-                toast.success(t('toast.manifestParsedAutoFilled'));
-            }
 
             return true;
         } catch (error) {
