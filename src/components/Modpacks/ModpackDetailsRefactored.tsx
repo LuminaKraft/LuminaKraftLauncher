@@ -230,40 +230,62 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
         <span className="text-sm font-medium">{t('navigation.backToList')}</span>
       </button>
 
-      {/* Hero Section with banner or fallback image */}
-      <div 
-        className="relative h-80 flex flex-col justify-end p-8 text-white"
+      {/* Hero Section with banner or fallback gradient */}
+      <div
+        className={`relative h-80 flex flex-col justify-end p-8 text-white ${
+          !modpack.backgroundImage ? 'bg-gradient-to-br from-blue-500 to-purple-600' : ''
+        }`}
       >
         {/* Banner / fallback image */}
-        <div 
-          className="absolute inset-0 bg-center bg-cover"
-          style={{
-            backgroundImage: `url(${modpack.backgroundImage || modpack.images?.[0] || modpack.logo})`,
-            opacity: 0.12
-          }}
-        />
+        {modpack.backgroundImage && (
+          <div
+            className="absolute inset-0 bg-center bg-cover"
+            style={{
+              backgroundImage: `url(${modpack.backgroundImage || modpack.images?.[0] || modpack.logo})`,
+              opacity: 0.12
+            }}
+          />
+        )}
         {/* Dark overlay for better text readability */}
         <div className="absolute inset-0 bg-black/40" />
-        
+
         {/* Logo and Content */}
         <div className="relative z-10 flex items-start space-x-6">
           {/* Logo */}
           <div className="flex-shrink-0">
-            <div 
-              className="w-40 h-40 rounded-lg overflow-hidden flex items-center justify-center"
+            <div
+              className={`w-40 h-40 rounded-lg overflow-hidden flex items-center justify-center ${
+                !modpack.logo || (modpack.logo && modpack.logo.length === 1)
+                  ? 'bg-gradient-to-br from-blue-500 to-purple-600'
+                  : ''
+              }`}
               style={getAnimationStyle({
                 animation: `fadeInUp 0.4s ease-out 0.05s backwards`
               })}
             >
-              <img
-                src={modpack.logo}
-                alt={displayName}
-                className="w-full h-full object-contain object-top"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iOTYiIGhlaWdodD0iOTYiIHZpZXdCb3g9IjAgMCA5NiA5NiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9Ijk2IiBoZWlnaHQ9Ijk2IiBmaWxsPSIjMzc0MTUxIi8+CjxwYXRoIGQ9Ik0zNiAzNkg2MFY2MEgzNlYzNloiIGZpbGw9IiM2Mzc1ODMiLz4KPC9zdmc+';
-                }}
-              />
+              {modpack.logo && modpack.logo.length === 1 ? (
+                // Show first letter for local modpacks
+                <div className="text-7xl font-bold text-white opacity-30">
+                  {modpack.logo}
+                </div>
+              ) : modpack.logo ? (
+                // Show logo image
+                <img
+                  src={modpack.logo}
+                  alt={displayName}
+                  className="w-full h-full object-contain object-top"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    target.parentElement!.innerHTML = `<div class="text-7xl font-bold text-white opacity-30">${displayName.charAt(0).toUpperCase()}</div>`;
+                  }}
+                />
+              ) : (
+                // Show first letter when no logo
+                <div className="text-7xl font-bold text-white opacity-30">
+                  {displayName.charAt(0).toUpperCase()}
+                </div>
+              )}
             </div>
           </div>
           

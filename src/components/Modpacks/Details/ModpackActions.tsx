@@ -42,30 +42,6 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state, isReadO
   const getStatusInfo = () => {
     const hasValidIp = modpack.ip && modpack.ip.trim() !== '';
 
-    // Handle servers without modpack and without IP (check this FIRST)
-    if (!requiresModpack && !hasValidIp) {
-      return {
-        icon: AlertTriangle,
-        label: t('modpacks.notAvailable'),
-        bgColor: 'bg-gray-600/50 cursor-not-allowed',
-        textColor: 'text-gray-400',
-        action: () => {},
-        disabled: true
-      };
-    }
-
-    // Handle any server with IP (vanilla or non-vanilla)
-    if (!requiresModpack && hasValidIp) {
-      return {
-        icon: Globe,
-        label: `${t('modpacks.connect')} ${modpack.ip}`,
-        bgColor: 'bg-blue-600 hover:bg-blue-700',
-        textColor: 'text-white',
-        action: () => copyToClipboard(modpack.ip!),
-        disabled: false
-      };
-    }
-
     // Read-only mode (Home/Explore): Show Install or Installed only
     if (isReadOnly) {
       // Show installing/updating state in read-only mode
@@ -182,6 +158,32 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state, isReadO
         };
 
       default:
+        // Handle servers without modpack
+        // If has IP: show connect button
+        if (!requiresModpack && hasValidIp) {
+          return {
+            icon: Globe,
+            label: `${t('modpacks.connect')} ${modpack.ip}`,
+            bgColor: 'bg-blue-600 hover:bg-blue-700',
+            textColor: 'text-white',
+            action: () => copyToClipboard(modpack.ip!),
+            disabled: false
+          };
+        }
+
+        // If no modpack and no IP: show not available
+        if (!requiresModpack && !hasValidIp) {
+          return {
+            icon: AlertTriangle,
+            label: t('modpacks.notAvailable'),
+            bgColor: 'bg-gray-600/50 cursor-not-allowed',
+            textColor: 'text-gray-400',
+            action: () => {},
+            disabled: true
+          };
+        }
+
+        // Default: show install button
         return {
           icon: Download,
           label: t('modpacks.install'),
