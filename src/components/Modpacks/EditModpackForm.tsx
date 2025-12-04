@@ -222,12 +222,12 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
         // Fetch the updated modpack data to get the new image URL
         const { data: modpackData } = await supabase
           .from('modpacks')
-          .select('logo, backgroundImage')
+          .select('logo_url, banner_url')
           .eq('id', modpackId)
           .single();
 
         if (modpackData) {
-          const imageUrl = type === 'logo' ? modpackData.logo : modpackData.backgroundImage;
+          const imageUrl = type === 'logo' ? modpackData.logo_url : modpackData.banner_url;
           setFormData(prev => prev ? ({ ...prev, [`${type}Url`]: imageUrl }) : null);
         }
       }

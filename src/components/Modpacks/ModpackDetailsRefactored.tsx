@@ -238,7 +238,7 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
         <div 
           className="absolute inset-0 bg-center bg-cover"
           style={{
-            backgroundImage: `url(${modpack.banner || modpack.images?.[0] || modpack.logo})`,
+            backgroundImage: `url(${modpack.backgroundImage || modpack.images?.[0]?.url || modpack.logo})`,
             opacity: 0.12
           }}
         />
