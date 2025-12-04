@@ -4,13 +4,11 @@ import {
   Download, Play, RefreshCw, Wrench, FolderOpen, Trash2,
   Loader2, StopCircle, Globe, AlertTriangle, Settings, Clock
 } from 'lucide-react';
-import { invoke } from '@tauri-apps/api/core';
 import type { Modpack, ModpackState, ProgressInfo } from '../../../types/launcher';
 import { useLauncher } from '../../../contexts/LauncherContext';
 import { useAnimation } from '../../../contexts/AnimationContext';
 import ConfirmDialog from '../../ConfirmDialog';
 import LauncherService from '../../../services/launcherService';
-import ProfileOptionsModal from '../ProfileOptionsModal';
 
 interface ModpackActionsProps {
   modpack: Modpack;
@@ -18,16 +16,21 @@ interface ModpackActionsProps {
     progress?: ProgressInfo;
   };
   isReadOnly?: boolean; // Read-only mode: show Install/Installed only
+  showProfileOptions?: boolean;
+  setShowProfileOptions?: (show: boolean) => void;
 }
 
-const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state, isReadOnly = false }) => {
+const ModpackActions: React.FC<ModpackActionsProps> = ({
+  modpack,
+  state,
+  isReadOnly = false,
+  setShowProfileOptions = () => {}
+}) => {
   const { t } = useTranslation();
   const { installModpack, updateModpack, launchModpack, repairModpack, removeModpack, stopInstance } = useLauncher();
   const { getAnimationClass, getAnimationStyle } = useAnimation();
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
-  const [showProfileOptions, setShowProfileOptions] = useState(false);
-  const [instanceMetadata, setInstanceMetadata] = useState<any>(null);
 
   const requiresModpack = !!modpack.urlModpackZip;
 
@@ -257,27 +260,6 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state, isReadO
     };
   }, [state.status]);
 
-  // Load instance metadata when installed
-  useEffect(() => {
-    const loadMetadata = async () => {
-      if (state.installed) {
-        try {
-          const metadataJson = await invoke<string | null>('get_instance_metadata', {
-            modpackId: modpack.id
-          });
-
-          if (metadataJson) {
-            setInstanceMetadata(JSON.parse(metadataJson));
-          }
-        } catch (error) {
-          console.error('Failed to load instance metadata:', error);
-        }
-      }
-    };
-
-    loadMetadata();
-  }, [state.installed, modpack.id]);
-
   const displayedPercentage = state.status === 'launching'
     ? fakeLaunchProgress
     : state.progress?.percentage ?? 0;
@@ -435,16 +417,6 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state, isReadO
           type="danger"
         />
       )}
-
-      {/* Profile Options Modal */}
-      <ProfileOptionsModal
-        modpackId={modpack.id}
-        modpackName={modpack.name}
-        isOpen={showProfileOptions}
-        onClose={() => setShowProfileOptions(false)}
-        isLocalModpack={!modpack.urlModpackZip}
-        metadata={instanceMetadata}
-      />
     </>
   );
 };

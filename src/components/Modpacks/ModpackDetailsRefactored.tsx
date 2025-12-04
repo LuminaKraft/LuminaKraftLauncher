@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Download, Clock, Users, Terminal, Info, Image } from 'lucide-react';
+import { invoke } from '@tauri-apps/api/core';
 import LogsSection from './Details/Sections/LogsSection';
 import ScreenshotsSection from './Details/Sections/ScreenshotsSection';
 import { listen } from '@tauri-apps/api/event';
@@ -14,6 +15,7 @@ import ModpackInfo from './Details/ModpackInfo';
 import ModpackRequirements from './Details/ModpackRequirements';
 import ModpackFeatures from './Details/ModpackFeatures';
 import ModpackScreenshotGallery from './Details/ModpackScreenshotGallery';
+import ProfileOptionsModal from './ProfileOptionsModal';
 
 interface ModpackDetailsProps {
   modpack: Modpack;
@@ -45,6 +47,31 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
     userPlaytime: 0
   });
   const [isLoadingStats, setIsLoadingStats] = useState(true);
+
+  // Profile Options Modal state
+  const [showProfileOptions, setShowProfileOptions] = useState(false);
+  const [instanceMetadata, setInstanceMetadata] = useState<any>(null);
+
+  // Load instance metadata when component mounts or modpack changes
+  useEffect(() => {
+    const loadMetadata = async () => {
+      if (state.installed) {
+        try {
+          const metadataJson = await invoke<string | null>('get_instance_metadata', {
+            modpackId: modpack.id
+          });
+
+          if (metadataJson) {
+            setInstanceMetadata(JSON.parse(metadataJson));
+          }
+        } catch (error) {
+          console.error('Failed to load instance metadata:', error);
+        }
+      }
+    };
+
+    loadMetadata();
+  }, [state.installed, modpack.id]);
 
   // Load stats from database
   useEffect(() => {
@@ -332,7 +359,13 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
               animation: `fadeInUp 0.3s ease-out 0.1s backwards`
             })}
           >
-            <ModpackActions modpack={modpack} state={liveState} isReadOnly={isReadOnly} />
+            <ModpackActions
+              modpack={modpack}
+              state={liveState}
+              isReadOnly={isReadOnly}
+              showProfileOptions={showProfileOptions}
+              setShowProfileOptions={setShowProfileOptions}
+            />
           </div>
 
           {/* Left Column - Main Info */}
@@ -408,7 +441,13 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
                 animation: `fadeInUp 0.3s ease-out 0.2s backwards`
               })}
             >
-              <ModpackActions modpack={modpack} state={liveState} isReadOnly={isReadOnly} />
+              <ModpackActions
+                modpack={modpack}
+                state={liveState}
+                isReadOnly={isReadOnly}
+                showProfileOptions={showProfileOptions}
+                setShowProfileOptions={setShowProfileOptions}
+              />
               <ModpackInfo modpack={modpack} />
               {/* System Requirements - Only show in read-only mode */}
               {isReadOnly && <ModpackRequirements modpack={modpack} />}
@@ -418,6 +457,16 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
       </div>
       </div>
       {/* End of scrollable content */}
+
+      {/* Profile Options Modal - Outside scrollable area */}
+      <ProfileOptionsModal
+        modpackId={modpack.id}
+        modpackName={modpack.name}
+        isOpen={showProfileOptions}
+        onClose={() => setShowProfileOptions(false)}
+        isLocalModpack={!modpack.urlModpackZip}
+        metadata={instanceMetadata}
+      />
     </div>
   );
 };
