@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import { spawn } from 'child_process';
-import { fixMsiVersion, restoreTauriConfig } from './fix-msi-version.js';
 
 async function runCommand(command, args = []) {
   return new Promise((resolve, reject) => {
@@ -32,9 +31,6 @@ async function main() {
     console.log('🔍 Checking Linux dependencies...');
     await runCommand('node', ['scripts/check-linux-deps.js']);
 
-    // Fix MSI version for Windows if needed
-    const wasFixed = fixMsiVersion();
-
     // Run Tauri build
     console.log('🔨 Running Tauri build...');
     await runCommand('npx', ['tauri', 'build']);
@@ -44,11 +40,6 @@ async function main() {
   } catch (error) {
     console.error('❌ Build failed:', error.message);
     process.exit(1);
-  } finally {
-    // Always restore original version
-    if (process.platform === 'win32') {
-      restoreTauriConfig();
-    }
   }
 }
 
