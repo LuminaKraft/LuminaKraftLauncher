@@ -62,13 +62,13 @@ export function MyModpacksPage() {
     const resolved = { ...modpack };
 
     // Resolve logo if it's a relative path
-    if (resolved.logo && resolved.logo.startsWith('cache/')) {
+    if (resolved.logo && resolved.logo.startsWith('caches/')) {
       const fullPath = `${launcherDataDirRef.current}/${resolved.logo}`;
       resolved.logo = convertFileSrc(fullPath);
     }
 
     // Resolve backgroundImage if it's a relative path
-    if (resolved.backgroundImage && resolved.backgroundImage.startsWith('cache/')) {
+    if (resolved.backgroundImage && resolved.backgroundImage.startsWith('caches/')) {
       const fullPath = `${launcherDataDirRef.current}/${resolved.backgroundImage}`;
       resolved.backgroundImage = convertFileSrc(fullPath);
     }

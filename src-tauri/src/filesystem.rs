@@ -116,7 +116,7 @@ pub async fn save_instance_metadata(metadata: &InstanceMetadata) -> Result<()> {
 /// This is separate from InstanceMetadata and contains UI-relevant data
 pub async fn save_modpack_metadata(modpack: &crate::Modpack) -> Result<()> {
     let launcher_dir = get_launcher_data_dir()?;
-    let cache_dir = launcher_dir.join("cache").join("modpacks");
+    let cache_dir = launcher_dir.join("caches").join("modpacks");
 
     // Ensure cache directory exists
     tokio::fs::create_dir_all(&cache_dir).await?;
@@ -648,7 +648,7 @@ pub async fn save_modpack_image(
 ) -> Result<()> {
     let launcher_dir = get_launcher_data_dir()?;
     let modpack_images_dir = launcher_dir
-        .join("cache")
+        .join("caches")
         .join("modpacks")
         .join(modpack_id)
         .join("images");
@@ -669,14 +669,14 @@ pub async fn save_modpack_image(
     tokio::fs::write(&image_path, image_data).await?;
 
     // Update modpack metadata JSON with new image path
-    let cache_dir = launcher_dir.join("cache").join("modpacks");
+    let cache_dir = launcher_dir.join("caches").join("modpacks");
     let metadata_path = cache_dir.join(format!("{}.json", modpack_id));
 
     if metadata_path.exists() {
         if let Ok(content) = tokio::fs::read_to_string(&metadata_path).await {
             if let Ok(mut metadata) = serde_json::from_str::<serde_json::Value>(&content) {
                 // Create relative path for storage (will be resolved at runtime)
-                let relative_path = format!("cache/modpacks/{}/images/{}", modpack_id, image_file_name);
+                let relative_path = format!("caches/modpacks/{}/images/{}", modpack_id, image_file_name);
 
                 if image_type == "logo" {
                     metadata["logo"] = serde_json::Value::String(relative_path);

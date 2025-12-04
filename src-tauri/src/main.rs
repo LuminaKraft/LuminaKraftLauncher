@@ -167,7 +167,7 @@ async fn save_modpack_metadata_json(
         None => return Err("Failed to get app data directory".to_string()),
     };
 
-    let cache_dir = launcher_dir.join("cache").join("modpacks");
+    let cache_dir = launcher_dir.join("caches").join("modpacks");
 
     // Create cache directory if it doesn't exist
     std::fs::create_dir_all(&cache_dir)
