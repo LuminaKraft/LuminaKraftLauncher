@@ -804,6 +804,7 @@
       "zipRequired": "Por favor selecciona un archivo ZIP",
       "dropZip": "Por favor suelta un archivo ZIP",
       "nameRequired": "El nombre es requerido en ambos idiomas",
+      "nameAlreadyExists": "Ya existe un modpack con este nombre. Por favor elige un nombre diferente.",
       "shortDescRequired": "La descripción corta es requerida en ambos idiomas",
       "fullDescRequired": "La descripción completa es requerida en ambos idiomas",
       "versionRequired": "La versión es requerida",

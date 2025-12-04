@@ -74,6 +74,8 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
   const [isDraggingScreenshots, setIsDraggingScreenshots] = useState(false);
   const [currentLang, setCurrentLang] = useState<'en' | 'es'>('en');
   const [currentStep, setCurrentStep] = useState(1);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [isCheckingName, setIsCheckingName] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const getSteps = () => [
@@ -184,6 +186,49 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
       setFormData(prev => ({ ...prev, category: 'partner' }));
     }
   }, [userRole]);
+
+  // Validate modpack name/slug doesn't already exist
+  useEffect(() => {
+    const validateName = async () => {
+      const name = formData.name.en.trim();
+      if (!name || name.length < 3) {
+        setNameError(null);
+        return;
+      }
+
+      setIsCheckingName(true);
+      try {
+        const { supabase } = await import('../../services/supabaseClient');
+        const slug = name.toLowerCase().replace(/\s+/g, '-');
+
+        const { data, error } = await supabase
+          .from('modpacks')
+          .select('id')
+          .eq('slug', slug)
+          .limit(1);
+
+        if (error) {
+          console.error('Error checking modpack name:', error);
+          setNameError(null);
+          return;
+        }
+
+        if (data && data.length > 0) {
+          setNameError(t('publishModpack.validation.nameAlreadyExists'));
+        } else {
+          setNameError(null);
+        }
+      } catch (error) {
+        console.error('Failed to validate name:', error);
+      } finally {
+        setIsCheckingName(false);
+      }
+    };
+
+    // Debounce validation (only check after user stops typing for 500ms)
+    const timeoutId = setTimeout(validateName, 500);
+    return () => clearTimeout(timeoutId);
+  }, [formData.name.en, t]);
 
   const updateFormData = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -358,6 +403,10 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
   const validateForm = (): boolean => {
     if (!formData.name.en || !formData.name.es) {
       toast.error(t('publishModpack.validation.nameRequired'));
+      return false;
+    }
+    if (nameError) {
+      toast.error(nameError);
       return false;
     }
     if (!formData.shortDescription.en || !formData.shortDescription.es) {
@@ -973,14 +1022,30 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                   <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
                     {t('publishModpack.basicInfo.name')} <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
-                    value={formData.name[currentLang]}
-                    onChange={(e) => updateI18nField('name', currentLang, e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
-                    required
-                    placeholder={currentLang === 'en' ? 'My Awesome Modpack' : 'Mi Increíble Modpack'}
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={formData.name[currentLang]}
+                      onChange={(e) => updateI18nField('name', currentLang, e.target.value)}
+                      className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow ${
+                        nameError
+                          ? 'border-red-500 dark:border-red-500'
+                          : 'border-gray-300 dark:border-gray-600'
+                      }`}
+                      required
+                      placeholder={currentLang === 'en' ? 'My Awesome Modpack' : 'Mi Increíble Modpack'}
+                    />
+                    {isCheckingName && (
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                      </div>
+                    )}
+                  </div>
+                  {nameError && (
+                    <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                      <span>⚠️</span> {nameError}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
