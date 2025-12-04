@@ -67,7 +67,8 @@ export function MyModpacksPage() {
         console.log('🖼️ Logo converted to data URL');
       } catch (error) {
         console.error('Failed to load logo:', error);
-        // Keep original path if conversion fails
+        // Set to empty string so placeholder is shown
+        resolved.logo = '';
       }
     }
 
@@ -79,7 +80,8 @@ export function MyModpacksPage() {
         console.log('🖼️ Background converted to data URL');
       } catch (error) {
         console.error('Failed to load background:', error);
-        // Keep original path if conversion fails
+        // Set to empty string so placeholder is shown
+        resolved.backgroundImage = '';
       }
     }
 

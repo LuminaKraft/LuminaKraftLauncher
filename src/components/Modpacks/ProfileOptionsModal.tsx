@@ -64,22 +64,32 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
           appDataDirRef.current = appData.endsWith('/') ? appData.slice(0, -1) : appData;
         }
 
-        // Try to load logo
-        const logoPath = `${appDataDirRef.current}/caches/modpacks/${modpackId}/images/logo.png`;
-        try {
-          const logo = await invoke<string>('get_file_as_data_url', { filePath: logoPath });
-          setLogoUrl(logo);
-        } catch {
-          setLogoUrl(null);
-        }
+        // Get cached modpack data to find correct image paths
+        const cachedData = await invoke<string | null>('get_cached_modpack_data', { modpackId });
+        if (cachedData) {
+          const cache = JSON.parse(cachedData);
 
-        // Try to load banner
-        const bannerPath = `${appDataDirRef.current}/caches/modpacks/${modpackId}/images/banner.jpeg`;
-        try {
-          const banner = await invoke<string>('get_file_as_data_url', { filePath: bannerPath });
-          setBannerUrl(banner);
-        } catch {
-          setBannerUrl(null);
+          // Load logo if path exists in cache
+          if (cache.logo) {
+            try {
+              const fullLogoPath = `${appDataDirRef.current}/${cache.logo}`;
+              const logo = await invoke<string>('get_file_as_data_url', { filePath: fullLogoPath });
+              setLogoUrl(logo);
+            } catch {
+              setLogoUrl(null);
+            }
+          }
+
+          // Load banner if path exists in cache
+          if (cache.backgroundImage) {
+            try {
+              const fullBannerPath = `${appDataDirRef.current}/${cache.backgroundImage}`;
+              const banner = await invoke<string>('get_file_as_data_url', { filePath: fullBannerPath });
+              setBannerUrl(banner);
+            } catch {
+              setBannerUrl(null);
+            }
+          }
         }
       } catch (error) {
         console.error('Failed to load images:', error);
