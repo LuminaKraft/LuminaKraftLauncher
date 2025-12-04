@@ -219,14 +219,14 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
         const result = await service.getModpackImages(modpackId);
         if (result.success && result.data) setImages(result.data);
       } else {
-        const result = await R2UploadService.uploadToR2(file, modpackId, type);
+        await R2UploadService.uploadToR2(file, modpackId, type);
         // The register-modpack-upload function has already updated the database
         // Fetch the updated modpack data to get the new image URL
         const { data: modpackData } = await supabase
           .from('modpacks')
           .select('logo_url, banner_url')
           .eq('id', modpackId)
-          .single();
+          .single() as { data: { logo_url?: string; banner_url?: string } | null };
 
         if (modpackData) {
           const imageUrl = type === 'logo' ? modpackData.logo_url : modpackData.banner_url;
@@ -399,10 +399,10 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
         } as any);
       } else {
         // Update existing version with changelog
-        await supabase
-          .from('modpack_versions')
+        await (supabase
+          .from('modpack_versions') as any)
           .update({ changelog_i18n: changelog })
-          .eq('id', existingVersion.id);
+          .eq('id', (existingVersion as any).id);
       }
 
       toast.success('New version published!', { id: toastId });

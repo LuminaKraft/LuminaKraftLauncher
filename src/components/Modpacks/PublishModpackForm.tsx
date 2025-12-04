@@ -371,7 +371,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
       return updatedFile;
     } catch (error) {
       console.error('[ZIP] Failed to create updated ZIP, using original:', error);
-      toast.warning('Could not create updated ZIP with overrides, using original file');
+      toast.error('Could not create updated ZIP with overrides, using original file');
       return zipFile!;
     }
   };

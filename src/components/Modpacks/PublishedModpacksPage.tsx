@@ -19,6 +19,7 @@ interface Modpack {
   modloader: string;
   upload_status: string;
   is_active: boolean;
+  is_coming_soon?: boolean;
   logo_url: string | null;
   created_at: string;
   updated_at: string;
