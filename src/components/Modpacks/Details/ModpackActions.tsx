@@ -68,6 +68,18 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({ modpack, state, isReadO
 
     // Read-only mode (Home/Explore): Show Install or Installed only
     if (isReadOnly) {
+      // Show installing/updating state in read-only mode
+      if (['installing', 'updating'].includes(state.status)) {
+        return {
+          icon: Loader2,
+          label: state.status === 'installing' ? t('modpacks.installing') : t('modpacks.updating'),
+          bgColor: 'bg-lumina-500/50 cursor-not-allowed',
+          textColor: 'text-white/70',
+          spinning: true,
+          disabled: true
+        };
+      }
+
       if (['installed', 'outdated', 'error'].includes(state.status)) {
         return {
           icon: Download,
