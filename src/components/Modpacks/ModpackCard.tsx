@@ -30,8 +30,6 @@ const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect
   const [showProfileOptionsModal, setShowProfileOptionsModal] = useState(false);
   const [instanceMetadata, setInstanceMetadata] = useState<any>(null);
 
-
-
   const getServerStatusBadge = () => {
     // Priority: New > Coming Soon (don't show Active if it's New or Coming Soon)
     if (modpack.isNew) {
@@ -95,6 +93,17 @@ const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect
 
     // Read-only mode (Home/Explore): Show Install or Installed (disabled) only
     if (isReadOnly) {
+      // Show installing/updating state
+      if (['installing', 'updating'].includes(state.status)) {
+        return {
+          text: state.status === 'installing' ? t('modpacks.installing') : t('modpacks.updating'),
+          icon: Loader2,
+          onClick: () => { },
+          className: 'btn-secondary',
+          disabled: true
+        };
+      }
+
       if (['installed', 'outdated', 'error'].includes(state.status)) {
         return {
           text: t('modpacks.installed'),
