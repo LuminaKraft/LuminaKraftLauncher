@@ -528,7 +528,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
             const startProgress = 30 + (i * (10 / screenshotFiles.length));
             await R2UploadService.uploadToR2(screenshotFiles[i], modpackId, 'screenshot', (progress) => {
               setUploadProgress(startProgress + (progress.percent * (10 / screenshotFiles.length) / 100));
-            });
+            }, i); // Pass sort order (index)
           }
         } catch (error) {
           console.error('[Screenshot] Upload failed:', error);

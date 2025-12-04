@@ -212,7 +212,9 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
     const toastId = toast.loading('Uploading image...');
     try {
       if (type === 'screenshot') {
-        await R2UploadService.uploadToR2(file, modpackId, 'screenshot');
+        // Pass current image count as sort order for new screenshots
+        const sortOrder = images.length;
+        await R2UploadService.uploadToR2(file, modpackId, 'screenshot', undefined, sortOrder);
         // Refresh images
         const result = await service.getModpackImages(modpackId);
         if (result.success && result.data) setImages(result.data);

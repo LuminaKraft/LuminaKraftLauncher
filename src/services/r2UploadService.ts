@@ -39,13 +39,15 @@ export class R2UploadService {
    * @param modpackId - Modpack ID
    * @param fileType - Type of file: 'modpack', 'logo', 'banner', 'screenshot'
    * @param onProgress - Progress callback
+   * @param sortOrder - Sort order for screenshots (optional)
    * @returns Upload result with file URL
    */
   async uploadToR2(
     file: File,
     modpackId: string,
     fileType: 'modpack' | 'logo' | 'banner' | 'screenshot' = 'modpack',
-    onProgress?: (progress: UploadProgress) => void
+    onProgress?: (progress: UploadProgress) => void,
+    sortOrder?: number
   ): Promise<{ fileUrl: string; fileSize: number; fileSha256?: string }> {
     try {
       console.log(`📤 Uploading ${fileType}:`, file.name, `(${(file.size / 1024 / 1024).toFixed(2)}MB)`);
@@ -119,20 +121,27 @@ export class R2UploadService {
 
       // Step 3: Register upload in database
       console.log('💾 Registering upload in database...');
+      const registerBody: any = {
+        modpackId,
+        fileType,
+        fileUrl: publicUrl,
+        fileKey,
+        fileSize: file.size,
+        fileSha256,
+      };
+
+      // Include sortOrder for screenshots
+      if (fileType === 'screenshot' && sortOrder !== undefined) {
+        registerBody.sortOrder = sortOrder;
+      }
+
       const registerResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/register-modpack-upload`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          modpackId,
-          fileType,
-          fileUrl: publicUrl,
-          fileKey,
-          fileSize: file.size,
-          fileSha256,
-        }),
+        body: JSON.stringify(registerBody),
       });
 
       if (!registerResponse.ok) {
