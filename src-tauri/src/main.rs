@@ -158,6 +158,55 @@ async fn get_cached_modpack_data(modpack_id: String) -> Result<Option<String>, S
 }
 
 #[tauri::command]
+async fn update_modpack_cache_json(
+    modpack_id: String,
+    updates: serde_json::Value,
+) -> Result<(), String> {
+    let launcher_dir = match dirs::data_dir() {
+        Some(dir) => dir.join("LKLauncher"),
+        None => return Err("Failed to get app data directory".to_string()),
+    };
+
+    let cache_path = launcher_dir
+        .join("caches")
+        .join("modpacks")
+        .join(format!("{}.json", modpack_id));
+
+    // Read existing cache if it exists
+    let mut cache_data: serde_json::Value = if cache_path.exists() {
+        match std::fs::read_to_string(&cache_path) {
+            Ok(content) => match serde_json::from_str(&content) {
+                Ok(data) => data,
+                Err(e) => return Err(format!("Failed to parse cached modpack data: {}", e)),
+            },
+            Err(e) => return Err(format!("Failed to read cached modpack data: {}", e)),
+        }
+    } else {
+        serde_json::json!({})
+    };
+
+    // Merge updates into cache
+    if let serde_json::Value::Object(ref mut map) = cache_data {
+        if let serde_json::Value::Object(updates_map) = updates {
+            for (key, value) in updates_map {
+                map.insert(key, value);
+            }
+        }
+    }
+
+    // Write updated cache
+    let json_str = match serde_json::to_string_pretty(&cache_data) {
+        Ok(s) => s,
+        Err(e) => return Err(format!("Failed to serialize cache data: {}", e)),
+    };
+
+    match std::fs::write(&cache_path, json_str) {
+        Ok(_) => Ok(()),
+        Err(e) => Err(format!("Failed to write cached modpack data: {}", e)),
+    }
+}
+
+#[tauri::command]
 async fn save_modpack_metadata_json(
     modpack_id: String,
     modpack_json: String
@@ -1148,6 +1197,7 @@ fn main() {
             get_system_ram,
             get_instance_metadata,
             get_cached_modpack_data,
+            update_modpack_cache_json,
             save_modpack_metadata_json,
             get_file_as_data_url,
             update_instance_ram_settings,

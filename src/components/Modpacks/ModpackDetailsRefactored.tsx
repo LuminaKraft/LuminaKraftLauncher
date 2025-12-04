@@ -25,9 +25,10 @@ interface ModpackDetailsProps {
   onBack: () => void;
   features?: any[] | null;
   isReadOnly?: boolean; // Read-only mode: hide management actions
+  onModpackUpdated?: (updates: { name?: string; logo?: string; backgroundImage?: string }) => void; // Called when modpack is updated
 }
 
-const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack, isReadOnly = false }) => {
+const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack, isReadOnly = false, onModpackUpdated }) => {
   const { t } = useTranslation();
   const { modpackStates } = useLauncher();
   const { getAnimationClass, getAnimationStyle } = useAnimation();
@@ -135,10 +136,25 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
   }, [modpack.id]);
 
   // Use modpack fields directly (translations/features are now in modpack details)
+  // Use modpack.name as source of truth - it's updated immediately when edited
   const displayName = modpack.name;
   const displayDescription = modpack.description;
   // Defensive: always use features from modpack details, fallback to []
   const resolvedFeatures = Array.isArray((modpack as any).features) ? (modpack as any).features : [];
+
+  const reloadInstanceMetadata = async () => {
+    try {
+      const metadataJson = await invoke<string | null>('get_instance_metadata', {
+        modpackId: modpack.id
+      });
+
+      if (metadataJson) {
+        setInstanceMetadata(JSON.parse(metadataJson));
+      }
+    } catch (error) {
+      console.error('Failed to reload instance metadata:', error);
+    }
+  };
 
   // Get server status badge (only New and Coming Soon, not Active/Inactive)
   const getServerStatusBadge = () => {
@@ -461,11 +477,13 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
       {/* Profile Options Modal - Outside scrollable area */}
       <ProfileOptionsModal
         modpackId={modpack.id}
-        modpackName={modpack.name}
+        modpackName={displayName}
         isOpen={showProfileOptions}
         onClose={() => setShowProfileOptions(false)}
         isLocalModpack={!modpack.urlModpackZip}
         metadata={instanceMetadata}
+        onSaveComplete={reloadInstanceMetadata}
+        onModpackUpdated={onModpackUpdated}
       />
     </div>
   );

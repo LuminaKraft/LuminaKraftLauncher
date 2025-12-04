@@ -694,17 +694,23 @@ pub async fn save_modpack_image(
     // Ensure images directory exists
     tokio::fs::create_dir_all(&modpack_images_dir).await?;
 
-    // Determine file extension from original filename, or use default
-    let extension = std::path::Path::new(file_name)
-        .extension()
-        .and_then(|ext| ext.to_str())
-        .unwrap_or("jpg");
+    // Delete previous images of this type (e.g., logo_*.png or banner_*.jpeg)
+    if let Ok(mut entries) = tokio::fs::read_dir(&modpack_images_dir).await {
+        while let Ok(Some(entry)) = entries.next_entry().await {
+            let path = entry.path();
+            if let Some(file_name_str) = path.file_name().and_then(|n| n.to_str()) {
+                if file_name_str.starts_with(&format!("{}_", image_type)) {
+                    let _ = tokio::fs::remove_file(&path).await;
+                    println!("🗑️  Deleted old {} image: {:?}", image_type, file_name_str);
+                }
+            }
+        }
+    }
 
-    // Save image with type-based filename
-    let image_file_name = format!("{}.{}", image_type, extension);
-    let image_path = modpack_images_dir.join(&image_file_name);
-
+    // Save image with provided filename (includes random ID)
+    let image_path = modpack_images_dir.join(file_name);
     tokio::fs::write(&image_path, image_data).await?;
+    println!("💾 Saved {} image: {}", image_type, file_name);
 
     // Update modpack metadata JSON with new image path
     let cache_dir = launcher_dir.join("caches").join("modpacks");
@@ -714,7 +720,7 @@ pub async fn save_modpack_image(
         if let Ok(content) = tokio::fs::read_to_string(&metadata_path).await {
             if let Ok(mut metadata) = serde_json::from_str::<serde_json::Value>(&content) {
                 // Create relative path for storage (will be resolved at runtime)
-                let relative_path = format!("caches/modpacks/{}/images/{}", modpack_id, image_file_name);
+                let relative_path = format!("caches/modpacks/{}/images/{}", modpack_id, file_name);
 
                 if image_type == "logo" {
                     metadata["logo"] = serde_json::Value::String(relative_path);
@@ -724,7 +730,7 @@ pub async fn save_modpack_image(
 
                 let updated_json = serde_json::to_string_pretty(&metadata)?;
                 tokio::fs::write(&metadata_path, updated_json).await?;
-                println!("✅ Saved {} image for modpack {}", image_type, modpack_id);
+                println!("✅ Updated cache JSON for {} image for modpack {}", image_type, modpack_id);
             }
         }
     }

@@ -12,6 +12,8 @@ interface ProfileOptionsModalProps {
   isOpen: boolean;
   onClose: () => void;
   isLocalModpack?: boolean; // True if imported locally, not from server
+  onSaveComplete?: () => void; // Called after successful save to refresh parent data
+  onModpackUpdated?: (updates: { name?: string; logo?: string; backgroundImage?: string }) => void; // Called to update parent state
   metadata?: {
     recommendedRam?: number;
     ramAllocation?: string;
@@ -25,6 +27,8 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
   isOpen,
   onClose,
   isLocalModpack = false,
+  onSaveComplete,
+  onModpackUpdated,
   metadata
 }) => {
   const { t } = useTranslation();
@@ -44,6 +48,10 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
   const [editingName, setEditingName] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
+  const [selectedLogoFile, setSelectedLogoFile] = useState<File | null>(null);
+  const [selectedBannerFile, setSelectedBannerFile] = useState<File | null>(null);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
+  const [bannerPreviewUrl, setBannerPreviewUrl] = useState<string | null>(null);
 
   // Load cached images when modal opens
   useEffect(() => {
@@ -108,9 +116,16 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
     }
   };
 
+  // Generate random ID for image filenames
+  const generateImageId = () => Math.random().toString(36).substring(2, 10);
+
   const handleSave = async () => {
     setIsSaving(true);
     try {
+      // Track what was updated
+      const updates: { name?: string; logo?: string; backgroundImage?: string } = {};
+      const cacheUpdates: { [key: string]: string } = {};
+
       // Update name if it changed (for local modpacks only)
       if (isLocalModpack && displayName !== modpackName) {
         const metadata = await invoke<string>('get_instance_metadata', { modpackId });
@@ -121,6 +136,61 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
             modpackId,
             modpackJson: JSON.stringify(parsed)
           });
+          updates.name = displayName;
+          cacheUpdates.name = displayName;
+        }
+      }
+
+      // If logo was selected, save it with random ID
+      if (isLocalModpack && selectedLogoFile) {
+        const logoId = generateImageId();
+        const arrayBuffer = await selectedLogoFile.arrayBuffer();
+        const bytes = Array.from(new Uint8Array(arrayBuffer));
+
+        await invoke('save_modpack_image', {
+          modpackId,
+          imageType: 'logo',
+          imageData: bytes,
+          fileName: `logo_${logoId}.png`
+        });
+
+        const logoPath = `caches/modpacks/${modpackId}/images/logo_${logoId}.png`;
+        updates.logo = logoPath;
+        cacheUpdates.logo = logoPath;
+        setSelectedLogoFile(null);
+        setLogoPreviewUrl(null);
+      }
+
+      // If banner was selected, save it with random ID
+      if (isLocalModpack && selectedBannerFile) {
+        const bannerId = generateImageId();
+        const arrayBuffer = await selectedBannerFile.arrayBuffer();
+        const bytes = Array.from(new Uint8Array(arrayBuffer));
+
+        await invoke('save_modpack_image', {
+          modpackId,
+          imageType: 'banner',
+          imageData: bytes,
+          fileName: `banner_${bannerId}.jpeg`
+        });
+
+        const bannerPath = `caches/modpacks/${modpackId}/images/banner_${bannerId}.jpeg`;
+        updates.backgroundImage = bannerPath;
+        cacheUpdates.backgroundImage = bannerPath;
+        setSelectedBannerFile(null);
+        setBannerPreviewUrl(null);
+      }
+
+      // Update cache JSON if there are changes
+      if (Object.keys(cacheUpdates).length > 0) {
+        try {
+          await invoke('update_modpack_cache_json', {
+            modpackId,
+            updates: cacheUpdates
+          });
+        } catch (error) {
+          console.error('Warning: Failed to update cache JSON:', error);
+          // Non-fatal error - continue anyway
         }
       }
 
@@ -132,6 +202,17 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
       });
 
       toast.success(t('settings.saved'));
+
+      // Notify parent about updates
+      if (onModpackUpdated && Object.keys(updates).length > 0) {
+        onModpackUpdated(updates);
+      }
+
+      // Notify parent to refresh data
+      if (onSaveComplete) {
+        onSaveComplete();
+      }
+
       onClose();
     } catch (error) {
       console.error('Failed to save settings:', error);
@@ -141,50 +222,28 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
     }
   };
 
-  const handleImageUpload = async (imageType: 'logo' | 'banner', file: File) => {
-    try {
-      const arrayBuffer = await file.arrayBuffer();
-      const bytes = Array.from(new Uint8Array(arrayBuffer));
-
-      await invoke('save_modpack_image', {
-        modpackId,
-        imageType,
-        imageData: bytes,
-        fileName: file.name
-      });
-
-      // Refresh image after upload
-      if (appDataDirRef.current) {
-        try {
-          const imagePath = imageType === 'logo'
-            ? `${appDataDirRef.current}/caches/modpacks/${modpackId}/images/logo.png`
-            : `${appDataDirRef.current}/caches/modpacks/${modpackId}/images/banner.jpeg`;
-          const imageUrl = await invoke<string>('get_file_as_data_url', { filePath: imagePath });
-          if (imageType === 'logo') {
-            setLogoUrl(imageUrl);
-          } else {
-            setBannerUrl(imageUrl);
-          }
-        } catch {
-          // Silently fail, image will just show placeholder
-        }
+  const handleImageUpload = (imageType: 'logo' | 'banner', file: File) => {
+    // Create preview URL
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const preview = e.target?.result as string;
+      if (imageType === 'logo') {
+        setSelectedLogoFile(file);
+        setLogoPreviewUrl(preview);
+      } else {
+        setSelectedBannerFile(file);
+        setBannerPreviewUrl(preview);
       }
-
-      const key = imageType === 'logo' ? 'logoUpdated' : 'bannerUpdated';
-      toast.success(t(`settings.${key}`));
-    } catch (error) {
-      console.error(`Failed to upload ${imageType}:`, error);
-      const key = imageType === 'logo' ? 'logoUpdateFailed' : 'bannerUpdateFailed';
-      toast.error(t(`settings.${key}`));
-    }
+    };
+    reader.readAsDataURL(file);
   };
 
   const MIN_RAM = 512; // 512MB minimum
   const MAX_RAM = 32768; // 32GB maximum
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-8 overflow-hidden">
-      <div className="bg-dark-800 rounded-lg p-6 max-w-2xl w-full border border-dark-600 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-8 overflow-hidden pointer-events-auto">
+      <div className="bg-dark-800 rounded-lg p-6 max-w-2xl w-full border border-dark-600 max-h-[90vh] overflow-y-auto pointer-events-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-white">{t('profileOptions.title')}</h2>
@@ -241,32 +300,36 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
             <div className="flex items-center gap-4">
               {/* Logo */}
               <div
-                className="relative w-16 h-16 rounded-lg bg-dark-700 flex-shrink-0 group cursor-pointer overflow-hidden"
+                className="relative w-16 h-16 rounded-lg bg-dark-700 flex-shrink-0 cursor-pointer overflow-hidden hover-group"
                 onClick={() => logoInputRef.current?.click()}
               >
-                {logoUrl ? (
+                {logoPreviewUrl ? (
+                  <img src={logoPreviewUrl} alt="Logo Preview" className="w-full h-full object-cover" />
+                ) : logoUrl ? (
                   <img src={logoUrl} alt="Logo" className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold">
                     {displayName.charAt(0).toUpperCase()}
                   </div>
                 )}
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
                   <span className="text-white text-xs font-medium">Cambiar</span>
                 </div>
               </div>
 
               {/* Banner */}
               <div
-                className="relative flex-1 h-16 rounded-lg bg-dark-700 group cursor-pointer overflow-hidden"
+                className="relative flex-1 h-16 rounded-lg bg-dark-700 cursor-pointer overflow-hidden hover-group"
                 onClick={() => bannerInputRef.current?.click()}
               >
-                {bannerUrl ? (
+                {bannerPreviewUrl ? (
+                  <img src={bannerPreviewUrl} alt="Banner Preview" className="w-full h-full object-cover" />
+                ) : bannerUrl ? (
                   <img src={bannerUrl} alt="Banner" className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-r from-purple-500 to-pink-600"></div>
                 )}
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
                   <span className="text-white text-xs font-medium">Cambiar</span>
                 </div>
               </div>

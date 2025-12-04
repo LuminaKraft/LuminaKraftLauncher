@@ -280,6 +280,34 @@ export function MyModpacksPage() {
   };
 
   /**
+   * Update modpack in cache when edited
+   */
+  const handleModpackUpdated = async (modpackId: string, updates: { name?: string; logo?: string; backgroundImage?: string }) => {
+    try {
+      // Get current modpack from map
+      const currentModpack = modpackDataMap.get(modpackId);
+      if (!currentModpack) return;
+
+      // Create updated modpack with new values
+      const updated: Modpack = {
+        ...currentModpack,
+        ...updates
+      };
+
+      // If paths were updated, load the images as data URLs
+      if (updates.logo || updates.backgroundImage) {
+        const resolved = await resolveImagePaths(updated);
+        setModpackDataMap(prev => new Map(prev).set(modpackId, resolved));
+      } else {
+        // Just update the name
+        setModpackDataMap(prev => new Map(prev).set(modpackId, updated));
+      }
+    } catch (error) {
+      console.error('Failed to update modpack:', error);
+    }
+  };
+
+  /**
    * Handle import button click
    */
   const handleImportModpack = () => {
@@ -520,6 +548,7 @@ export function MyModpacksPage() {
             state={state}
             onBack={handleBackToList}
             isReadOnly={false}
+            onModpackUpdated={(updates) => handleModpackUpdated(selectedModpackId!, updates)}
           />
         </div>
       );
@@ -647,6 +676,7 @@ export function MyModpacksPage() {
                   onSelect={() => handleModpackSelect(id)}
                   index={index}
                   hideServerBadges={true}
+                  onModpackUpdated={(updates) => handleModpackUpdated(id, updates)}
                 />
               );
             })}
@@ -704,6 +734,7 @@ export function MyModpacksPage() {
                   onSelect={() => handleModpackSelect(instance.id)}
                   index={index + installingIds.length}
                   hideServerBadges={true}
+                  onModpackUpdated={(updates) => handleModpackUpdated(instance.id, updates)}
                 />
               );
             })}

@@ -19,9 +19,10 @@ interface ModpackCardProps {
   hideServerBadges?: boolean; // Hide category and status badges for local modpacks
   isReadOnly?: boolean; // Read-only mode: only show Install/Installed buttons (for Home/Explore)
   onNavigateToMyModpacks?: () => void; // Callback to navigate to My Modpacks after install
+  onModpackUpdated?: (updates: { name?: string; logo?: string; backgroundImage?: string }) => void; // Called when modpack is updated
 }
 
-const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect, index = 0, hideServerBadges = false, isReadOnly = false, onNavigateToMyModpacks }) => {
+const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect, index = 0, hideServerBadges = false, isReadOnly = false, onNavigateToMyModpacks, onModpackUpdated }) => {
   const { t } = useTranslation();
   const { getAnimationClass, getAnimationStyle } = useAnimation();
   const { installModpack, updateModpack, launchModpack, repairModpack, removeModpack, stopInstance } = useLauncher();
@@ -286,8 +287,23 @@ const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect
     ? fakeLaunchProgress
     : state.progress?.percentage ?? 0;
 
+  // Use modpack.name as source of truth - it's updated immediately when edited in MyModpacksPage
   const displayName = modpack.name;
   const displayDescription = modpack.shortDescription || modpack.description || '';
+
+  const reloadInstanceMetadata = async () => {
+    try {
+      const metadataJson = await invoke<string | null>('get_instance_metadata', {
+        modpackId: modpack.id
+      });
+
+      if (metadataJson) {
+        setInstanceMetadata(JSON.parse(metadataJson));
+      }
+    } catch (error) {
+      console.error('Failed to reload instance metadata:', error);
+    }
+  };
 
   // Parse general message format: "progress.key|counter" or just "progress.key"
   const parseGeneralMessage = (message?: string): { translatedMessage: string; counter?: string } => {
@@ -677,6 +693,8 @@ const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect
         onClose={() => setShowProfileOptionsModal(false)}
         isLocalModpack={!modpack.urlModpackZip}
         metadata={instanceMetadata}
+        onSaveComplete={reloadInstanceMetadata}
+        onModpackUpdated={onModpackUpdated}
       />
     </div>
   );
