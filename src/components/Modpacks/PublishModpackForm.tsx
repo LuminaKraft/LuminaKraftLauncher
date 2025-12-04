@@ -1615,8 +1615,9 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
             }}
             onContinue={(uploadedFiles) => {
               setShowValidationDialog(false);
-              if (uploadedFiles) {
+              if (uploadedFiles && uploadedFiles.size > 0) {
                 setPendingUploadedFiles(uploadedFiles);
+                setShowDownloadDialog(true);
               }
             }}
             modpackName={validationData.modpackName}
