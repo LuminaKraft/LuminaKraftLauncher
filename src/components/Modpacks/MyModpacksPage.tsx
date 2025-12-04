@@ -30,6 +30,7 @@ export function MyModpacksPage() {
   const launcherService = LauncherService.getInstance();
   const { installModpackFromZip, modpackStates } = useLauncher();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const lastProcessedStateRef = useRef<string>('');
 
   // State management
   const [instances, setInstances] = useState<LocalInstance[]>([]);
@@ -58,12 +59,22 @@ export function MyModpacksPage() {
   // Listen for installation state changes and reload
   useEffect(() => {
     const handleStateChange = async () => {
-      const installingIds = Object.entries(modpackStates)
-        .filter(([_, state]) => state.status === 'installing')
-        .map(([id]) => id);
-
       const installedIds = Object.entries(modpackStates)
         .filter(([_, state]) => state.status === 'installed')
+        .map(([id]) => id);
+
+      // Create a hash of current state to prevent duplicate processing
+      const currentStateHash = JSON.stringify(installedIds.sort());
+
+      // Only process if state has actually changed
+      if (lastProcessedStateRef.current === currentStateHash) {
+        return;
+      }
+
+      lastProcessedStateRef.current = currentStateHash;
+
+      const installingIds = Object.entries(modpackStates)
+        .filter(([_, state]) => state.status === 'installing')
         .map(([id]) => id);
 
       // If a modpack just finished installing, save correct metadata and reload
@@ -93,7 +104,7 @@ export function MyModpacksPage() {
     };
 
     handleStateChange();
-  }, [modpackStates, instances]);
+  }, [modpackStates]);
 
   /**
    * Save complete modpack metadata from localStorage to override incomplete backend metadata
@@ -369,14 +380,26 @@ export function MyModpacksPage() {
           id: loadingToast,
           duration: 5000
         });
+
+        // Now import the original ZIP with the added overrides
+        setShowDownloadDialog(false);
+        toast.loading('Installing modpack with overrides...', { id: 'import-toast' });
+
+        try {
+          await performImport(validationData.file);
+          toast.dismiss('import-toast');
+        } catch (importError) {
+          toast.error('Failed to install modpack', { id: 'import-toast' });
+          console.error('Import failed:', importError);
+        }
+
+        setPendingUploadedFiles(null);
+        setValidationData(null);
       } catch (error) {
         console.error('Error creating modpack with overrides:', error);
         toast.error('Failed to create updated modpack', { id: loadingToast });
+        setShowDownloadDialog(false);
       }
-
-      // Now import
-      await performImport(validationData.file);
-      setPendingUploadedFiles(null);
     }
   };
 
