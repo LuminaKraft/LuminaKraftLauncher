@@ -849,9 +849,9 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
             </div>
 
             {/* Upload ZIP Section */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
-              <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-                {t('publishModpack.steps.uploadDesc')} {formData.isComingSoon && <span className="text-sm text-gray-500 dark:text-gray-400 font-normal">{t('publishModpack.upload.optional')}</span>}
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-md">
+              <h2 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white">
+                {t('publishModpack.steps.uploadDesc')} {formData.isComingSoon && <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">{t('publishModpack.upload.optional')}</span>}
               </h2>
               <div
                 onDragOver={handleDragOver}
@@ -859,9 +859,9 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
                 className={`
-              relative border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-all duration-200
+              relative border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all duration-200 min-h-0
               ${isDragging
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 scale-[1.02]'
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                     : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-gray-50 dark:hover:bg-gray-800/50'
                   }
             `}
@@ -877,37 +877,33 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                   className="hidden"
                   required
                 />
-                <div className="flex flex-col items-center gap-4">
+                <div className="flex flex-col items-center gap-2">
                   {isParsing ? (
                     <>
-                      <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600"></div>
-                      <p className="text-lg text-gray-600 dark:text-gray-400 font-medium">{t('publishModpack.upload.parsing')}</p>
+                      <div className="animate-spin rounded-full h-10 w-10 border-b-4 border-blue-600"></div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">{t('publishModpack.upload.parsing')}</p>
                     </>
                   ) : zipFile ? (
-                    <>
-                      <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-2">
-                        <FileArchive className="w-10 h-10 text-green-600 dark:text-green-400" />
-                      </div>
-                      <div>
-                        <p className="text-xl font-bold text-gray-900 dark:text-white mb-1">
-                          {zipFile.name}
-                        </p>
-                        <div className="flex items-center justify-center gap-2">
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
-                            {(getUpdatedZipSize() / 1024 / 1024).toFixed(2)} MB
-                          </p>
-                          {pendingUploadedFiles && pendingUploadedFiles.size > 0 && (
-                            <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full font-medium">
-                              +{pendingUploadedFiles.size}
-                            </span>
-                          )}
+                    <div className="flex items-center justify-between w-full gap-3">
+                      <div className="flex items-center gap-2 flex-1">
+                        <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <FileArchive className="w-6 h-6 text-green-600 dark:text-green-400" />
                         </div>
-                        {manifestParsed && (
-                          <div className="flex items-center justify-center gap-2 mt-3 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-full text-sm font-medium">
-                            <Check className="w-4 h-4" />
-                            <span>{t('publishModpack.upload.parseSuccess')}</span>
+                        <div className="text-left min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                            {zipFile.name}
+                          </p>
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {(getUpdatedZipSize() / 1024 / 1024).toFixed(2)} MB
+                            </p>
+                            {pendingUploadedFiles && pendingUploadedFiles.size > 0 && (
+                              <span className="text-xs bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded font-medium">
+                                +{pendingUploadedFiles.size}
+                              </span>
+                            )}
                           </div>
-                        )}
+                        </div>
                       </div>
                       <button
                         type="button"
@@ -917,21 +913,20 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                           resetValidation();
                           if (fileInputRef.current) fileInputRef.current.value = '';
                         }}
-                        className="mt-4 px-4 py-2 text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors flex-shrink-0"
+                        title={t('publishModpack.upload.remove')}
                       >
-                        {t('publishModpack.upload.remove')}
+                        <X className="w-5 h-5" />
                       </button>
-                    </>
+                    </div>
                   ) : (
                     <>
-                      <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-                        <Upload className="w-10 h-10 text-blue-600 dark:text-blue-400" />
-                      </div>
+                      <Upload className="w-8 h-8 text-blue-600 dark:text-blue-400 mb-1" />
                       <div>
-                        <p className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white">
                           {t('publishModpack.upload.dragDropAlt')}
                         </p>
-                        <p className="text-gray-500 dark:text-gray-400">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                           {t('publishModpack.upload.formatInfo')}
                         </p>
                       </div>
