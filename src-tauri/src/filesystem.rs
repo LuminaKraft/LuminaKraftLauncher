@@ -637,4 +637,59 @@ pub async fn create_modpack_with_overrides(
     emit_progress("complete", "ZIP file created successfully!", total_steps, total_steps);
     println!("✅ New modpack ZIP created successfully: {:?}", output_zip_path);
     Ok(())
+}
+
+/// Save modpack image (logo or banner) to cache
+pub async fn save_modpack_image(
+    modpack_id: &str,
+    image_type: &str, // "logo" or "banner"
+    image_data: Vec<u8>,
+    file_name: &str,
+) -> Result<()> {
+    let launcher_dir = get_launcher_data_dir()?;
+    let modpack_images_dir = launcher_dir
+        .join("cache")
+        .join("modpacks")
+        .join(modpack_id)
+        .join("images");
+
+    // Ensure images directory exists
+    tokio::fs::create_dir_all(&modpack_images_dir).await?;
+
+    // Determine file extension from original filename, or use default
+    let extension = std::path::Path::new(file_name)
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .unwrap_or("jpg");
+
+    // Save image with type-based filename
+    let image_file_name = format!("{}.{}", image_type, extension);
+    let image_path = modpack_images_dir.join(&image_file_name);
+
+    tokio::fs::write(&image_path, image_data).await?;
+
+    // Update modpack metadata JSON with new image path
+    let cache_dir = launcher_dir.join("cache").join("modpacks");
+    let metadata_path = cache_dir.join(format!("{}.json", modpack_id));
+
+    if metadata_path.exists() {
+        if let Ok(content) = tokio::fs::read_to_string(&metadata_path).await {
+            if let Ok(mut metadata) = serde_json::from_str::<serde_json::Value>(&content) {
+                // Create relative path for storage (will be resolved at runtime)
+                let relative_path = format!("cache/modpacks/{}/images/{}", modpack_id, image_file_name);
+
+                if image_type == "logo" {
+                    metadata["logo"] = serde_json::Value::String(relative_path);
+                } else if image_type == "banner" {
+                    metadata["backgroundImage"] = serde_json::Value::String(relative_path);
+                }
+
+                let updated_json = serde_json::to_string_pretty(&metadata)?;
+                tokio::fs::write(&metadata_path, updated_json).await?;
+                println!("✅ Saved {} image for modpack {}", image_type, modpack_id);
+            }
+        }
+    }
+
+    Ok(())
 } 

@@ -207,6 +207,19 @@ async fn update_instance_ram_settings(
 }
 
 #[tauri::command]
+async fn save_modpack_image(
+    modpack_id: String,
+    image_type: String,
+    image_data: Vec<u8>,
+    file_name: String
+) -> Result<(), String> {
+    match filesystem::save_modpack_image(&modpack_id, &image_type, image_data, &file_name).await {
+        Ok(_) => Ok(()),
+        Err(e) => Err(format!("Failed to save modpack image: {}", e)),
+    }
+}
+
+#[tauri::command]
 async fn get_local_modpacks() -> Result<String, String> {
     match filesystem::list_instances().await {
         Ok(instances) => {
@@ -1135,6 +1148,7 @@ fn main() {
             add_mods_to_instance,
             create_modpack_with_overrides,
             install_modpack_from_local_zip,
+            save_modpack_image,
             oauth::start_oauth_server,
         ])
         .setup(|app| {
