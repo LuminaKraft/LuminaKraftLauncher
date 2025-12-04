@@ -360,17 +360,17 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
         const fileBuffer = await file.arrayBuffer();
         const filePath = `overrides/mods/${file.name}`;
         originalZip.file(filePath, fileBuffer);
-        console.log(`✅ Added to ZIP: ${filePath}`);
+        console.log(`[ZIP] Added to ZIP: ${filePath}`);
       }
 
       // Generate new ZIP
       const updatedZipBlob = await originalZip.generateAsync({ type: 'blob' });
       const updatedFile = new File([updatedZipBlob], zipFile.name, { type: 'application/zip' });
 
-      console.log(`📦 Created updated ZIP with ${pendingUploadedFiles.size} file(s)`);
+      console.log(`[ZIP] Created updated ZIP with ${pendingUploadedFiles.size} file(s)`);
       return updatedFile;
     } catch (error) {
-      console.error('⚠️ Failed to create updated ZIP, using original:', error);
+      console.error('[ZIP] Failed to create updated ZIP, using original:', error);
       toast.warning('Could not create updated ZIP with overrides, using original file');
       return zipFile!;
     }
@@ -504,7 +504,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
             setUploadProgress(10 + (progress.percent * 0.1));
           });
         } catch (error) {
-          console.error('❌ Logo upload failed:', error);
+          console.error('[Logo] Upload failed:', error);
           toast.error(t('publishModpack.messages.uploadError', { error: String(error) }));
           return;
         }
@@ -516,7 +516,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
             setUploadProgress(20 + (progress.percent * 0.1));
           });
         } catch (error) {
-          console.error('❌ Banner upload failed:', error);
+          console.error('[Banner] Upload failed:', error);
           toast.error(t('publishModpack.messages.uploadError', { error: String(error) }));
           return;
         }
@@ -531,7 +531,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
             });
           }
         } catch (error) {
-          console.error('❌ Screenshot upload failed:', error);
+          console.error('[Screenshot] Upload failed:', error);
           toast.error(t('publishModpack.messages.uploadError', { error: String(error) }));
           return;
         }
@@ -585,7 +585,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
           await service.updateModpack(modpackId, { isActive: false });
           setUploadProgress(95);
         } catch (error) {
-          console.error('❌ Modpack file upload failed:', error);
+          console.error('[Modpack ZIP] Upload failed:', error);
           toast.error(t('publishModpack.messages.uploadError', { error: String(error) }));
           return;
         }
@@ -633,6 +633,10 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
       if (currentEffectiveStep?.title === t('publishModpack.steps.basicInfo')) {
         if (!formData.name.en || !formData.name.es) {
           toast.error(t('publishModpack.validation.nameRequired'));
+          return;
+        }
+        if (nameError) {
+          toast.error(nameError);
           return;
         }
         if (!formData.version || !formData.minecraftVersion || !formData.modloaderVersion) {
@@ -1043,7 +1047,8 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                   </div>
                   {nameError && (
                     <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-                      <span>⚠️</span> {nameError}
+                      <AlertCircle className="w-4 h-4" />
+                      {nameError}
                     </p>
                   )}
                 </div>
