@@ -438,7 +438,6 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
     try {
       await service.updateModpack(modpackId, { isActive: newStatus });
       setFormData(prev => prev ? ({ ...prev, isActive: newStatus }) : null);
-      toast.success(newStatus ? 'Modpack is now visible' : 'Modpack is now hidden');
     } catch (error) {
       toast.error('Failed to update visibility');
     } finally {
@@ -453,7 +452,6 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
     try {
       await service.updateModpack(modpackId, { isComingSoon: newStatus });
       setFormData(prev => prev ? ({ ...prev, isComingSoon: newStatus }) : null);
-      toast.success(newStatus ? 'Modpack marked as Coming Soon' : 'Coming Soon status removed');
     } catch (error) {
       toast.error('Failed to update Coming Soon status');
     } finally {
@@ -467,7 +465,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
     try {
       const result = await service.deleteModpack(modpackId);
       if (result.success) {
-        toast.success('Modpack deleted', { id: toastId });
+        toast.dismiss(toastId);
         onNavigate?.('my-modpacks');
       } else {
         throw new Error(result.error);

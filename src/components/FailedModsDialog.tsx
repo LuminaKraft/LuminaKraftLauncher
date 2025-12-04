@@ -106,7 +106,6 @@ export const FailedModsDialog: React.FC<FailedModsDialogProps> = ({
     const newFiles = new Map(uploadedFiles);
     newFiles.set(failedMod.projectId, file);
     setUploadedFiles(newFiles);
-    toast.success(`${file.name} uploaded`);
   };
 
   const handleBulkFileUpload = (files: FileList | File[]) => {
@@ -143,9 +142,6 @@ export const FailedModsDialog: React.FC<FailedModsDialogProps> = ({
 
     setUploadedFiles(newFiles);
 
-    if (matchedCount > 0) {
-      toast.success(`${matchedCount} file(s) matched and uploaded`);
-    }
     if (validFiles.length > matchedCount) {
       toast.error(`${validFiles.length - matchedCount} file(s) could not be matched`);
     }

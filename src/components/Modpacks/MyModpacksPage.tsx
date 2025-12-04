@@ -465,10 +465,7 @@ export function MyModpacksPage() {
         });
 
         unlisten();
-        toast.success(`Updated modpack saved to Downloads: ${outputFileName}`, {
-          id: loadingToast,
-          duration: 5000
-        });
+        toast.dismiss(loadingToast);
 
         // Now import the original ZIP with the added overrides
         setShowDownloadDialog(false);

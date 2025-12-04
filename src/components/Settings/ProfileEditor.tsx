@@ -46,7 +46,6 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ luminaKraftUser, discordA
 
       setDisplayName(tempDisplayName);
       setIsEditing(false);
-      toast.success('Display name updated!');
       onUpdate();
     } catch (error) {
       console.error('Error updating display name:', error);

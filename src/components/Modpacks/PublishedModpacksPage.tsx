@@ -134,7 +134,7 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
       });
 
       if (success) {
-        toast.success(t(!currentState ? 'publishedModpacks.toast.activated' : 'publishedModpacks.toast.deactivated'), { id: toastId });
+        toast.dismiss(toastId);
         loadData(); // Reload to reflect changes
       } else {
         toast.error(t('publishedModpacks.toast.updateError', { error }), { id: toastId });
@@ -170,7 +170,7 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
       const { success, error } = await service.deleteModpack(selectedModpack.id);
 
       if (success) {
-        toast.success(t('publishedModpacks.toast.deleteSuccess'), { id: toastId });
+        toast.dismiss(toastId);
         loadData(); // Reload to reflect changes
       } else {
         toast.error(t('publishedModpacks.toast.deleteError', { error }), { id: toastId });
