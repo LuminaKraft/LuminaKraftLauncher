@@ -159,25 +159,6 @@
       "community": "Comunidad"
     }
   },
-  "errors": {
-    "unknown": "Error desconocido",
-    "downloadFailed": "Error al descargar archivos del modpack",
-    "extractionFailed": "Error al extraer archivos del modpack",
-    "fileNotFound": "Archivo requerido no encontrado: {{file}}",
-    "zipFileNotFound": "Archivo del modpack no encontrado o corrupto",
-    "zipExtractionFailed": "Error al extraer archivo ZIP",
-    "directoryCreationFailed": "Error al crear directorio de instalación",
-    "permissionDenied": "Permisos denegados - verificar permisos de archivo",
-    "diskSpaceFull": "Espacio en disco insuficiente para la instalación",
-    "corruptedFile": "El archivo descargado parece estar corrupto",
-    "networkError": "Error de conexión de red",
-    "failedInstallModpack": "Error al instalar el modpack",
-    "curseforgeUnauthorized": "Error de autenticación de la API de CurseForge. El launcher no está autorizado para acceder a los datos de mods. Por favor, inténtalo más tarde o contacta soporte.",
-    "curseforgeForbidden": "Acceso prohibido a la API de CurseForge. El launcher no tiene permisos para acceder a este contenido.",
-    "curseforgeApiError": "Error al conectar con la API de CurseForge. Por favor, verifica tu conexión a internet e inténtalo de nuevo.",
-    "retryInstallation": "Por favor intenta la instalación de nuevo",
-    "contactSupport": "Si el problema persiste, contacta soporte"
-  },
   "progress": {
     "prefix": "Progreso:",
     "downloadingModpack": "Descargando modpack...",
@@ -1036,6 +1017,22 @@
     "preparingForInstallation": "Preparando el modpack para la instalación. Esto puede tomar un momento..."
   },
   "errors": {
+    "unknown": "Error desconocido",
+    "downloadFailed": "Error al descargar archivos del modpack",
+    "extractionFailed": "Error al extraer archivos del modpack",
+    "fileNotFound": "Archivo requerido no encontrado: {{file}}",
+    "zipFileNotFound": "Archivo del modpack no encontrado o corrupto",
+    "zipExtractionFailed": "Error al extraer archivo ZIP",
+    "directoryCreationFailed": "Error al crear directorio de instalación",
+    "permissionDenied": "Permisos denegados - verificar permisos de archivo",
+    "diskSpaceFull": "Espacio en disco insuficiente para la instalación",
+    "corruptedFile": "El archivo descargado parece estar corrupto",
+    "networkError": "Error de conexión de red",
+    "curseforgeUnauthorized": "Error de autenticación de la API de CurseForge. El launcher no está autorizado para acceder a los datos de mods. Por favor, inténtalo más tarde o contacta soporte.",
+    "curseforgeForbidden": "Acceso prohibido a la API de CurseForge. El launcher no tiene permisos para acceder a este contenido.",
+    "curseforgeApiError": "Error al conectar con la API de CurseForge. Por favor, verifica tu conexión a internet e inténtalo de nuevo.",
+    "retryInstallation": "Por favor intenta la instalación de nuevo",
+    "contactSupport": "Si el problema persiste, contacta soporte",
     "failedValidate": "Error al validar modpack",
     "failedInstallModpack": "Error al instalar el modpack",
     "failedParseManifest": "Error al analizar manifest.json",

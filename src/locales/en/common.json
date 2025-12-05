@@ -161,25 +161,6 @@
       "community": "Community"
     }
   },
-  "errors": {
-    "unknown": "Unknown error occurred",
-    "downloadFailed": "Failed to download modpack files",
-    "extractionFailed": "Failed to extract modpack files",
-    "fileNotFound": "Required file not found: {{file}}",
-    "zipFileNotFound": "Modpack file not found or corrupted",
-    "zipExtractionFailed": "Failed to extract ZIP file",
-    "directoryCreationFailed": "Failed to create installation directory",
-    "permissionDenied": "Permission denied - check file permissions",
-    "diskSpaceFull": "Insufficient disk space for installation",
-    "corruptedFile": "Downloaded file appears to be corrupted",
-    "networkError": "Network connection error",
-    "failedInstallModpack": "Failed to install modpack",
-    "curseforgeUnauthorized": "CurseForge API authentication failed. The launcher is not authorized to access mod data. Please try again later or contact support.",
-    "curseforgeForbidden": "CurseForge API access forbidden. The launcher does not have permission to access this content.",
-    "curseforgeApiError": "Failed to connect to CurseForge API. Please check your internet connection and try again.",
-    "retryInstallation": "Please try the installation again",
-    "contactSupport": "If the problem persists, contact support"
-  },
   "progress": {
     "prefix": "Progress:",
     "downloadingModpack": "Downloading modpack...",
@@ -1037,6 +1018,22 @@
     "preparingForInstallation": "Preparing the modpack for installation. This may take a moment..."
   },
   "errors": {
+    "unknown": "Unknown error occurred",
+    "downloadFailed": "Failed to download modpack files",
+    "extractionFailed": "Failed to extract modpack files",
+    "fileNotFound": "Required file not found: {{file}}",
+    "zipFileNotFound": "Modpack file not found or corrupted",
+    "zipExtractionFailed": "Failed to extract ZIP file",
+    "directoryCreationFailed": "Failed to create installation directory",
+    "permissionDenied": "Permission denied - check file permissions",
+    "diskSpaceFull": "Insufficient disk space for installation",
+    "corruptedFile": "Downloaded file appears to be corrupted",
+    "networkError": "Network connection error",
+    "curseforgeUnauthorized": "CurseForge API authentication failed. The launcher is not authorized to access mod data. Please try again later or contact support.",
+    "curseforgeForbidden": "CurseForge API access forbidden. The launcher does not have permission to access this content.",
+    "curseforgeApiError": "Failed to connect to CurseForge API. Please check your internet connection and try again.",
+    "retryInstallation": "Please try the installation again",
+    "contactSupport": "If the problem persists, contact support",
     "failedValidate": "Failed to validate modpack",
     "failedInstallModpack": "Failed to install modpack",
     "failedParseManifest": "Failed to parse manifest.json",
