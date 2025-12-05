@@ -666,6 +666,11 @@ export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: My
             onBack={handleBackToList}
             isReadOnly={false}
             onModpackUpdated={(updates) => handleModpackUpdated(selectedModpackId!, updates)}
+            onNavigate={(section) => {
+              if (section === 'my-modpacks') {
+                handleBackToList();
+              }
+            }}
           />
         </div>
       );
