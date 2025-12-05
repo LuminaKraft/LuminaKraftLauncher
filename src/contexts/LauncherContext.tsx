@@ -297,11 +297,13 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
         };
 
         // Update userSettings with new Discord info
-        // IMPORTANT: Always preserve clientToken - it's critical for rate limiting
-        const existingClientToken = state.userSettings.clientToken || launcherService.getUserSettings().clientToken;
+        // IMPORTANT: Use launcherService.getUserSettings() to get the LATEST saved settings
+        // This avoids stale closure issues where state.userSettings might be outdated
+        const currentSettings = launcherService.getUserSettings();
+        const existingClientToken = currentSettings.clientToken;
 
         const newSettings = {
-          ...state.userSettings,
+          ...currentSettings, // Use fresh settings, not potentially stale state
           clientToken: existingClientToken, // Ensure clientToken is never lost
           discordAccount: discordAccount
         };
