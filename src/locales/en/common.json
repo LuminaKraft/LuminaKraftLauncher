@@ -132,6 +132,7 @@
     "removing": "Removing...",
     "removeTooltip": "Remove modpack",
     "openFolder": "Instance",
+    "openFolderTooltip": "Open instance folder",
     "stop": "Stop Instance",
     "stopping": "Stopping Instance...",
     "downloads": "Downloads",

@@ -131,6 +131,7 @@
     "removing": "Eliminando...",
     "removeTooltip": "Eliminar modpack",
     "openFolder": "Instancia",
+    "openFolderTooltip": "Abrir carpeta de la instancia",
     "stop": "Detener Instancia",
     "stopping": "Deteniendo Instancia...",
     "downloads": "Descargas",
