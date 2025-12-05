@@ -710,7 +710,11 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
               // Rate limit exceeded
               setRateLimitDialog({
                 isOpen: true,
-                errorCode: rateLimitCheck.errorCode || 'LIMIT_EXCEEDED_MAX',
+                errorCode: rateLimitCheck.errorCode || (
+                  !rateLimitCheck.isAuthenticated ? 'LIMIT_EXCEEDED_ANON' :
+                    !rateLimitCheck.isDiscordMember ? 'LIMIT_EXCEEDED_AUTH' :
+                      'LIMIT_EXCEEDED_MAX'
+                ),
                 limit: rateLimitCheck.limit,
                 resetAt: rateLimitCheck.resetAt
               });

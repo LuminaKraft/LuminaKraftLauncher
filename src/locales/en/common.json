@@ -567,7 +567,7 @@
     "warning": "Download Limit Warning",
     "limit": "Hourly Limit",
     "remaining": "Remaining",
-    "resetIn": "Resets in",
+    "resetIn": "Resets at",
     "linkDiscordTitle": "Get 5x More Downloads!",
     "linkDiscordDesc": "Link your Discord account to increase your download limit from 10 to 50 downloads per hour",
     "linkDiscordAuthDesc": "Sign in and link your Discord account to get 50 downloads per hour instead of just 3",
