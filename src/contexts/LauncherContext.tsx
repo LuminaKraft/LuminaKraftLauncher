@@ -1042,6 +1042,23 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
         .replace(/_{2,}/g, '_')
         .toLowerCase();
 
+      // Save modpack data to localStorage for MyModpacksPage to use
+      // This allows showing the real modpack name instead of "Importing modpack..."
+      try {
+        const modpackData = {
+          id: safeName,
+          name: manifest.name || fileName.replace('.zip', ''),
+          version: manifest.version || '',
+          minecraftVersion: manifest.minecraft?.version || '',
+          modloader: manifest.minecraft?.modLoaders?.[0]?.id?.split('-')[0] || 'forge',
+          modloaderVersion: manifest.minecraft?.modLoaders?.[0]?.id?.split('-')[1] || '',
+          category: 'community'
+        };
+        localStorage.setItem(`installing_modpack_${safeName}`, JSON.stringify(modpackData));
+      } catch (e) {
+        console.warn('Failed to save importing modpack data:', e);
+      }
+
       // Set initial installing state
       dispatch({
         type: 'SET_MODPACK_STATE',
@@ -1054,7 +1071,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
               downloadSpeed: '',
               eta: '',
               step: 'initializing',
-              generalMessage: 'Preparing import...',
+              generalMessage: `Importing ${manifest.name || fileName.replace('.zip', '')}...`,
               detailMessage: ''
             }
           })
@@ -1093,6 +1110,13 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
           state: createModpackState('installed')
         }
       });
+
+      // Clean up localStorage used for import name display
+      try {
+        localStorage.removeItem(`installing_modpack_${safeName}`);
+      } catch (e) {
+        // Ignore cleanup errors
+      }
 
       // Reload instance states to reflect the new installation
       await loadModpackStates();

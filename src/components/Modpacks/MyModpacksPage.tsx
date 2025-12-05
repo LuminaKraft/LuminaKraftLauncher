@@ -746,8 +746,8 @@ export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: My
                   const savedData = localStorage.getItem(`installing_modpack_${id}`);
                   if (savedData) {
                     modpackData = JSON.parse(savedData);
-                    // Clean up localStorage after using it
-                    localStorage.removeItem(`installing_modpack_${id}`);
+                    // Don't remove here - keep for re-renders while installing
+                    // Will be cleaned up after install completes
                   }
                 } catch (error) {
                   console.error('Failed to load modpack from localStorage:', error);
