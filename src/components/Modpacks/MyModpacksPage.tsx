@@ -828,18 +828,16 @@ export function MyModpacksPage() {
         variant="info"
       />
 
-      {/* Validation & Import Progress Modal */}
-      {(showValidationProgress || importingModpackId) && createPortal(
+      {/* Validation Progress Modal - only show during validation, not during import */}
+      {showValidationProgress && createPortal(
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9998]">
           <div className="bg-gradient-to-b from-gray-800 to-gray-900 rounded-lg shadow-2xl p-8 flex flex-col items-center gap-4 w-full max-w-sm">
             <Loader className="w-12 h-12 text-blue-400 animate-spin" />
             <h2 className="text-xl font-semibold text-white text-center">
-              {showValidationProgress ? t('myModpacks.validating') : t('myModpacks.preparingModpack')}
+              {t('myModpacks.validating')}
             </h2>
             <p className="text-sm text-gray-400 text-center">
-              {showValidationProgress
-                ? t('myModpacks.validatingDescription')
-                : t('validation.preparingForInstallation')}
+              {t('myModpacks.validatingDescription')}
             </p>
           </div>
         </div>,
