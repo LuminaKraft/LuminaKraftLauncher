@@ -449,7 +449,14 @@ const AccountPage: React.FC = () => {
                     {/* Join Discord Server button for non-members */}
                     {!discordAccount.isMember && (
                       <button
-                        onClick={() => window.open('https://discord.gg/luminakraft', '_blank')}
+                        onClick={async () => {
+                          try {
+                            await invoke('open_url', { url: 'https://discord.gg/UJZRrcUFMj' });
+                          } catch (error) {
+                            console.warn('Tauri command not available, using fallback:', error);
+                            window.open('https://discord.gg/UJZRrcUFMj', '_blank', 'noopener,noreferrer');
+                          }
+                        }}
                         className="w-full p-3 bg-[#5865F2] hover:bg-[#4752C4] rounded-lg transition-colors flex items-center justify-center gap-2 group"
                       >
                         <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
