@@ -5,7 +5,50 @@ All notable changes to the LuminaKraft Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.0-beta.5] - 2025-12-04
+## [0.1.0] - 2025-12-05
+
+### ✨ **Features**
+- **Setup Wizard / Onboarding**
+  - New first-launch setup wizard with Microsoft & LuminaKraft account linking
+  - Language switcher (EN/ES) in wizard header
+  - Dynamic progress dots based on login state
+  - Show Minecraft skin avatar for Microsoft, Discord avatar for LuminaKraft
+  - Skip offline profile step when Microsoft is connected
+- **Account & Authentication**
+  - Join Discord server button for non-members with rate limit benefits
+  - Auth modal with cancel button after 3 seconds
+  - Rate limit dialog with login and Discord join options
+- **Modpack Management**
+  - Persist PublishModpackForm and EditModpackForm state in localStorage
+  - Remember last published-modpacks sub-section
+  - Navigate to my-modpacks after install/remove
+  - Show local modpacks in "Continue Playing" section
+
+### 🐛 **Bug Fixes**
+- **Authentication**
+  - Fixed Microsoft account being lost due to stale closure in refreshUserProfile
+  - Fixed onboardingCompleted not persisting (synchronous settings load)
+  - Fixed Discord join button not working in AccountPage (Tauri invoke)
+- **Rate Limiting**
+  - Fixed rate limit check running after UI state change
+  - Preserve clientToken when updating settings on signOut and profile sync
+- **Navigation & UI**
+  - Fixed modpack navigation from homepage vs sidebar
+  - Fixed broken Tailwind classes in ModpackActions
+  - Clear selected modpack when navigating to explore/my-modpacks
+
+### 🔧 **Technical Improvements**
+- Load settings synchronously in LauncherContext to prevent race conditions
+- Optimized account loading with parallel fetching and identity fallback
+- Added Web Worker for non-blocking ZIP validation (3-phase architecture)
+- Auto-cleanup of temp directories in modpack merge operations
+- Comprehensive i18n coverage for all components
+
+### 📦 **Dependencies**
+- Added @headlessui/react for accessible UI components
+- Added vitest setup for launcher service tests
+
+## [0.1.0-rc.1] - 2025-12-04
 
 ### 🐛 **Critical Bug Fixes**
 - **Modpack Upload in Built App**
