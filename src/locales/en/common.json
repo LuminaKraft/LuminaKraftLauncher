@@ -569,9 +569,9 @@
     "remaining": "Remaining",
     "resetIn": "Resets at",
     "linkDiscordTitle": "Get 5x More Downloads!",
-    "linkDiscordDesc": "Link your Discord account to increase your download limit from 25 to 100 downloads per hour",
-    "linkDiscordAuthDesc": "Sign in and link your Discord account to get 100 downloads per hour instead of just 10",
-    "benefit1": "100 downloads per hour (vs 10 for anonymous)",
+    "linkDiscordDesc": "Link your Discord account to increase your download limit from 10 to 50 downloads per hour",
+    "linkDiscordAuthDesc": "Sign in and link your Discord account to get 50 downloads per hour instead of just 3",
+    "benefit1": "50 downloads per hour (vs 3 for anonymous)",
     "benefit2": "Publish your own modpacks",
     "benefit3": "Join our community and get support",
     "goToSettings": "Go to Settings"
