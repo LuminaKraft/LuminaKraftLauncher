@@ -62,20 +62,16 @@ type LauncherAction =
   | { type: 'SET_MODPACK_STATE'; payload: { id: string; state: ModpackState } }
   | { type: 'UPDATE_MODPACK_PROGRESS'; payload: { id: string; progress: ProgressInfo } };
 
-const defaultSettings: UserSettings = {
-  username: 'Player',
-  allocatedRam: 4096,
-  language: 'en',
-  authMethod: 'offline',
-  enablePrereleases: false,
-  enableAnimations: true,
-};
+// Load settings synchronously from launcherService to ensure onboardingCompleted 
+// and other persisted settings are available immediately on app start
+const launcherService = LauncherService.getInstance();
+const loadedSettings = launcherService.getUserSettings();
 
 const initialState: LauncherState = {
   modpacksData: null,
   modpackStates: {},
-  userSettings: defaultSettings,
-  currentLanguage: 'en',
+  userSettings: loadedSettings, // Use loaded settings instead of defaultSettings
+  currentLanguage: loadedSettings.language || 'en',
   isLoading: false,
   error: null,
 };
