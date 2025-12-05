@@ -497,7 +497,7 @@ export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: My
         setValidationData(null);
       } catch (error) {
         console.error('Error importing modpack:', error);
-        toast.error(t('errors.failedInstallModpack'));
+        toast.error(error instanceof Error ? error.message : t('errors.failedInstallModpack'));
       }
     }
   };
