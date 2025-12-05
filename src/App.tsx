@@ -407,8 +407,8 @@ function AppContent() {
       {/* Global Authentication Overlay */}
       <LoadingModal
         isOpen={isAuthenticating}
-        message={t('auth.signing')}
-        submessage={t('auth.microsoftDescription')}
+        message={t('auth.authenticating')}
+        submessage={t('auth.pleaseWaitAuth')}
       />
     </div>
   );
