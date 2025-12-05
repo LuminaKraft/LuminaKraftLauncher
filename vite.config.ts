@@ -11,8 +11,8 @@ export default defineConfig(async () => ({
   build: {
     // Don't clear the output directory to preserve artifacts from different platform builds
     emptyOutDir: false,
-    // Increase chunk size warning limit for desktop app (1.5MB)
-    chunkSizeWarningLimit: 1500,
+    // Increase chunk size warning limit for desktop app (2MB - acceptable for desktop)
+    chunkSizeWarningLimit: 2000,
   },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
@@ -26,10 +26,10 @@ export default defineConfig(async () => ({
     host: host || false,
     hmr: host
       ? {
-          protocol: "ws",
-          host,
-          port: 1421,
-        }
+        protocol: "ws",
+        host,
+        port: 1421,
+      }
       : undefined,
     watch: {
       // 3. tell vite to ignore watching `src-tauri` and other problematic files
