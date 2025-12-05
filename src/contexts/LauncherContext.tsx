@@ -770,8 +770,9 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
           },
         });
 
-        // After update, refresh modpack metadata to get latest version info
+        // After update, clear cache and refresh modpack metadata to get latest version info
         if (action === 'update') {
+          launcherService.clearCache();
           await refreshData();
         }
       }
