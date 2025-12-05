@@ -708,7 +708,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
             const rateLimitCheck = await launcherService.checkDownloadRateLimit(modpackId, state.userSettings.clientToken);
 
             if (!rateLimitCheck.allowed) {
-              // Rate limit exceeded
+              // Rate limit exceeded - show dialog but don't change modpack state
               setRateLimitDialog({
                 isOpen: true,
                 errorCode: rateLimitCheck.errorCode || (
@@ -719,17 +719,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
                 limit: rateLimitCheck.limit,
                 resetAt: rateLimitCheck.resetAt
               });
-
-              dispatch({
-                type: 'SET_MODPACK_STATE',
-                payload: {
-                  id: modpackId,
-                  state: createModpackState('error', {
-                    error: rateLimitCheck.message
-                  }),
-                },
-              });
-              return;
+              return; // Exit without changing state or showing any message
             }
           } catch (error) {
             console.error('Error checking rate limit:', error);
