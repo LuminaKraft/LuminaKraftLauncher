@@ -1068,8 +1068,10 @@ class LauncherService {
       };
     }
 
+    const settings = this.getSettings();
     const { data, error } = await supabase.rpc('track_download_with_limit', {
-      p_modpack_id: modpackId
+      p_modpack_id: modpackId,
+      p_client_token: settings.clientToken
     } as any) as { data: any; error: any };
 
     if (error) {
