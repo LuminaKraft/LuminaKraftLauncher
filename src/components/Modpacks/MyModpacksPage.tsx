@@ -551,28 +551,20 @@ export function MyModpacksPage() {
    */
   const handleDownloadDialogConfirm = async () => {
     if (validationData && pendingUploadedFiles) {
-      const loadingToast = toast.loading(t('myModpacks.preparingModpack'));
       try {
-        // Prepare ZIP in memory with overrides
-        const updatedZip = await prepareZipWithOverrides(validationData.filePath, pendingUploadedFiles);
-
-        toast.loading(t('myModpacks.installingModpack'), { id: loadingToast });
         setShowDownloadDialog(false);
 
+        // Prepare ZIP in memory with overrides (silently)
+        const updatedZip = await prepareZipWithOverrides(validationData.filePath, pendingUploadedFiles);
+
         // Import the updated ZIP
-        try {
-          await performImport(updatedZip);
-          toast.dismiss(loadingToast);
-        } catch (importError) {
-          toast.error(t('errors.failedInstallModpack'), { id: loadingToast });
-          console.error('Import failed:', importError);
-        }
+        await performImport(updatedZip);
 
         setPendingUploadedFiles(null);
         setValidationData(null);
       } catch (error) {
         console.error('Error preparing modpack with overrides:', error);
-        toast.error(t('myModpacks.failedPrepareModpack'), { id: loadingToast });
+        toast.error(t('myModpacks.failedPrepareModpack'));
         setShowDownloadDialog(false);
       }
     }
