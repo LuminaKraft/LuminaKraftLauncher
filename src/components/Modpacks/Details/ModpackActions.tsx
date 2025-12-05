@@ -112,9 +112,12 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({
           } catch (error) {
             console.error('Failed to save modpack to localStorage:', error);
           }
-          installModpack(modpack.id);
-          // Navigate to my-modpacks after starting install
-          onNavigate?.('my-modpacks', modpack.id);
+
+          // Wait for installModpack and only navigate if it started successfully
+          const started = await installModpack(modpack.id);
+          if (started) {
+            onNavigate?.('my-modpacks', modpack.id);
+          }
         },
         disabled: false
       };

@@ -41,12 +41,12 @@ interface LauncherContextType {
   setIsAuthenticating: (_value: boolean) => void;
   updateUserSettings: (_settings: Partial<UserSettings>) => Promise<void>;
   refreshData: () => Promise<void>;
-  installModpack: (_id: string) => Promise<void>;
+  installModpack: (_id: string) => Promise<boolean>;
   installModpackFromZip: (_filePath: string) => Promise<void>;
-  updateModpack: (_id: string) => Promise<void>;
-  launchModpack: (_id: string) => Promise<void>;
-  repairModpack: (_id: string) => Promise<void>;
-  stopInstance: (_id: string) => Promise<void>;
+  updateModpack: (_id: string) => Promise<boolean>;
+  launchModpack: (_id: string) => Promise<boolean>;
+  repairModpack: (_id: string) => Promise<boolean>;
+  stopInstance: (_id: string) => Promise<boolean>;
   changeLanguage: (_language: string) => Promise<void>;
   removeModpack: (_id: string) => Promise<void>;
   showUsernameDialog: boolean;
@@ -626,7 +626,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
   const performModpackAction = async (
     action: 'install' | 'update' | 'launch' | 'repair' | 'stop',
     modpackId: string
-  ) => {
+  ): Promise<boolean> => {
     const modpack = state.modpacksData?.modpacks.find((m: { id: string }) => m.id === modpackId);
 
     // For launch and stop actions, we don't need the modpack data from server
@@ -674,7 +674,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
             limit: rateLimitCheck.limit,
             resetAt: rateLimitCheck.resetAt
           });
-          return; // Exit without changing state
+          return false; // Rate limit exceeded - don't proceed
         }
       } catch (error) {
         console.error('Error checking rate limit:', error);
@@ -756,7 +756,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
                 },
               },
             });
-            return;
+            return false;
           }
 
           // -----------------------------------------------------------------
@@ -921,6 +921,8 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
           await refreshData();
         }
       }
+
+      return true; // Action started successfully
     } catch (error) {
       console.error(`Error ${action}ing modpack:`, error);
 

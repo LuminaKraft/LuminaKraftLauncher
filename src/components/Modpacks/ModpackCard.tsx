@@ -68,14 +68,14 @@ const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect
     }
   };
 
-  const handleInstall = () => {
+  const handleInstall = async () => {
     // Save full modpack data to localStorage so MyModpacksPage can use it during installation
     try {
       localStorage.setItem(`installing_modpack_${modpack.id}`, JSON.stringify(modpack));
     } catch (error) {
       console.error('Failed to save modpack to localStorage:', error);
     }
-    installModpack(modpack.id);
+    return await installModpack(modpack.id);
   };
 
   const getButtonConfig = () => {
@@ -119,9 +119,9 @@ const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect
       return {
         text: t('modpacks.install'),
         icon: Download,
-        onClick: () => {
-          handleInstall();
-          if (onNavigateToMyModpacks) {
+        onClick: async () => {
+          const started = await handleInstall();
+          if (started && onNavigateToMyModpacks) {
             onNavigateToMyModpacks();
           }
         },
