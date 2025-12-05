@@ -1162,6 +1162,7 @@ fn main() {
     }
 
     tauri::Builder::default()
+        .manage(oauth::OAuthServerState::default())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_shell::init())
@@ -1208,6 +1209,7 @@ fn main() {
             install_modpack_from_local_zip,
             save_modpack_image,
             oauth::start_oauth_server,
+            oauth::stop_oauth_server,
         ])
         .setup(|app| {
             // Initialize app data directory

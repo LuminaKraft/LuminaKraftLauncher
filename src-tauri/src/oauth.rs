@@ -1,4 +1,5 @@
-use tauri::{AppHandle, Emitter, Wry};
+use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
+use tauri::{AppHandle, Emitter, Manager, Wry};
 
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
 struct CallbackPayload {
@@ -6,6 +7,19 @@ struct CallbackPayload {
     refresh_token: String,
     provider_token: Option<String>,
     provider_refresh_token: Option<String>,
+}
+
+// Global shutdown flag for active OAuth servers
+pub struct OAuthServerState {
+    pub shutdown_flag: Arc<AtomicBool>,
+}
+
+impl Default for OAuthServerState {
+    fn default() -> Self {
+        Self {
+            shutdown_flag: Arc::new(AtomicBool::new(false)),
+        }
+    }
 }
 
 fn handle_request(
@@ -70,22 +84,45 @@ pub fn start_oauth_server(app_handle: AppHandle<Wry>) -> Result<u16, String> {
     let server = tiny_http::Server::http(&server_addr)
         .map_err(|e| format!("Failed to start server: {}", e))?;
 
+    // Get or create the shutdown flag from app state
+    let state = app_handle.state::<OAuthServerState>();
+    // Reset the shutdown flag for new server
+    state.shutdown_flag.store(false, Ordering::SeqCst);
+    let shutdown_flag = state.shutdown_flag.clone();
+
     std::thread::spawn(move || {
         println!("OAuth server listening on {}", server_addr);
 
-        // We only expect one request. The loop will exit after one is handled.
-        for request in server.incoming_requests() {
-            match handle_request(request, &app_handle) {
-                Ok(true) => {
-                    println!("OAuth callback received. Shutting down server.");
-                    break; // Exit loop and shut down
+        // Use a timeout-based approach to check for shutdown
+        loop {
+            // Check if shutdown was requested
+            if shutdown_flag.load(Ordering::SeqCst) {
+                println!("OAuth server shutdown requested.");
+                break;
+            }
+
+            // Try to receive a request with a short timeout
+            match server.recv_timeout(std::time::Duration::from_millis(500)) {
+                Ok(Some(request)) => {
+                    match handle_request(request, &app_handle) {
+                        Ok(true) => {
+                            println!("OAuth callback received. Shutting down server.");
+                            break; // Exit loop and shut down
+                        }
+                        Ok(false) => {
+                            // Request handled, continue to next
+                        }
+                        Err(e) => {
+                            eprintln!("Error handling request: {}", e);
+                            break;
+                        }
+                    }
                 }
-                Ok(false) => {
-                    // Request handled, continue to next (if any)
+                Ok(None) => {
+                    // Timeout, continue loop to check shutdown flag
                 }
                 Err(e) => {
-                    eprintln!("Error handling request: {}", e);
-                    // Decide if you want to shut down on error
+                    eprintln!("Server error: {}", e);
                     break;
                 }
             }
@@ -93,4 +130,12 @@ pub fn start_oauth_server(app_handle: AppHandle<Wry>) -> Result<u16, String> {
     });
 
     Ok(port)
+}
+
+#[tauri::command]
+pub fn stop_oauth_server(app_handle: AppHandle<Wry>) -> Result<(), String> {
+    let state = app_handle.state::<OAuthServerState>();
+    state.shutdown_flag.store(true, Ordering::SeqCst);
+    println!("OAuth server stop requested.");
+    Ok(())
 }

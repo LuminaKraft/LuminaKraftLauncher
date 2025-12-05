@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { LauncherProvider, useLauncher } from './contexts/LauncherContext';
 import { AnimationProvider, useAnimation } from './contexts/AnimationContext';
@@ -409,7 +410,10 @@ function AppContent() {
         isOpen={isAuthenticating}
         message={t('auth.authenticating')}
         submessage={t('auth.pleaseWaitAuth')}
-        onCancel={() => setIsAuthenticating(false)}
+        onCancel={() => {
+          invoke('stop_oauth_server').catch(console.error);
+          setIsAuthenticating(false);
+        }}
       />
     </div>
   );

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { invoke } from '@tauri-apps/api/core';
 import { User, Trash2 } from 'lucide-react';
 import AuthService from '../../services/authService';
 import ProfileEditor from '../Settings/ProfileEditor';
@@ -305,8 +306,8 @@ const AccountPage: React.FC = () => {
                       disabled={!canUnlink}
                       title={!canUnlink ? (t('auth.cannotUnlinkOnlyProvider') || 'Cannot unlink only provider') : ''}
                       className={`text-sm font-medium px-3 py-1 rounded transition-colors ${canUnlink
-                          ? 'text-red-400 hover:text-red-300 hover:bg-red-400/10'
-                          : 'text-gray-600 cursor-not-allowed'
+                        ? 'text-red-400 hover:text-red-300 hover:bg-red-400/10'
+                        : 'text-gray-600 cursor-not-allowed'
                         }`}
                     >
                       Unlink
@@ -348,8 +349,8 @@ const AccountPage: React.FC = () => {
                       disabled={!canUnlink}
                       title={!canUnlink ? (t('auth.cannotUnlinkOnlyProvider') || 'Cannot unlink only provider') : ''}
                       className={`text-sm font-medium px-3 py-1 rounded transition-colors ${canUnlink
-                          ? 'text-red-400 hover:text-red-300 hover:bg-red-400/10'
-                          : 'text-gray-600 cursor-not-allowed'
+                        ? 'text-red-400 hover:text-red-300 hover:bg-red-400/10'
+                        : 'text-gray-600 cursor-not-allowed'
                         }`}
                     >
                       Unlink
@@ -394,8 +395,8 @@ const AccountPage: React.FC = () => {
                       disabled={!canUnlink}
                       title={!canUnlink ? (t('auth.cannotUnlinkOnlyProvider') || 'Cannot unlink only provider') : ''}
                       className={`text-sm font-medium px-3 py-1 rounded transition-colors ${canUnlink
-                          ? 'text-red-400 hover:text-red-300 hover:bg-red-400/10'
-                          : 'text-gray-600 cursor-not-allowed'
+                        ? 'text-red-400 hover:text-red-300 hover:bg-red-400/10'
+                        : 'text-gray-600 cursor-not-allowed'
                         }`}
                     >
                       Unlink
@@ -440,8 +441,8 @@ const AccountPage: React.FC = () => {
                       disabled={!canUnlink}
                       title={!canUnlink ? (t('auth.cannotUnlinkOnlyProvider') || 'Cannot unlink only provider') : ''}
                       className={`text-sm font-medium px-3 py-1 rounded transition-colors ${canUnlink
-                          ? 'text-red-400 hover:text-red-300 hover:bg-red-400/10'
-                          : 'text-gray-600 cursor-not-allowed'
+                        ? 'text-red-400 hover:text-red-300 hover:bg-red-400/10'
+                        : 'text-gray-600 cursor-not-allowed'
                         }`}
                     >
                       Unlink
@@ -510,7 +511,10 @@ const AccountPage: React.FC = () => {
         isOpen={isSigningIn}
         message={t('auth.authenticating')}
         submessage={t('auth.pleaseWaitAuth')}
-        onCancel={() => setIsSigningIn(false)}
+        onCancel={() => {
+          invoke('stop_oauth_server').catch(console.error);
+          setIsSigningIn(false);
+        }}
       />
     </div>
   );
