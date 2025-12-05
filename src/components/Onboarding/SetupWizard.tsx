@@ -246,13 +246,15 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
                     </div>
                 </div>
 
-                <div className="mt-8 flex justify-between items-center px-4 md:px-12 pb-8">
-                    <button
-                        onClick={handleNextFromAccount}
-                        className="text-gray-400 hover:text-white transition-colors text-sm font-medium"
-                    >
-                        {t('onboarding.account.configureLater')}
-                    </button>
+                <div className={`mt-8 flex items-center px-4 md:px-12 pb-8 ${msAccount ? 'justify-end' : 'justify-between'}`}>
+                    {!msAccount && (
+                        <button
+                            onClick={handleNextFromAccount}
+                            className="text-gray-400 hover:text-white transition-colors text-sm font-medium"
+                        >
+                            {t('onboarding.account.configureLater')}
+                        </button>
+                    )}
                     <button
                         onClick={handleNextFromAccount}
                         className="px-6 py-2.5 bg-white text-dark-900 rounded-xl font-bold hover:bg-gray-200 transition-colors flex items-center gap-2"
