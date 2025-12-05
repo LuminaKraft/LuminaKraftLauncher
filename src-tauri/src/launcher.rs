@@ -125,6 +125,8 @@ where
                 return Ok(Vec::new());
             }
         }
+        // Note: Old mods/resourcepacks that are no longer in the manifest will be cleaned up
+        // after processing the new manifest (see cleanup_removed_mods below)
     } else {
         // Create instance directories
         instance_dirs.ensure_directories().await?;
@@ -276,19 +278,12 @@ pub async fn get_meta_storage_info() -> Result<serde_json::Value> {
     let meta_dirs = MetaDirectories::init().await?;
     
     let total_size = meta_dirs.get_meta_size().await?;
-    let (cache_size, icons_cache_size, screenshots_cache_size) = meta_dirs.get_cache_size_breakdown().await?;
     let minecraft_versions_count = meta_dirs.get_minecraft_versions_count().await?;
     let java_installations_count = meta_dirs.get_java_installations_count().await?;
     
     Ok(serde_json::json!({
         "total_size": total_size,
         "total_size_formatted": format_bytes(total_size),
-        "cache_size": cache_size,
-        "cache_size_formatted": format_bytes(cache_size),
-        "icons_size": icons_cache_size,
-        "icons_size_formatted": format_bytes(icons_cache_size),
-        "screenshots_size": screenshots_cache_size,
-        "screenshots_size_formatted": format_bytes(screenshots_cache_size),
         "meta_path": meta_dirs.meta_dir.display().to_string(),
         "minecraft_versions_count": minecraft_versions_count,
         "java_installations_count": java_installations_count
@@ -297,92 +292,9 @@ pub async fn get_meta_storage_info() -> Result<serde_json::Value> {
 
 /// Clean up meta storage by removing unused resources
 pub async fn cleanup_meta_storage() -> Result<Vec<String>> {
-    let meta_dirs = MetaDirectories::init().await?;
-    
-    let mut cleaned_items = Vec::new();
-    
-    // Clean up unused libraries, assets, versions, etc.
     // This would require analyzing what's currently in use by active instances
-    
-    // For now, just clean up cache
-    if let Ok(_) = meta_dirs.clear_all_cache().await {
-        cleaned_items.push("Cache cleared".to_string());
-    }
-    
-    Ok(cleaned_items)
-}
-
-/// Cache modpack images automatically when loading from API
-pub async fn cache_modpack_images(modpacks: Vec<serde_json::Value>) -> Result<()> {
-    let meta_dirs = MetaDirectories::init().await?;
-    
-    for modpack in modpacks {
-        let modpack_id = modpack.get("id")
-            .and_then(|v| v.as_str())
-            .unwrap_or("unknown");
-        
-        // Cache icon if available
-        if let Some(icon_url) = modpack.get("icon").and_then(|v| v.as_str()) {
-            if !icon_url.is_empty() {
-                match meta_dirs.cache_image(icon_url, "icon", modpack_id).await {
-                    Ok(_) => {},
-                    Err(e) => eprintln!("Failed to cache icon for {}: {}", modpack_id, e),
-                }
-            }
-        }
-        
-        // Cache screenshots if available
-        if let Some(screenshots) = modpack.get("screenshots").and_then(|v| v.as_array()) {
-            for (i, screenshot) in screenshots.iter().enumerate() {
-                if let Some(screenshot_url) = screenshot.as_str() {
-                    if !screenshot_url.is_empty() {
-                        let screenshot_id = format!("{}_screenshot_{}", modpack_id, i);
-                        match meta_dirs.cache_image(screenshot_url, "screenshot", &screenshot_id).await {
-                            Ok(_) => {},
-                            Err(e) => eprintln!("Failed to cache screenshot {} for {}: {}", i, modpack_id, e),
-                        }
-                    }
-                }
-            }
-        }
-        
-        // Cache gallery images if available
-        if let Some(gallery) = modpack.get("gallery").and_then(|v| v.as_array()) {
-            for (i, gallery_item) in gallery.iter().enumerate() {
-                if let Some(gallery_url) = gallery_item.get("url").and_then(|v| v.as_str()) {
-                    if !gallery_url.is_empty() {
-                        let gallery_id = format!("{}_gallery_{}", modpack_id, i);
-                        match meta_dirs.cache_image(gallery_url, "screenshot", &gallery_id).await {
-                            Ok(_) => {},
-                            Err(e) => eprintln!("Failed to cache gallery image {} for {}: {}", i, modpack_id, e),
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    Ok(())
-}
-
-/// Clear only modpack icons cache
-pub async fn clear_icons_cache() -> Result<Vec<String>> {
-    let meta_dirs = MetaDirectories::init().await?;
-    
-    match meta_dirs.clear_icons_cache().await {
-        Ok(_) => Ok(vec!["Icons cache cleared".to_string()]),
-        Err(e) => Err(anyhow::anyhow!("Failed to clear icons cache: {}", e)),
-    }
-}
-
-/// Clear only modpack screenshots cache
-pub async fn clear_screenshots_cache() -> Result<Vec<String>> {
-    let meta_dirs = MetaDirectories::init().await?;
-    
-    match meta_dirs.clear_screenshots_cache().await {
-        Ok(_) => Ok(vec!["Screenshots cache cleared".to_string()]),
-        Err(e) => Err(anyhow::anyhow!("Failed to clear screenshots cache: {}", e)),
-    }
+    // For now, just return an empty list (no cache to clear)
+    Ok(Vec::new())
 }
 
 /// Return list of Minecraft versions stored in meta
