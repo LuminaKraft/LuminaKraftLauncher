@@ -107,7 +107,7 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
           .single();
 
         if (userData) {
-          setUserPartnerId(userData.partner_id || null);
+          setUserPartnerId((userData as { partner_id: string | null }).partner_id || null);
         }
       }
 

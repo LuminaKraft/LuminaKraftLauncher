@@ -69,7 +69,7 @@ export function useModpackValidation({ onManifestParsed }: UseModpackValidationP
             return true;
         } catch (error) {
             console.error('Error validating manifest:', error);
-            toast.error(t('errors.failedValidateModpack'));
+            toast.error('Failed to validate modpack');
             return false;
         } finally {
             setIsParsing(false);

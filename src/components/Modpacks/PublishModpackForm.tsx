@@ -300,8 +300,6 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
     try {
       const originalZipBuffer = await zipFile.arrayBuffer();
       const originalZipBytes = Array.from(new Uint8Array(originalZipBuffer));
-      const totalSize = (originalZipBuffer.byteLength +
-        Array.from(pendingUploadedFiles.values()).reduce((sum, file) => sum + file.size, 0)) / (1024 * 1024);
 
       const unlisten = await listen<{ current: number, total: number, stage: string, message: string }>('zip-progress', (event) => {
         const { current, total } = event.payload;
@@ -1071,11 +1069,10 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                       type="text"
                       value={formData.name[currentLang]}
                       onChange={(e) => updateI18nField('name', currentLang, e.target.value)}
-                      className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow ${
-                        nameError
-                          ? 'border-red-500 dark:border-red-500'
-                          : 'border-gray-300 dark:border-gray-600'
-                      }`}
+                      className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow ${nameError
+                        ? 'border-red-500 dark:border-red-500'
+                        : 'border-gray-300 dark:border-gray-600'
+                        }`}
                       required
                       placeholder={currentLang === 'en' ? 'My Awesome Modpack' : 'Mi Increíble Modpack'}
                     />
@@ -1383,8 +1380,8 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                         }
                       }}
                       className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors cursor-pointer relative group h-48 flex flex-col items-center justify-center ${isDraggingLogo
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                          : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                        : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/50'
                         }`}
                     >
                       <input
@@ -1428,8 +1425,8 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                         }
                       }}
                       className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors cursor-pointer relative group h-48 flex flex-col items-center justify-center ${isDraggingBanner
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                          : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                        : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/50'
                         }`}
                     >
                       <input
