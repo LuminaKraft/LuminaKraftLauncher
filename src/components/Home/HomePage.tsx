@@ -78,9 +78,9 @@ export function HomePage({ onNavigate }: HomePageProps) {
               ...modpack,
               name: instance.name || modpack.name,
               version: instance.version || modpack.version,
-              minecraftVersion: instance.minecraft_version || modpack.minecraftVersion,
+              minecraftVersion: instance.minecraftVersion || modpack.minecraftVersion,
               modloader: instance.modloader || modpack.modloader,
-              modloaderVersion: instance.modloader_version || modpack.modloaderVersion,
+              modloaderVersion: instance.modloaderVersion || modpack.modloaderVersion,
             };
           }
 
