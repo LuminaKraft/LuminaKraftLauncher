@@ -839,7 +839,9 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
       const isRepairAction = action === 'repair';
       const repairPrefix = isRepairAction ? 'reparación' : (action === 'install' ? 'instalación' : action === 'update' ? 'actualización' : action);
 
-      if (errorMessage.includes('failed to extract zip file') || errorMessage.includes('no such file or directory')) {
+      if (errorMessage.includes('429') || errorMessage.includes('rate limit') || errorMessage.includes('too many requests')) {
+        userFriendlyError = `Error durante la ${repairPrefix}: Límite de solicitudes alcanzado. Crea una cuenta de LuminaKraft para aumentar tus límites.`;
+      } else if (errorMessage.includes('failed to extract zip file') || errorMessage.includes('no such file or directory')) {
         userFriendlyError = `Error durante la ${repairPrefix}: No se pudo extraer el archivo ZIP`;
       } else if (errorMessage.includes('java') || errorMessage.includes('No such file or directory') || errorMessage.includes('exec format error')) {
         userFriendlyError = `Error durante la ${repairPrefix}: Java no válido o no encontrado`;

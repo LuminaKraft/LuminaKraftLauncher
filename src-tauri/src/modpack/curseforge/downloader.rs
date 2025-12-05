@@ -34,7 +34,7 @@ pub async fn fetch_mod_files_batch(file_ids: &[i64], auth_token: Option<&str>) -
             },
         };
 
-        let max_retries = 3;
+        let max_retries = 5;
         let mut response = None;
         let mut batch_error = None;
 
@@ -43,14 +43,16 @@ pub async fn fetch_mod_files_batch(file_ids: &[i64], auth_token: Option<&str>) -
                 println!("🌐 Fetching mod info from Supabase Edge Function (batch size: {})", chunk.len());
             }
 
-            let mut request = client.post(proxy_base_url)
-                .json(&edge_request);
+            // Build the request with optional auth
+            let mut request = client
+                .post(proxy_base_url)
+                .header("Content-Type", "application/json");
             
-            // Add authentication header for Supabase
             if let Some(token) = auth_token {
-                // Supabase expects Authorization header with Bearer token
-                request = request.header("Authorization", token);
+                request = request.header("Authorization", format!("Bearer {}", token));
             }
+
+            request = request.json(&edge_request);
             
             match request.send().await {
                 Ok(resp) => {
@@ -75,12 +77,19 @@ pub async fn fetch_mod_files_batch(file_ids: &[i64], auth_token: Option<&str>) -
                         println!("❌ CurseForge API access forbidden (403) - Permission denied");
                         batch_error = Some(anyhow::anyhow!("CurseForge API access forbidden (403). The launcher does not have permission to access this content."));
                         break;
-                    } else if status == 429 && attempt < max_retries {
-                        // Rate limited - retry with exponential backoff
-                        println!("⚠️ CurseForge API rate limited, retrying in {} seconds...", 2 * attempt * attempt);
-                        let delay_ms = 2000 * attempt * attempt;
-                        tokio::time::sleep(std::time::Duration::from_millis(delay_ms)).await;
-                        continue;
+                    } else if status == 429 {
+                        if attempt < max_retries {
+                            // Rate limited - retry with exponential backoff
+                            let delay_secs = 2u64.pow(attempt as u32);
+                            println!("⚠️ CurseForge API rate limited (429), retrying in {} seconds...", delay_secs);
+                            tokio::time::sleep(std::time::Duration::from_secs(delay_secs)).await;
+                            continue;
+                        } else {
+                            // Max retries exceeded for rate limit
+                            println!("❌ CurseForge API rate limit exceeded after {} retries", max_retries);
+                            batch_error = Some(anyhow::anyhow!("Rate limit exceeded (429). Create a LuminaKraft account to increase your download limits."));
+                            break;
+                        }
                     } else if status.is_server_error() && attempt < max_retries {
                         // Server error - retry
                         println!("⚠️ CurseForge API server error ({}), retrying...", status);
