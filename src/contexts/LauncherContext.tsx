@@ -26,7 +26,7 @@ import AuthService from '../services/authService';
 import JSZip from 'jszip';
 import { ModpackManagementService } from '../services/modpackManagementService';
 import { listen } from '@tauri-apps/api/event';
-import { getUserProfile } from '../services/supabaseClient';
+import { supabase, getUserProfile } from '../services/supabaseClient';
 
 interface LauncherContextType {
   modpacksData: ModpacksData | null;
@@ -458,6 +458,22 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
       window.removeEventListener('luminakraft:cache-cleared', handleCacheCleared);
     };
   }, []); // Empty dependency array - only register once at mount
+
+  // Listen for Supabase auth changes (Sign Out)
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') {
+        console.log('👋 User signed out, clearing account data');
+        updateUserSettings({
+          discordAccount: undefined,
+        });
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const refreshData = async (retryCount = 0) => {
     dispatch({ type: 'SET_LOADING', payload: true });

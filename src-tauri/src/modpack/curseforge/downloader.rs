@@ -9,7 +9,7 @@ use super::types::{CurseForgeManifest, ModFileInfo, ApiResponse, GetModFilesRequ
 
 
 /// Fetch mod file information in batches from CurseForge API
-pub async fn fetch_mod_files_batch(file_ids: &[i64], auth_token: Option<&str>) -> Result<Vec<ModFileInfo>> {
+pub async fn fetch_mod_files_batch(file_ids: &[i64], auth_token: Option<&str>, anon_key: &str) -> Result<Vec<ModFileInfo>> {
     let client = Client::builder()
         .user_agent("LKLauncher/1.0 (CurseForge API Client)")
         .timeout(std::time::Duration::from_secs(30))
@@ -46,7 +46,8 @@ pub async fn fetch_mod_files_batch(file_ids: &[i64], auth_token: Option<&str>) -
             // Build the request with optional auth
             let mut request = client
                 .post(proxy_base_url)
-                .header("Content-Type", "application/json");
+                .header("Content-Type", "application/json")
+                .header("apikey", anon_key);
             
             if let Some(token) = auth_token {
                 request = request.header("Authorization", token);
@@ -69,8 +70,9 @@ pub async fn fetch_mod_files_batch(file_ids: &[i64], auth_token: Option<&str>) -
                         break;
                     } else if status == 401 {
                         // 401 Unauthorized - critical error, don't retry
-                        println!("❌ CurseForge API authentication failed (401) - The proxy server is not authorized");
-                        batch_error = Some(anyhow::anyhow!("CurseForge API authentication failed (401). The launcher is not authorized to access CurseForge mod data. Please try again later or contact support."));
+                        let error_text = resp.text().await.unwrap_or_default();
+                        println!("❌ CurseForge API authentication failed (401) - The proxy server is not authorized. Response: {}", error_text);
+                        batch_error = Some(anyhow::anyhow!("CurseForge API authentication failed (401). Response: {}", error_text));
                         break;
                     } else if status == 403 {
                         // 403 Forbidden - critical error, don't retry
@@ -201,6 +203,7 @@ pub async fn download_mods_with_failed_tracking<F>(
     start_percentage: f32,
     end_percentage: f32,
     auth_token: Option<&str>,
+    anon_key: &str,
 ) -> Result<Vec<serde_json::Value>>
 where
     F: Fn(String, f32, String) + Send + Sync + 'static,
@@ -218,7 +221,7 @@ where
         "fetching_mod_info".to_string()
     );
     
-    let all_file_infos = match fetch_mod_files_batch(&file_ids, auth_token).await {
+    let all_file_infos = match fetch_mod_files_batch(&file_ids, auth_token, anon_key).await {
         Ok(infos) => infos,
         Err(e) => {
             emit_progress(
@@ -364,6 +367,7 @@ pub async fn download_mods_with_filenames<F>(
     start_percentage: f32,
     end_percentage: f32,
     auth_token: Option<&str>,
+    anon_key: &str,
 ) -> Result<(Vec<serde_json::Value>, std::collections::HashSet<String>)>
 where
     F: Fn(String, f32, String) + Send + Sync + 'static + Clone,
@@ -377,7 +381,7 @@ where
         "fetching_mod_info".to_string()
     );
     
-    let all_file_infos = fetch_mod_files_batch(&file_ids, auth_token).await?;
+    let all_file_infos = fetch_mod_files_batch(&file_ids, auth_token, anon_key).await?;
     
     // Collect expected filenames for cleanup
     let expected_filenames: std::collections::HashSet<String> = all_file_infos
@@ -388,7 +392,7 @@ where
     println!("📋 Expected {} mod files from manifest", expected_filenames.len());
     
     // Now do the actual download using the existing function
-    let failed_mods = download_mods_with_failed_tracking(manifest, instance_dir, emit_progress, start_percentage, end_percentage, auth_token).await?;
+    let failed_mods = download_mods_with_failed_tracking(manifest, instance_dir, emit_progress, start_percentage, end_percentage, auth_token, anon_key).await?;
     
     Ok((failed_mods, expected_filenames))
 } 

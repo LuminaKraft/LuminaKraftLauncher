@@ -672,6 +672,7 @@ class LauncherService {
       microsoftAccount: settings.microsoftAccount || null,
       clientToken: settings.clientToken || null,
       supabaseAccessToken: supabaseAccessToken,
+      supabaseAnonKey: import.meta.env.VITE_SUPABASE_ANON_KEY,
       enablePrereleases: settings.enablePrereleases || false,
       enableAnimations: settings.enableAnimations || true,
     };

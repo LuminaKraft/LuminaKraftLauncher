@@ -11,6 +11,7 @@ pub async fn process_curseforge_modpack_with_failed_tracking<F>(
     instance_dir: &PathBuf,
     emit_progress: F,
     auth_token: Option<&str>,
+    anon_key: &str,
 ) -> Result<(String, String, Option<u32>, Vec<serde_json::Value>)>
 where
     F: Fn(String, f32, String) + Send + Sync + 'static + Clone,
@@ -82,7 +83,7 @@ where
         "preparing_mod_downloads".to_string()
     );
     
-    let (failed_mods, expected_filenames) = download_mods_with_filenames(&manifest, instance_dir, emit_progress.clone(), 30.0, 95.0, auth_token).await?;
+    let (failed_mods, expected_filenames) = download_mods_with_filenames(&manifest, instance_dir, emit_progress.clone(), 30.0, 95.0, auth_token, anon_key).await?;
     
     // Clean up mods that are no longer in the manifest (for updates)
     emit_progress(

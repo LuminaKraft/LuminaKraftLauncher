@@ -190,16 +190,17 @@ where
         if is_curseforge_modpack {
             emit_progress("progress.processingCurseforge".to_string(), 70.0, "processing_curseforge".to_string());
             
+            let anon_key = settings.supabase_anon_key.as_deref().unwrap_or("").trim_matches('"');
+
             // Prepare auth token for CurseForge API calls
-            // Priority: Supabase token > Microsoft token > client token
+            // Only use Supabase token for Authorization header (Gateway requirement)
+            // If no user token, use Anon Key
             let auth_token = if let Some(supabase_token) = &settings.supabase_access_token {
                 Some(format!("Bearer {}", supabase_token))
-            } else if let Some(microsoft_account) = &settings.microsoft_account {
-                Some(format!("Bearer {}", microsoft_account.access_token))
             } else {
-                settings.client_token.clone()
+                Some(format!("Bearer {}", anon_key))
             };
-            
+
             let (_cf_modloader, _cf_version, recommended_ram, failed_mods) = curseforge::process_curseforge_modpack_with_failed_tracking(
                 &temp_zip_path,
                 &instance_dirs.instance_dir,
@@ -210,7 +211,8 @@ where
                         emit_progress(message, final_percentage, step);
                     }
                 },
-                auth_token.as_deref()
+                auth_token.as_deref(),
+                anon_key
             ).await?;
 
             // Store recommended RAM from manifest

@@ -96,6 +96,8 @@ pub struct UserSettings {
     pub enable_prereleases: bool,
     #[serde(rename = "enableAnimations", default)]
     pub enable_animations: bool,
+    #[serde(rename = "supabaseAnonKey")]
+    pub supabase_anon_key: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
