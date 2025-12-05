@@ -486,9 +486,6 @@ class AuthService {
             // Wait a bit for session to be processed
             await new Promise(resolve => setTimeout(resolve, 500));
 
-            // Emit profile update event (listeners will handle fetching user)
-            this.emitProfileUpdate();
-
             // Run Discord and Microsoft sync in background
             setTimeout(async () => {
               try {
@@ -498,10 +495,13 @@ class AuthService {
                 }
                 // Sync Microsoft data if available locally (for new accounts created via Discord)
                 await this.syncMicrosoftData();
+
+                // CRITICAL: Emit profile update AFTER sync is done so UI fetches fresh data
+                this.emitProfileUpdate();
               } catch (err) {
                 console.error('Background sync failed:', err);
               }
-            }, 1000);
+            }, 100); // Reduced delay since we want this to happen relatively fast
           } catch (e) {
             console.error('Error in oauth-callback listener (link):', e);
           } finally {

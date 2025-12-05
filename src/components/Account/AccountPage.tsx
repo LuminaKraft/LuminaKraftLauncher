@@ -219,12 +219,22 @@ const AccountPage: React.FC = () => {
             const { data: { session } } = await supabase.auth.getSession();
             const currentUser = session?.user;
 
-            const updatedUser = await fetchUserWithProfile(currentUser);
+            const { user: updatedUser, discord: updatedDiscord, providers: updatedProviders } =
+              await fetchUserWithProfile(currentUser);
 
             if (updatedUser) {
               setLuminaKraftUser(updatedUser);
               // Also update hasLoadedUserRef to ensure subsequent auth events don't trigger loader
               hasLoadedUserRef.current = true;
+
+              // CRITICAL FIX: Also update linked accounts (Discord, Providers)
+              if (updatedDiscord) {
+                setDiscordAccount(updatedDiscord);
+              }
+
+              if (updatedProviders) {
+                setLinkedProviders(updatedProviders);
+              }
             }
 
             // setIsLoadingLuminaKraft(false);
