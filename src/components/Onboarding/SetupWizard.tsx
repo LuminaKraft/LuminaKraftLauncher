@@ -209,8 +209,17 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
                         : 'bg-dark-800/50 border-dark-700 hover:border-lumina-500/50 hover:bg-dark-700/50'
                         }`}>
                         <div className="flex flex-col items-center space-y-4">
-                            <div className="w-12 h-12 rounded-xl bg-lumina-600 flex items-center justify-center text-white p-2">
-                                <User className="w-8 h-8 text-white" />
+                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${userSettings.discordAccount ? 'bg-transparent' : 'bg-lumina-600'
+                                }`}>
+                                {userSettings.discordAccount?.avatar ? (
+                                    <img
+                                        src={`https://cdn.discordapp.com/avatars/${userSettings.discordAccount.id}/${userSettings.discordAccount.avatar}.png`}
+                                        alt={userSettings.discordAccount.username || 'Discord Avatar'}
+                                        className="w-full h-full rounded-xl shadow-lg border-2 border-lumina-500/50"
+                                    />
+                                ) : (
+                                    <User className="w-8 h-8 text-white" />
+                                )}
                             </div>
                             <div className="text-center">
                                 <h3 className="font-semibold text-white mb-1">{t('onboarding.account.luminakraft.title')}</h3>
