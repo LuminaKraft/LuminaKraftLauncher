@@ -1045,7 +1045,7 @@ class LauncherService {
    * Returns rate limit info including whether download is allowed
    * @throws Error if rate limit exceeded
    */
-  async checkDownloadRateLimit(modpackId: string): Promise<{
+  async checkDownloadRateLimit(modpackId: string, clientToken?: string): Promise<{
     allowed: boolean;
     limit: number;
     remaining: number;
@@ -1054,9 +1054,9 @@ class LauncherService {
     isDiscordMember: boolean;
     message: string;
   }> {
-    // Only check for modpacks with valid UUIDs (from server)
-    if (!this.isValidUUID(modpackId)) {
-      console.log(`Skipping rate limit check for non-UUID modpack: ${modpackId}`);
+    // Local modpacks don't have rate limits
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(modpackId)) {
       return {
         allowed: true,
         limit: 999,
@@ -1068,10 +1068,9 @@ class LauncherService {
       };
     }
 
-    const settings = this.getSettings();
     const { data, error } = await supabase.rpc('track_download_with_limit', {
       p_modpack_id: modpackId,
-      p_client_token: settings.clientToken
+      p_client_token: clientToken
     } as any) as { data: any; error: any };
 
     if (error) {

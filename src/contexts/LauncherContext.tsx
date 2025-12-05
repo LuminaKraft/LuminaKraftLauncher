@@ -697,7 +697,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
         case 'install':
           // Check rate limit before installing
           try {
-            const rateLimitCheck = await launcherService.checkDownloadRateLimit(modpackId);
+            const rateLimitCheck = await launcherService.checkDownloadRateLimit(modpackId, state.userSettings.clientToken);
 
             if (!rateLimitCheck.allowed) {
               // Rate limit exceeded
