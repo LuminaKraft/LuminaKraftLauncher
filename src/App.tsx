@@ -155,8 +155,8 @@ function AppContent() {
           refreshData();
         }
       }
-      // Clear selected modpack ID when entering explore or my-modpacks from sidebar
-      // This ensures we start with the list view, not a specific modpack
+      // Clear selected modpack when navigating to explore/my-modpacks from sidebar
+      // This ensures we show the list view, not a specific modpack
       if (newSection === 'explore' || newSection === 'my-modpacks') {
         setSelectedModpackId(null);
       }
@@ -167,10 +167,23 @@ function AppContent() {
   };
 
   const handleModpackNavigation = (section: string, modpackId?: string) => {
-    // Set or clear the modpackId based on what was passed
-    // If navigating without a modpackId, clear it so the section starts fresh
-    setSelectedModpackId(modpackId || null);
-    handleSectionChange(section);
+    // Check for unsaved changes before allowing navigation
+    if ((window as any).blockNavigation) {
+      const shouldBlock = (window as any).blockNavigation();
+      if (shouldBlock === false) {
+        return; // Block navigation
+      }
+    }
+
+    setIsTransitioning(true);
+    withDelay(() => {
+      // Clear or set the modpackId based on what was passed
+      setSelectedModpackId(modpackId || null);
+      setActiveSection(section);
+      withDelay(() => {
+        setIsTransitioning(false);
+      }, 50);
+    }, 150);
   };
 
   const renderContent = () => {
