@@ -1037,6 +1037,7 @@
   },
   "errors": {
     "failedValidate": "Error al validar modpack",
+    "failedInstallModpack": "Error al instalar el modpack",
     "failedParseManifest": "Error al analizar manifest.json",
     "failedLogin": "Error al iniciar sesión con Microsoft",
     "failedUpdateDisplay": "Error al actualizar nombre de usuario",

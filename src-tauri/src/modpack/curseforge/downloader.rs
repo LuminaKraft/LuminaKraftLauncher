@@ -49,7 +49,7 @@ pub async fn fetch_mod_files_batch(file_ids: &[i64], auth_token: Option<&str>) -
                 .header("Content-Type", "application/json");
             
             if let Some(token) = auth_token {
-                request = request.header("Authorization", format!("Bearer {}", token));
+                request = request.header("Authorization", token);
             }
 
             request = request.json(&edge_request);
