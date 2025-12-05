@@ -13,9 +13,31 @@ import type {
   ProgressInfo
 } from '../types/launcher';
 
+/**
+ * Cache behaviour patterns inspired by Modrinth's approach:
+ * - StaleWhileRevalidate: Return cached data immediately, revalidate in background
+ * - MustRevalidate: Force revalidation if cache is expired
+ * - Bypass: Skip cache entirely, always fetch fresh
+ */
+export enum CacheBehaviour {
+  StaleWhileRevalidate = 'stale_while_revalidate',
+  MustRevalidate = 'must_revalidate',
+  Bypass = 'bypass'
+}
+
+/**
+ * Cache TTL constants in milliseconds
+ */
+const CACHE_TTL = {
+  MODPACKS: 5 * 60 * 1000,      // 5 minutes for modpack list
+  MODPACK_DETAILS: 10 * 60 * 1000, // 10 minutes for modpack details
+  PARTNERS: 10 * 60 * 1000      // 10 minutes for partners
+} as const;
+
 interface CacheEntry<T = any> {
   data: T;
   timestamp: number;
+  expiresAt: number;  // TTL-based expiry
 }
 
 // Helper function to check if we're running in Tauri context
@@ -194,7 +216,7 @@ class LauncherService {
       }
       if (persisted && Date.now() - persisted.timestamp < this.cacheTTL) {
         this.modpacksData = persisted.data;
-        this.cache.set(cacheKey, { data: persisted.data, timestamp: persisted.timestamp });
+        this.cache.set(cacheKey, { data: persisted.data, timestamp: persisted.timestamp, expiresAt: persisted.timestamp + CACHE_TTL.MODPACKS });
         return persisted.data;
       }
       console.log('Fetching modpacks data from Supabase...');
@@ -309,16 +331,13 @@ class LauncherService {
       })) || [];
 
       this.modpacksData = { modpacks };
+      const now = Date.now();
       this.cache.set(cacheKey, {
         data: this.modpacksData,
-        timestamp: Date.now()
+        timestamp: now,
+        expiresAt: now + CACHE_TTL.MODPACKS
       });
       this.writePersistentCache(cacheKey, this.modpacksData);
-      if (this.modpacksData.modpacks && this.modpacksData.modpacks.length > 0) {
-        this.cacheModpackImages(this.modpacksData.modpacks).catch((error: any) => {
-          console.warn('Failed to cache modpack images:', error);
-        });
-      }
       console.log(`✅ Loaded ${modpacks.length} modpacks from Supabase`);
       return this.modpacksData;
     } catch (error) {
@@ -351,7 +370,7 @@ class LauncherService {
       return cached.data;
     }
     if (persisted && Date.now() - persisted.timestamp < this.cacheTTL) {
-      this.cache.set(cacheKey, { data: persisted.data, timestamp: persisted.timestamp });
+      this.cache.set(cacheKey, { data: persisted.data, timestamp: persisted.timestamp, expiresAt: persisted.timestamp + CACHE_TTL.MODPACK_DETAILS });
       return persisted.data;
     }
 
@@ -459,7 +478,8 @@ class LauncherService {
         rating: statsResult.data?.average_rating || null,
       };
 
-      this.cache.set(cacheKey, { data: details, timestamp: Date.now() });
+      const detailsNow = Date.now();
+      this.cache.set(cacheKey, { data: details, timestamp: detailsNow, expiresAt: detailsNow + CACHE_TTL.MODPACK_DETAILS });
       this.writePersistentCache(cacheKey, details);
       return details;
     } catch (error) {
@@ -482,7 +502,7 @@ class LauncherService {
       return cached.data;
     }
     if (persisted && Date.now() - persisted.timestamp < this.cacheTTL) {
-      this.cache.set(cacheKey, { data: persisted.data, timestamp: persisted.timestamp });
+      this.cache.set(cacheKey, { data: persisted.data, timestamp: persisted.timestamp, expiresAt: persisted.timestamp + CACHE_TTL.PARTNERS });
       return persisted.data;
     }
 
@@ -499,7 +519,8 @@ class LauncherService {
       }
 
       console.log(`✅ Loaded ${data?.length || 0} partners`);
-      this.cache.set(cacheKey, { data: data || [], timestamp: Date.now() });
+      const partnersNow = Date.now();
+      this.cache.set(cacheKey, { data: data || [], timestamp: partnersNow, expiresAt: partnersNow + CACHE_TTL.PARTNERS });
       this.writePersistentCache(cacheKey, data || []);
       return data || [];
     } catch (error) {
@@ -847,7 +868,8 @@ class LauncherService {
 
   private writePersistentCache<T = any>(key: string, data: T): void {
     try {
-      const entry: CacheEntry<T> = { data, timestamp: Date.now() };
+      const persistNow = Date.now();
+      const entry: CacheEntry<T> = { data, timestamp: persistNow, expiresAt: persistNow + CACHE_TTL.MODPACKS };
       localStorage.setItem(`LK_CACHE:${key}`, JSON.stringify(entry));
     } catch (_) {
       // ignore
@@ -994,20 +1016,6 @@ class LauncherService {
       if (unlistenProgress) {
         unlistenProgress();
       }
-    }
-  }
-
-  private async cacheModpackImages(modpacks: any[]): Promise<void> {
-    if (!isTauriContext()) {
-      return; // Skip caching in browser environment
-    }
-
-    try {
-      await safeInvoke('cache_modpack_images_command', { modpacks });
-      console.log('Modpack images cached successfully');
-    } catch (error) {
-      console.error('Failed to cache modpack images:', error);
-      throw error;
     }
   }
 
