@@ -339,6 +339,7 @@
     "displayNameDesc": "This is shown throughout the launcher and on your public profile",
     "usingDiscordAvatar": "Using Discord avatar. Link a different provider or upload custom image.",
     "uploadCustomAvatar": "Upload a custom profile picture",
+    "profileUpdated": "Profile updated",
     "uploading": "Uploading...",
     "chooseImage": "Choose Image"
   },

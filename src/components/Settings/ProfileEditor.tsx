@@ -16,6 +16,7 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ luminaKraftUser, discordA
   const { t } = useTranslation();
   const [displayName, setDisplayName] = useState(luminaKraftUser.user_metadata?.display_name || '');
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [tempDisplayName, setTempDisplayName] = useState(displayName);
 
   // Sync state with prop changes (e.g. silent background updates)
@@ -42,23 +43,34 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ luminaKraftUser, discordA
       return;
     }
 
+    setIsSaving(true);
+
     try {
+      // 1. Update Supabase Auth User (metadata)
       const { error } = await supabase.auth.updateUser({
         data: { display_name: tempDisplayName }
       });
 
       if (error) throw error;
 
-      // Also update in public.users table
-      await updateUser(luminaKraftUser.id, { display_name: tempDisplayName });
+      // 2. Update Public User Table (DB)
+      try {
+        await updateUser(luminaKraftUser.id, { display_name: tempDisplayName });
+      } catch (dbError) {
+        console.error('Failed to update public user profile:', dbError);
+        // Don't block UI if only DB sync fails but Auth succeeded
+      }
 
       setDisplayName(tempDisplayName);
-      // Force exit edit mode
-      setIsEditing(false);
-      onUpdate();
+      setIsEditing(false); // Update local state immediately
+      onUpdate(); // Notify parent
+
+      toast.success(t('settings.profileUpdated'));
     } catch (error) {
       console.error('Error updating display name:', error);
       toast.error(t('errors.failedUpdateDisplay'));
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -105,14 +117,27 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ luminaKraftUser, discordA
               type="text"
               value={tempDisplayName}
               onChange={(e) => setTempDisplayName(e.target.value)}
-              className="flex-1 px-3 py-1 bg-dark-800 border border-lumina-500 rounded focus:outline-none text-white text-sm"
+              disabled={isSaving}
+              className="flex-1 px-3 py-1 bg-dark-800 border border-lumina-500 rounded focus:outline-none text-white text-sm disabled:opacity-50"
               placeholder="Display Name"
               autoFocus
             />
-            <button onClick={handleUpdateDisplayName} className="p-1.5 bg-green-600/20 text-green-400 rounded hover:bg-green-600/30">
-              <Check size={16} />
+            <button
+              onClick={handleUpdateDisplayName}
+              disabled={isSaving}
+              className="p-1.5 bg-green-600/20 text-green-400 rounded hover:bg-green-600/30 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSaving ? (
+                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <Check size={16} />
+              )}
             </button>
-            <button onClick={handleCancelEdit} className="p-1.5 bg-red-600/20 text-red-400 rounded hover:bg-red-600/30">
+            <button
+              onClick={handleCancelEdit}
+              disabled={isSaving}
+              className="p-1.5 bg-red-600/20 text-red-400 rounded hover:bg-red-600/30 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               <X size={16} />
             </button>
           </div>

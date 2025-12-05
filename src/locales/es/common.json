@@ -337,6 +337,7 @@
     "displayNameDesc": "Esto se muestra en todo el launcher y en tu perfil público",
     "usingDiscordAvatar": "Usando avatar de Discord. Vincula un proveedor diferente o sube una imagen personalizada.",
     "uploadCustomAvatar": "Subir una foto de perfil personalizada",
+    "profileUpdated": "Perfil actualizado",
     "uploading": "Subiendo...",
     "chooseImage": "Elegir Imagen"
   },
