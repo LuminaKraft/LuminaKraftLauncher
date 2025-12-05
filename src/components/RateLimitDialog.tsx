@@ -95,7 +95,7 @@ export default function RateLimitDialog({
                     {content.description}
                   </p>
                   <p className="text-xs text-gray-500 mt-2">
-                    {t('rateLimit.resetIn')} {new Date(resetAt).toLocaleTimeString()}
+                    {t('rateLimit.resetIn')} {new Date(resetAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
 
