@@ -54,18 +54,55 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
   const [userRole, setUserRole] = useState<'admin' | 'partner' | 'user' | null>(null);
   const [partnerName, setPartnerName] = useState<string | null>(null);
 
-  const [formData, setFormData] = useState<FormData>({
-    name: { en: '', es: '' },
-    shortDescription: { en: '', es: '' },
-    description: { en: '', es: '' },
-    version: '1.0.0',
-    minecraftVersion: '1.20.1',
-    modloader: 'forge',
-    modloaderVersion: '47.2.0',
-    primaryColor: '#3b82f6',
-    features: [],
-    isComingSoon: false
-  });
+  // Load saved form data from localStorage
+  const getSavedFormData = (): FormData => {
+    try {
+      const saved = localStorage.getItem('publishModpackFormData');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.warn('Failed to load saved form data:', e);
+    }
+    return {
+      name: { en: '', es: '' },
+      shortDescription: { en: '', es: '' },
+      description: { en: '', es: '' },
+      version: '1.0.0',
+      minecraftVersion: '1.20.1',
+      modloader: 'forge',
+      modloaderVersion: '47.2.0',
+      primaryColor: '#3b82f6',
+      features: [],
+      isComingSoon: false
+    };
+  };
+
+  const getSavedStep = (): number => {
+    try {
+      const saved = localStorage.getItem('publishModpackFormStep');
+      if (saved) {
+        return parseInt(saved, 10) || 1;
+      }
+    } catch (e) {
+      console.warn('Failed to load saved step:', e);
+    }
+    return 1;
+  };
+
+  const getSavedLang = (): 'en' | 'es' => {
+    try {
+      const saved = localStorage.getItem('publishModpackFormLang');
+      if (saved === 'en' || saved === 'es') {
+        return saved;
+      }
+    } catch (e) {
+      console.warn('Failed to load saved lang:', e);
+    }
+    return 'en';
+  };
+
+  const [formData, setFormData] = useState<FormData>(getSavedFormData);
 
   const [zipFile, setZipFile] = useState<File | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -77,11 +114,38 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
   const [isDraggingLogo, setIsDraggingLogo] = useState(false);
   const [isDraggingBanner, setIsDraggingBanner] = useState(false);
   const [isDraggingScreenshots, setIsDraggingScreenshots] = useState(false);
-  const [currentLang, setCurrentLang] = useState<'en' | 'es'>('en');
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentLang, setCurrentLang] = useState<'en' | 'es'>(getSavedLang);
+  const [currentStep, setCurrentStep] = useState(getSavedStep);
   const [nameError, setNameError] = useState<string | null>(null);
   const [isCheckingName, setIsCheckingName] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Save form data to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('publishModpackFormData', JSON.stringify(formData));
+    } catch (e) {
+      console.warn('Failed to save form data:', e);
+    }
+  }, [formData]);
+
+  // Save current step to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('publishModpackFormStep', currentStep.toString());
+    } catch (e) {
+      console.warn('Failed to save step:', e);
+    }
+  }, [currentStep]);
+
+  // Save current language to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('publishModpackFormLang', currentLang);
+    } catch (e) {
+      console.warn('Failed to save lang:', e);
+    }
+  }, [currentLang]);
 
   const getSteps = () => [
     { id: 1, title: t('publishModpack.steps.upload'), icon: Upload, description: t('publishModpack.steps.uploadDesc') },
@@ -632,6 +696,10 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
       setTimeout(() => {
         setUploadProgress(0);
         setPendingUploadedFiles(null); // Clean up uploaded files
+        // Clear saved form data from localStorage
+        localStorage.removeItem('publishModpackFormData');
+        localStorage.removeItem('publishModpackFormStep');
+        localStorage.removeItem('publishModpackFormLang');
         onNavigate?.('published-modpacks');
       }, 500);
     } catch (error) {
