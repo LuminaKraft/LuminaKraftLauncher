@@ -56,7 +56,7 @@ function AppContent() {
   const [modpacksPageKey, setModpacksPageKey] = useState(0); // Key to force re-render of ModpacksPage
   const [showRestartModal, setShowRestartModal] = useState(false);
   const [isRestarting, setIsRestarting] = useState(false);
-  const { isLoading, error, modpacksData, isAuthenticating, refreshData, showUsernameDialog } = useLauncher();
+  const { isLoading, error, modpacksData, isAuthenticating, setIsAuthenticating, refreshData, showUsernameDialog } = useLauncher();
   const { withDelay } = useAnimation();
   const { t } = useTranslation();
   const launcherService = LauncherService.getInstance();
@@ -409,6 +409,7 @@ function AppContent() {
         isOpen={isAuthenticating}
         message={t('auth.authenticating')}
         submessage={t('auth.pleaseWaitAuth')}
+        onCancel={() => setIsAuthenticating(false)}
       />
     </div>
   );
