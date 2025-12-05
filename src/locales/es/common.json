@@ -858,7 +858,7 @@
       "readyToImport": "Listo para Importar",
       "actionRequired": "Se Requiere Acción",
       "allFilesPresent": "Todos los {{count}} archivo(s) (mods/paquetes de recursos) que no pueden descargarse automáticamente están presentes en overrides/.",
-      "fileMissing": "{{count}} archivo(s) (mods/paquetes de recursos) no pueden descargarse automáticamente y faltan en overrides/.",
+      "fileMissing": "{{count}} archivo(s) (mods/paquetes de recursos) no pueden descargarse automáticamente.",
       "description": "Estos archivos (mods/paquetes de recursos) no pueden descargarse automáticamente. Puedes subirlos aquí o incluirlos en la carpeta overrides:",
       "dragAndDrop": "Suelta todos los archivos aquí o haz clic para examinar",
       "autoMatched": "Los archivos se igualarán automáticamente por nombre",

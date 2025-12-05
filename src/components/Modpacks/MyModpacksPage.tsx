@@ -431,7 +431,6 @@ export function MyModpacksPage() {
     try {
       console.log('[Import] Starting import from path:', filePath);
       await installModpackFromZip(filePath);
-      toast.success(t('myModpacks.installingModpack'));
 
       // Reload instances
       await loadInstancesAndMetadata();

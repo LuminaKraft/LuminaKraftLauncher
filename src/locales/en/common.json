@@ -859,7 +859,7 @@
       "readyToImport": "Ready to Import!",
       "actionRequired": "Action Required",
       "allFilesPresent": "All {{count}} file(s) (mods/resourcepacks) that cannot be auto-downloaded are present in overrides/.",
-      "fileMissing": "{{count}} file(s) (mods/resourcepacks) cannot be auto-downloaded and are missing from overrides/.",
+      "fileMissing": "{{count}} file(s) (mods/resourcepacks) cannot be auto-downloaded.",
       "description": "These files (mods/resourcepacks) cannot be downloaded automatically. You can upload them here or include them in the overrides folder:",
       "dragAndDrop": "Drop all files here or click to browse",
       "autoMatched": "Files will be automatically matched by name",
