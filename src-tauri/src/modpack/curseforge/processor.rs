@@ -2,7 +2,7 @@ use anyhow::{Result, anyhow};
 use std::path::PathBuf;
 use std::fs;
 use super::manifest::{read_manifest, get_modloader_info, process_overrides};
-use super::downloader::download_mods_with_failed_tracking;
+use super::downloader::download_mods_with_filenames;
 use crate::modpack::extraction::extract_zip;
 
 /// Process a CurseForge modpack with progress tracking and failed mod detection
@@ -75,14 +75,22 @@ where
     
     process_overrides(&manifest, &temp_dir, instance_dir, emit_progress.clone())?;
     
-    // Download mods - internal progress will be 30% to 95% (maps to 70%-100% externally)
+    // Download mods - this also returns the expected filenames for cleanup
     emit_progress(
         "".to_string(),
         30.0,
         "preparing_mod_downloads".to_string()
     );
     
-    let failed_mods = download_mods_with_failed_tracking(&manifest, instance_dir, emit_progress.clone(), 30.0, 95.0, auth_token).await?;
+    let (failed_mods, expected_filenames) = download_mods_with_filenames(&manifest, instance_dir, emit_progress.clone(), 30.0, 95.0, auth_token).await?;
+    
+    // Clean up mods that are no longer in the manifest (for updates)
+    emit_progress(
+        "progress.cleaningRemovedMods".to_string(),
+        96.0,
+        "cleaning_removed_mods".to_string()
+    );
+    cleanup_removed_mods(&expected_filenames, instance_dir)?;
     
     // Clean up temp directory
     emit_progress(
@@ -107,6 +115,58 @@ where
     Ok((modloader, modloader_version, recommended_ram, failed_mods))
 }
 
-
-
- 
+/// Clean up mods that are no longer in the manifest (useful for updates)
+/// Takes the list of expected mod filenames from the CurseForge API response
+fn cleanup_removed_mods(expected_filenames: &std::collections::HashSet<String>, instance_dir: &PathBuf) -> Result<()> {
+    let mods_dir = instance_dir.join("mods");
+    
+    if !mods_dir.exists() {
+        return Ok(());
+    }
+    
+    // Read all .jar files in the mods directory
+    let entries = match fs::read_dir(&mods_dir) {
+        Ok(entries) => entries,
+        Err(e) => {
+            eprintln!("⚠️ Failed to read mods directory: {}", e);
+            return Ok(());
+        }
+    };
+    
+    let mut removed_count = 0;
+    
+    for entry in entries.flatten() {
+        let path = entry.path();
+        
+        // Only process .jar files
+        if let Some(ext) = path.extension() {
+            if ext != "jar" {
+                continue;
+            }
+        } else {
+            continue;
+        }
+        
+        // Get filename
+        let filename = match path.file_name().and_then(|n| n.to_str()) {
+            Some(name) => name.to_string(),
+            None => continue,
+        };
+        
+        // If this file is NOT in the expected list, delete it
+        if !expected_filenames.contains(&filename) {
+            if let Err(e) = fs::remove_file(&path) {
+                eprintln!("⚠️ Failed to remove old mod {}: {}", filename, e);
+            } else {
+                println!("🗑️ Removed old mod: {}", filename);
+                removed_count += 1;
+            }
+        }
+    }
+    
+    if removed_count > 0 {
+        println!("🧹 Cleaned up {} old mod(s)", removed_count);
+    }
+    
+    Ok(())
+}

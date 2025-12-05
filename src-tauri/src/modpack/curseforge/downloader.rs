@@ -344,4 +344,42 @@ where
     }
     
     Ok(failed_mods)
+}
+
+/// Download mods with progress tracking and return expected filenames for cleanup
+/// This wraps download_mods_with_failed_tracking and also returns the set of expected filenames
+pub async fn download_mods_with_filenames<F>(
+    manifest: &CurseForgeManifest, 
+    instance_dir: &PathBuf,
+    emit_progress: F,
+    start_percentage: f32,
+    end_percentage: f32,
+    auth_token: Option<&str>,
+) -> Result<(Vec<serde_json::Value>, std::collections::HashSet<String>)>
+where
+    F: Fn(String, f32, String) + Send + Sync + 'static + Clone,
+{
+    let file_ids: Vec<i64> = manifest.files.iter().map(|f| f.file_id).collect();
+    
+    // Fetch file info to get filenames
+    emit_progress(
+        "progress.fetchingModInfo".to_string(),
+        start_percentage + 2.0,
+        "fetching_mod_info".to_string()
+    );
+    
+    let all_file_infos = fetch_mod_files_batch(&file_ids, auth_token).await?;
+    
+    // Collect expected filenames for cleanup
+    let expected_filenames: std::collections::HashSet<String> = all_file_infos
+        .iter()
+        .filter_map(|info| info.file_name.clone())
+        .collect();
+    
+    println!("📋 Expected {} mod files from manifest", expected_filenames.len());
+    
+    // Now do the actual download using the existing function
+    let failed_mods = download_mods_with_failed_tracking(manifest, instance_dir, emit_progress, start_percentage, end_percentage, auth_token).await?;
+    
+    Ok((failed_mods, expected_filenames))
 } 
