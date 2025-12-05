@@ -1,7 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { check, Update } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
-import toast from 'react-hot-toast';
 
 export interface UpdateInfo {
   hasUpdate: boolean;
@@ -21,7 +20,7 @@ class UpdateService {
   private currentUpdate: Update | null = null;
   private eventListeners: Map<string, Function[]> = new Map();
 
-  private constructor() {}
+  private constructor() { }
 
   static getInstance(): UpdateService {
     if (!UpdateService.instance) {
@@ -79,13 +78,13 @@ class UpdateService {
    */
   private async checkForStableRelease(currentVersion: string, platform: string): Promise<UpdateInfo> {
     console.log('🔍 Checking for stable updates only...');
-    
+
     const update = await check();
-    
+
     if (update && !this.isPrerelease(update.version)) {
       this.currentUpdate = update;
       console.log(`✅ Stable update available: ${currentVersion} -> ${update.version}`);
-      
+
       const updateInfo: UpdateInfo = {
         hasUpdate: true,
         currentVersion,
@@ -116,11 +115,11 @@ class UpdateService {
    */
   private async checkForAnyRelease(currentVersion: string, platform: string): Promise<UpdateInfo> {
     console.log('🔍 Checking for any updates (including prereleases)...');
-    
+
     try {
       const response = await fetch('https://api.github.com/repos/LuminaKraft/LuminakraftLauncher/releases');
       const releases = await response.json();
-      
+
       if (!Array.isArray(releases)) {
         throw new Error('Invalid releases response from GitHub API');
       }
@@ -160,7 +159,8 @@ class UpdateService {
         return updateInfo;
       }
     } catch (error) {
-      console.error('❌ Failed to check GitHub API, falling back to Tauri updater:', error);
+      // This is expected if GitHub API rate limits or no stable releases exist
+      console.warn('⚠️ GitHub API unavailable or rate limited, falling back to Tauri updater');
       // Fallback to Tauri updater
       const update = await check();
       if (update) {
@@ -265,27 +265,27 @@ class UpdateService {
   private isNewerVersion(current: string, candidate: string): boolean {
     const currentParts = current.replace(/^v/, '').split('-')[0].split('.').map(Number);
     const candidateParts = candidate.replace(/^v/, '').split('-')[0].split('.').map(Number);
-    
+
     for (let i = 0; i < 3; i++) {
       const currentPart = currentParts[i] || 0;
       const candidatePart = candidateParts[i] || 0;
-      
+
       if (candidatePart > currentPart) return true;
       if (candidatePart < currentPart) return false;
     }
-    
+
     // If base versions are equal, check prerelease status
     const currentIsPrerelease = this.isPrerelease(current);
     const candidateIsPrerelease = this.isPrerelease(candidate);
-    
+
     // If current is prerelease and candidate is stable with same base version, candidate is newer
     if (currentIsPrerelease && !candidateIsPrerelease) return true;
-    
+
     // If both are prereleases or both are stable, compare full versions
     if (currentIsPrerelease === candidateIsPrerelease) {
       return candidate !== current && candidate > current;
     }
-    
+
     return false;
   }
 
@@ -316,7 +316,7 @@ class UpdateService {
       if (!cached) return null;
 
       const { timestamp, updateInfo } = JSON.parse(cached);
-      
+
       // Use cached info if it's less than 1 hour old
       if (Date.now() - timestamp < this.CHECK_INTERVAL) {
         return updateInfo;
@@ -324,7 +324,7 @@ class UpdateService {
     } catch (error) {
       console.error('Failed to get cached update info:', error);
     }
-    
+
     return null;
   }
 
