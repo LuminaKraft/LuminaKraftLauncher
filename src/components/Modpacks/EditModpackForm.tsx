@@ -370,7 +370,10 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
     try {
       await authService.syncDiscordRoles();
 
-      // 1. Upload file using r2UploadService
+      // 1. Update modpack version FIRST (so edge function uses correct version)
+      await service.updateModpack(modpackId, { version: newVersion });
+
+      // 2. Upload file using r2UploadService (edge function will create version entry)
       const uploadResult = await R2UploadService.uploadToR2(
         zipFile,
         modpackId,
@@ -378,31 +381,44 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
         (progress) => setUploadProgress(progress.percent)
       );
 
-      // 2. Update modpack version
-      await service.updateModpack(modpackId, { version: newVersion });
-
-      // 3. Create version record (register-modpack-upload should have created/updated it, but ensure changelog is set)
-      // Check if version already exists
+      // 3. Create or update version record
+      // register-modpack-upload may have already created this version, so handle duplicates
       const { data: existingVersion } = await supabase
         .from('modpack_versions')
         .select('id')
         .eq('modpack_id', modpackId)
         .eq('version', newVersion)
-        .single();
+        .maybeSingle();
 
       if (!existingVersion) {
-        await supabase.from('modpack_versions').insert({
+        // Try to insert new version
+        const { error: insertError } = await supabase.from('modpack_versions').insert({
           modpack_id: modpackId,
           version: newVersion,
           changelog_i18n: changelog,
           file_url: uploadResult.fileUrl
         } as any);
+
+        // If insert fails (e.g., duplicate), try to update instead
+        if (insertError) {
+          console.warn('Insert failed, trying to update existing version:', insertError);
+          await (supabase.from('modpack_versions') as any)
+            .update({
+              changelog_i18n: changelog,
+              file_url: uploadResult.fileUrl
+            })
+            .eq('modpack_id', modpackId)
+            .eq('version', newVersion);
+        }
       } else {
-        // Update existing version with changelog
+        // Update existing version with changelog and file URL
         await (supabase
           .from('modpack_versions') as any)
-          .update({ changelog_i18n: changelog })
-          .eq('id', (existingVersion as any).id);
+          .update({
+            changelog_i18n: changelog,
+            file_url: uploadResult.fileUrl
+          })
+          .eq('id', (existingVersion as { id: string }).id);
       }
 
       toast.success(t('toast.versionPublished'), { id: toastId });
@@ -696,8 +712,8 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                         }
                       }}
                       className={`border-2 border-dashed rounded-lg p-4 text-center relative group ${isDraggingLogo
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                          : 'border-gray-300 dark:border-gray-600'
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                        : 'border-gray-300 dark:border-gray-600'
                         }`}
                     >
                       {formData.logoUrl ? (
@@ -730,8 +746,8 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                         }
                       }}
                       className={`border-2 border-dashed rounded-lg p-4 text-center relative group ${isDraggingBanner
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                          : 'border-gray-300 dark:border-gray-600'
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                        : 'border-gray-300 dark:border-gray-600'
                         }`}
                     >
                       {formData.bannerUrl ? (
@@ -772,7 +788,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                   >
                     <label className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 cursor-pointer inline-flex">
                       <Upload className="w-4 h-4" />
-{t('editModpack.media.uploadScreenshot')}
+                      {t('editModpack.media.uploadScreenshot')}
                       <input
                         type="file"
                         accept="image/*"
@@ -790,7 +806,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
 
                 {images.length === 0 ? (
                   <div className="text-center py-12 text-gray-500 dark:text-gray-400 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg">
-{t('editModpack.media.noScreenshotsUploaded')}
+                    {t('editModpack.media.noScreenshotsUploaded')}
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -826,13 +842,13 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                     className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
                   >
                     <Plus className="w-4 h-4" />
-{t('editModpack.features.addFeature')}
+                    {t('editModpack.features.addFeature')}
                   </button>
                 </div>
 
                 {features.length === 0 ? (
                   <div className="text-center py-12 text-gray-500 dark:text-gray-400 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg">
-{t('editModpack.features.noFeaturesAdded')}
+                    {t('editModpack.features.noFeaturesAdded')}
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -902,7 +918,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                     className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
                   >
                     <Save className="w-4 h-4" />
-{t('editModpack.features.saveFeatures')}
+                    {t('editModpack.features.saveFeatures')}
                   </button>
                 </div>
               </div>
@@ -938,7 +954,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                             }}
                             className="text-blue-600 hover:text-blue-700 text-sm font-medium hover:underline"
                           >
-{t('editModpack.versions.downloadZip')}
+                            {t('editModpack.versions.downloadZip')}
                           </button>
                         </div>
                         {v.changelog_i18n && (
@@ -1036,7 +1052,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                           className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
                         >
                           {isUpdating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-{t('editModpack.versions.publishVersion')}
+                          {t('editModpack.versions.publishVersion')}
                         </button>
                       </div>
                     </>
@@ -1106,7 +1122,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                   className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"
                 >
                   <Trash2 className="w-4 h-4" />
-{t('editModpack.settings.deleteModpack')}
+                  {t('editModpack.settings.deleteModpack')}
                 </button>
               </div>
             </div>
