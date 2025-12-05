@@ -491,7 +491,7 @@
   },
   "failedMods": {
     "title": "Archivos no disponibles",
-    "description": "Los siguientes archivos (mods/paquetes de recursos) no se pudieron descargar porque no están disponibles para descarga pública. Haz clic en cada enlace para ir directamente a la página de descarga y agrégalos manualmente a las carpetas correspondientes (mods/ o resourcepacks/):",
+    "description": "Los siguientes archivos (mods/paquetes de recursos) no se pudieron descargar porque no están disponibles para descarga pública. Puedes subirlos a continuación y se agregarán automáticamente a tu modpack:",
     "loading": "Obteniendo información de los archivos...",
     "error": "No se pudo obtener la información de los archivos",
     "fileName": "Archivo:",

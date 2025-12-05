@@ -493,7 +493,7 @@
   },
   "failedMods": {
     "title": "Unavailable Files",
-    "description": "The following files (mods/resourcepacks) could not be downloaded because they are not available for public download. Click on each link to go directly to the download page and add the files manually to the appropriate folders (mods/ or resourcepacks/):",
+    "description": "The following files (mods/resourcepacks) could not be downloaded because they are not available for public download. You can upload them below and they will be automatically added to your modpack:",
     "loading": "Getting file information...",
     "error": "Could not get file information",
     "fileName": "File:",
