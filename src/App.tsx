@@ -155,8 +155,9 @@ function AppContent() {
           refreshData();
         }
       }
-      // Clear selected modpack ID when leaving explore section
-      if (activeSection === 'explore' && newSection !== 'explore') {
+      // Clear selected modpack ID when entering explore or my-modpacks from sidebar
+      // This ensures we start with the list view, not a specific modpack
+      if (newSection === 'explore' || newSection === 'my-modpacks') {
         setSelectedModpackId(null);
       }
       withDelay(() => {
@@ -166,9 +167,9 @@ function AppContent() {
   };
 
   const handleModpackNavigation = (section: string, modpackId?: string) => {
-    if (modpackId) {
-      setSelectedModpackId(modpackId);
-    }
+    // Set or clear the modpackId based on what was passed
+    // If navigating without a modpackId, clear it so the section starts fresh
+    setSelectedModpackId(modpackId || null);
     handleSectionChange(section);
   };
 
@@ -246,8 +247,8 @@ function AppContent() {
       <main className="flex-1 overflow-auto">
         <div
           className={`h-full transition-all duration-200 ease-out ${isTransitioning
-              ? 'opacity-0 scale-95 translate-y-2'
-              : 'opacity-100 scale-100 translate-y-0'
+            ? 'opacity-0 scale-95 translate-y-2'
+            : 'opacity-100 scale-100 translate-y-0'
             }`}
         >
           {renderContent()}
