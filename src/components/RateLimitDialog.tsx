@@ -101,6 +101,14 @@ export default function RateLimitDialog({
                         <span className="text-gray-400">{t('rateLimit.currentLimit')}</span>
                         <span className="text-white font-medium">{limit}/h</span>
                       </div>
+
+                      {errorCode === 'LIMIT_EXCEEDED_ANON' && (
+                        <div className="flex items-center justify-between text-sm mb-2">
+                          <span className="text-lumina-400 font-medium">{t('auth.signIn')}</span>
+                          <span className="text-lumina-400 font-bold">10/h</span>
+                        </div>
+                      )}
+
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-indigo-400 font-medium">Discord</span>
                         <span className="text-indigo-400 font-bold">50/h</span>
