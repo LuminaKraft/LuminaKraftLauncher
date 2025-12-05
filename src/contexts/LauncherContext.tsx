@@ -1327,7 +1327,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
             setIsAuthenticating(false);
           }
         }}
-        onLinkDiscord={async () => {
+        onJoinDiscord={async () => {
           setRateLimitDialog(prev => ({ ...prev, isOpen: false }));
           // Navigate to settings or trigger link
           // For now, just open settings page if possible, or trigger link flow
