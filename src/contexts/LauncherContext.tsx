@@ -763,12 +763,17 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
           type: 'SET_MODPACK_STATE',
           payload: {
             id: modpackId,
-            state: { 
+            state: {
               ...(state.modpackStates[modpackId] || createModpackState('not_installed')),
               status: newStatus
             },
           },
         });
+
+        // After update, refresh modpack metadata to get latest version info
+        if (action === 'update') {
+          await refreshData();
+        }
       }
     } catch (error) {
       console.error(`Error ${action}ing modpack:`, error);
