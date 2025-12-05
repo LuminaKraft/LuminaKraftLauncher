@@ -676,20 +676,27 @@ class AuthService {
         // Fetch current user data to calculate display_name with priority
         const { data: currentUser } = await supabase
           .from('users')
-          .select('minecraft_username, email')
+          .select('minecraft_username, email, display_name')
           .eq('id', user.id)
           .single<{
             minecraft_username: string | null;
             email: string | null;
+            display_name: string | null;
           }>();
 
-        // Calculate display_name with priority: Discord global_name > Discord username > Minecraft username > Email > User
-        const calculated_display_name =
-          discordUser.global_name ||
-          cleanUsername ||
-          currentUser?.minecraft_username ||
-          currentUser?.email?.split('@')[0] ||
-          'User';
+        // Calculate display_name with priority: DB display_name > Discord global_name > Discord username > Minecraft username > Email > User
+        const currentDisplayName = currentUser?.display_name;
+        // Only overwrite if current display_name is missing, empty, or "User"
+        // If user has set a custom display_name via ProfileEditor, KEEP IT.
+        const shouldOverwrite = !currentDisplayName || currentDisplayName === 'User' || currentDisplayName === '';
+
+        const calculated_display_name = shouldOverwrite
+          ? (discordUser.global_name ||
+            cleanUsername ||
+            currentUser?.minecraft_username ||
+            currentUser?.email?.split('@')[0] ||
+            'User')
+          : currentDisplayName;
 
         const updateData = {
           discord_id: discordUser.id,

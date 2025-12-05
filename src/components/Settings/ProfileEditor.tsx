@@ -18,6 +18,14 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ luminaKraftUser, discordA
   const [isEditing, setIsEditing] = useState(false);
   const [tempDisplayName, setTempDisplayName] = useState(displayName);
 
+  // Sync state with prop changes (e.g. silent background updates)
+  React.useEffect(() => {
+    const newName = luminaKraftUser.user_metadata?.display_name;
+    if (newName && newName !== displayName) {
+      setDisplayName(newName);
+    }
+  }, [luminaKraftUser]);
+
   const handleStartEdit = () => {
     setTempDisplayName(displayName);
     setIsEditing(true);
@@ -45,6 +53,7 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ luminaKraftUser, discordA
       await updateUser(luminaKraftUser.id, { display_name: tempDisplayName });
 
       setDisplayName(tempDisplayName);
+      // Force exit edit mode
       setIsEditing(false);
       onUpdate();
     } catch (error) {
@@ -72,15 +81,15 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ luminaKraftUser, discordA
       {/* Avatar */}
       <div className="relative flex-shrink-0">
         {profilePic ? (
-           <img
-             src={profilePic}
-             alt="Profile"
-             className="w-16 h-16 rounded-full object-cover border-2 border-lumina-600/50 shadow-lg"
-           />
+          <img
+            src={profilePic}
+            alt="Profile"
+            className="w-16 h-16 rounded-full object-cover border-2 border-lumina-600/50 shadow-lg"
+          />
         ) : (
-           <div className="w-16 h-16 bg-dark-700 rounded-full flex items-center justify-center border-2 border-dark-500">
-              <UserIcon className="w-8 h-8 text-dark-400" />
-           </div>
+          <div className="w-16 h-16 bg-dark-700 rounded-full flex items-center justify-center border-2 border-dark-500">
+            <UserIcon className="w-8 h-8 text-dark-400" />
+          </div>
         )}
       </div>
 
@@ -89,7 +98,7 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ luminaKraftUser, discordA
         <p className="text-xs text-gray-400 uppercase font-bold tracking-wider mb-1">
           {t('settings.displayName')}
         </p>
-        
+
         {isEditing ? (
           <div className="flex items-center space-x-2">
             <input
@@ -110,7 +119,7 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ luminaKraftUser, discordA
         ) : (
           <div className="flex items-center space-x-2 group">
             <h3 className="text-xl font-bold text-white truncate">{displayName || 'User'}</h3>
-            <button 
+            <button
               onClick={handleStartEdit}
               className="p-1.5 text-gray-500 hover:text-lumina-400 opacity-0 group-hover:opacity-100 transition-opacity"
               title={t('settings.edit')}
@@ -119,7 +128,7 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ luminaKraftUser, discordA
             </button>
           </div>
         )}
-        
+
         <p className="text-sm text-gray-500 mt-1 truncate">{luminaKraftUser.email}</p>
       </div>
     </div>

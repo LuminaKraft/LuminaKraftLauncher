@@ -29,7 +29,7 @@ const AccountPage: React.FC = () => {
     const setupAuth = async () => {
       try {
 
-        const fetchUserWithProfile = async (retries = 3, existingUser: any = null) => {
+        const fetchUserWithProfile = async (existingUser: any = null) => {
           let user = existingUser;
 
           if (!user) {
@@ -45,9 +45,11 @@ const AccountPage: React.FC = () => {
           }
 
           if (!user) {
-            setDiscordAccount(null);
-            return null;
+            return { user: null, discord: null, providers: [] };
           }
+
+          // CRITICAL: Clone user object to ensure React detects state change
+          user = JSON.parse(JSON.stringify(user));
 
           // Helper to timeout promises
           // Note: <T,> syntax is required in TSX files
@@ -58,15 +60,15 @@ const AccountPage: React.FC = () => {
             ]);
           };
 
-          // Parallelize fetches to speed up loading
+          // Parallelize fetches
           const authService = AuthService.getInstance();
 
           const [discord, providers, profileData]: [any, any, any] = await Promise.all([
-            // 1. Discord Account
-            timeout(authService.getDiscordAccount(), 2000, null),
-            // 2. Linked Providers
-            timeout(authService.getLinkedProviders(), 2000, []),
-            // 3. Public Profile (Display Name)
+            // 1. Discord Account - 3s timeout safe
+            timeout(authService.getDiscordAccount(), 3000, null),
+            // 2. Linked Providers - 3s timeout
+            timeout(authService.getLinkedProviders(), 3000, []),
+            // 3. Public Profile
             (async () => {
               try {
                 const profilePromise = supabase
@@ -74,54 +76,63 @@ const AccountPage: React.FC = () => {
                   .select('display_name, avatar_url')
                   .eq('id', user.id)
                   .single();
-                // Cast to any to handle Supabase builder type compatibility
-                const { data }: any = await timeout(profilePromise as any, 2000, { data: null });
+                const { data } = await timeout(profilePromise as any, 3000, { data: null } as any);
                 return data;
               } catch (e) { return null; }
             })()
           ]);
 
-          setDiscordAccount(discord);
-          setLinkedProviders(providers);
+          let dbDisplayName = null;
 
+          // 1. Prioritize DB Profile Data
           if (profileData) {
+            dbDisplayName = (profileData as any).display_name;
             user.user_metadata = {
               ...user.user_metadata,
-              display_name: (profileData as any).display_name,
-              avatar_url: (profileData as any).avatar_url,
-              // Also update full_name for compatibility if needed
-              full_name: (profileData as any).display_name || user.user_metadata.full_name
+              display_name: dbDisplayName || user.user_metadata.display_name, // Only overwrite if DB has value
+              avatar_url: (profileData as any).avatar_url || user.user_metadata.avatar_url,
+              full_name: dbDisplayName || user.user_metadata.full_name
             };
           }
 
-          // Fallback: If display_name is missing or "User", try to get it from identities
-          const currentName = user.user_metadata.display_name || user.user_metadata.full_name;
-          const isGenericName = !currentName || currentName === 'User';
+          // 2. Fallback logic: Only override if we DON'T have a valid display_name from DB or current metadata
+          const currentName = user.user_metadata.display_name;
+          const isGenericOrEmpty = !currentName || currentName === 'User';
 
-          if (isGenericName) {
-            const targetIdentity = user.identities?.find((id: any) => id.provider === 'discord' || id.provider === 'google' || id.provider === 'azure') || user.identities?.[0];
+          // Only apply fallback if we really need it (empty or "User") AND we didn't just get a valid one from DB
+          if (isGenericOrEmpty) {
+            let betterName = discord?.global_name || discord?.username;
+            let betterAvatar = null;
 
-            if (targetIdentity?.identity_data) {
-              const data = targetIdentity.identity_data;
-              const betterName = data.full_name || data.name || data.user_name || data.display_name;
-              const betterAvatar = data.avatar_url || data.picture || data.avatar;
+            if (!betterName) {
+              const targetIdentity = user.identities?.find((id: any) => id.provider === 'discord' || id.provider === 'google' || id.provider === 'azure') || user.identities?.[0];
 
-              if (betterName) {
-                user.user_metadata = {
-                  ...user.user_metadata,
-                  display_name: betterName,
-                  full_name: betterName,
-                  avatar_url: user.user_metadata.avatar_url || betterAvatar
-                };
+              if (targetIdentity?.identity_data) {
+                const data = targetIdentity.identity_data;
+                betterName = data.global_name || data.full_name || data.name || data.user_name || data.display_name;
+                betterAvatar = data.avatar_url || data.picture || data.avatar;
               }
+            }
+
+            if (betterName) {
+              user.user_metadata = {
+                ...user.user_metadata,
+                display_name: betterName,
+                full_name: betterName, // Sync full_name too
+                avatar_url: user.user_metadata.avatar_url || betterAvatar
+              };
             }
           }
 
-          return user;
+          return { user, discord, providers };
         };
 
-        const initialUser = await fetchUserWithProfile();
+        const { user: initialUser, discord: initialDiscord, providers: initialProviders } = await fetchUserWithProfile();
+
         setLuminaKraftUser(initialUser);
+        setDiscordAccount(initialDiscord);
+        setLinkedProviders(initialProviders);
+
         if (initialUser) hasLoadedUserRef.current = true;
         setIsLoadingLuminaKraft(false);
 
@@ -129,37 +140,64 @@ const AccountPage: React.FC = () => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
           async (event, session) => {
             // IGNORE TOKEN_REFRESHED to prevent flicker. 
-            // The session is automatically updated by Supabase client.
             if (event === 'TOKEN_REFRESHED') {
               return;
             }
 
             if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
-              // If we already have a user and this is just a focus regain (SIGNED_IN), 
-              // DO NOT show loader to avoid flicker. 
-              // Only show loader if we have NO user yet.
               // Only show loader if we haven't loaded a user yet
               if (!hasLoadedUserRef.current) {
                 setIsLoadingLuminaKraft(true);
               }
 
-              // Use session.user directly if available to avoid blocking getUser() call
               const currentUser = session?.user;
 
-              // Pass currentUser to fetch function (we'll need to update signature)
-              // Or just use it if we refactor. 
-              // For now, let's just optimize the loading state.
-
-              // If we have a session user, we can try to use it to skip the timeout wait in fetchUserWithProfile
-              const updatedUser = await fetchUserWithProfile(3, currentUser);
+              const { user: updatedUser, discord: updatedDiscord, providers: updatedProviders } =
+                await fetchUserWithProfile(currentUser);
 
               if (updatedUser) {
                 setLuminaKraftUser(updatedUser);
                 hasLoadedUserRef.current = true;
+
+                // Persistence logic: Only update if valid, or if we are sure it's gone.
+                // If update fetch failed (null) but user has identity, keep old one?
+                // Actually, fetchUserWithProfile returns null discord if timeout.
+                // If we have a user identity for discord, but discord obj is null, implies fetch error/timeout.
+                // In that case, DO NOT clear the existing discord state.
+
+                const hasDiscordIdentity = updatedUser.identities?.some((id: any) => id.provider === 'discord');
+
+                if (updatedDiscord) {
+                  setDiscordAccount(updatedDiscord);
+                } else if (!hasDiscordIdentity) {
+                  // Only clear if user genuinely doesn't have discord linked anymore
+                  setDiscordAccount(null);
+                }
+                // If hashDiscordIdentity is true but updatedDiscord is null (timeout), we Keep existing state (do nothing)
+
+                if (updatedProviders && updatedProviders.length > 0) {
+                  setLinkedProviders(updatedProviders);
+                }
+                // For providers, it's harder to check "hasIdentity" for all, but same principle applies.
+                // If empty list mainly due to timeout?
+                // Safest: always update providers if NOT empty. If empty, check if we timed out?
+                // For now, let's assume empty list is valid unlinking unless it was timeout.
+                // But we don't know if it was timeout returned from fetchUserWithProfile easily without flag.
+                // Simplification: If we have an authenticated user, we trust the providers list unless it's empty AND we had ones before?
+                // Let's stick to standard behavior for providers for now, usually it loads fast.
+                if (updatedProviders && updatedProviders.length === 0 && (linkedProviders.length > 0)) {
+                  // Only clear if we really think it's unlinked. 
+                  // Without clearer signal, we might just accept the clear.
+                  // But for Discord specifically (the icon), the logic above handles it.
+                } else {
+                  setLinkedProviders(updatedProviders);
+                }
+
+              } else {
+                // Update failed or user null?
               }
 
               setIsLoadingLuminaKraft(false);
-              // Hide loading modal when sign-in completes
               setIsSigningIn(false);
             } else if (event === 'SIGNED_OUT') {
               setLuminaKraftUser(null);
@@ -174,13 +212,25 @@ const AccountPage: React.FC = () => {
         // Listen for custom profile update events (triggered by authService after sync)
         const handleProfileUpdateEvent = async () => {
           try {
-            setIsLoadingLuminaKraft(true);
-            const updatedUser = await fetchUserWithProfile(1);
-            setLuminaKraftUser(updatedUser);
-            setIsLoadingLuminaKraft(false);
+            // Update silently without showing loader
+            // setIsLoadingLuminaKraft(true); // Commented out to prevent flicker
+
+            // Try to get cached session first to avoid network calls/timeouts
+            const { data: { session } } = await supabase.auth.getSession();
+            const currentUser = session?.user;
+
+            const updatedUser = await fetchUserWithProfile(currentUser);
+
+            if (updatedUser) {
+              setLuminaKraftUser(updatedUser);
+              // Also update hasLoadedUserRef to ensure subsequent auth events don't trigger loader
+              hasLoadedUserRef.current = true;
+            }
+
+            // setIsLoadingLuminaKraft(false);
           } catch (error) {
             console.error('Error updating user from profile event:', error);
-            setIsLoadingLuminaKraft(false);
+            // setIsLoadingLuminaKraft(false);
           }
         };
         window.addEventListener('luminakraft:profile-updated', handleProfileUpdateEvent);
