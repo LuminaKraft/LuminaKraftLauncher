@@ -40,14 +40,51 @@ export function HomePage({ onNavigate }: HomePageProps) {
         }
 
         try {
+          // Get cached modpack data (name, logo, etc.)
           const cachedData = await invoke<string | null>('get_cached_modpack_data', {
             modpackId: id
           });
 
+          // Get instance metadata (minecraft version, modloader, etc.)
+          const instanceMetadata = await invoke<string | null>('get_instance_metadata', {
+            modpackId: id
+          });
+
+          let modpack: Modpack = {
+            id,
+            name: 'Local Modpack',
+            description: '',
+            version: '',
+            minecraftVersion: '',
+            modloader: '',
+            modloaderVersion: '',
+            isActive: true, // Local modpacks are always active
+            isComingSoon: false,
+            isNew: false,
+            logo: '',
+            backgroundImage: '',
+          } as Modpack;
+
+          // Merge cached data if available
           if (cachedData) {
-            const modpack = JSON.parse(cachedData) as Modpack;
-            newMap.set(id, modpack);
+            const cached = JSON.parse(cachedData);
+            modpack = { ...modpack, ...cached, isActive: true };
           }
+
+          // Merge instance metadata if available
+          if (instanceMetadata) {
+            const instance = JSON.parse(instanceMetadata);
+            modpack = {
+              ...modpack,
+              name: instance.name || modpack.name,
+              version: instance.version || modpack.version,
+              minecraftVersion: instance.minecraft_version || modpack.minecraftVersion,
+              modloader: instance.modloader || modpack.modloader,
+              modloaderVersion: instance.modloader_version || modpack.modloaderVersion,
+            };
+          }
+
+          newMap.set(id, modpack);
         } catch (error) {
           console.error(`Failed to load local modpack ${id}:`, error);
         }

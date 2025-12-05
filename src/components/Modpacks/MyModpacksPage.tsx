@@ -122,6 +122,13 @@ export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: My
     }
   };
 
+  // Sync selectedModpackId with initialModpackId prop
+  useEffect(() => {
+    if (initialModpackId) {
+      setSelectedModpackId(initialModpackId);
+    }
+  }, [initialModpackId]);
+
   // Load instances on mount and clean up old temp files
   useEffect(() => {
     cleanupOldTempFiles();
