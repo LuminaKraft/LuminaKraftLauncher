@@ -1120,12 +1120,17 @@ async fn create_modpack_with_overrides(
             let output_path = PathBuf::from(output_zip_path);
 
             // Create the modpack with overrides
-            filesystem::create_modpack_with_overrides(
+            let result = filesystem::create_modpack_with_overrides(
                 original_zip_path,
                 uploaded_paths,
                 output_path,
                 Some(app_handle)
-            ).await
+            ).await;
+
+            // Clean up temp directory after creating the modpack
+            utils::cleanup::cleanup_temp_dir(&temp_dir);
+
+            result
         })
     })
     .await
