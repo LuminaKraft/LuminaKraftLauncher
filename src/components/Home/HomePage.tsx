@@ -13,12 +13,29 @@ interface HomePageProps {
 
 export function HomePage({ onNavigate }: HomePageProps) {
   const { t } = useTranslation();
-  const { modpackStates } = useLauncher();
+  const { modpackStates, userSettings } = useLauncher();
   const [comingSoonModpacks, setComingSoonModpacks] = useState<Modpack[]>([]);
   const [featuredModpacks, setFeaturedModpacks] = useState<Modpack[]>([]);
   const [discoverModpacks, setDiscoverModpacks] = useState<Modpack[]>([]);
   const [localModpacksMap, setLocalModpacksMap] = useState<Map<string, Modpack>>(new Map());
   const [loading, setLoading] = useState(true);
+
+  const displayName = useMemo(() => {
+    // 1. Try Discord Global Name (LuminaKraft Profile)
+    if (userSettings.discordAccount?.globalName) {
+      return userSettings.discordAccount.globalName;
+    }
+    // 2. Try Discord Username
+    if (userSettings.discordAccount?.username) {
+      return userSettings.discordAccount.username;
+    }
+    // 3. Try Microsoft Username
+    if (userSettings.microsoftAccount?.username) {
+      return userSettings.microsoftAccount.username;
+    }
+    // 4. Fallback to offline username
+    return userSettings.username || 'Player';
+  }, [userSettings]);
 
   useEffect(() => {
     loadHomePageData();
@@ -180,8 +197,9 @@ export function HomePage({ onNavigate }: HomePageProps) {
     <div className="max-w-7xl mx-auto p-6 space-y-8">
       {/* Minimal Hero Section - More professional */}
       <div className="mb-2">
-        <h1 className="text-3xl font-bold text-white mb-1">{t('home.hero.title')}</h1>
-        <p className="text-sm text-gray-400">{t('home.hero.subtitle')}</p>
+        <h1 className="text-3xl font-bold text-white mb-1">
+          {t('home.hero.title')} <span className="text-blue-400">{displayName}</span>
+        </h1>
       </div>
 
       {/* Jump back in Section */}
