@@ -26,6 +26,7 @@ import AuthService from '../services/authService';
 import JSZip from 'jszip';
 import { ModpackManagementService } from '../services/modpackManagementService';
 import { listen } from '@tauri-apps/api/event';
+import { getUserProfile } from '../services/supabaseClient';
 
 interface LauncherContextType {
   modpacksData: ModpacksData | null;
@@ -262,7 +263,62 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
       }
     };
 
+
     initializeApp();
+  }, []);
+
+  // Helper to refresh user profile from Supabase and update local settings
+  const refreshUserProfile = async () => {
+    try {
+      const profile = await getUserProfile() as any;
+      if (profile) {
+        // Map profile to DiscordAccount
+        const discordAccount: any = {
+          id: profile.discord_id || '',
+          username: profile.discord_username || '',
+          globalName: profile.discord_global_name || null,
+          discriminator: undefined,
+          avatar: profile.discord_avatar,
+          isMember: profile.is_discord_member || false,
+          hasPartnerRole: profile.has_partner_role || false,
+          partnerId: profile.partner_id,
+          roles: profile.discord_roles || [],
+          lastSync: profile.last_discord_sync
+        };
+
+        // Update userSettings with new Discord info
+        const newSettings = {
+          ...state.userSettings,
+          discordAccount: discordAccount
+        };
+
+        // Save to local storage via service
+        launcherService.saveUserSettings(newSettings);
+
+        // Update state
+        dispatch({ type: 'SET_USER_SETTINGS', payload: newSettings });
+        console.log('✅ User settings updated with latest profile data');
+      }
+    } catch (error) {
+      console.error('Error refreshing user profile:', error);
+    }
+  };
+
+  // Listen for profile updates (e.g. after Discord sync)
+  useEffect(() => {
+    const handleProfileUpdate = () => {
+      console.log('🔄 Profile updated event received, refreshing settings...');
+      refreshUserProfile();
+    };
+
+    window.addEventListener('luminakraft:profile-updated', handleProfileUpdate);
+
+    // Also refresh on mount if we might have a session
+    refreshUserProfile();
+
+    return () => {
+      window.removeEventListener('luminakraft:profile-updated', handleProfileUpdate);
+    };
   }, []);
 
   // Load modpack states when data is loaded
