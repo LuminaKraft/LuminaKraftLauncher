@@ -1,14 +1,12 @@
 use anyhow::{Result, anyhow};
 use std::path::PathBuf;
 use dirs::data_dir;
-use md5;
 
 pub const META_FOLDER_NAME: &str = "meta";
 pub const LIBRARIES_FOLDER_NAME: &str = "libraries";
 pub const ASSETS_FOLDER_NAME: &str = "assets";
 pub const VERSIONS_FOLDER_NAME: &str = "versions";
 pub const JAVA_FOLDER_NAME: &str = "java_versions";
-pub const CACHES_FOLDER_NAME: &str = "caches";
 
 /// Directory structure for meta resources (following Modrinth's structure)
 #[derive(Debug, Clone)]
@@ -18,9 +16,6 @@ pub struct MetaDirectories {
     pub assets_dir: PathBuf,
     pub versions_dir: PathBuf,
     pub java_dir: PathBuf,
-    pub caches_dir: PathBuf,
-    pub modpack_icons_dir: PathBuf,
-    pub modpack_screenshots_dir: PathBuf,
 }
 
 impl MetaDirectories {
@@ -35,12 +30,9 @@ impl MetaDirectories {
         let assets_dir = meta_dir.join(ASSETS_FOLDER_NAME);
         let versions_dir = meta_dir.join(VERSIONS_FOLDER_NAME);
         let java_dir = meta_dir.join(JAVA_FOLDER_NAME);
-        let caches_dir = base_dir.join(CACHES_FOLDER_NAME);
-        let _assets_index_dir = assets_dir.join("indexes"); // created for completeness
-        let _objects_dir = assets_dir.join("objects"); // created for completeness
-        let natives_dir = meta_dir.join("natives"); // still created but not stored
-        let modpack_icons_dir = caches_dir.join("icons");
-        let modpack_screenshots_dir = caches_dir.join("screenshots");
+        let _assets_index_dir = assets_dir.join("indexes");
+        let _objects_dir = assets_dir.join("objects");
+        let natives_dir = meta_dir.join("natives");
 
         // Create all directories
         let dirs_to_create = [
@@ -49,12 +41,9 @@ impl MetaDirectories {
             &assets_dir,
             &versions_dir,
             &java_dir,
-            &caches_dir,
             &_assets_index_dir,
             &_objects_dir,
             &natives_dir,
-            &modpack_icons_dir,
-            &modpack_screenshots_dir,
         ];
 
         for dir in dirs_to_create {
@@ -67,9 +56,6 @@ impl MetaDirectories {
             assets_dir,
             versions_dir,
             java_dir,
-            caches_dir,
-            modpack_icons_dir,
-            modpack_screenshots_dir,
         })
     }
 
@@ -104,18 +90,8 @@ impl MetaDirectories {
         total_size += Self::get_dir_size(&self.assets_dir).await?;
         total_size += Self::get_dir_size(&self.versions_dir).await?;
         total_size += Self::get_dir_size(&self.java_dir).await?;
-        total_size += Self::get_dir_size(&self.caches_dir).await?;
         
         Ok(total_size)
-    }
-
-    /// Get cache size breakdown
-    pub async fn get_cache_size_breakdown(&self) -> Result<(u64, u64, u64)> {
-        let icons_size = Self::get_dir_size(&self.modpack_icons_dir).await?;
-        let screenshots_size = Self::get_dir_size(&self.modpack_screenshots_dir).await?;
-        let total_cache_size = Self::get_dir_size(&self.caches_dir).await?;
-        
-        Ok((total_cache_size, icons_size, screenshots_size))
     }
 
     /// Get count of Minecraft versions installed
@@ -140,65 +116,6 @@ impl MetaDirectories {
             }
         }
         Ok(count)
-    }
-
-    /// Cache a modpack image (icon or screenshot) from URL
-    pub async fn cache_image(&self, image_url: &str, image_type: &str, modpack_id: &str) -> Result<PathBuf> {
-        let target_dir = match image_type {
-            "icon" => &self.modpack_icons_dir,
-            "screenshot" => &self.modpack_screenshots_dir,
-            _ => return Err(anyhow!("Invalid image type: {}", image_type)),
-        };
-
-        // Generate cache filename based on URL hash
-        let url_hash = format!("{:x}", md5::compute(image_url));
-        let extension = image_url.split('.').last().unwrap_or("webp");
-        let cache_filename = format!("{}_{}_{}.{}", modpack_id, image_type, url_hash, extension);
-        let cache_path = target_dir.join(&cache_filename);
-
-        // Check if already cached
-        if cache_path.exists() {
-            return Ok(cache_path);
-        }
-
-        // Download and cache the image
-        let client = reqwest::Client::new();
-        let response = client.get(image_url).send().await?;
-        let image_data = response.bytes().await?;
-
-        tokio::fs::write(&cache_path, &image_data).await?;
-        println!("Cached {} for modpack {}: {}", image_type, modpack_id, cache_path.display());
-
-        Ok(cache_path)
-    }
-
-    /// Clear all cache
-    pub async fn clear_all_cache(&self) -> Result<()> {
-        if self.caches_dir.exists() {
-            tokio::fs::remove_dir_all(&self.caches_dir).await?;
-            tokio::fs::create_dir_all(&self.caches_dir).await?;
-            tokio::fs::create_dir_all(&self.modpack_icons_dir).await?;
-            tokio::fs::create_dir_all(&self.modpack_screenshots_dir).await?;
-        }
-        Ok(())
-    }
-
-    /// Clear only icons cache
-    pub async fn clear_icons_cache(&self) -> Result<()> {
-        if self.modpack_icons_dir.exists() {
-            tokio::fs::remove_dir_all(&self.modpack_icons_dir).await?;
-            tokio::fs::create_dir_all(&self.modpack_icons_dir).await?;
-        }
-        Ok(())
-    }
-
-    /// Clear only screenshots cache
-    pub async fn clear_screenshots_cache(&self) -> Result<()> {
-        if self.modpack_screenshots_dir.exists() {
-            tokio::fs::remove_dir_all(&self.modpack_screenshots_dir).await?;
-            tokio::fs::create_dir_all(&self.modpack_screenshots_dir).await?;
-        }
-        Ok(())
     }
 
     /// Helper function to calculate directory size recursively

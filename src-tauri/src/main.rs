@@ -142,16 +142,16 @@ async fn get_cached_modpack_data(modpack_id: String) -> Result<Option<String>, S
         None => return Err("Failed to get app data directory".to_string()),
     };
 
-    let cache_path = launcher_dir
-        .join("caches")
+    let meta_path = launcher_dir
+        .join("meta")
         .join("modpacks")
         .join(format!("{}.json", modpack_id));
 
-    if !cache_path.exists() {
+    if !meta_path.exists() {
         return Ok(None);
     }
 
-    match std::fs::read_to_string(cache_path) {
+    match std::fs::read_to_string(meta_path) {
         Ok(content) => Ok(Some(content)),
         Err(e) => Err(format!("Failed to read cached modpack data: {}", e)),
     }
@@ -167,26 +167,26 @@ async fn update_modpack_cache_json(
         None => return Err("Failed to get app data directory".to_string()),
     };
 
-    let cache_path = launcher_dir
-        .join("caches")
+    let meta_path = launcher_dir
+        .join("meta")
         .join("modpacks")
         .join(format!("{}.json", modpack_id));
 
-    // Read existing cache if it exists
-    let mut cache_data: serde_json::Value = if cache_path.exists() {
-        match std::fs::read_to_string(&cache_path) {
+    // Read existing metadata if it exists
+    let mut meta_data: serde_json::Value = if meta_path.exists() {
+        match std::fs::read_to_string(&meta_path) {
             Ok(content) => match serde_json::from_str(&content) {
                 Ok(data) => data,
-                Err(e) => return Err(format!("Failed to parse cached modpack data: {}", e)),
+                Err(e) => return Err(format!("Failed to parse modpack metadata: {}", e)),
             },
-            Err(e) => return Err(format!("Failed to read cached modpack data: {}", e)),
+            Err(e) => return Err(format!("Failed to read modpack metadata: {}", e)),
         }
     } else {
         serde_json::json!({})
     };
 
-    // Merge updates into cache
-    if let serde_json::Value::Object(ref mut map) = cache_data {
+    // Merge updates into metadata
+    if let serde_json::Value::Object(ref mut map) = meta_data {
         if let serde_json::Value::Object(updates_map) = updates {
             for (key, value) in updates_map {
                 map.insert(key, value);
@@ -194,15 +194,15 @@ async fn update_modpack_cache_json(
         }
     }
 
-    // Write updated cache
-    let json_str = match serde_json::to_string_pretty(&cache_data) {
+    // Write updated metadata
+    let json_str = match serde_json::to_string_pretty(&meta_data) {
         Ok(s) => s,
-        Err(e) => return Err(format!("Failed to serialize cache data: {}", e)),
+        Err(e) => return Err(format!("Failed to serialize metadata: {}", e)),
     };
 
-    match std::fs::write(&cache_path, json_str) {
+    match std::fs::write(&meta_path, json_str) {
         Ok(_) => Ok(()),
-        Err(e) => Err(format!("Failed to write cached modpack data: {}", e)),
+        Err(e) => Err(format!("Failed to write modpack metadata: {}", e)),
     }
 }
 
@@ -216,16 +216,16 @@ async fn save_modpack_metadata_json(
         None => return Err("Failed to get app data directory".to_string()),
     };
 
-    let cache_dir = launcher_dir.join("caches").join("modpacks");
+    let meta_dir = launcher_dir.join("meta").join("modpacks");
 
-    // Create cache directory if it doesn't exist
-    std::fs::create_dir_all(&cache_dir)
-        .map_err(|e| format!("Failed to create cache directory: {}", e))?;
+    // Create metadata directory if it doesn't exist
+    std::fs::create_dir_all(&meta_dir)
+        .map_err(|e| format!("Failed to create metadata directory: {}", e))?;
 
-    let cache_path = cache_dir.join(format!("{}.json", modpack_id));
+    let meta_path = meta_dir.join(format!("{}.json", modpack_id));
 
     // Write the modpack JSON to file
-    std::fs::write(&cache_path, modpack_json)
+    std::fs::write(&meta_path, modpack_json)
         .map_err(|e| format!("Failed to save modpack metadata: {}", e))?;
 
     Ok(())
@@ -753,30 +753,6 @@ async fn cleanup_meta_storage() -> Result<Vec<String>, String> {
 }
 
 #[tauri::command]
-async fn cache_modpack_images_command(modpacks: Vec<serde_json::Value>) -> Result<(), String> {
-    match launcher::cache_modpack_images(modpacks).await {
-        Ok(_) => Ok(()),
-        Err(e) => Err(format!("Failed to cache modpack images: {}", e)),
-    }
-}
-
-#[tauri::command]
-async fn clear_icons_cache() -> Result<Vec<String>, String> {
-    match launcher::clear_icons_cache().await {
-        Ok(result) => Ok(result),
-        Err(e) => Err(format!("Failed to clear icons cache: {}", e)),
-    }
-}
-
-#[tauri::command]
-async fn clear_screenshots_cache() -> Result<Vec<String>, String> {
-    match launcher::clear_screenshots_cache().await {
-        Ok(result) => Ok(result),
-        Err(e) => Err(format!("Failed to clear screenshots cache: {}", e)),
-    }
-}
-
-#[tauri::command]
 async fn stop_instance(app: tauri::AppHandle, instance_id: String) -> Result<(), String> {
     // Emit event that instance is stopping
     let _ = app.emit(&format!("minecraft-stopping-{}", instance_id), serde_json::json!({}));
@@ -1222,9 +1198,6 @@ fn main() {
             open_instance_folder,
             get_meta_storage_info,
             cleanup_meta_storage,
-            cache_modpack_images_command,
-            clear_icons_cache,
-            clear_screenshots_cache,
             list_minecraft_versions,
             update_refreshed_microsoft_token,
             stop_instance,
@@ -1245,6 +1218,10 @@ fn main() {
                 eprintln!("Failed to create instances directory: {}", e);
             }
 
+            // Migrate old caches/modpacks to new meta/modpacks location
+            if let Err(e) = filesystem::migrate_caches_to_meta() {
+                eprintln!("Failed to migrate caches to meta: {}", e);
+            }
 
             Ok(())
         })
