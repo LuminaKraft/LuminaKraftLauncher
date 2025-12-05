@@ -657,6 +657,31 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
       }
     }
 
+    // Check rate limit BEFORE changing state for install action
+    if (action === 'install') {
+      try {
+        const rateLimitCheck = await launcherService.checkDownloadRateLimit(modpackId, state.userSettings.clientToken);
+
+        if (!rateLimitCheck.allowed) {
+          // Rate limit exceeded - show dialog and exit immediately without changing state
+          setRateLimitDialog({
+            isOpen: true,
+            errorCode: rateLimitCheck.errorCode || (
+              !rateLimitCheck.isAuthenticated ? 'LIMIT_EXCEEDED_ANON' :
+                !rateLimitCheck.isDiscordMember ? 'LIMIT_EXCEEDED_AUTH' :
+                  'LIMIT_EXCEEDED_MAX'
+            ),
+            limit: rateLimitCheck.limit,
+            resetAt: rateLimitCheck.resetAt
+          });
+          return; // Exit without changing state
+        }
+      } catch (error) {
+        console.error('Error checking rate limit:', error);
+        // Continue with installation even if rate limit check fails
+      }
+    }
+
     const actionStatus = action === 'launch' ? 'launching' : action === 'update' ? 'updating' : `${action}ing` as any;
 
     dispatch({
@@ -703,29 +728,6 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
 
       switch (action) {
         case 'install':
-          // Check rate limit before installing
-          try {
-            const rateLimitCheck = await launcherService.checkDownloadRateLimit(modpackId, state.userSettings.clientToken);
-
-            if (!rateLimitCheck.allowed) {
-              // Rate limit exceeded - show dialog but don't change modpack state
-              setRateLimitDialog({
-                isOpen: true,
-                errorCode: rateLimitCheck.errorCode || (
-                  !rateLimitCheck.isAuthenticated ? 'LIMIT_EXCEEDED_ANON' :
-                    !rateLimitCheck.isDiscordMember ? 'LIMIT_EXCEEDED_AUTH' :
-                      'LIMIT_EXCEEDED_MAX'
-                ),
-                limit: rateLimitCheck.limit,
-                resetAt: rateLimitCheck.resetAt
-              });
-              return; // Exit without changing state or showing any message
-            }
-          } catch (error) {
-            console.error('Error checking rate limit:', error);
-            // Continue with installation even if rate limit check fails
-          }
-
           const failedModsResult = await launcherService.installModpackWithFailedTracking(modpackId, onProgress);
           if (failedModsResult && failedModsResult.length > 0) {
             setFailedMods(failedModsResult);
