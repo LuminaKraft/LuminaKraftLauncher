@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Download, FolderOpen, Loader } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import toast from 'react-hot-toast';
-import { downloadDir, appDataDir, tempDir } from '@tauri-apps/api/path';
-import { listen } from '@tauri-apps/api/event';
+import { appDataDir, tempDir } from '@tauri-apps/api/path';
 import { open } from '@tauri-apps/plugin-dialog';
 import JSZip from 'jszip';
 import ModpackValidationService, { ModFileInfo } from '../../services/modpackValidationService';
@@ -27,7 +26,12 @@ interface LocalInstance {
   installedAt: string;
 }
 
-export function MyModpacksPage() {
+interface MyModpacksPageProps {
+  initialModpackId?: string;
+  onNavigate?: (section: string, modpackId?: string) => void;
+}
+
+export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: MyModpacksPageProps) {
   const { t } = useTranslation();
   const validationService = ModpackValidationService.getInstance();
   const launcherService = LauncherService.getInstance();
@@ -38,12 +42,12 @@ export function MyModpacksPage() {
   // State management
   const [instances, setInstances] = useState<LocalInstance[]>([]);
   const [modpackDataMap, setModpackDataMap] = useState<Map<string, Modpack>>(new Map());
-  const [selectedModpackId, setSelectedModpackId] = useState<string | null>(null);
+  const [selectedModpackId, setSelectedModpackId] = useState<string | null>(initialModpackId || null);
   const [loading, setLoading] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [validating, setValidating] = useState(false);
   const [showValidationProgress, setShowValidationProgress] = useState(false);
-  const [validationProgressMessage, setValidationProgressMessage] = useState('');
+  const [_validationProgressMessage, setValidationProgressMessage] = useState('');
   const [importingModpackId, setImportingModpackId] = useState<string | null>(null);
   const [tempZipPath, setTempZipPath] = useState<string | null>(null); // Track temp ZIP for cleanup
 

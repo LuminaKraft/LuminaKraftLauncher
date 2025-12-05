@@ -184,7 +184,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
     setIsUpdating(true);
     try {
       await authService.syncDiscordRoles();
-      const { success, error } = await service.updateModpack(modpackId, {
+      const { success, error: _error } = await service.updateModpack(modpackId, {
         name: formData.name,
         shortDescription: formData.shortDescription,
         description: formData.description,

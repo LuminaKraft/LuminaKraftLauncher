@@ -26,9 +26,10 @@ interface ModpackDetailsProps {
   features?: any[] | null;
   isReadOnly?: boolean; // Read-only mode: hide management actions
   onModpackUpdated?: (updates: { name?: string; logo?: string; backgroundImage?: string }) => void; // Called when modpack is updated
+  onNavigate?: (section: string, modpackId?: string) => void;
 }
 
-const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack, isReadOnly = false, onModpackUpdated }) => {
+const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack, isReadOnly = false, onModpackUpdated, onNavigate }) => {
   const { t } = useTranslation();
   const { modpackStates } = useLauncher();
   const { getAnimationClass, getAnimationStyle } = useAnimation();
@@ -187,50 +188,47 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
   // Different stats for read-only vs management mode
   const statsDisplay = isReadOnly
     ? [
-        {
-          icon: Download,
-          value: isLoadingStats ? '...' : stats.totalDownloads.toString(),
-          label: t('modpacks.downloads')
-        },
-        {
-          icon: Users,
-          value: isLoadingStats ? '...' : stats.activePlayers.toString(),
-          label: t('modpacks.activePlayers')
-        },
-      ]
+      {
+        icon: Download,
+        value: isLoadingStats ? '...' : stats.totalDownloads.toString(),
+        label: t('modpacks.downloads')
+      },
+      {
+        icon: Users,
+        value: isLoadingStats ? '...' : stats.activePlayers.toString(),
+        label: t('modpacks.activePlayers')
+      },
+    ]
     : [
-        {
-          icon: Clock,
-          value: isLoadingStats ? '...' : formatPlaytime(stats.userPlaytime),
-          label: t('modpacks.playTime')
-        },
-        {
-          icon: Users,
-          value: isLoadingStats ? '...' : stats.activePlayers.toString(),
-          label: t('modpacks.activePlayers')
-        },
-      ];
+      {
+        icon: Clock,
+        value: isLoadingStats ? '...' : formatPlaytime(stats.userPlaytime),
+        label: t('modpacks.playTime')
+      },
+      {
+        icon: Users,
+        value: isLoadingStats ? '...' : stats.activePlayers.toString(),
+        label: t('modpacks.activePlayers')
+      },
+    ];
 
   const renderContentTab = () => (
     <>
       {/* Quick Stats */}
       <div className="grid grid-cols-3 gap-4 mb-8">
         {statsDisplay.map((stat, index) => (
-          <div 
-            key={index} 
-            className={`bg-dark-800 rounded-xl p-4 border border-dark-700 group ${
-              getAnimationClass('hover:border-lumina-400/50 transition-all duration-200', 'hover:scale-105')
-            }`}
+          <div
+            key={index}
+            className={`bg-dark-800 rounded-xl p-4 border border-dark-700 group ${getAnimationClass('hover:border-lumina-400/50 transition-all duration-200', 'hover:scale-105')
+              }`}
             style={getAnimationStyle({
               animation: `fadeInUp 0.4s ease-out ${index * 0.05}s backwards`
             })}
           >
-            <stat.icon className={`w-5 h-5 text-lumina-400 mb-2 ${
-              getAnimationClass('transition-transform duration-150', 'group-hover:scale-105')
-            }`} />
-            <div className={`text-2xl font-bold text-white ${
-              getAnimationClass('transition-colors duration-150', 'group-hover:text-lumina-300')
-            }`}>
+            <stat.icon className={`w-5 h-5 text-lumina-400 mb-2 ${getAnimationClass('transition-transform duration-150', 'group-hover:scale-105')
+              }`} />
+            <div className={`text-2xl font-bold text-white ${getAnimationClass('transition-colors duration-150', 'group-hover:text-lumina-300')
+              }`}>
               {stat.value}
             </div>
             <div className="text-sm text-dark-400">{stat.label}</div>
@@ -247,7 +245,7 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
       )}
 
       {/* Features */}
-  <ModpackFeatures features={resolvedFeatures} />
+      <ModpackFeatures features={resolvedFeatures} />
 
     </>
   );
@@ -257,9 +255,8 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
       {/* Back button - Fixed position */}
       <button
         onClick={onBack}
-        className={`absolute top-6 left-6 z-40 flex items-center space-x-2 px-3 py-2 bg-dark-800/80 backdrop-blur-sm text-dark-400 hover:text-white rounded-lg border border-dark-700/50 ${
-          getAnimationClass('transition-all duration-200', 'hover:scale-105 hover:bg-dark-700/90')
-        }`}
+        className={`absolute top-6 left-6 z-40 flex items-center space-x-2 px-3 py-2 bg-dark-800/80 backdrop-blur-sm text-dark-400 hover:text-white rounded-lg border border-dark-700/50 ${getAnimationClass('transition-all duration-200', 'hover:scale-105 hover:bg-dark-700/90')
+          }`}
         style={getAnimationStyle({})}
       >
         <ArrowLeft className="w-4 h-4" />
@@ -269,192 +266,106 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
 
-      {/* Hero Section with banner or fallback gradient */}
-      <div
-        className={`relative h-80 flex flex-col justify-end p-8 text-white ${
-          !modpack.backgroundImage ? 'bg-gradient-to-br from-blue-500 to-purple-600' : ''
-        }`}
-      >
-        {/* Banner / fallback image */}
-        {modpack.backgroundImage && (
-          <div
-            className="absolute inset-0 bg-center bg-cover"
-            style={{
-              backgroundImage: `url(${modpack.backgroundImage || modpack.images?.[0] || modpack.logo})`,
-              opacity: 0.12
-            }}
-          />
-        )}
-        {/* Dark overlay for better text readability */}
-        <div className="absolute inset-0 bg-black/40" />
-
-        {/* Logo and Content */}
-        <div className="relative z-10 flex items-start space-x-6">
-          {/* Logo */}
-          <div className="flex-shrink-0">
+        {/* Hero Section with banner or fallback gradient */}
+        <div
+          className={`relative h-80 flex flex-col justify-end p-8 text-white ${!modpack.backgroundImage ? 'bg-gradient-to-br from-blue-500 to-purple-600' : ''
+            }`}
+        >
+          {/* Banner / fallback image */}
+          {modpack.backgroundImage && (
             <div
-              className={`w-40 h-40 rounded-lg overflow-hidden flex items-center justify-center ${
-                !modpack.logo || (modpack.logo && modpack.logo.length === 1)
-                  ? 'bg-gradient-to-br from-blue-500 to-purple-600'
-                  : ''
-              }`}
-              style={getAnimationStyle({
-                animation: `fadeInUp 0.4s ease-out 0.05s backwards`
-              })}
-            >
-              {modpack.logo && modpack.logo.length === 1 ? (
-                // Show first letter for local modpacks
-                <div className="text-7xl font-bold text-white opacity-30">
-                  {modpack.logo}
-                </div>
-              ) : modpack.logo ? (
-                // Show logo image
-                <img
-                  src={modpack.logo}
-                  alt={displayName}
-                  className="w-full h-full object-contain object-top"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                    target.parentElement!.innerHTML = `<div class="text-7xl font-bold text-white opacity-30">${displayName.charAt(0).toUpperCase()}</div>`;
-                  }}
-                />
-              ) : (
-                // Show first letter when no logo
-                <div className="text-7xl font-bold text-white opacity-30">
-                  {displayName.charAt(0).toUpperCase()}
-                </div>
-              )}
-            </div>
-          </div>
-          
-          <div className="flex-1 min-w-0">
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-              <div className="min-w-0 flex-1">
-                <h1 
-                  className={`text-4xl font-bold text-white mb-2 ${
-                    getAnimationClass('transition-all duration-200')
-                  }`}
-                  style={getAnimationStyle({
-                    animation: `fadeInUp 0.4s ease-out 0.1s backwards`
-                  })}
-                >
-                  {displayName}
-                </h1>
-                <p 
-                  className={`text-lg text-dark-300 leading-relaxed ${
-                    getAnimationClass('transition-all duration-200')
-                  }`}
-                  style={getAnimationStyle({
-                    animation: `fadeInUp 0.4s ease-out 0.15s backwards`
-                  })}
-                >
-                  {displayDescription}
-                </p>
-              </div>
+              className="absolute inset-0 bg-center bg-cover"
+              style={{
+                backgroundImage: `url(${modpack.backgroundImage || modpack.images?.[0] || modpack.logo})`,
+                opacity: 0.12
+              }}
+            />
+          )}
+          {/* Dark overlay for better text readability */}
+          <div className="absolute inset-0 bg-black/40" />
+
+          {/* Logo and Content */}
+          <div className="relative z-10 flex items-start space-x-6">
+            {/* Logo */}
+            <div className="flex-shrink-0">
               <div
-                className="flex-shrink-0"
+                className={`w-40 h-40 rounded-lg overflow-hidden flex items-center justify-center ${!modpack.logo || (modpack.logo && modpack.logo.length === 1)
+                    ? 'bg-gradient-to-br from-blue-500 to-purple-600'
+                    : ''
+                  }`}
                 style={getAnimationStyle({
-                  animation: `fadeInUp 0.4s ease-out 0.2s backwards`
+                  animation: `fadeInUp 0.4s ease-out 0.05s backwards`
                 })}
               >
-                {getServerStatusBadge()}
+                {modpack.logo && modpack.logo.length === 1 ? (
+                  // Show first letter for local modpacks
+                  <div className="text-7xl font-bold text-white opacity-30">
+                    {modpack.logo}
+                  </div>
+                ) : modpack.logo ? (
+                  // Show logo image
+                  <img
+                    src={modpack.logo}
+                    alt={displayName}
+                    className="w-full h-full object-contain object-top"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      target.parentElement!.innerHTML = `<div class="text-7xl font-bold text-white opacity-30">${displayName.charAt(0).toUpperCase()}</div>`;
+                    }}
+                  />
+                ) : (
+                  // Show first letter when no logo
+                  <div className="text-7xl font-bold text-white opacity-30">
+                    {displayName.charAt(0).toUpperCase()}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <h1
+                    className={`text-4xl font-bold text-white mb-2 ${getAnimationClass('transition-all duration-200')
+                      }`}
+                    style={getAnimationStyle({
+                      animation: `fadeInUp 0.4s ease-out 0.1s backwards`
+                    })}
+                  >
+                    {displayName}
+                  </h1>
+                  <p
+                    className={`text-lg text-dark-300 leading-relaxed ${getAnimationClass('transition-all duration-200')
+                      }`}
+                    style={getAnimationStyle({
+                      animation: `fadeInUp 0.4s ease-out 0.15s backwards`
+                    })}
+                  >
+                    {displayDescription}
+                  </p>
+                </div>
+                <div
+                  className="flex-shrink-0"
+                  style={getAnimationStyle({
+                    animation: `fadeInUp 0.4s ease-out 0.2s backwards`
+                  })}
+                >
+                  {getServerStatusBadge()}
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="container mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Mobile Actions First */}
-          <div
-            className={`lg:hidden ${getAnimationClass('transition-all duration-200')}`}
-            style={getAnimationStyle({
-              animation: `fadeInUp 0.3s ease-out 0.1s backwards`
-            })}
-          >
-            <ModpackActions
-              modpack={modpack}
-              state={liveState}
-              isReadOnly={isReadOnly}
-              showProfileOptions={showProfileOptions}
-              setShowProfileOptions={setShowProfileOptions}
-            />
-          </div>
-
-          {/* Left Column - Main Info */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Tab Navigation */}
-            <div 
-              className={`flex space-x-1 bg-dark-800 p-1 rounded-lg ${
-                getAnimationClass('transition-all duration-200')
-              }`}
+        {/* Main Content */}
+        <div className="container mx-auto px-6 py-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Mobile Actions First */}
+            <div
+              className={`lg:hidden ${getAnimationClass('transition-all duration-200')}`}
               style={getAnimationStyle({
                 animation: `fadeInUp 0.3s ease-out 0.1s backwards`
-              })}
-            >
-              <button
-                onClick={() => setActiveTab('content')}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-all duration-200 ${
-                  activeTab === 'content'
-                    ? 'bg-lumina-600 text-white shadow-lg'
-                    : 'text-dark-300 hover:text-white hover:bg-dark-700'
-                }`}
-                >
-                <Info className="w-4 h-4" />
-                <span>{t('modpacks.information')}</span>
-              </button>
-              {/* Screenshots Tab Button - Only show in read-only mode */}
-              {isReadOnly && (
-                <button
-                  onClick={() => setActiveTab('screenshots')}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-all duration-200 ${
-                    activeTab === 'screenshots'
-                      ? 'bg-lumina-600 text-white shadow-lg'
-                      : 'text-dark-300 hover:text-white hover:bg-dark-700'
-                  }`}
-                >
-                  <Image className="w-4 h-4" />
-                  <span>{t('modpacks.screenshots')}</span>
-                  {modpack.images && modpack.images.length > 0 && (
-                    <span className="bg-lumina-400 text-black text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
-                      {modpack.images.length}
-                    </span>
-                  )}
-                </button>
-              )}
-              <button
-                onClick={() => setActiveTab('logs')}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-all duration-200 ${
-                  activeTab === 'logs'
-                    ? 'bg-lumina-600 text-white shadow-lg'
-                    : 'text-dark-300 hover:text-white hover:bg-dark-700'
-                }`}
-              >
-                <Terminal className="w-4 h-4" />
-                <span>{t('modpacks.logs')}</span>
-                {logs.length > 0 && (
-                  <span className="bg-green-500 text-black text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
-                    {logs.length}
-                  </span>
-                )}
-              </button>
-            </div>
-
-            {/* Tab Content */}
-            <div className="min-h-[400px]">
-              {activeTab === 'content' ? renderContentTab() : activeTab === 'logs' ? <LogsSection logs={logs} /> : <ScreenshotsSection images={modpack.images} modpackName={displayName} />}
-            </div>
-          </div>
-
-          {/* Right Column - Desktop Actions */}
-          <div className="hidden lg:block">
-            <div
-              className={`space-y-6 ${getAnimationClass('transition-all duration-200')}`}
-              style={getAnimationStyle({
-                animation: `fadeInUp 0.3s ease-out 0.2s backwards`
               })}
             >
               <ModpackActions
@@ -463,14 +374,94 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
                 isReadOnly={isReadOnly}
                 showProfileOptions={showProfileOptions}
                 setShowProfileOptions={setShowProfileOptions}
+                onNavigate={onNavigate}
               />
-              <ModpackInfo modpack={modpack} />
-              {/* System Requirements - Only show in read-only mode */}
-              {isReadOnly && <ModpackRequirements modpack={modpack} />}
+            </div>
+
+            {/* Left Column - Main Info */}
+            <div className="lg:col-span-2 space-y-8">
+              {/* Tab Navigation */}
+              <div
+                className={`flex space-x-1 bg-dark-800 p-1 rounded-lg ${getAnimationClass('transition-all duration-200')
+                  }`}
+                style={getAnimationStyle({
+                  animation: `fadeInUp 0.3s ease-out 0.1s backwards`
+                })}
+              >
+                <button
+                  onClick={() => setActiveTab('content')}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-all duration-200 ${activeTab === 'content'
+                      ? 'bg-lumina-600 text-white shadow-lg'
+                      : 'text-dark-300 hover:text-white hover:bg-dark-700'
+                    }`}
+                >
+                  <Info className="w-4 h-4" />
+                  <span>{t('modpacks.information')}</span>
+                </button>
+                {/* Screenshots Tab Button - Only show in read-only mode */}
+                {isReadOnly && (
+                  <button
+                    onClick={() => setActiveTab('screenshots')}
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-all duration-200 ${activeTab === 'screenshots'
+                        ? 'bg-lumina-600 text-white shadow-lg'
+                        : 'text-dark-300 hover:text-white hover:bg-dark-700'
+                      }`}
+                  >
+                    <Image className="w-4 h-4" />
+                    <span>{t('modpacks.screenshots')}</span>
+                    {modpack.images && modpack.images.length > 0 && (
+                      <span className="bg-lumina-400 text-black text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+                        {modpack.images.length}
+                      </span>
+                    )}
+                  </button>
+                )}
+                <button
+                  onClick={() => setActiveTab('logs')}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-all duration-200 ${activeTab === 'logs'
+                      ? 'bg-lumina-600 text-white shadow-lg'
+                      : 'text-dark-300 hover:text-white hover:bg-dark-700'
+                    }`}
+                >
+                  <Terminal className="w-4 h-4" />
+                  <span>{t('modpacks.logs')}</span>
+                  {logs.length > 0 && (
+                    <span className="bg-green-500 text-black text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+                      {logs.length}
+                    </span>
+                  )}
+                </button>
+              </div>
+
+              {/* Tab Content */}
+              <div className="min-h-[400px]">
+                {activeTab === 'content' ? renderContentTab() : activeTab === 'logs' ? <LogsSection logs={logs} /> : <ScreenshotsSection images={modpack.images} modpackName={displayName} />}
+              </div>
+            </div>
+
+            {/* Right Column - Desktop Actions */}
+            <div className="hidden lg:block">
+              <div
+                className={`space-y-6 ${getAnimationClass('transition-all duration-200')}`}
+                style={getAnimationStyle({
+                  animation: `fadeInUp 0.3s ease-out 0.2s backwards`
+                })}
+              >
+                <ModpackActions
+                  modpack={modpack}
+                  state={liveState}
+                  isReadOnly={isReadOnly}
+                  showProfileOptions={showProfileOptions}
+                  setShowProfileOptions={setShowProfileOptions}
+                  onNavigate={onNavigate}
+                />
+                <ModpackInfo modpack={modpack} />
+                {/* System Requirements - Only show in read-only mode */}
+                {isReadOnly && <ModpackRequirements modpack={modpack} />}
+              </div>
             </div>
           </div>
         </div>
-      </div>
       </div>
       {/* End of scrollable content */}
 

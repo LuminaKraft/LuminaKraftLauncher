@@ -18,13 +18,15 @@ interface ModpackActionsProps {
   isReadOnly?: boolean; // Read-only mode: show Install/Installed only
   showProfileOptions?: boolean;
   setShowProfileOptions?: (show: boolean) => void;
+  onNavigate?: (section: string, modpackId?: string) => void;
 }
 
 const ModpackActions: React.FC<ModpackActionsProps> = ({
   modpack,
   state,
   isReadOnly = false,
-  setShowProfileOptions = () => {}
+  setShowProfileOptions = () => { },
+  onNavigate
 }) => {
   const { t } = useTranslation();
   const { installModpack, updateModpack, launchModpack, repairModpack, removeModpack, stopInstance } = useLauncher();
@@ -52,7 +54,7 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({
         label: t('modpacks.comingSoon'),
         bgColor: 'bg-gray-600/50 cursor-not-allowed',
         textColor: 'text-gray-400',
-        action: () => {},
+        action: () => { },
         disabled: true
       };
     }
@@ -77,18 +79,22 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({
           label: t('modpacks.installed'),
           bgColor: 'bg-gray-600/50 cursor-not-allowed',
           textColor: 'text-gray-400',
-          action: () => {},
+          action: () => { },
           disabled: true
         };
       }
 
-      // Not installed in read-only mode
+      // Not installed in read-only mode - install and navigate to my-modpacks
       return {
         icon: Download,
         label: t('modpacks.install'),
         bgColor: 'bg-lumina-500 hover:bg-lumina-600',
         textColor: 'text-white',
-        action: () => installModpack(modpack.id),
+        action: () => {
+          installModpack(modpack.id);
+          // Navigate to my-modpacks after starting install
+          onNavigate?.('my-modpacks', modpack.id);
+        },
         disabled: false
       };
     }
@@ -185,7 +191,7 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({
             label: t('modpacks.notAvailable'),
             bgColor: 'bg-gray-600/50 cursor-not-allowed',
             textColor: 'text-gray-400',
-            action: () => {},
+            action: () => { },
             disabled: true
           };
         }
@@ -203,7 +209,7 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({
 
   const getStepMessage = (step?: string): string => {
     if (!step) return '';
-    
+
     const stepMappings: { [key: string]: string } = {
       'downloading_manifest': t('modpacks.steps.downloadingManifest'),
       'processing_manifest': t('modpacks.steps.processingManifest'),
@@ -214,7 +220,7 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({
       'finalizing': t('modpacks.steps.finalizing'),
       'complete': t('modpacks.steps.complete')
     };
-    
+
     return stepMappings[step] || step;
   };
 
@@ -224,7 +230,7 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({
       await removeModpack(modpack.id);
       setShowRemoveDialog(false);
     } catch (error) {
-              console.error('Failed to remove instance:', error);
+      console.error('Failed to remove instance:', error);
     } finally {
       setIsRemoving(false);
     }
@@ -271,9 +277,8 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({
         <button
           onClick={statusInfo.action}
           disabled={statusInfo.disabled}
-          className={`w-full flex items-center justify-center space-x-3 px-6 py-4 rounded-xl font-semibold text-lg transition-all duration-200 ${
-            getAnimationClass('', 'hover:scale-[1.02] active:scale-[0.98]')
-          } ${statusInfo.bgColor} ${statusInfo.textColor} shadow-lg disabled:opacity-50 disabled:cursor-not-allowed`}
+          className={`w-full flex items-center justify-center space-x-3 px-6 py-4 rounded-xl font-semibold text-lg transition-all duration-200 ${getAnimationClass('', 'hover:scale-[1.02] active:scale-[0.98]')
+            } ${statusInfo.bgColor} ${statusInfo.textColor} shadow-lg disabled:opacity-50 disabled:cursor-not-allowed`}
           style={getAnimationStyle({})}
         >
           <Icon className={`w-6 h-6 ${statusInfo.spinning ? 'animate-spin' : ''}`} />
@@ -290,10 +295,10 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({
               </span>
               <span className="font-mono">{Math.round(displayedPercentage)}%</span>
             </div>
-            
+
             {/* Progress Bar */}
             <div className="w-full bg-dark-700 rounded-full h-2 overflow-hidden">
-              <div 
+              <div
                 className="bg-gradient-to-r from-lumina-600 to-lumina-500 h-2 rounded-full transition-all duration-200 ease-out"
                 style={{ width: `${displayedPercentage}%` }}
               />
@@ -320,28 +325,28 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({
                         bulletClass = "w-2 h-2 bg-green-500 rounded-full";
                       } else if (message.startsWith("mod_error:") || message.startsWith("mod_unavailable:")) {
                         bulletClass = "w-2 h-2 bg-red-500 rounded-full";
-                    }
+                      }
 
-                    return (
-                      <>
-                        <div className={bulletClass}></div>
-                        <span className="truncate">{displayText}</span>
-                      </>
-                    );
-                  })()}
-                </div>
-                
+                      return (
+                        <>
+                          <div className={bulletClass}></div>
+                          <span className="truncate">{displayText}</span>
+                        </>
+                      );
+                    })()}
+                  </div>
+
                   {/* Right side: ETA aligned with percentage */}
-                <div className="flex-shrink-0 font-mono">
-                  <div className="relative">
-                    <span className="opacity-0 pointer-events-none select-none">00m 00s</span>
-                    {state.progress.eta && (
-                      <span className="absolute top-0 right-0 text-dark-400">{state.progress.eta}</span>
-                    )}
+                  <div className="flex-shrink-0 font-mono">
+                    <div className="relative">
+                      <span className="opacity-0 pointer-events-none select-none">00m 00s</span>
+                      {state.progress.eta && (
+                        <span className="absolute top-0 right-0 text-dark-400">{state.progress.eta}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
             ) : null}
           </div>
         )}
@@ -362,14 +367,12 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({
             {/* Profile Options Button (Full Width) */}
             <button
               onClick={() => setShowProfileOptions(true)}
-              className={`w-full flex items-center justify-center space-x-2 px-3 py-2.5 rounded-lg bg-lumina-600 hover:bg-lumina-700 text-white transition-all duration-200 ${
-                getAnimationClass('', 'hover:scale-[1.02]')
-              } group`}
+              className={`w-full flex items-center justify-center space-x-2 px-3 py-2.5 rounded-lg bg-lumina-600 hover:bg-lumina-700 text-white transition-all duration-200 ${getAnimationClass('', 'hover:scale-[1.02]')
+                } group`}
               style={getAnimationStyle({})}
             >
-              <Settings className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${
-                getAnimationClass('', 'group-hover:rotate-90')
-              }`} />
+              <Settings className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${getAnimationClass('', 'group-hover:rotate-90')
+                }`} />
               <span className="text-sm font-medium">{t('profileOptions.button')}</span>
             </button>
 
@@ -377,26 +380,22 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({
             <div className="flex gap-2">
               <button
                 onClick={() => LauncherService.getInstance().openInstanceFolder(modpack.id)}
-                className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2.5 rounded-lg bg-dark-700 hover:bg-dark-600 text-dark-300 hover:text-white transition-all duration-200 ${
-                  getAnimationClass('', 'hover:scale-[1.02]')
-                } min-w-0 group`}
+                className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2.5 rounded-lg bg-dark-700 hover:bg-dark-600 text-dark-300 hover:text-white transition-all duration-200 ${getAnimationClass('', 'hover:scale-[1.02]')
+                  } min-w-0 group`}
                 style={getAnimationStyle({})}
               >
-                <FolderOpen className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${
-                  getAnimationClass('', 'group-hover:scale-110')
-                }`} />
+                <FolderOpen className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${getAnimationClass('', 'group-hover:scale-110')
+                  }`} />
                 <span className="truncate text-sm">{t('modpacks.openFolder')}</span>
               </button>
               <button
                 onClick={() => setShowRemoveDialog(true)}
-                className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white transition-all duration-200 ${
-                  getAnimationClass('', 'hover:scale-[1.02]')
-                } min-w-0 group`}
+                className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white transition-all duration-200 ${getAnimationClass('', 'hover:scale-[1.02]')
+                  } min-w-0 group`}
                 style={getAnimationStyle({})}
               >
-                <Trash2 className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${
-                  getAnimationClass('', 'group-hover:scale-110')
-                }`} />
+                <Trash2 className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${getAnimationClass('', 'group-hover:scale-110')
+                  }`} />
                 <span className="truncate text-sm">{t('modpacks.remove')}</span>
               </button>
             </div>

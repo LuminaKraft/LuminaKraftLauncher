@@ -95,7 +95,7 @@ function AppContent() {
 
   const handleDownloadUpdate = async () => {
     if (!updateInfo || !updateInfo.hasUpdate) return;
-    
+
     try {
       setIsInstallingUpdate(true);
       await updateService.downloadAndInstallUpdate((progress, total) => {
@@ -166,9 +166,7 @@ function AppContent() {
   };
 
   const handleModpackNavigation = (section: string, modpackId?: string) => {
-    if (section === 'edit-modpack' && modpackId) {
-      setSelectedModpackId(modpackId);
-    } else if (section === 'explore' && modpackId) {
+    if (modpackId) {
       setSelectedModpackId(modpackId);
     }
     handleSectionChange(section);
@@ -181,7 +179,7 @@ function AppContent() {
       case 'explore':
         return <ModpacksPage key={modpacksPageKey} initialModpackId={selectedModpackId || undefined} onNavigate={handleModpackNavigation} />;
       case 'my-modpacks':
-        return <MyModpacksPage />;
+        return <MyModpacksPage initialModpackId={selectedModpackId || undefined} onNavigate={handleModpackNavigation} />;
       case 'published-modpacks':
         return <PublishedModpacksPage onNavigate={handleModpackNavigation} />;
       case 'publish-modpack':
@@ -195,7 +193,7 @@ function AppContent() {
       case 'account':
         return <AccountPage />;
       case 'settings':
-        return <SettingsPage onNavigationBlocked={() => {}} />;
+        return <SettingsPage onNavigationBlocked={() => { }} />;
       case 'about':
         return <AboutPage />;
       default:
@@ -227,8 +225,8 @@ function AppContent() {
             <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
             <h2 className="text-xl font-semibold mb-2">Error de Conexión</h2>
             <p className="text-dark-400 mb-4">{error}</p>
-            <button 
-              onClick={() => window.location.reload()} 
+            <button
+              onClick={() => window.location.reload()}
               className="btn-primary"
             >
               Reintentar
@@ -241,17 +239,16 @@ function AppContent() {
 
   return (
     <div className="flex h-screen bg-dark-900 text-white">
-      <Sidebar 
-        activeSection={activeSection} 
-        onSectionChange={handleSectionChange} 
+      <Sidebar
+        activeSection={activeSection}
+        onSectionChange={handleSectionChange}
       />
       <main className="flex-1 overflow-auto">
         <div
-          className={`h-full transition-all duration-200 ease-out ${
-            isTransitioning
+          className={`h-full transition-all duration-200 ease-out ${isTransitioning
               ? 'opacity-0 scale-95 translate-y-2'
               : 'opacity-100 scale-100 translate-y-0'
-          }`}
+            }`}
         >
           {renderContent()}
         </div>

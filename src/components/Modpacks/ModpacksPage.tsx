@@ -145,6 +145,7 @@ const ModpacksPage: React.FC<ModpacksPageProps> = ({ initialModpackId, onNavigat
             state={modpackState}
             onBack={handleBackToList}
             isReadOnly={true}
+            onNavigate={onNavigate}
           />
         )}
       </div>
