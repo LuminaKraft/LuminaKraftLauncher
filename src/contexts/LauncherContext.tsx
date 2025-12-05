@@ -728,11 +728,42 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
 
       switch (action) {
         case 'install':
-          const failedModsResult = await launcherService.installModpackWithFailedTracking(modpackId, onProgress);
-          if (failedModsResult && failedModsResult.length > 0) {
-            setFailedMods(failedModsResult);
-            setShowFailedModsDialog(true);
-          }
+          // Start install in background - don't await so we can return immediately
+          (async () => {
+            try {
+              const failedModsResult = await launcherService.installModpackWithFailedTracking(modpackId, onProgress);
+              if (failedModsResult && failedModsResult.length > 0) {
+                setFailedMods(failedModsResult);
+                setShowFailedModsDialog(true);
+              }
+              // Update state after completion
+              const newStatus = await launcherService.getModpackStatus(modpackId);
+              dispatch({
+                type: 'SET_MODPACK_STATE',
+                payload: {
+                  id: modpackId,
+                  state: {
+                    ...(state.modpackStates[modpackId] || createModpackState('not_installed')),
+                    status: newStatus
+                  },
+                },
+              });
+            } catch (error) {
+              console.error('Error installing modpack:', error);
+              dispatch({
+                type: 'SET_MODPACK_STATE',
+                payload: {
+                  id: modpackId,
+                  state: {
+                    ...(state.modpackStates[modpackId] || createModpackState('not_installed')),
+                    status: 'error',
+                    error: String(error)
+                  },
+                },
+              });
+            }
+          })();
+          return true; // Return immediately - install continues in background
           break;
         case 'update':
           const updateFailedModsResult = await launcherService.updateModpack(modpackId, onProgress);
