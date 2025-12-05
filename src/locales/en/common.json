@@ -343,6 +343,54 @@
     "uploading": "Uploading...",
     "chooseImage": "Choose Image"
   },
+  "onboarding": {
+    "welcome": {
+      "title": "Welcome to LuminaKraft Launcher",
+      "subtitle": "Your new experience for managing modpacks: simple, modern, and powerful.",
+      "start": "Get Started"
+    },
+    "account": {
+      "title": "Connect your Accounts",
+      "subtitle": "Sync your data and access premium servers.",
+      "configureLater": "Continue as Offline",
+      "back": "Back",
+      "next": "Next",
+      "microsoft": {
+        "title": "Microsoft Account",
+        "description": "Required to play on Premium servers.",
+        "connect": "Connect Microsoft",
+        "connecting": "Connecting...",
+        "connected": "Connected as {{username}}"
+      },
+      "luminakraft": {
+        "title": "LuminaKraft Account",
+        "description": "Sync modpacks, publish, and more.",
+        "connect": "Sign In / Register",
+        "connected": "Connected"
+      }
+    },
+    "profile": {
+      "title": "Set Up Your Profile",
+      "subtitle": "What should we call you?",
+      "usernameLabel": "Username (Offline)",
+      "usernamePlaceholder": "Player",
+      "usernameDescription": "This name will be used if you don't sign in with Microsoft.",
+      "continue": "Continue"
+    },
+    "finish": {
+      "title": "All Set!",
+      "description": "LuminaKraft Launcher has been configured successfully.",
+      "account": "ACCOUNT",
+      "status": "STATUS",
+      "active": "Active",
+      "startPlaying": "Start Playing",
+      "joinDiscord": {
+        "title": "Join our community",
+        "description": "Need help or want to meet other players?",
+        "button": "Join Discord"
+      }
+    }
+  },
   "auth": {
     "title": "Authentication",
     "chooseUsername": "Choose your Username",

@@ -125,6 +125,7 @@ export interface UserSettings {
   autoUpdate?: boolean; // Automatic updates (default: true)
   clientToken?: string; // launcher-generated token to authenticate offline users
   supabaseAccessToken?: string; // Supabase session token for anonymous/authenticated users
+  onboardingCompleted?: boolean;
 }
 
 export interface ProgressInfo {

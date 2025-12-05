@@ -22,6 +22,7 @@ import { Toaster } from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import { UsernameRequiredDialog } from './components/UsernameRequiredDialog';
 import { LoadingModal } from './components/Common/LoadingModal';
+import { SetupWizard } from './components/Onboarding/SetupWizard';
 
 function AppContent() {
   const [activeSection, setActiveSection] = useState('home');
@@ -57,10 +58,36 @@ function AppContent() {
   const [modpacksPageKey, setModpacksPageKey] = useState(0); // Key to force re-render of ModpacksPage
   const [showRestartModal, setShowRestartModal] = useState(false);
   const [isRestarting, setIsRestarting] = useState(false);
-  const { isLoading, error, modpacksData, isAuthenticating, setIsAuthenticating, refreshData, showUsernameDialog } = useLauncher();
+  const { isLoading, error, modpacksData, isAuthenticating, setIsAuthenticating, refreshData, showUsernameDialog, userSettings } = useLauncher();
+  const [showSetupWizard, setShowSetupWizard] = useState(false);
+  const [setupChecked, setSetupChecked] = useState(false);
   const { withDelay } = useAnimation();
   const { t } = useTranslation();
   const launcherService = LauncherService.getInstance();
+  useEffect(() => {
+    if (setupChecked) return;
+
+    // Check if configuration is missing (Default User "Player", Offline, No Connected Accounts)
+    // We wait for initial load (isLoading false) or just check immediately since settings are sync form localStorage
+    // But to be safe, we check if we have data or if the app is ready. 
+    // Actually userSettings is available immediately.
+
+    // If we have an override to force setup, we could check that too.
+
+    const isConfigured = userSettings.microsoftAccount ||
+      userSettings.discordAccount ||
+      (userSettings.username && userSettings.username !== 'Player');
+
+    // Check if onboarding is explicitly marked as completed
+    const hasCompletedOnboarding = userSettings.onboardingCompleted === true;
+
+    // Show wizard if NOT completed AND NOT already configured (for backward compatibility)
+    if (!hasCompletedOnboarding && !isConfigured) {
+      setShowSetupWizard(true);
+    }
+    setSetupChecked(true);
+  }, [userSettings, setupChecked]);
+
   useEffect(() => {
     const checkForUpdatesOnStartup = async () => {
       if (launcherService.isTauriAvailable()) {
@@ -326,6 +353,11 @@ function AppContent() {
       {/* Username Required Dialog for Offline Users */}
       {showUsernameDialog && (
         <UsernameRequiredDialog />
+      )}
+
+      {/* Setup Wizard / Onboarding */}
+      {showSetupWizard && (
+        <SetupWizard onComplete={() => setShowSetupWizard(false)} />
       )}
 
       {/* Restart Modal */}
