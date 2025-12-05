@@ -5,7 +5,6 @@ import { invoke } from '@tauri-apps/api/core';
 import toast from 'react-hot-toast';
 import { createPortal } from 'react-dom';
 import { ModFileInfo } from '../../services/modpackValidationService';
-import ModpackValidationService from '../../services/modpackValidationService';
 
 interface ModpackValidationDialogProps {
   isOpen: boolean;
@@ -25,7 +24,6 @@ export const ModpackValidationDialog: React.FC<ModpackValidationDialogProps> = (
   modsInOverrides
 }) => {
   const { t } = useTranslation();
-  const validationService = ModpackValidationService.getInstance();
   const [uploadedFiles, setUploadedFiles] = useState<Map<string, File>>(new Map());
   const [isDragging, setIsDragging] = useState(false);
 
@@ -146,50 +144,16 @@ export const ModpackValidationDialog: React.FC<ModpackValidationDialogProps> = (
 
         {/* Content */}
         <div className="p-6 overflow-y-auto flex-1">
-          {/* Summary */}
-          <div className={`rounded-lg p-4 mb-6 ${
-            canContinue
-              ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
-              : 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800'
-          }`}>
-            <div className="flex items-start gap-3">
-              {canContinue ? (
-                <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
-              ) : (
-                <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
-              )}
-              <div className="flex-1">
-                <h4 className={`font-semibold mb-1 ${
-                  canContinue
-                    ? 'text-green-900 dark:text-green-100'
-                    : 'text-yellow-900 dark:text-yellow-100'
-                }`}>
-                  {canContinue ? t('publishModpack.validation.readyToImport') : t('publishModpack.validation.actionRequired')}
-                </h4>
-                <p className={`text-sm ${
-                  canContinue
-                    ? 'text-green-800 dark:text-green-200'
-                    : 'text-yellow-800 dark:text-yellow-200'
-                }`}>
-                  {canContinue
-                    ? t('publishModpack.validation.allFilesPresent', { count: modsWithoutUrl.length })
-                    : t('publishModpack.validation.fileMissing', { count: missingMods.length })
-                  }
-                </p>
-              </div>
-            </div>
-          </div>
-
           {/* Mods with empty URL */}
           {modsWithoutUrl.length > 0 && (
             <div className="mb-6">
-              <h4 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                 <FileArchive className="w-4 h-4" />
-                {t('publishModpack.validation.filesWithoutAutoDownload', { count: modsWithoutUrl.length })}
+                {missingMods.length > 0
+                  ? t('publishModpack.validation.fileMissing', { count: missingMods.length })
+                  : t('publishModpack.validation.allFilesPresent', { count: modsWithoutUrl.length })
+                }
               </h4>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                {t('publishModpack.validation.description')}
-              </p>
 
               {/* Bulk Upload / Drag & Drop Zone */}
               {missingMods.length > 0 && (
@@ -248,30 +212,25 @@ export const ModpackValidationDialog: React.FC<ModpackValidationDialogProps> = (
                           : 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800'
                       }`}
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            {isResolved ? (
-                              <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
-                            ) : (
-                              <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0" />
-                            )}
-                            <p className="font-medium text-gray-900 dark:text-white truncate">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          {isResolved ? (
+                            <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+                          ) : (
+                            <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                               {mod.displayName || mod.fileName}
                             </p>
+                            {isResolved && (
+                              <p className="text-xs text-gray-500 dark:text-gray-500">
+                                {isInOverrides
+                                  ? t('publishModpack.validation.inOverrides')
+                                  : t('publishModpack.validation.uploadFile')}
+                              </p>
+                            )}
                           </div>
-                          <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
-                            {mod.fileName}
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                            {t('common.status')}: {validationService.getFileStatusText(mod.fileStatus)}
-                            {' • '}
-                            {isInOverrides
-                              ? t('publishModpack.validation.inOverrides')
-                              : uploadedFile
-                                ? `${t('publishModpack.validation.uploadFile')}: ${uploadedFile.name}`
-                                : t('publishModpack.validation.missingFromOverrides')}
-                          </p>
                         </div>
                         <div className="flex gap-2 flex-shrink-0">
                           {!isInOverrides && !uploadedFile && (
@@ -322,32 +281,6 @@ export const ModpackValidationDialog: React.FC<ModpackValidationDialogProps> = (
             </div>
           )}
 
-          {/* Instructions for missing files */}
-          {missingMods.length > 0 && missingMods.some(mod => !uploadedFiles.has(mod.fileName)) && (
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-              <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
-                {t('publishModpack.validation.twoWaysToFix')}
-              </h4>
-              <div className="text-sm text-blue-800 dark:text-blue-200 space-y-3">
-                <div>
-                  <p className="font-medium mb-1">{t('publishModpack.validation.option1Title')}</p>
-                  <ol className="space-y-1 list-decimal list-inside ml-2">
-                    <li>{t('publishModpack.validation.option1Step1')}</li>
-                    <li>{t('publishModpack.validation.option1Step2')}</li>
-                    <li>{t('publishModpack.validation.option1Step3')}</li>
-                  </ol>
-                </div>
-                <div>
-                  <p className="font-medium mb-1">{t('publishModpack.validation.option2Title')}</p>
-                  <ol className="space-y-1 list-decimal list-inside ml-2">
-                    <li>{t('publishModpack.validation.option2Step1')}</li>
-                    <li>{t('publishModpack.validation.option2Step2')}</li>
-                    <li>{t('publishModpack.validation.option2Step3')}</li>
-                  </ol>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Footer */}

@@ -31,7 +31,7 @@ export function MyModpacksPage() {
   const { t } = useTranslation();
   const validationService = ModpackValidationService.getInstance();
   const launcherService = LauncherService.getInstance();
-  const { installModpackFromZip, modpackStates } = useLauncher();
+  const { installModpackFromZip, modpackStates, refreshData } = useLauncher();
   const lastProcessedStateRef = useRef<string>('');
   const launcherDataDirRef = useRef<string | null>(null);
 
@@ -435,6 +435,9 @@ export function MyModpacksPage() {
 
       // Reload instances
       await loadInstancesAndMetadata();
+
+      // Refresh launcher data to update modpack states from backend
+      await refreshData();
     } catch (error) {
       console.error('[Import] Error installing modpack from ZIP:', error);
       toast.error(error instanceof Error ? error.message : t('errors.failedInstallModpack'));
