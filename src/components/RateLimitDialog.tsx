@@ -1,4 +1,3 @@
-import React from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -11,8 +10,10 @@ interface RateLimitDialogProps {
   limit: number;
   resetAt: string;
   onLogin?: () => void;
-  onLinkDiscord?: () => void;
+  onJoinDiscord?: () => void;
 }
+
+const DISCORD_INVITE_URL = 'https://discord.gg/luminakraft';
 
 export default function RateLimitDialog({
   isOpen,
@@ -21,9 +22,14 @@ export default function RateLimitDialog({
   limit,
   resetAt,
   onLogin,
-  onLinkDiscord
+  onJoinDiscord
 }: RateLimitDialogProps) {
   const { t } = useTranslation();
+
+  const openDiscordInvite = () => {
+    window.open(DISCORD_INVITE_URL, '_blank');
+    onJoinDiscord?.();
+  };
 
   const getContent = () => {
     switch (errorCode) {
@@ -38,10 +44,10 @@ export default function RateLimitDialog({
       case 'LIMIT_EXCEEDED_AUTH':
         return {
           title: t('rateLimit.exceeded'),
-          description: t('rateLimit.linkDiscordDesc'),
-          buttonText: t('publishedModpacks.auth.signIn'),
+          description: t('rateLimit.joinDiscordDesc'),
+          buttonText: t('rateLimit.joinDiscord'),
           buttonIcon: Link,
-          action: onLinkDiscord
+          action: openDiscordInvite
         };
       default:
         return {
