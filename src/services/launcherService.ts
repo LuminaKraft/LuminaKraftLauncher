@@ -1069,6 +1069,8 @@ class LauncherService {
       };
     }
 
+    console.log('🔐 Rate limit check - clientToken:', clientToken ? `${clientToken.substring(0, 10)}...` : 'NULL/UNDEFINED');
+
     const { data, error } = await supabase.rpc('track_download_with_limit', {
       p_modpack_id: modpackId,
       p_client_token: clientToken || null  // Ensure null, not undefined
