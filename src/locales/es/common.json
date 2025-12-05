@@ -554,6 +554,7 @@
     "subtitle": "Gestiona tus instancias locales de modpacks",
     "import": "Importar Modpack",
     "validating": "Validando...",
+    "validatingDescription": "Procesando y validando archivos del modpack. Esto puede tomar un momento para modpacks grandes.",
     "importedOn": "Importado el",
     "preparingModpack": "Preparando modpack con overrides...",
     "installingModpack": "Instalando modpack con overrides...",

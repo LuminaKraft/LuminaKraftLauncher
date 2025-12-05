@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { Download, FolderOpen } from 'lucide-react';
+import { Download, FolderOpen, Loader } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import toast from 'react-hot-toast';
 import { downloadDir, appDataDir } from '@tauri-apps/api/path';
@@ -41,6 +42,8 @@ export function MyModpacksPage() {
   const [loading, setLoading] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [validating, setValidating] = useState(false);
+  const [showValidationProgress, setShowValidationProgress] = useState(false);
+  const [validationProgressMessage, setValidationProgressMessage] = useState('');
 
   /**
    * Resolve relative image paths to data URLs via Tauri
@@ -335,16 +338,18 @@ export function MyModpacksPage() {
 
     try {
       setValidating(true);
-      toast.loading(t('myModpacks.validating'), { id: 'validation' });
+      setShowValidationProgress(true);
+      setValidationProgressMessage(t('myModpacks.validating'));
 
       const result = await validationService.validateModpackZip(file);
 
       if (!result.success) {
-        toast.error(result.error || t('errors.failedValidateModpack'), { id: 'validation' });
+        setShowValidationProgress(false);
+        toast.error(result.error || t('errors.failedValidateModpack'));
         return;
       }
 
-      toast.dismiss('validation');
+      setShowValidationProgress(false);
 
       // Check for missing mods
       const missingMods = result.modsWithoutUrl.filter(
@@ -759,6 +764,20 @@ export function MyModpacksPage() {
         cancelText="Skip Download"
         variant="info"
       />
+
+      {/* Validation Progress Modal */}
+      {showValidationProgress && createPortal(
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9998]">
+          <div className="bg-gradient-to-b from-gray-800 to-gray-900 rounded-lg shadow-2xl p-8 flex flex-col items-center gap-4 w-full max-w-sm">
+            <Loader className="w-12 h-12 text-blue-400 animate-spin" />
+            <h2 className="text-xl font-semibold text-white text-center">{t('myModpacks.validating')}</h2>
+            <p className="text-sm text-gray-400 text-center">
+              {t('myModpacks.validatingDescription')}
+            </p>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
