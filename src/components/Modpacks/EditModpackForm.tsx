@@ -55,8 +55,25 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
   const service = ModpackManagementService.getInstance();
   const authService = AuthService.getInstance();
 
+  // Load saved tab from localStorage (only if same modpack)
+  const getSavedTab = (): 'general' | 'media' | 'features' | 'versions' | 'settings' => {
+    try {
+      const savedModpackId = localStorage.getItem('editModpackFormModpackId');
+      // Only restore tab if editing the same modpack
+      if (savedModpackId === modpackId) {
+        const saved = localStorage.getItem('editModpackFormTab');
+        if (saved === 'general' || saved === 'media' || saved === 'features' || saved === 'versions' || saved === 'settings') {
+          return saved;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load saved tab:', e);
+    }
+    return 'general';
+  };
+
   // State
-  const [activeTab, setActiveTab] = useState<'general' | 'media' | 'features' | 'versions' | 'settings'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'media' | 'features' | 'versions' | 'settings'>(getSavedTab);
   const [formData, setFormData] = useState<FormData | null>(null);
   const [features, setFeatures] = useState<Feature[]>([]);
   const [images, setImages] = useState<ModpackImage[]>([]);
@@ -93,6 +110,16 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
 
   // Dialog State
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  // Save activeTab and modpackId to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('editModpackFormTab', activeTab);
+      localStorage.setItem('editModpackFormModpackId', modpackId);
+    } catch (e) {
+      console.warn('Failed to save edit form state:', e);
+    }
+  }, [activeTab, modpackId]);
 
   useEffect(() => {
     loadModpackData();

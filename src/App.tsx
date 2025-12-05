@@ -22,8 +22,30 @@ import { useTranslation } from 'react-i18next';
 
 function AppContent() {
   const [activeSection, setActiveSection] = useState('home');
-  const [selectedModpackId, setSelectedModpackId] = useState<string | null>(null); // For edit modpack
-  const [lastPublishedSection, setLastPublishedSection] = useState<string>('published-modpacks'); // Remember last sub-section
+  const [selectedModpackId, setSelectedModpackId] = useState<string | null>(() => {
+    // Restore selected modpack ID for edit-modpack from localStorage
+    try {
+      return localStorage.getItem('editModpackFormModpackId') || null;
+    } catch {
+      return null;
+    }
+  });
+  const [lastPublishedSection, setLastPublishedSection] = useState<string>(() => {
+    // If there's a saved edit modpack, remember we were in edit-modpack
+    try {
+      const savedModpackId = localStorage.getItem('editModpackFormModpackId');
+      if (savedModpackId) {
+        return 'edit-modpack';
+      }
+      const savedPublishStep = localStorage.getItem('publishModpackFormStep');
+      if (savedPublishStep && parseInt(savedPublishStep, 10) > 1) {
+        return 'publish-modpack';
+      }
+    } catch {
+      // ignore
+    }
+    return 'published-modpacks';
+  });
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
