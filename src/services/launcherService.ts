@@ -37,7 +37,7 @@ class LauncherService {
   private modpacksData: ModpacksData | null = null;
   private userSettings: UserSettings;
   private cache: Map<string, CacheEntry> = new Map();
-  private readonly cacheTTL = 15 * 60 * 1000; // 15 minutes for all modpack data
+  private readonly cacheTTL = 5 * 60 * 1000; // 5 minutes for all modpack data (synced with periodic refresh interval)
   private readonly requestTimeout = 30000; // 30 seconds
 
   constructor() {

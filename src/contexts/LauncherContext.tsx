@@ -253,7 +253,8 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
           await authService.syncDiscordRoles();
         }
 
-        // Load initial data
+        // Load initial data - clear cache first to ensure fresh data on startup
+        launcherService.clearCache();
         await refreshData();
       } catch (error) {
         console.error('Error initializing app:', error);
@@ -272,6 +273,24 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
       });
     }
   }, [state.modpacksData]);
+
+  // ---------------------------------------------------------------------------
+  // Periodic data refresh (every 5 minutes)
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    // Set up interval to refresh data every 5 minutes
+    const refreshInterval = setInterval(() => {
+      console.log('🔄 Periodic data refresh...');
+      launcherService.clearCache();
+      refreshData().catch(error => {
+        console.error('Error in periodic data refresh:', error);
+      });
+    }, 5 * 60 * 1000); // 5 minutes
+
+    return () => {
+      clearInterval(refreshInterval);
+    };
+  }, []);
 
   // ---------------------------------------------------------------------------
   // Automatic Microsoft token refresh
