@@ -564,8 +564,14 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
   };
 
   const updateUserSettings = async (settings: Partial<UserSettings>) => {
-    const newSettings = { ...state.userSettings, ...settings };
-    launcherService.saveUserSettings(settings);
+    // IMPORTANT: Ensure clientToken is preserved - it's critical for rate limiting
+    const existingClientToken = state.userSettings.clientToken || launcherService.getUserSettings().clientToken;
+    const newSettings = {
+      ...state.userSettings,
+      ...settings,
+      clientToken: existingClientToken  // Always preserve clientToken
+    };
+    launcherService.saveUserSettings(newSettings);  // Save FULL settings, not partial
     dispatch({ type: 'SET_USER_SETTINGS', payload: newSettings });
 
     // If username changed and user is authenticated, sync with Supabase
