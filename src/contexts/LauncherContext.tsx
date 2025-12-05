@@ -9,6 +9,7 @@ import type {
   ModpackStatus,
   MicrosoftAccount
 } from '../types/launcher';
+import { invoke } from '@tauri-apps/api/core';
 
 // Define LauncherState here since it is missing from types
 interface LauncherState {
@@ -429,6 +430,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
   const loadModpackStates = async () => {
     if (!state.modpacksData) return;
 
+    // Load states for server modpacks
     for (const modpack of state.modpacksData.modpacks) {
       try {
         const status = await launcherService.getModpackStatus(modpack.id);
@@ -449,6 +451,28 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
           },
         });
       }
+    }
+
+    // Also load local modpacks that are not in server data
+    try {
+      const localModpacksJson = await invoke<string>('get_local_modpacks');
+      const localModpacks: { id: string }[] = JSON.parse(localModpacksJson);
+      const serverModpackIds = new Set(state.modpacksData.modpacks.map(m => m.id));
+
+      for (const localModpack of localModpacks) {
+        if (!serverModpackIds.has(localModpack.id)) {
+          // This is a local-only modpack
+          dispatch({
+            type: 'SET_MODPACK_STATE',
+            payload: {
+              id: localModpack.id,
+              state: createModpackState('installed'),
+            },
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error loading local modpacks:', error);
     }
   };
 

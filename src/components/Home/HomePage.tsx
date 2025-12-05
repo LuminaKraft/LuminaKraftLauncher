@@ -68,12 +68,14 @@ export function HomePage({ onNavigate }: HomePageProps) {
           // Merge cached data if available
           if (cachedData) {
             const cached = JSON.parse(cachedData);
+            console.log(`📦 [HomePage] Cached data for ${id}:`, cached);
             modpack = { ...modpack, ...cached, isActive: true };
           }
 
           // Merge instance metadata if available
           if (instanceMetadata) {
             const instance = JSON.parse(instanceMetadata);
+            console.log(`📋 [HomePage] Instance metadata for ${id}:`, instance);
             modpack = {
               ...modpack,
               name: instance.name || modpack.name,
@@ -82,6 +84,8 @@ export function HomePage({ onNavigate }: HomePageProps) {
               modloader: instance.modloader || modpack.modloader,
               modloaderVersion: instance.modloaderVersion || modpack.modloaderVersion,
             };
+          } else {
+            console.log(`⚠️ [HomePage] No instance metadata for ${id}`);
           }
 
           newMap.set(id, modpack);
