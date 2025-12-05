@@ -19,6 +19,7 @@ import { updateService, UpdateInfo } from './services/updateService';
 import './App.css';
 import { Toaster } from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
+import { UsernameRequiredDialog } from './components/UsernameRequiredDialog';
 
 function AppContent() {
   const [activeSection, setActiveSection] = useState('home');
@@ -54,7 +55,7 @@ function AppContent() {
   const [modpacksPageKey, setModpacksPageKey] = useState(0); // Key to force re-render of ModpacksPage
   const [showRestartModal, setShowRestartModal] = useState(false);
   const [isRestarting, setIsRestarting] = useState(false);
-  const { isLoading, error, modpacksData, isAuthenticating, refreshData } = useLauncher();
+  const { isLoading, error, modpacksData, isAuthenticating, refreshData, showUsernameDialog } = useLauncher();
   const { withDelay } = useAnimation();
   const { t } = useTranslation();
   const launcherService = LauncherService.getInstance();
@@ -318,6 +319,12 @@ function AppContent() {
           {renderContent()}
         </div>
       </main>
+
+      {/* Username Required Dialog for Offline Users */}
+      {/* Username Required Dialog for Offline Users */}
+      {showUsernameDialog && (
+        <UsernameRequiredDialog />
+      )}
 
       {/* Restart Modal */}
       {showRestartModal && (

@@ -48,6 +48,8 @@ interface LauncherContextType {
   stopInstance: (_id: string) => Promise<void>;
   changeLanguage: (_language: string) => Promise<void>;
   removeModpack: (_id: string) => Promise<void>;
+  showUsernameDialog: boolean;
+  setShowUsernameDialog: (_value: boolean) => void;
 }
 
 type LauncherAction =
@@ -225,6 +227,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
   const [failedMods, setFailedMods] = useState<FailedMod[]>([]);
   const [showFailedModsDialog, setShowFailedModsDialog] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [showUsernameDialog, setShowUsernameDialog] = useState(false);
   const refreshDataRef = useRef<(() => Promise<void>) | null>(null);
   const launcherService = LauncherService.getInstance();
   const { i18n, t } = useTranslation();
@@ -712,6 +715,23 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
           }
           break;
         case 'launch': {
+          // Check for mandatory username change
+          if (state.userSettings.authMethod === 'offline' && state.userSettings.username === 'Player') {
+            setShowUsernameDialog(true);
+            // Reset state to installed so it doesn't get stuck in 'launching'
+            dispatch({
+              type: 'SET_MODPACK_STATE',
+              payload: {
+                id: modpackId,
+                state: {
+                  ...(state.modpackStates[modpackId] || createModpackState('installed')),
+                  status: 'installed'
+                },
+              },
+            });
+            return;
+          }
+
           // -----------------------------------------------------------------
           // Setup listeners BEFORE invoking launch to avoid missing early events
           // -----------------------------------------------------------------
@@ -1202,6 +1222,8 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     stopInstance: (id: string) => performModpackAction('stop', id), // Added stopInstance
     changeLanguage,
     removeModpack,
+    showUsernameDialog,
+    setShowUsernameDialog,
   };
 
   // Update ref with refreshData so the cache-clear listener can call it

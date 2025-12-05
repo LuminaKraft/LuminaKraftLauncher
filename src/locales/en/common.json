@@ -16,7 +16,8 @@
     "back": "Back",
     "next": "Next",
     "previous": "Previous",
-    "search": "Search..."
+    "search": "Search...",
+    "continue": "Continue"
   },
   "navigation": {
     "modpacks": "Modpacks",
@@ -342,6 +343,11 @@
   },
   "auth": {
     "title": "Authentication",
+    "chooseUsername": "Choose your Username",
+    "usernameRequiredMessage": "To continue playing offline, please choose a unique username.",
+    "usernamePlaceholder": "Enter username...",
+    "usernameRequired": "Username is required",
+    "usernameTooShort": "Username must be at least 3 characters",
     "description": "Choose your authentication method for Minecraft. Microsoft authentication allows you to access premium servers and keep your skin and cape.",
     "microsoftAuth": "Microsoft Authentication",
     "microsoftDescription": "Sign in with your Microsoft account to access Minecraft. The browser will open automatically.",
