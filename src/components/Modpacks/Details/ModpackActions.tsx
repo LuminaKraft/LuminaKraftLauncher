@@ -108,7 +108,7 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({
           }
 
           try {
-            localStorage.setItem(`installing_modpack_${modpack.id} `, JSON.stringify(modpackToSave));
+            localStorage.setItem(`installing_modpack_${modpack.id}`, JSON.stringify(modpackToSave));
           } catch (error) {
             console.error('Failed to save modpack to localStorage:', error);
           }
@@ -200,7 +200,7 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({
         if (!requiresModpack && hasValidIp) {
           return {
             icon: Globe,
-            label: `${t('modpacks.connect')} ${modpack.ip} `,
+            label: `${t('modpacks.connect')} ${modpack.ip}`,
             bgColor: 'bg-blue-600 hover:bg-blue-700',
             textColor: 'text-white',
             action: () => copyToClipboard(modpack.ip!),
@@ -301,11 +301,11 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({
         <button
           onClick={statusInfo.action}
           disabled={statusInfo.disabled}
-          className={`w - full flex items - center justify - center space - x - 3 px - 6 py - 4 rounded - xl font - semibold text - lg transition - all duration - 200 ${getAnimationClass('', 'hover:scale-[1.02] active:scale-[0.98]')
-            } ${statusInfo.bgColor} ${statusInfo.textColor} shadow - lg disabled: opacity - 50 disabled: cursor - not - allowed`}
+          className={`w-full flex items-center justify-center space-x-3 px-6 py-4 rounded-xl font-semibold text-lg transition-all duration-200 ${getAnimationClass('', 'hover:scale-[1.02] active:scale-[0.98]')
+            } ${statusInfo.bgColor} ${statusInfo.textColor} shadow-lg disabled:opacity-50 disabled:cursor-not-allowed`}
           style={getAnimationStyle({})}
         >
-          <Icon className={`w - 6 h - 6 ${statusInfo.spinning ? 'animate-spin' : ''} `} />
+          <Icon className={`w-6 h-6 ${statusInfo.spinning ? 'animate-spin' : ''}`} />
           <span>{statusInfo.label}</span>
         </button>
 
@@ -324,7 +324,7 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({
             <div className="w-full bg-dark-700 rounded-full h-2 overflow-hidden">
               <div
                 className="bg-gradient-to-r from-lumina-600 to-lumina-500 h-2 rounded-full transition-all duration-200 ease-out"
-                style={{ width: `${displayedPercentage}% ` }}
+                style={{ width: `${displayedPercentage}%` }}
               />
             </div>
 
@@ -391,12 +391,12 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({
             {/* Profile Options Button (Full Width) */}
             <button
               onClick={() => setShowProfileOptions(true)}
-              className={`w - full flex items - center justify - center space - x - 2 px - 3 py - 2.5 rounded - lg bg - lumina - 600 hover: bg - lumina - 700 text - white transition - all duration - 200 ${getAnimationClass('', 'hover:scale-[1.02]')
+              className={`w-full flex items-center justify-center space-x-2 px-3 py-2.5 rounded-lg bg-lumina-600 hover:bg-lumina-700 text-white transition-all duration-200 ${getAnimationClass('', 'hover:scale-[1.02]')
                 } group`}
               style={getAnimationStyle({})}
             >
-              <Settings className={`w - 4 h - 4 flex - shrink - 0 transition - transform duration - 200 ${getAnimationClass('', 'group-hover:rotate-90')
-                } `} />
+              <Settings className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${getAnimationClass('', 'group-hover:rotate-90')
+                }`} />
               <span className="text-sm font-medium">{t('profileOptions.button')}</span>
             </button>
 
@@ -404,22 +404,22 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({
             <div className="flex gap-2">
               <button
                 onClick={() => LauncherService.getInstance().openInstanceFolder(modpack.id)}
-                className={`flex - 1 flex items - center justify - center space - x - 2 px - 3 py - 2.5 rounded - lg bg - dark - 700 hover: bg - dark - 600 text - dark - 300 hover: text - white transition - all duration - 200 ${getAnimationClass('', 'hover:scale-[1.02]')
-                  } min - w - 0 group`}
+                className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2.5 rounded-lg bg-dark-700 hover:bg-dark-600 text-dark-300 hover:text-white transition-all duration-200 ${getAnimationClass('', 'hover:scale-[1.02]')
+                  } min-w-0 group`}
                 style={getAnimationStyle({})}
               >
-                <FolderOpen className={`w - 4 h - 4 flex - shrink - 0 transition - transform duration - 200 ${getAnimationClass('', 'group-hover:scale-110')
-                  } `} />
+                <FolderOpen className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${getAnimationClass('', 'group-hover:scale-110')
+                  }`} />
                 <span className="truncate text-sm">{t('modpacks.openFolder')}</span>
               </button>
               <button
                 onClick={() => setShowRemoveDialog(true)}
-                className={`flex - 1 flex items - center justify - center space - x - 2 px - 3 py - 2.5 rounded - lg bg - red - 600 hover: bg - red - 700 text - white transition - all duration - 200 ${getAnimationClass('', 'hover:scale-[1.02]')
-                  } min - w - 0 group`}
+                className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white transition-all duration-200 ${getAnimationClass('', 'hover:scale-[1.02]')
+                  } min-w-0 group`}
                 style={getAnimationStyle({})}
               >
-                <Trash2 className={`w - 4 h - 4 flex - shrink - 0 transition - transform duration - 200 ${getAnimationClass('', 'group-hover:scale-110')
-                  } `} />
+                <Trash2 className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${getAnimationClass('', 'group-hover:scale-110')
+                  }`} />
                 <span className="truncate text-sm">{t('modpacks.remove')}</span>
               </button>
             </div>
