@@ -112,7 +112,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
   };
 
   return (
-    <div 
+    <div
       className={`${isExpanded ? 'w-64' : 'w-20'} bg-dark-800 border-r border-dark-700 flex flex-col transition-all duration-200 ease-in-out select-none relative`}
       style={{
         animation: 'fadeInLeft 0.4s ease-out'
@@ -148,7 +148,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
                   if (!isPinned) setIsExpanded(true);
                 }}
               >
-                <img 
+                <img
                   src={`https://mc-heads.net/avatar/${userSettings.microsoftAccount.uuid}/40`}
                   alt={`${userSettings.microsoftAccount.username}'s head`}
                   className="w-full h-full object-cover transition-all duration-200 group-hover:scale-110 group-hover:rotate-6 group-active:scale-125 group-active:rotate-12"
@@ -215,11 +215,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
 
       {/* Navigation */}
       <nav className="flex-1 p-4">
-        <div className="space-y-2" onMouseEnter={() => { if(!isPinned) setIsExpanded(true); }}>
+        <div className="space-y-2" onMouseEnter={() => { if (!isPinned) setIsExpanded(true); }}>
           {menuItems.map((item, index) => {
             const Icon = item.icon;
-            const isActive = activeSection === item.id;
-            
+            // Treat publish-modpack and edit-modpack as sub-sections of published-modpacks
+            const isActive = activeSection === item.id ||
+              (item.id === 'published-modpacks' && (activeSection === 'publish-modpack' || activeSection === 'edit-modpack'));
+
             return (
               <button
                 key={item.id}
@@ -244,7 +246,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
       <div className="p-4">
         {/* Border with opacity transition */}
         <div className={`border-t border-dark-700 mb-4 transition-opacity duration-150 ${isExpanded ? 'opacity-100' : 'opacity-0'}`}></div>
-        
+
         {/* Copyright and version - fade in/out with opacity */}
         <div className={`text-center mb-4 transition-opacity duration-150 ${isExpanded ? 'opacity-100' : 'opacity-0'}`}>
           <p className="text-dark-400 text-xs truncate whitespace-nowrap">
@@ -254,18 +256,17 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
             {t('app.version', { version: currentVersion })}
           </p>
         </div>
-        
+
         {/* Pin Button with better UX */}
         <button
           onClick={() => {
             const newPinned = !isPinned;
             setIsPinned(newPinned);
           }}
-          className={`w-full flex items-center justify-center p-3 rounded-lg transition-all duration-200 border group relative ${
-            isPinned 
-              ? 'text-lumina-400 bg-lumina-600/10 border-lumina-500/40 hover:bg-lumina-600/20 hover:border-lumina-400/60' 
+          className={`w-full flex items-center justify-center p-3 rounded-lg transition-all duration-200 border group relative ${isPinned
+              ? 'text-lumina-400 bg-lumina-600/10 border-lumina-500/40 hover:bg-lumina-600/20 hover:border-lumina-400/60'
               : 'text-dark-400 hover:text-lumina-400 hover:bg-lumina-600/10 border-dark-600 hover:border-lumina-500/30'
-          }`}
+            }`}
           style={{
             animation: 'fadeInUp 0.4s ease-out 0.3s backwards'
           }}
@@ -276,11 +277,10 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
           ) : (
             <Pin className="w-5 h-5 transform group-hover:-rotate-12 transition-transform duration-200" />
           )}
-          
+
           {/* Tooltip indicator */}
-          <div className={`absolute -top-2 -right-1 w-2 h-2 rounded-full transition-all duration-200 ${
-            isPinned ? 'bg-green-500 opacity-100' : 'bg-gray-500 opacity-40'
-          }`} />
+          <div className={`absolute -top-2 -right-1 w-2 h-2 rounded-full transition-all duration-200 ${isPinned ? 'bg-green-500 opacity-100' : 'bg-gray-500 opacity-40'
+            }`} />
         </button>
       </div>
     </div>

@@ -144,6 +144,11 @@ function AppContent() {
       }
     }
 
+    // If clicking on published-modpacks while in publish-modpack or edit-modpack, stay in current sub-section
+    if (newSection === 'published-modpacks' && (activeSection === 'publish-modpack' || activeSection === 'edit-modpack')) {
+      return; // Don't navigate, keep the form open
+    }
+
     setIsTransitioning(true);
     withDelay(() => {
       setActiveSection(newSection);
