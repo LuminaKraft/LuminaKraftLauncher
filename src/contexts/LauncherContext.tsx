@@ -318,6 +318,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const handleProfileUpdate = () => {
       console.log('🔄 Profile updated event received, refreshing settings...');
+      setIsAuthenticating(false);
       refreshUserProfile();
     };
 
@@ -1281,12 +1282,12 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
         resetAt={rateLimitDialog.resetAt}
         onLogin={async () => {
           setRateLimitDialog(prev => ({ ...prev, isOpen: false }));
+          setIsAuthenticating(true);
           try {
             await AuthService.getInstance().signInToLuminaKraftAccount();
-            // window.location.reload(); // signInToLuminaKraftAccount handles redirect/reload usually?
-            // Actually it redirects to OAuth provider.
           } catch (error) {
             console.error('Login failed:', error);
+            setIsAuthenticating(false);
           }
         }}
         onLinkDiscord={async () => {
