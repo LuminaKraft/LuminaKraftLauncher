@@ -138,17 +138,23 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
 
       // Update name if it changed (for local modpacks only)
       if (isLocalModpack && displayName !== modpackName) {
-        const metadata = await invoke<string>('get_instance_metadata', { modpackId });
-        if (metadata) {
-          const parsed = JSON.parse(metadata);
-          parsed.name = displayName;
-          await invoke('save_modpack_metadata_json', {
-            modpackId,
-            modpackJson: JSON.stringify(parsed)
-          });
-          updates.name = displayName;
-          cacheUpdates.name = displayName;
-        }
+        // Get existing cache data to preserve logo/backgroundImage
+        const cachedData = await invoke<string | null>('get_cached_modpack_data', { modpackId });
+        const existingCache = cachedData ? JSON.parse(cachedData) : {};
+
+        // Only save essential user-editable fields
+        const essentialMetadata = {
+          name: displayName,
+          logo: existingCache.logo || '',
+          backgroundImage: existingCache.backgroundImage || ''
+        };
+
+        await invoke('save_modpack_metadata_json', {
+          modpackId,
+          modpackJson: JSON.stringify(essentialMetadata)
+        });
+        updates.name = displayName;
+        cacheUpdates.name = displayName;
       }
 
       // If logo was selected, save it with random ID
@@ -164,7 +170,7 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
           fileName: `logo_${logoId}.png`
         });
 
-        const logoPath = `caches/modpacks/${modpackId}/images/logo_${logoId}.png`;
+        const logoPath = `meta/modpacks/${modpackId}/images/logo_${logoId}.png`;
         updates.logo = logoPath;
         cacheUpdates.logo = logoPath;
         setSelectedLogoFile(null);
@@ -184,7 +190,7 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
           fileName: `banner_${bannerId}.jpeg`
         });
 
-        const bannerPath = `caches/modpacks/${modpackId}/images/banner_${bannerId}.jpeg`;
+        const bannerPath = `meta/modpacks/${modpackId}/images/banner_${bannerId}.jpeg`;
         updates.backgroundImage = bannerPath;
         cacheUpdates.backgroundImage = bannerPath;
         setSelectedBannerFile(null);
@@ -290,11 +296,10 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
           ) : (
             <div
               onClick={() => isLocalModpack && setEditingName(true)}
-              className={`input-field w-full transition-colors ${
-                isLocalModpack
-                  ? 'cursor-pointer hover:border-lumina-400/50 bg-dark-700 hover:bg-dark-600'
-                  : 'cursor-not-allowed bg-dark-700 opacity-70'
-              } p-2`}
+              className={`input-field w-full transition-colors ${isLocalModpack
+                ? 'cursor-pointer hover:border-lumina-400/50 bg-dark-700 hover:bg-dark-600'
+                : 'cursor-not-allowed bg-dark-700 opacity-70'
+                } p-2`}
             >
               <span className={isLocalModpack ? 'text-white' : 'text-dark-400'}>{displayName}</span>
             </div>

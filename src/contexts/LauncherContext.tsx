@@ -1,9 +1,9 @@
 import { createContext, useContext, useReducer, useEffect, ReactNode, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { 
-  ModpacksData, 
-  ModpackState, 
-  UserSettings, 
+import type {
+  ModpacksData,
+  ModpackState,
+  UserSettings,
   ProgressInfo,
   FailedMod,
   ModpackStatus,
@@ -48,7 +48,7 @@ interface LauncherContextType {
   removeModpack: (_id: string) => Promise<void>;
 }
 
-type LauncherAction = 
+type LauncherAction =
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'SET_MODPACKS_DATA'; payload: ModpacksData }
@@ -98,72 +98,72 @@ function launcherReducer(state: LauncherState, action: LauncherAction): Launcher
     case 'UPDATE_MODPACK_PROGRESS':
       const currentProgress = state.modpackStates[action.payload.id]?.progress;
       const newProgress = action.payload.progress;
-      
+
       // Calcular tiempo estimado
       const currentTime = Date.now();
       const currentState = state.modpackStates[action.payload.id];
       let eta = '';
       let progressHistory = currentState?.progressHistory || [];
-      
+
       // Add new entry to history (keep last 20 entries for better stability)
       progressHistory = [...progressHistory.slice(-19), {
         percentage: newProgress.percentage,
         timestamp: currentTime
       }];
-      
+
       // Calculate ETA only if we have enough data and progress is between 10% and 95%
       if (progressHistory.length >= 5 && newProgress.percentage > 10 && newProgress.percentage < 95) {
         // Use larger window for better stability - last 10 points if available
         const windowSize = Math.min(10, progressHistory.length);
         const windowStart = progressHistory.length - windowSize;
         const window = progressHistory.slice(windowStart);
-        
+
         const oldest = window[0];
         const newest = window[window.length - 1];
-        
+
         const timeElapsed = (newest.timestamp - oldest.timestamp) / 1000; // seconds
         const progressMade = newest.percentage - oldest.percentage;
-        
+
         if (progressMade > 0.5 && timeElapsed > 2) { // More restrictive to avoid jumps
           const remainingProgress = 100 - newProgress.percentage;
           let estimatedTimeRemaining = (remainingProgress * timeElapsed) / progressMade;
-          
+
           // Smooth ETA using moving average with previous ETA
           if (currentState?.lastEtaSeconds) {
             const weight = 0.7; // 70% previous value, 30% new value (smoother)
             estimatedTimeRemaining = (currentState.lastEtaSeconds * weight) + (estimatedTimeRemaining * (1 - weight));
           }
-          
+
           // Only show if reasonable (less than 30 minutes)
           if (estimatedTimeRemaining < 1800) {
             const minutes = Math.floor(estimatedTimeRemaining / 60);
             const seconds = Math.floor(estimatedTimeRemaining % 60);
             eta = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
           }
-          
+
           // Guardar el valor en segundos para suavizado futuro (solo si currentState existe)
           if (currentState) {
             currentState.lastEtaSeconds = estimatedTimeRemaining;
           }
         }
       }
-      
+
       // Prevenir que el porcentaje baje (excepto cuando se reinicia al 0-5% o durante mod downloads)
       let finalPercentage = newProgress.percentage;
       if (currentProgress && newProgress.percentage > 5) {
         // Allow backwards progress if we're in mod download phase (75-95% range)
-        const isModDownloadPhase = newProgress.step?.includes('downloading_mod') || 
-                                  newProgress.step?.includes('preparing_mod_downloads') ||
-                                  newProgress.generalMessage?.includes('downloadingMods') ||
-                                  (newProgress.percentage >= 75 && newProgress.percentage <= 95);
-        
+        const isModDownloadPhase = newProgress.step?.includes('downloading_mod') ||
+          newProgress.step?.includes('preparing_mod_downloads') ||
+          newProgress.generalMessage?.includes('downloadingMods') ||
+          (newProgress.percentage >= 75 && newProgress.percentage <= 95);
+
         if (!isModDownloadPhase) {
           finalPercentage = Math.max(currentProgress.percentage, newProgress.percentage);
         } else {
           finalPercentage = newProgress.percentage; // Allow backwards progress during mod downloads
         }
       }
-      
+
       // Keep last general message and ETA if new one doesn't have one (avoid visual jumps)
       const finalProgress = {
         ...newProgress,
@@ -172,7 +172,7 @@ function launcherReducer(state: LauncherState, action: LauncherAction): Launcher
         generalMessage: newProgress.generalMessage || currentProgress?.generalMessage || '',
         detailMessage: newProgress.detailMessage || ''
       };
-      
+
       return {
         ...state,
         modpackStates: {
@@ -253,8 +253,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
           await authService.syncDiscordRoles();
         }
 
-        // Load initial data - clear cache first to ensure fresh data on startup
-        launcherService.clearCache();
+        // Load initial data - cache will be used if valid (TTL-based)
         await refreshData();
       } catch (error) {
         console.error('Error initializing app:', error);
@@ -275,13 +274,13 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
   }, [state.modpacksData]);
 
   // ---------------------------------------------------------------------------
-  // Periodic data refresh (every 5 minutes)
+  // Periodic data refresh (every 5 minutes) - uses stale-while-revalidate pattern
   // ---------------------------------------------------------------------------
   useEffect(() => {
     // Set up interval to refresh data every 5 minutes
+    // The cache TTL handles staleness - no need to clear cache
     const refreshInterval = setInterval(() => {
-      console.log('🔄 Periodic data refresh...');
-      launcherService.clearCache();
+      console.log('🔄 Periodic data refresh (cache TTL handles staleness)...');
       refreshData().catch(error => {
         console.error('Error in periodic data refresh:', error);
       });
@@ -353,14 +352,14 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
         const unlisten = await listen<MicrosoftAccount>('microsoft-token-refreshed', (event) => {
           console.log('🔄 Received refreshed Microsoft token from backend');
           const refreshedAccount = event.payload;
-          
+
           // Update user settings with the new token
           updateUserSettings({
             authMethod: 'microsoft',
             microsoftAccount: refreshedAccount,
             username: refreshedAccount.username,
           });
-          
+
           console.log('✅ Microsoft token updated in frontend');
         });
 
@@ -373,7 +372,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     };
 
     const cleanupPromise = setupTokenRefreshListener();
-    
+
     // Cleanup on unmount
     return () => {
       cleanupPromise.then(cleanup => {
@@ -472,7 +471,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
       await i18n.changeLanguage(language);
       dispatch({ type: 'SET_LANGUAGE', payload: language });
       updateUserSettings({ language });
-      
+
       // Clear cache completely to force reload of all data
       launcherService.clearCache();
       dispatch({ type: 'SET_LOADING', payload: true });
@@ -521,7 +520,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     action: 'install' | 'update' | 'launch' | 'repair' | 'stop',
     modpackId: string
   ) => {
-  const modpack = state.modpacksData?.modpacks.find((m: { id: string }) => m.id === modpackId);
+    const modpack = state.modpacksData?.modpacks.find((m: { id: string }) => m.id === modpackId);
 
     // For launch and stop actions, we don't need the modpack data from server
     // These actions work with locally installed modpacks
@@ -557,7 +556,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
       type: 'SET_MODPACK_STATE',
       payload: {
         id: modpackId,
-        state: { 
+        state: {
           ...(state.modpackStates[modpackId] || createModpackState('not_installed')),
           status: actionStatus
         },
@@ -577,11 +576,11 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
             generalMessage = generalMessage.replace('Descargando', 'Revalidando').replace('Downloading', 'Revalidating');
           }
         }
-        
+
         dispatch({
           type: 'UPDATE_MODPACK_PROGRESS',
-          payload: { 
-            id: modpackId, 
+          payload: {
+            id: modpackId,
             progress: {
               percentage: progress.percentage,
               currentFile: progress.currentFile,
@@ -728,7 +727,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
               },
             },
           });
-          
+
           // Setup listeners for stopping/stopped events
           let unlistenStopping: (() => void) | null = null;
           let unlistenStopped: (() => void) | null = null;
@@ -736,7 +735,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
           try {
             const stoppingEvent = `minecraft-stopping-${modpackId}`;
             const stoppedEvent = `minecraft-exited-${modpackId}`;
-            
+
             unlistenStopping = await listen(stoppingEvent, () => {
               dispatch({
                 type: 'SET_MODPACK_STATE',
@@ -761,7 +760,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
                   },
                 },
               });
-              
+
               // Cleanup listeners once stopped
               if (unlistenStopping) unlistenStopping();
               if (unlistenStopped) unlistenStopped();
@@ -769,7 +768,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
           } catch (err) {
             console.error('Error setting up stopping listeners', err);
           }
-          
+
           await launcherService.stopInstance(modpackId);
           break;
       }
@@ -797,10 +796,10 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error(`Error ${action}ing modpack:`, error);
-      
+
       // Parse specific error messages for better user experience
       let userFriendlyError = t('errors.unknown');
-      
+
       let errorMessage = '';
       if (error instanceof Error) {
         errorMessage = error.message.toLowerCase();
@@ -811,65 +810,65 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
       } else {
         errorMessage = String(error).toLowerCase();
       }
-      
+
       // Add context for repair actions
       const isRepairAction = action === 'repair';
       const repairPrefix = isRepairAction ? 'reparación' : (action === 'install' ? 'instalación' : action === 'update' ? 'actualización' : action);
-      
+
       if (errorMessage.includes('failed to extract zip file') || errorMessage.includes('no such file or directory')) {
-          userFriendlyError = `Error durante la ${repairPrefix}: No se pudo extraer el archivo ZIP`;
-        } else if (errorMessage.includes('java') || errorMessage.includes('No such file or directory') || errorMessage.includes('exec format error')) {
-          userFriendlyError = `Error durante la ${repairPrefix}: Java no válido o no encontrado`;
-        } else if (errorMessage.includes('zip file not found') || errorMessage.includes('file not found')) {
-          userFriendlyError = `Error durante la ${repairPrefix}: Archivo ZIP no encontrado`;
-        } else if (errorMessage.includes('permission denied')) {
-          userFriendlyError = `Error durante la ${repairPrefix}: Permisos insuficientes`;
-        } else if (errorMessage.includes('no space left') || errorMessage.includes('disk space')) {
-          userFriendlyError = `Error durante la ${repairPrefix}: Espacio en disco insuficiente`;
-        } else if (errorMessage.includes('corrupted') || errorMessage.includes('invalid zip')) {
-          userFriendlyError = `Error durante la ${repairPrefix}: Archivo corrupto o inválido`;
-        } else if (errorMessage.includes('network') || errorMessage.includes('connection')) {
-          userFriendlyError = `Error durante la ${repairPrefix}: Problema de conexión de red`;
-        } else if (errorMessage.includes('failed to download')) {
-          userFriendlyError = `Error durante la ${repairPrefix}: Fallo en la descarga`;
-        } else if (errorMessage.includes('authentication failed (401)') || 
-                   errorMessage.includes('not authorized') ||
-                   errorMessage.includes('curseforge api authentication failed')) {
-          userFriendlyError = `Error durante la ${repairPrefix}: Autenticación fallida con CurseForge`;
-        } else if (errorMessage.includes('access forbidden (403)') || 
-                   errorMessage.includes('curseforge api access forbidden')) {
-          userFriendlyError = `Error durante la ${repairPrefix}: Acceso prohibido a CurseForge`;
-        } else if (errorMessage.includes('curseforge api') || errorMessage.includes('failed to retrieve any mod file information')) {
-          userFriendlyError = `Error durante la ${repairPrefix}: Problema con la API de CurseForge`;
+        userFriendlyError = `Error durante la ${repairPrefix}: No se pudo extraer el archivo ZIP`;
+      } else if (errorMessage.includes('java') || errorMessage.includes('No such file or directory') || errorMessage.includes('exec format error')) {
+        userFriendlyError = `Error durante la ${repairPrefix}: Java no válido o no encontrado`;
+      } else if (errorMessage.includes('zip file not found') || errorMessage.includes('file not found')) {
+        userFriendlyError = `Error durante la ${repairPrefix}: Archivo ZIP no encontrado`;
+      } else if (errorMessage.includes('permission denied')) {
+        userFriendlyError = `Error durante la ${repairPrefix}: Permisos insuficientes`;
+      } else if (errorMessage.includes('no space left') || errorMessage.includes('disk space')) {
+        userFriendlyError = `Error durante la ${repairPrefix}: Espacio en disco insuficiente`;
+      } else if (errorMessage.includes('corrupted') || errorMessage.includes('invalid zip')) {
+        userFriendlyError = `Error durante la ${repairPrefix}: Archivo corrupto o inválido`;
+      } else if (errorMessage.includes('network') || errorMessage.includes('connection')) {
+        userFriendlyError = `Error durante la ${repairPrefix}: Problema de conexión de red`;
+      } else if (errorMessage.includes('failed to download')) {
+        userFriendlyError = `Error durante la ${repairPrefix}: Fallo en la descarga`;
+      } else if (errorMessage.includes('authentication failed (401)') ||
+        errorMessage.includes('not authorized') ||
+        errorMessage.includes('curseforge api authentication failed')) {
+        userFriendlyError = `Error durante la ${repairPrefix}: Autenticación fallida con CurseForge`;
+      } else if (errorMessage.includes('access forbidden (403)') ||
+        errorMessage.includes('curseforge api access forbidden')) {
+        userFriendlyError = `Error durante la ${repairPrefix}: Acceso prohibido a CurseForge`;
+      } else if (errorMessage.includes('curseforge api') || errorMessage.includes('failed to retrieve any mod file information')) {
+        userFriendlyError = `Error durante la ${repairPrefix}: Problema con la API de CurseForge`;
+      } else {
+        // Use the original error message as fallback, but add context for repair
+        let originalError = '';
+        if (error instanceof Error) {
+          originalError = error.message;
+        } else if (typeof error === 'string') {
+          originalError = error;
+        } else if (error && typeof error === 'object' && 'message' in error) {
+          originalError = String(error.message);
         } else {
-          // Use the original error message as fallback, but add context for repair
-          let originalError = '';
-          if (error instanceof Error) {
-            originalError = error.message;
-          } else if (typeof error === 'string') {
-            originalError = error;
-          } else if (error && typeof error === 'object' && 'message' in error) {
-            originalError = String(error.message);
-          } else {
-            originalError = String(error);
-          }
-          
-          // If the error already mentions repair context, keep it as is
-          if (originalError.toLowerCase().includes('reparación') || 
-              originalError.toLowerCase().includes('repair')) {
-            userFriendlyError = originalError;
-          } else {
-            userFriendlyError = `Error durante la ${repairPrefix}: ${originalError}`;
-          }
+          originalError = String(error);
         }
-      
+
+        // If the error already mentions repair context, keep it as is
+        if (originalError.toLowerCase().includes('reparación') ||
+          originalError.toLowerCase().includes('repair')) {
+          userFriendlyError = originalError;
+        } else {
+          userFriendlyError = `Error durante la ${repairPrefix}: ${originalError}`;
+        }
+      }
+
       dispatch({
         type: 'SET_MODPACK_STATE',
         payload: {
           id: modpackId,
-          state: { 
+          state: {
             ...(state.modpackStates[modpackId] || createModpackState('not_installed')),
-            status: 'error', 
+            status: 'error',
             error: userFriendlyError
           },
         },
@@ -882,26 +881,26 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
   const updateModpack = (id: string) => performModpackAction('update', id);
   const launchModpack = (id: string) => performModpackAction('launch', id);
   const repairModpack = (id: string) => performModpackAction('repair', id);
-  
+
   const removeModpack = async (id: string) => {
     try {
       console.log('🗑️ Removing instance:', id);
-      
+
       dispatch({
         type: 'SET_MODPACK_STATE',
         payload: {
           id,
-          state: { 
+          state: {
             ...(state.modpackStates[id] || createModpackState('not_installed')),
             status: 'installing' // Usar installing como estado temporal mientras se elimina
           },
         },
       });
-      
+
       console.log('📡 Calling removeModpack service...');
       await launcherService.removeModpack(id);
-      
-              console.log('✅ Instance removed successfully, updating state');
+
+      console.log('✅ Instance removed successfully, updating state');
       // After successful removal, change state to not_installed
       dispatch({
         type: 'SET_MODPACK_STATE',
@@ -911,14 +910,14 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
         },
       });
     } catch (error) {
-              console.error('❌ Error removing instance:', error);
+      console.error('❌ Error removing instance:', error);
       dispatch({
         type: 'SET_MODPACK_STATE',
         payload: {
           id,
-          state: { 
+          state: {
             ...(state.modpackStates[id] || createModpackState('not_installed')),
-            status: 'error', 
+            status: 'error',
             error: error instanceof Error ? error.message : 'Error al remover la instancia'
           },
         },
@@ -930,61 +929,61 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
   // Helper function to translate backend messages
   const translateBackendMessage = (message: string): string => {
     if (!message) return message;
-    
+
     // Handle translation keys from backend
     if (message.startsWith('progress.')) {
       // Handle complex messages with parameters
       if (message.includes('|')) {
         const parts = message.split('|');
         const key = parts[0];
-        
+
         if (key === 'progress.downloadingModpack') {
           // Format: "progress.downloadingModpack|current/total"
           const currentTotal = parts[1];
-          return t('progress.downloadingModpack', { 
-            current: currentTotal.split('/')[0], 
-            total: currentTotal.split('/')[1] 
+          return t('progress.downloadingModpack', {
+            current: currentTotal.split('/')[0],
+            total: currentTotal.split('/')[1]
           });
         }
-        
+
         if (key === 'progress.downloadingMinecraft') {
           // Format: "progress.downloadingMinecraft|component|progress"
           const component = parts[1];
           const progressPart = parts[2];
-          
+
           // Use component name to get specific translation
           const translationKey = component === 'Assets' ? 'progress.downloadingAssets' :
-                                component === 'Java' ? 'progress.downloadingJava' :
-                                component === 'Librerías' ? 'progress.downloadingLibraries' :
-                                component === 'Nativos' ? 'progress.downloadingNatives' :
-                                'progress.downloadingMinecraftFiles';
-          
+            component === 'Java' ? 'progress.downloadingJava' :
+              component === 'Librerías' ? 'progress.downloadingLibraries' :
+                component === 'Nativos' ? 'progress.downloadingNatives' :
+                  'progress.downloadingMinecraftFiles';
+
           return `${t(translationKey)} (${progressPart})`;
         }
-        
+
         if (key === 'progress.downloadingMinecraftFile') {
           // Format: "progress.downloadingMinecraftFile|fileName"
           const fileName = parts[1];
           return t('progress.downloadingMinecraftFile', { fileName });
         }
-        
+
         if (key === 'progress.installingComponent') {
           // Format: "progress.installingComponent|component"
           const component = parts[1];
           return t('progress.installingComponent', { component });
         }
-        
+
         if (key === 'progress.curseforgeApiError') {
           // Format: "progress.curseforgeApiError|error message"
           const error = parts[1];
           return t('progress.curseforgeApiError', { error });
         }
       }
-      
+
       // Simple translation key
       return t(message);
     }
-    
+
     return message;
   };
 
