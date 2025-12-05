@@ -91,6 +91,12 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({
         bgColor: 'bg-lumina-500 hover:bg-lumina-600',
         textColor: 'text-white',
         action: () => {
+          // Save full modpack data to localStorage so MyModpacksPage can use it during installation
+          try {
+            localStorage.setItem(`installing_modpack_${modpack.id}`, JSON.stringify(modpack));
+          } catch (error) {
+            console.error('Failed to save modpack to localStorage:', error);
+          }
           installModpack(modpack.id);
           // Navigate to my-modpacks after starting install
           onNavigate?.('my-modpacks', modpack.id);
