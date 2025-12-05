@@ -265,18 +265,19 @@ const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect
   // Load instance metadata when installed
   useEffect(() => {
     const loadMetadata = async () => {
-      if (state.installed) {
-        try {
-          const metadataJson = await invoke<string | null>('get_instance_metadata', {
-            modpackId: modpack.id
-          });
+      // Skip if no modpack ID or not installed
+      if (!modpack.id || !state.installed) return;
 
-          if (metadataJson) {
-            setInstanceMetadata(JSON.parse(metadataJson));
-          }
-        } catch (error) {
-          console.error('Failed to load instance metadata:', error);
+      try {
+        const metadataJson = await invoke<string | null>('get_instance_metadata', {
+          modpackId: modpack.id
+        });
+
+        if (metadataJson) {
+          setInstanceMetadata(JSON.parse(metadataJson));
         }
+      } catch (error) {
+        console.error('Failed to load instance metadata:', error);
       }
     };
 

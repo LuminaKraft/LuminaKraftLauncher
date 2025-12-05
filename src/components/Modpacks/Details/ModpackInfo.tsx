@@ -12,7 +12,9 @@ const ModpackInfo: React.FC<ModpackInfoProps> = ({ modpack }) => {
   const { t } = useTranslation();
   const { getAnimationClass, getAnimationStyle } = useAnimation();
 
-  const getModloaderDisplayName = (modloader: string) => {
+  const getModloaderDisplayName = (modloader: string | undefined) => {
+    if (!modloader) return 'Unknown';
+
     const modloaderMappings: { [key: string]: string } = {
       'forge': 'Forge',
       'fabric': 'Fabric',
@@ -20,7 +22,7 @@ const ModpackInfo: React.FC<ModpackInfoProps> = ({ modpack }) => {
       'neoforge': 'NeoForge',
       'vanilla': 'Vanilla'
     };
-    
+
     return modloaderMappings[modloader.toLowerCase()] || modloader;
   };
 
@@ -29,10 +31,9 @@ const ModpackInfo: React.FC<ModpackInfoProps> = ({ modpack }) => {
   return (
     <div className="space-y-6">
       {/* Installation Card */}
-      <div 
-        className={`bg-dark-800 rounded-xl p-6 border border-dark-700 transition-all duration-200 ${
-          getAnimationClass('', 'hover:border-lumina-400/30')
-        }`}
+      <div
+        className={`bg-dark-800 rounded-xl p-6 border border-dark-700 transition-all duration-200 ${getAnimationClass('', 'hover:border-lumina-400/30')
+          }`}
         style={{
           animation: 'fadeInUp 0.4s ease-out 0.4s backwards',
           ...getAnimationStyle({})
@@ -73,10 +74,9 @@ const ModpackInfo: React.FC<ModpackInfoProps> = ({ modpack }) => {
 
       {/* Server Info */}
       {isVanillaServer && modpack.ip && (
-        <div 
-          className={`bg-dark-800 rounded-xl p-6 border border-dark-700 transition-all duration-200 ${
-            getAnimationClass('', 'hover:border-lumina-400/30')
-          }`}
+        <div
+          className={`bg-dark-800 rounded-xl p-6 border border-dark-700 transition-all duration-200 ${getAnimationClass('', 'hover:border-lumina-400/30')
+            }`}
           style={getAnimationStyle({})}
         >
           <h3 className="text-xl font-bold text-white mb-4">{t('modpacks.serverInfo')}</h3>

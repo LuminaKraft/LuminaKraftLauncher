@@ -65,8 +65,8 @@ export function MyModpacksPage() {
 
     const resolved = { ...modpack };
 
-    // Resolve logo if it's a relative path
-    if (resolved.logo && resolved.logo.startsWith('caches/')) {
+    // Resolve logo if it's a relative path (handle both old caches/ and new meta/ paths)
+    if (resolved.logo && (resolved.logo.startsWith('meta/') || resolved.logo.startsWith('caches/'))) {
       const fullPath = `${launcherDataDirRef.current}/${resolved.logo}`;
       try {
         resolved.logo = await invoke<string>('get_file_as_data_url', { filePath: fullPath });
@@ -78,8 +78,8 @@ export function MyModpacksPage() {
       }
     }
 
-    // Resolve backgroundImage if it's a relative path
-    if (resolved.backgroundImage && resolved.backgroundImage.startsWith('caches/')) {
+    // Resolve backgroundImage if it's a relative path (handle both old caches/ and new meta/ paths)
+    if (resolved.backgroundImage && (resolved.backgroundImage.startsWith('meta/') || resolved.backgroundImage.startsWith('caches/'))) {
       const fullPath = `${launcherDataDirRef.current}/${resolved.backgroundImage}`;
       try {
         resolved.backgroundImage = await invoke<string>('get_file_as_data_url', { filePath: fullPath });
@@ -184,7 +184,8 @@ export function MyModpacksPage() {
   }, [modpackStates]);
 
   /**
-   * Save complete modpack metadata from localStorage to override incomplete backend metadata
+   * Save essential modpack metadata from localStorage
+   * Saves: name, logo, backgroundImage (user-editable) + urlModpackZip (for updates)
    */
   const saveInstallingModpackMetadata = async () => {
     const installedIds = Object.entries(modpackStates)
@@ -198,15 +199,18 @@ export function MyModpacksPage() {
           const savedData = localStorage.getItem(`installing_modpack_${id}`);
           if (savedData) {
             const modpack = JSON.parse(savedData);
-            console.log(`📝 Saving metadata for ${id}:`, {
-              backgroundImage: modpack.backgroundImage,
-              logo: modpack.logo,
-              name: modpack.name
-            });
-            // Call Tauri to save the correct metadata file
+            // Save essential fields: user-editable + urlModpackZip for updates
+            const essentialMetadata = {
+              name: modpack.name || '',
+              logo: modpack.logo || '',
+              backgroundImage: modpack.backgroundImage || '',
+              urlModpackZip: modpack.urlModpackZip || '' // Needed for update functionality
+            };
+            console.log(`📝 Saving essential metadata for ${id}:`, essentialMetadata);
+            // Call Tauri to save the metadata file
             await invoke('save_modpack_metadata_json', {
               modpackId: id,
-              modpackJson: JSON.stringify(modpack)
+              modpackJson: JSON.stringify(essentialMetadata)
             });
             console.log(`✅ Saved metadata for ${id}`);
             // Clean up localStorage
@@ -581,10 +585,34 @@ export function MyModpacksPage() {
   // Details view
   if (selectedModpackId) {
     let state = modpackStates[selectedModpackId];
-    let modpack = modpackDataMap.get(selectedModpackId);
+    const cachedData = modpackDataMap.get(selectedModpackId);
+    const instance = instances.find(i => i.id === selectedModpackId);
 
-    // Create placeholder if no metadata found
-    if (!modpack) {
+    // Merge cached UI data (name, logo, backgroundImage) with instance technical data
+    let modpack: Modpack;
+    if (instance) {
+      modpack = {
+        id: instance.id,
+        name: cachedData?.name || instance.name,
+        description: cachedData?.description || '',
+        shortDescription: cachedData?.shortDescription || `${t('myModpacks.importedOn')} ${new Date(instance.installedAt).toLocaleDateString()}`,
+        version: instance.version,
+        minecraftVersion: instance.minecraftVersion,
+        modloader: instance.modloader,
+        modloaderVersion: instance.modloaderVersion,
+        logo: cachedData?.logo || '',
+        backgroundImage: cachedData?.backgroundImage || '',
+        urlModpackZip: cachedData?.urlModpackZip || '', // From cache for update functionality
+        category: 'community',
+        isActive: true,
+        isNew: false,
+        isComingSoon: false
+      } as Modpack;
+    } else if (cachedData) {
+      // Installing modpack - use cached data
+      modpack = cachedData;
+    } else {
+      // Placeholder for unknown modpack
       modpack = {
         id: selectedModpackId,
         name: t('myModpacks.importing.name'),
@@ -618,9 +646,8 @@ export function MyModpacksPage() {
     if (modpack && state) {
       return (
         <div
-          className={`h-full w-full transition-opacity duration-200 ease-out ${
-            isTransitioning ? 'opacity-0' : 'opacity-100'
-          }`}
+          className={`h-full w-full transition-opacity duration-200 ease-out ${isTransitioning ? 'opacity-0' : 'opacity-100'
+            }`}
         >
           <ModpackDetailsRefactored
             modpack={modpack}
@@ -637,9 +664,8 @@ export function MyModpacksPage() {
   // Main list view
   return (
     <div
-      className={`max-w-7xl mx-auto p-6 transition-opacity duration-200 ease-out ${
-        isTransitioning ? 'opacity-0' : 'opacity-100'
-      }`}
+      className={`max-w-7xl mx-auto p-6 transition-opacity duration-200 ease-out ${isTransitioning ? 'opacity-0' : 'opacity-100'
+        }`}
     >
       {/* Validation Dialog */}
       {validationData && (
@@ -719,7 +745,10 @@ export function MyModpacksPage() {
 
               // If we have data from cache/localStorage/Supabase (from Explore), use it
               // Only show "Importing" placeholder if NO data (local ZIP import)
-              const modpack: Modpack = modpackData ? modpackData : {
+              const modpack: Modpack = modpackData ? {
+                ...modpackData,
+                id // Ensure id is always set from the loop variable
+              } : {
                 id,
                 name: t('myModpacks.importing.name'),
                 description: t('myModpacks.importing.description'),
@@ -730,7 +759,6 @@ export function MyModpacksPage() {
                 modloaderVersion: '',
                 logo: '',
                 backgroundImage: '',
-                banner_url: '',
                 urlModpackZip: '',
                 category: 'community',
                 isActive: false,
@@ -764,9 +792,10 @@ export function MyModpacksPage() {
               let modpack: Modpack;
 
               if (cachedData) {
-                // Use cached data, but override versions
+                // Use cached data, but override with instance data (versions + id)
                 modpack = {
                   ...cachedData,
+                  id: instance.id, // Ensure id is always set from instance
                   version: instance.version,
                   minecraftVersion: instance.minecraftVersion,
                   modloader: instance.modloader,
@@ -787,7 +816,6 @@ export function MyModpacksPage() {
                   modloaderVersion: instance.modloaderVersion,
                   logo: instance.name.charAt(0).toUpperCase(),
                   backgroundImage: '',
-                  banner_url: '',
                   urlModpackZip: '',
                   category: 'community',
                   isActive: true,
@@ -819,9 +847,8 @@ export function MyModpacksPage() {
         onConfirm={handleDownloadDialogConfirm}
         onCancel={handleSkipDownload}
         title="Download Updated Modpack?"
-        message={`You've uploaded ${
-          pendingUploadedFiles?.size || 0
-        } file(s) that were missing from this modpack. Would you like to download an updated version of the ZIP file with these files included in the overrides folder?`}
+        message={`You've uploaded ${pendingUploadedFiles?.size || 0
+          } file(s) that were missing from this modpack. Would you like to download an updated version of the ZIP file with these files included in the overrides folder?`}
         confirmText="Download Updated ZIP"
         cancelText="Skip Download"
         variant="info"
