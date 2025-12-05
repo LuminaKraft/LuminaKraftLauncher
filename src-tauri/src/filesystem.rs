@@ -32,6 +32,41 @@ pub fn get_instances_dir() -> Result<PathBuf> {
     Ok(instances_dir)
 }
 
+/// Migrate data from old caches/modpacks to new meta/modpacks location
+/// This is called on app startup to ensure backward compatibility
+pub fn migrate_caches_to_meta() -> Result<()> {
+    let launcher_dir = get_launcher_data_dir()?;
+    let old_path = launcher_dir.join("caches").join("modpacks");
+    let new_path = launcher_dir.join("meta").join("modpacks");
+
+    // Only migrate if old path exists and new path doesn't
+    if old_path.exists() && !new_path.exists() {
+        // Ensure parent directory exists
+        if let Some(parent) = new_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        // Move the directory
+        fs::rename(&old_path, &new_path)
+            .map_err(|e| anyhow!("Failed to migrate caches/modpacks to meta/modpacks: {}", e))?;
+
+        println!("✅ Migrated caches/modpacks/ → meta/modpacks/");
+
+        // Try to remove the old caches directory if it's empty
+        let caches_dir = launcher_dir.join("caches");
+        if caches_dir.exists() {
+            if let Ok(entries) = fs::read_dir(&caches_dir) {
+                if entries.count() == 0 {
+                    let _ = fs::remove_dir(&caches_dir);
+                    println!("🗑️ Removed empty caches/ directory");
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
 /// Sanitize a modpack name to be filesystem-safe
 fn sanitize_folder_name(name: &str) -> String {
     name.chars()
@@ -112,39 +147,56 @@ pub async fn save_instance_metadata(metadata: &InstanceMetadata) -> Result<()> {
     Ok(())
 }
 
-/// Save rich modpack metadata to cache for display purposes
-/// This is separate from InstanceMetadata and contains UI-relevant data
+/// Save minimal modpack metadata to cache for display purposes
+/// Only saves UI-relevant data: name, logo, backgroundImage, urlModpackZip
+/// Technical data (version, modloader, etc.) comes from instance.json
+/// IMPORTANT: Preserves existing values if new values are empty (for updates)
 pub async fn save_modpack_metadata(modpack: &crate::Modpack) -> Result<()> {
     let launcher_dir = get_launcher_data_dir()?;
-    let cache_dir = launcher_dir.join("caches").join("modpacks");
+    let meta_dir = launcher_dir.join("meta").join("modpacks");
 
-    // Ensure cache directory exists
-    tokio::fs::create_dir_all(&cache_dir).await?;
+    // Ensure meta directory exists
+    tokio::fs::create_dir_all(&meta_dir).await?;
 
-    let metadata_path = cache_dir.join(format!("{}.json", modpack.id));
+    let metadata_path = meta_dir.join(format!("{}.json", modpack.id));
 
-    // Create a subset of modpack data for caching (only UI-relevant fields)
+    // Load existing metadata to preserve values that shouldn't be overwritten
+    let existing_data: Option<serde_json::Value> = if metadata_path.exists() {
+        match tokio::fs::read_to_string(&metadata_path).await {
+            Ok(content) => serde_json::from_str(&content).ok(),
+            Err(_) => None,
+        }
+    } else {
+        None
+    };
+
+    // Helper to get existing value or default
+    let get_existing = |key: &str| -> String {
+        existing_data
+            .as_ref()
+            .and_then(|d| d.get(key))
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string()
+    };
+
+    // Use new value if not empty, otherwise preserve existing
+    let name = if modpack.name.is_empty() { get_existing("name") } else { modpack.name.clone() };
+    let logo = if modpack.logo.is_empty() { get_existing("logo") } else { modpack.logo.clone() };
+    let background = if modpack.banner_url.is_empty() { get_existing("backgroundImage") } else { modpack.banner_url.clone() };
+    
+    // urlModpackZip: only save if it's a valid HTTP URL, otherwise preserve existing
+    let url_to_save = if modpack.url_modpack_zip.starts_with("http") {
+        modpack.url_modpack_zip.clone()
+    } else {
+        get_existing("urlModpackZip")
+    };
+    
     let cache_data = serde_json::json!({
-        "id": modpack.id,
-        "name": modpack.name,
-        "description": modpack.description,
-        "version": modpack.version,
-        "minecraftVersion": modpack.minecraft_version,
-        "modloader": modpack.modloader,
-        "modloaderVersion": modpack.modloader_version,
-        "logo": modpack.logo,
-        "backgroundImage": modpack.banner_url, // Use banner_url field
-        "images": modpack.images,
-        "gamemode": modpack.gamemode,
-        "isNew": modpack.is_new,
-        "isActive": modpack.is_active,
-        "isComingSoon": modpack.is_coming_soon,
-        "featureIcons": modpack.feature_icons,
-        "collaborators": modpack.collaborators,
-        "youtubeEmbed": modpack.youtube_embed,
-        "tiktokEmbed": modpack.tiktok_embed,
-        "ip": modpack.ip,
-        "leaderboardPath": modpack.leaderboard_path,
+        "name": name,
+        "logo": logo,
+        "backgroundImage": background,
+        "urlModpackZip": url_to_save
     });
 
     let metadata_json = serde_json::to_string_pretty(&cache_data)?;
@@ -174,21 +226,21 @@ pub async fn delete_modpack_cache(modpack_id: &str) -> Result<()> {
         .ok_or_else(|| anyhow!("Failed to get data directory"))?
         .join("LKLauncher");
 
-    // Delete modpack cache directory
-    let cache_dir = launcher_dir
-        .join("caches")
+    // Delete modpack meta directory
+    let meta_dir = launcher_dir
+        .join("meta")
         .join("modpacks")
         .join(modpack_id);
 
-    if cache_dir.exists() {
-        fs::remove_dir_all(&cache_dir)
-            .map_err(|e| anyhow!("Failed to delete modpack cache: {}", e))?;
-        println!("✓ Deleted cache for modpack: {}", modpack_id);
+    if meta_dir.exists() {
+        fs::remove_dir_all(&meta_dir)
+            .map_err(|e| anyhow!("Failed to delete modpack metadata: {}", e))?;
+        println!("✓ Deleted metadata for modpack: {}", modpack_id);
     }
 
     // Delete modpack metadata JSON
     let metadata_path = launcher_dir
-        .join("caches")
+        .join("meta")
         .join("modpacks")
         .join(format!("{}.json", modpack_id));
 
@@ -686,7 +738,7 @@ pub async fn save_modpack_image(
 ) -> Result<()> {
     let launcher_dir = get_launcher_data_dir()?;
     let modpack_images_dir = launcher_dir
-        .join("caches")
+        .join("meta")
         .join("modpacks")
         .join(modpack_id)
         .join("images");
@@ -713,14 +765,14 @@ pub async fn save_modpack_image(
     println!("💾 Saved {} image: {}", image_type, file_name);
 
     // Update modpack metadata JSON with new image path
-    let cache_dir = launcher_dir.join("caches").join("modpacks");
-    let metadata_path = cache_dir.join(format!("{}.json", modpack_id));
+    let meta_dir = launcher_dir.join("meta").join("modpacks");
+    let metadata_path = meta_dir.join(format!("{}.json", modpack_id));
 
     if metadata_path.exists() {
         if let Ok(content) = tokio::fs::read_to_string(&metadata_path).await {
             if let Ok(mut metadata) = serde_json::from_str::<serde_json::Value>(&content) {
                 // Create relative path for storage (will be resolved at runtime)
-                let relative_path = format!("caches/modpacks/{}/images/{}", modpack_id, file_name);
+                let relative_path = format!("meta/modpacks/{}/images/{}", modpack_id, file_name);
 
                 if image_type == "logo" {
                     metadata["logo"] = serde_json::Value::String(relative_path);
