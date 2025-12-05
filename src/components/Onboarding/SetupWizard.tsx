@@ -75,7 +75,8 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
     };
 
     const handleNextFromAccount = () => {
-        if (userSettings.microsoftAccount) {
+        const msAccount = userSettings.microsoftAccount || localMsAccount;
+        if (msAccount) {
             // If logged in with Microsoft, skip profile (username) step
             changeStep('finish');
         } else {
@@ -88,7 +89,8 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
         if (step === 'profile') changeStep('account');
         if (step === 'finish') {
             // If logged in with Microsoft, go back to account (profile offline step is skipped)
-            if (userSettings.microsoftAccount) {
+            const msAccount = userSettings.microsoftAccount || localMsAccount;
+            if (msAccount) {
                 changeStep('account');
             } else {
                 changeStep('profile');
