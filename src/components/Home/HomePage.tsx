@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowRight, Clock, Play } from 'lucide-react';
+import { invoke } from '@tauri-apps/api/core';
 import ModpackCard from '../Modpacks/ModpackCard';
 import { Modpack } from '../../types/launcher';
 import LauncherService from '../../services/launcherService';
@@ -16,11 +17,49 @@ export function HomePage({ onNavigate }: HomePageProps) {
   const [comingSoonModpacks, setComingSoonModpacks] = useState<Modpack[]>([]);
   const [featuredModpacks, setFeaturedModpacks] = useState<Modpack[]>([]);
   const [discoverModpacks, setDiscoverModpacks] = useState<Modpack[]>([]);
+  const [localModpacksMap, setLocalModpacksMap] = useState<Map<string, Modpack>>(new Map());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadHomePageData();
   }, []);
+
+  // Load local modpack metadata when installed modpacks change
+  useEffect(() => {
+    const loadLocalModpacks = async () => {
+      const installedIds = Object.entries(modpackStates)
+        .filter(([_, state]) => state.installed)
+        .map(([id]) => id);
+
+      const newMap = new Map<string, Modpack>();
+
+      for (const id of installedIds) {
+        // Skip if already in server modpacks
+        if ([...featuredModpacks, ...comingSoonModpacks, ...discoverModpacks].some(m => m.id === id)) {
+          continue;
+        }
+
+        try {
+          const cachedData = await invoke<string | null>('get_cached_modpack_data', {
+            modpackId: id
+          });
+
+          if (cachedData) {
+            const modpack = JSON.parse(cachedData) as Modpack;
+            newMap.set(id, modpack);
+          }
+        } catch (error) {
+          console.error(`Failed to load local modpack ${id}:`, error);
+        }
+      }
+
+      setLocalModpacksMap(newMap);
+    };
+
+    if (!loading) {
+      loadLocalModpacks();
+    }
+  }, [modpackStates, loading, featuredModpacks, comingSoonModpacks, discoverModpacks]);
 
   const loadHomePageData = async () => {
     setLoading(true);
@@ -63,6 +102,25 @@ export function HomePage({ onNavigate }: HomePageProps) {
     }
   };
 
+  // Build a map of all available modpacks (server + local)
+  const allModpacksMap = useMemo(() => {
+    const map = new Map<string, Modpack>();
+
+    // Add server modpacks
+    [...featuredModpacks, ...comingSoonModpacks, ...discoverModpacks].forEach(m => {
+      map.set(m.id, m);
+    });
+
+    // Add local modpacks
+    localModpacksMap.forEach((modpack, id) => {
+      if (!map.has(id)) {
+        map.set(id, modpack);
+      }
+    });
+
+    return map;
+  }, [featuredModpacks, comingSoonModpacks, discoverModpacks, localModpacksMap]);
+
   // Get recently played instances
   const recentInstances = useMemo(() => {
     const installed = Object.entries(modpackStates)
@@ -100,8 +158,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {recentInstances.map((modpackId, index) => {
-              const modpack = [...featuredModpacks, ...comingSoonModpacks, ...discoverModpacks]
-                .find(m => m.id === modpackId);
+              const modpack = allModpacksMap.get(modpackId);
 
               if (!modpack) return null;
 
