@@ -384,10 +384,13 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
                 </div>
 
                 {/* Status Bar / Dots */}
+                {/* Status Bar / Dots */}
                 {step !== 'welcome' && (
                     <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2">
                         <div className={`w-2 h-2 rounded-full transition-colors ${step === 'account' ? 'bg-white' : 'bg-dark-600'}`} />
-                        <div className={`w-2 h-2 rounded-full transition-colors ${step === 'profile' ? 'bg-white' : 'bg-dark-600'}`} />
+                        {!(userSettings.microsoftAccount || localMsAccount) && (
+                            <div className={`w-2 h-2 rounded-full transition-colors ${step === 'profile' ? 'bg-white' : 'bg-dark-600'}`} />
+                        )}
                         <div className={`w-2 h-2 rounded-full transition-colors ${step === 'finish' ? 'bg-white' : 'bg-dark-600'}`} />
                     </div>
                 )}
