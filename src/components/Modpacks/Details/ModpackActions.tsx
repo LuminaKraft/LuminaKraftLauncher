@@ -253,6 +253,8 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({
     try {
       await removeModpack(modpack.id);
       setShowRemoveDialog(false);
+      // Navigate back to my-modpacks after successful removal
+      onNavigate?.('my-modpacks');
     } catch (error) {
       console.error('Failed to remove instance:', error);
     } finally {
