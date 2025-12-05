@@ -1035,7 +1035,8 @@
     "manifestNotFound": "No manifest.json found in ZIP file",
     "selectZipFile": "Please select a ZIP file",
     "validZipRequired": "Please upload a valid ZIP file",
-    "versionAndZipRequired": "Version and ZIP file are required"
+    "versionAndZipRequired": "Version and ZIP file are required",
+    "preparingForInstallation": "Preparing the modpack for installation. This may take a moment..."
   },
   "errors": {
     "failedValidate": "Failed to validate modpack",

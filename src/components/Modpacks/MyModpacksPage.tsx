@@ -44,6 +44,7 @@ export function MyModpacksPage() {
   const [validating, setValidating] = useState(false);
   const [showValidationProgress, setShowValidationProgress] = useState(false);
   const [validationProgressMessage, setValidationProgressMessage] = useState('');
+  const [importingModpackId, setImportingModpackId] = useState<string | null>(null);
 
   /**
    * Resolve relative image paths to data URLs via Tauri
@@ -118,6 +119,20 @@ export function MyModpacksPage() {
       const installedIds = Object.entries(modpackStates)
         .filter(([_, state]) => state.status === 'installed')
         .map(([id]) => id);
+
+      // Track modpacks in initial installation phase (not yet downloading)
+      const initialPhaseIds = installingIds.filter(id => {
+        const state = modpackStates[id];
+        return state.status === 'installing' && !state.downloading;
+      });
+
+      // Update importing modpack ID if there's one in initial phase
+      if (initialPhaseIds.length > 0) {
+        setImportingModpackId(initialPhaseIds[0]);
+      } else if (importingModpackId && !installingIds.includes(importingModpackId)) {
+        // Clear the ID when installation completes
+        setImportingModpackId(null);
+      }
 
       // Create a hash of current installing state to detect when installations complete
       const currentInstallingHash = JSON.stringify(installingIds.sort());
@@ -765,14 +780,18 @@ export function MyModpacksPage() {
         variant="info"
       />
 
-      {/* Validation Progress Modal */}
-      {showValidationProgress && createPortal(
+      {/* Validation & Import Progress Modal */}
+      {(showValidationProgress || importingModpackId) && createPortal(
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9998]">
           <div className="bg-gradient-to-b from-gray-800 to-gray-900 rounded-lg shadow-2xl p-8 flex flex-col items-center gap-4 w-full max-w-sm">
             <Loader className="w-12 h-12 text-blue-400 animate-spin" />
-            <h2 className="text-xl font-semibold text-white text-center">{t('myModpacks.validating')}</h2>
+            <h2 className="text-xl font-semibold text-white text-center">
+              {showValidationProgress ? t('myModpacks.validating') : t('myModpacks.preparingModpack')}
+            </h2>
             <p className="text-sm text-gray-400 text-center">
-              {t('myModpacks.validatingDescription')}
+              {showValidationProgress
+                ? t('myModpacks.validatingDescription')
+                : t('validation.preparingForInstallation')}
             </p>
           </div>
         </div>,
