@@ -1,7 +1,7 @@
 {
   "name": "luminakraft-launcher",
   "private": true,
-  "version": "0.1.0-rc.1",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -79,5 +79,5 @@
     "vite": "^6.0.3",
     "vitest": "^4.0.15"
   },
-  "isPrerelease": true
+  "isPrerelease": false
 }
