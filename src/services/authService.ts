@@ -57,6 +57,10 @@ class AuthService {
   async signOutSupabase(): Promise<void> {
     try {
       await supabase.auth.signOut();
+
+      // Clean up Discord provider tokens from localStorage
+      localStorage.removeItem('discord_provider_refresh_token');
+
       console.log('✅ Signed out from LuminaKraft Account');
     } catch (error) {
       console.error('Error signing out from Supabase:', error);
@@ -91,8 +95,8 @@ class AuthService {
    */
   async refreshMicrosoftToken(refreshToken: string): Promise<MicrosoftAccount> {
     try {
-      return await invoke<MicrosoftAccount>('refresh_microsoft_token', { 
-        refreshToken 
+      return await invoke<MicrosoftAccount>('refresh_microsoft_token', {
+        refreshToken
       });
     } catch (error) {
       throw new Error(`Failed to refresh Microsoft token: ${error}`);
@@ -116,12 +120,12 @@ class AuthService {
   async checkAndRefreshToken(account: MicrosoftAccount): Promise<MicrosoftAccount | null> {
     try {
       const isValid = await this.validateMicrosoftToken(account.exp);
-      
+
       if (!isValid) {
         console.log('Microsoft token expired, refreshing...');
         return await this.refreshMicrosoftToken(account.refreshToken);
       }
-      
+
       return account;
     } catch (error) {
       console.error('Failed to refresh Microsoft token:', error);
@@ -139,10 +143,10 @@ class AuthService {
       const port = await invoke<number>('start_oauth_server');
 
       // 2. Set up event listener for oauth callback
-      const unlisten = await listen<{ 
-        access_token: string; 
-        refresh_token: string; 
-        provider_token?: string; 
+      const unlisten = await listen<{
+        access_token: string;
+        refresh_token: string;
+        provider_token?: string;
         provider_refresh_token?: string;
       }>(
         'oauth-callback',
@@ -237,8 +241,8 @@ class AuthService {
       console.log(`OAuth server started on port ${port}`);
 
       // 2. Set up event listener for oauth callback
-      const unlisten = await listen<{ 
-        access_token: string; 
+      const unlisten = await listen<{
+        access_token: string;
         refresh_token: string;
         provider_token?: string;
         provider_refresh_token?: string;
@@ -250,7 +254,7 @@ class AuthService {
             const { access_token, refresh_token, provider_token, provider_refresh_token } = event.payload;
 
             // 3. Establish Supabase session with received tokens
-            const timeoutPromise = new Promise<{ data: { session: null }, error: Error }>((_, reject) => 
+            const timeoutPromise = new Promise<{ data: { session: null }, error: Error }>((_, reject) =>
               setTimeout(() => reject(new Error('SetSession timeout')), 10000)
             );
 
@@ -336,7 +340,7 @@ class AuthService {
   async syncMicrosoftData(microsoftAccount?: MicrosoftAccount): Promise<void> {
     try {
       console.log('Attempting to sync LOCAL Minecraft data to LuminaKraft account...');
-      
+
       // 1. Get Microsoft Data (either passed or from local storage)
       let account = microsoftAccount;
       if (!account) {
@@ -363,18 +367,18 @@ class AuthService {
         return;
       }
 
-      console.log('Syncing Minecraft profile data:', { 
-        username: account.username, 
+      console.log('Syncing Minecraft profile data:', {
+        username: account.username,
         uuid: account.uuid,
         xuid: account.xuid,
-        userId: session.user.id 
+        userId: session.user.id
       });
 
       // 3. Update Database
       // We use the Minecraft Profile UUID for minecraft_uuid
       // We use the Xbox User ID (xuid) for microsoft_id (as it's the stable account ID)
       const { error } = await updateUser(session.user.id, {
-        microsoft_id: account.xuid, 
+        microsoft_id: account.xuid,
         minecraft_username: account.username,
         minecraft_uuid: account.uuid,
         is_minecraft_verified: true,
@@ -453,8 +457,8 @@ class AuthService {
       const redirectUrl = `https://luminakraft.com/auth-callback?launcher=true&port=${port}`;
 
       // 2. Set up event listener for oauth callback
-      const unlisten = await listen<{ 
-        access_token: string; 
+      const unlisten = await listen<{
+        access_token: string;
         refresh_token: string;
         provider_token?: string;
         provider_refresh_token?: string;
@@ -837,7 +841,7 @@ class AuthService {
       console.log('  Has Discord refresh token:', !!refreshToken);
 
       // Call Edge Function with access token OR refresh token
-      const { data, error} = await supabase.functions.invoke('sync-discord-roles', {
+      const { data, error } = await supabase.functions.invoke('sync-discord-roles', {
         body: {
           userId: session.user.id,
           discordAccessToken: discordAccessToken || undefined,
