@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { invoke } from '@tauri-apps/api/core';
 import { useLauncher } from '../../contexts/LauncherContext';
 import AuthService from '../../services/authService';
+import { ModpackManagementService } from '../../services/modpackManagementService';
 import logo from '../../assets/logo.png';
 
 interface SetupWizardProps {
@@ -49,6 +50,8 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
 
             if (account) {
                 setLocalMsAccount(account);
+                // Register with ModpackManagementService (same as AccountDropdown)
+                ModpackManagementService.getInstance().setMicrosoftAccount(account);
                 await updateUserSettings({
                     authMethod: 'microsoft',
                     microsoftAccount: account,
