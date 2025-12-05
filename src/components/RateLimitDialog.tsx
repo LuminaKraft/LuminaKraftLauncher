@@ -91,10 +91,24 @@ export default function RateLimitDialog({
                   {content.title}
                 </Dialog.Title>
                 <div className="mt-2">
-                  <p className="text-sm text-gray-300">
+                  <p className="text-sm text-gray-300 mb-4">
                     {content.description}
                   </p>
-                  <p className="text-xs text-gray-500 mt-2">
+
+                  {(errorCode === 'LIMIT_EXCEEDED_ANON' || errorCode === 'LIMIT_EXCEEDED_AUTH') && (
+                    <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700 mb-4">
+                      <div className="flex items-center justify-between text-sm mb-2">
+                        <span className="text-gray-400">{t('rateLimit.currentLimit')}</span>
+                        <span className="text-white font-medium">{limit}/h</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-indigo-400 font-medium">Discord</span>
+                        <span className="text-indigo-400 font-bold">50/h</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <p className="text-xs text-gray-500">
                     {t('rateLimit.resetIn')} {new Date(resetAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
