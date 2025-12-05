@@ -1229,18 +1229,18 @@ class LauncherService {
    * Install a modpack from a local ZIP file
    * Extracts manifest, creates temporary modpack object, and installs
    */
-  async installModpackFromZip(file: File, onProgress?: (_progress: ProgressInfo) => void): Promise<void> {
+  async installModpackFromZip(filePath: string, onProgress?: (_progress: ProgressInfo) => void): Promise<void> {
     if (!isTauriContext()) {
       throw new Error('Esta función requiere ejecutar la aplicación con Tauri.');
     }
 
     try {
-      // Read the ZIP file as bytes
-      const arrayBuffer = await file.arrayBuffer();
-      const zipBytes = Array.from(new Uint8Array(arrayBuffer));
+      // Read the ZIP file from the path to extract manifest
+      const { readFile } = await import('@tauri-apps/plugin-fs');
+      const zipBuffer = await readFile(filePath);
 
       // Extract and parse manifest from ZIP using JSZip
-      const zip = await JSZip.loadAsync(file);
+      const zip = await JSZip.loadAsync(zipBuffer);
       const manifestFile = zip.file('manifest.json');
 
       if (!manifestFile) {
@@ -1250,14 +1250,17 @@ class LauncherService {
       const manifestText = await manifestFile.async('text');
       const manifest = JSON.parse(manifestText);
 
+      // Extract file name from path
+      const fileName = filePath.split('/').pop() || 'modpack.zip';
+
       // Create a safe ID for event names and folder names
       // Keep original case and replace only invalid filesystem characters with underscores
-      const safeName = (manifest.name || file.name.replace('.zip', ''))
+      const safeName = (manifest.name || fileName.replace('.zip', ''))
         .replace(/[^a-zA-Z0-9\-_]/g, '_')
         .replace(/_{2,}/g, '_');
 
       // Create a temporary modpack object from manifest
-      const modpackName = manifest.name || file.name.replace('.zip', '');
+      const modpackName = manifest.name || fileName.replace('.zip', '');
       const tempModpack = {
         id: safeName,
         name: modpackName,
@@ -1304,10 +1307,9 @@ class LauncherService {
       }
 
       try {
-        // Call the backend command to install from local ZIP
+        // Call the backend command to install from local ZIP (pass file path, not bytes)
         await safeInvoke('install_modpack_from_local_zip', {
-          zipBytes: zipBytes,
-          zipName: file.name,
+          zipPath: filePath,
           modpack: tempModpack,
           settings: transformedSettings
         });

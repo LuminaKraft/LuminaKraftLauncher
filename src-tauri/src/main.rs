@@ -1003,34 +1003,26 @@ async fn add_mods_to_instance(modpack_id: String, file_paths: Vec<String>) -> Re
 #[tauri::command]
 async fn install_modpack_from_local_zip(
     app: tauri::AppHandle,
-    zip_bytes: Vec<u8>,
-    zip_name: String,
+    zip_path: String,
     modpack: Modpack,
     settings: UserSettings
 ) -> Result<(), String> {
-    use std::fs;
-    use std::io::Write;
+    use std::path::PathBuf;
 
     tokio::task::spawn_blocking(move || {
         tokio::runtime::Handle::current().block_on(async {
             use anyhow::anyhow;
 
-            // Write ZIP to temp directory
-            let temp_dir = dirs::cache_dir()
-                .ok_or_else(|| anyhow!("Could not get cache directory"))?
-                .join("LKLauncher")
-                .join("temp")
-                .join("import");
+            let zip_file_path = PathBuf::from(&zip_path);
 
-            fs::create_dir_all(&temp_dir)?;
-
-            let zip_path = temp_dir.join(&zip_name);
-            let mut file = fs::File::create(&zip_path)?;
-            file.write_all(&zip_bytes)?;
+            // Verify the ZIP file exists at the provided path
+            if !zip_file_path.exists() {
+                return Err(anyhow!("ZIP file not found at path: {}", zip_path));
+            }
 
             // Update modpack with local ZIP path
             let mut local_modpack = modpack;
-            local_modpack.url_modpack_zip = zip_path.to_str().unwrap().to_string();
+            local_modpack.url_modpack_zip = zip_path;
 
             // Validate modpack before installation
             if let Err(e) = launcher::validate_modpack(&local_modpack) {

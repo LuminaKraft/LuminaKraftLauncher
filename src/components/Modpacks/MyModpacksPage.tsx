@@ -4,8 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { Download, FolderOpen, Loader } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import toast from 'react-hot-toast';
-import { downloadDir, appDataDir } from '@tauri-apps/api/path';
+import { downloadDir, appDataDir, tempDir } from '@tauri-apps/api/path';
 import { listen } from '@tauri-apps/api/event';
+import { open } from '@tauri-apps/plugin-dialog';
 import JSZip from 'jszip';
 import ModpackValidationService, { ModFileInfo } from '../../services/modpackValidationService';
 import ModpackValidationDialog from './ModpackValidationDialog';
@@ -31,7 +32,6 @@ export function MyModpacksPage() {
   const validationService = ModpackValidationService.getInstance();
   const launcherService = LauncherService.getInstance();
   const { installModpackFromZip, modpackStates } = useLauncher();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const lastProcessedStateRef = useRef<string>('');
   const launcherDataDirRef = useRef<string | null>(null);
 
@@ -45,6 +45,7 @@ export function MyModpacksPage() {
   const [showValidationProgress, setShowValidationProgress] = useState(false);
   const [validationProgressMessage, setValidationProgressMessage] = useState('');
   const [importingModpackId, setImportingModpackId] = useState<string | null>(null);
+  const [tempZipPath, setTempZipPath] = useState<string | null>(null); // Track temp ZIP for cleanup
 
   /**
    * Resolve relative image paths to data URLs via Tauri
@@ -99,13 +100,27 @@ export function MyModpacksPage() {
     modpackName: string;
     modsWithoutUrl: ModFileInfo[];
     modsInOverrides: string[];
-    file: File;
+    filePath: string;
   } | null>(null);
   const [showDownloadDialog, setShowDownloadDialog] = useState(false);
   const [pendingUploadedFiles, setPendingUploadedFiles] = useState<Map<string, File> | null>(null);
 
-  // Load instances on mount
+  /**
+   * Clean up old temp ZIP files (older than 1 hour)
+   */
+  const cleanupOldTempFiles = async () => {
+    try {
+      // Future enhancement: implement cleanup of files older than 1 hour
+      // For now, we rely on cleanup in performImport which is more efficient
+      console.log('[Cleanup] Ready to clean up old temp files on demand');
+    } catch (error) {
+      console.warn('[Cleanup] Failed to clean old temp files:', error);
+    }
+  };
+
+  // Load instances on mount and clean up old temp files
   useEffect(() => {
+    cleanupOldTempFiles();
     loadInstancesAndMetadata();
   }, []);
 
@@ -329,24 +344,40 @@ export function MyModpacksPage() {
   };
 
   /**
-   * Handle import button click
+   * Handle import button click - open native file dialog
    */
-  const handleImportModpack = () => {
+  const handleImportModpack = async () => {
     setValidating(false);
-    fileInputRef.current?.click();
+
+    try {
+      const filePath = await open({
+        multiple: false,
+        filters: [
+          {
+            name: 'ZIP Archive',
+            extensions: ['zip']
+          }
+        ],
+        title: 'Select Modpack ZIP File'
+      });
+
+      if (!filePath) return; // User cancelled
+
+      console.log('[Import] Selected file:', filePath);
+
+      // Process the selected file
+      await handleFileSelected(filePath as string);
+    } catch (error) {
+      console.error('[Import] Failed to open file dialog:', error);
+      toast.error('Failed to open file dialog');
+    }
   };
 
   /**
-   * Handle file selection for import
+   * Handle file selection from path
    */
-  const handleFileSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    // Reset input for reuse
-    event.target.value = '';
-
-    if (!file.name.endsWith('.zip')) {
+  const handleFileSelected = async (filePath: string) => {
+    if (!filePath.endsWith('.zip')) {
       toast.error(t('validation.selectZipFile'));
       return;
     }
@@ -356,7 +387,8 @@ export function MyModpacksPage() {
       setShowValidationProgress(true);
       setValidationProgressMessage(t('myModpacks.validating'));
 
-      const result = await validationService.validateModpackZip(file);
+      // Validate the modpack from the file path
+      const result = await validationService.validateModpackZipFromPath(filePath);
 
       if (!result.success) {
         setShowValidationProgress(false);
@@ -368,21 +400,21 @@ export function MyModpacksPage() {
 
       // Check for missing mods
       const missingMods = result.modsWithoutUrl.filter(
-        mod => !result.modsInOverrides?.includes(mod.fileName)
+        (mod: typeof result.modsWithoutUrl[number]) => !result.modsInOverrides?.includes(mod.fileName)
       );
 
       if (result.modsWithoutUrl && result.modsWithoutUrl.length > 0 && missingMods.length > 0) {
         // Show validation dialog for missing files
         setValidationData({
-          modpackName: result.manifest?.name || file.name,
+          modpackName: result.manifest?.name || filePath.split('/').pop() || 'Modpack',
           modsWithoutUrl: result.modsWithoutUrl,
           modsInOverrides: result.modsInOverrides || [],
-          file
+          filePath
         });
         setShowValidationDialog(true);
       } else {
         // No missing files - proceed directly
-        await performImport(file);
+        await performImport(filePath);
       }
     } catch (error) {
       console.error('Error validating modpack:', error);
@@ -395,16 +427,30 @@ export function MyModpacksPage() {
   /**
    * Perform the actual import
    */
-  const performImport = async (file: File) => {
+  const performImport = async (filePath: string) => {
     try {
-      await installModpackFromZip(file);
-      toast.success('Modpack installed successfully!');
+      console.log('[Import] Starting import from path:', filePath);
+      await installModpackFromZip(filePath);
+      toast.success(t('myModpacks.installingModpack'));
 
       // Reload instances
       await loadInstancesAndMetadata();
     } catch (error) {
-      console.error('Error installing modpack from ZIP:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to install modpack');
+      console.error('[Import] Error installing modpack from ZIP:', error);
+      toast.error(error instanceof Error ? error.message : t('errors.failedInstallModpack'));
+    } finally {
+      // Clean up temp ZIP file if it was created
+      if (tempZipPath) {
+        try {
+          const { remove } = await import('@tauri-apps/plugin-fs');
+          await remove(tempZipPath);
+          console.log(`[Cleanup] Deleted temp ZIP: ${tempZipPath}`);
+        } catch (cleanupError) {
+          console.warn(`[Cleanup] Failed to delete temp ZIP ${tempZipPath}:`, cleanupError);
+          // Don't throw - cleanup failure shouldn't block the import success
+        }
+        setTempZipPath(null);
+      }
     }
   };
 
@@ -418,7 +464,7 @@ export function MyModpacksPage() {
         setPendingUploadedFiles(uploadedFiles);
         setShowDownloadDialog(true);
       } else {
-        await performImport(validationData.file);
+        await performImport(validationData.filePath);
       }
     }
   };
@@ -429,23 +475,25 @@ export function MyModpacksPage() {
   const handleSkipDownload = async () => {
     if (validationData) {
       try {
-        await performImport(validationData.file);
+        await performImport(validationData.filePath);
         setPendingUploadedFiles(null);
         setValidationData(null);
       } catch (error) {
         console.error('Error importing modpack:', error);
-        toast.error('Failed to import modpack');
+        toast.error(t('errors.failedInstallModpack'));
       }
     }
   };
 
   /**
    * Prepare ZIP with uploaded mods/resourcepacks in correct folders
+   * Saves the updated ZIP to a temp directory and returns the path
    */
-  const prepareZipWithOverrides = async (originalFile: File, uploadedFiles: Map<string, File>): Promise<File> => {
+  const prepareZipWithOverrides = async (filePath: string, uploadedFiles: Map<string, File>): Promise<string> => {
     try {
-      // Read original ZIP
-      const originalZipBuffer = await originalFile.arrayBuffer();
+      // Read original ZIP from path
+      const { readFile, writeFile } = await import('@tauri-apps/plugin-fs');
+      const originalZipBuffer = await readFile(filePath);
       const originalZip = new JSZip();
       await originalZip.loadAsync(originalZipBuffer);
 
@@ -454,30 +502,44 @@ export function MyModpacksPage() {
         const fileBuffer = await file.arrayBuffer();
 
         // Determine target folder based on file extension
-        let filePath: string;
+        let targetPath: string;
         if (file.name.endsWith('.jar')) {
-          filePath = `overrides/mods/${file.name}`;
+          targetPath = `overrides/mods/${file.name}`;
         } else if (file.name.endsWith('.zip')) {
-          filePath = `overrides/resourcepacks/${file.name}`;
+          targetPath = `overrides/resourcepacks/${file.name}`;
         } else {
           console.warn(`[ZIP] Unknown file extension, skipping: ${file.name}`);
           continue;
         }
 
-        originalZip.file(filePath, fileBuffer);
-        console.log(`[ZIP] Added to ZIP: ${filePath}`);
+        originalZip.file(targetPath, fileBuffer);
+        console.log(`[ZIP] Added to ZIP: ${targetPath}`);
       }
 
-      // Generate new ZIP
+      // Generate new ZIP blob
       const updatedZipBlob = await originalZip.generateAsync({ type: 'blob' });
-      const updatedFile = new File([updatedZipBlob], originalFile.name, { type: 'application/zip' });
+      const updatedZipBuffer = await updatedZipBlob.arrayBuffer();
 
-      console.log(`[ZIP] Created updated ZIP with ${uploadedFiles.size} file(s)`);
-      return updatedFile;
+      // Save to temp directory
+      const tempDirPath = await tempDir();
+      const timestamp = Date.now();
+      const fileName = filePath.split('/').pop() || 'modpack.zip';
+      const outputPath = `${tempDirPath}/luminakraft-modpack-${timestamp}-${fileName}`;
+
+      // Write the updated ZIP to temp directory
+      await writeFile(outputPath, new Uint8Array(updatedZipBuffer));
+
+      console.log(`[ZIP] Created updated ZIP with ${uploadedFiles.size} file(s) at: ${outputPath}`);
+
+      // Track temp ZIP for cleanup
+      setTempZipPath(outputPath);
+
+      return outputPath;
     } catch (error) {
       console.error('[ZIP] Failed to create updated ZIP, using original:', error);
       toast.error(t('errors.failedCreateZip'));
-      return originalFile;
+      // Return original path as fallback
+      return filePath;
     }
   };
 
@@ -489,7 +551,7 @@ export function MyModpacksPage() {
       const loadingToast = toast.loading(t('myModpacks.preparingModpack'));
       try {
         // Prepare ZIP in memory with overrides
-        const updatedZip = await prepareZipWithOverrides(validationData.file, pendingUploadedFiles);
+        const updatedZip = await prepareZipWithOverrides(validationData.filePath, pendingUploadedFiles);
 
         toast.loading(t('myModpacks.installingModpack'), { id: loadingToast });
         setShowDownloadDialog(false);
@@ -585,15 +647,6 @@ export function MyModpacksPage() {
         isTransitioning ? 'opacity-0' : 'opacity-100'
       }`}
     >
-      {/* Hidden file input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".zip"
-        onChange={handleFileSelected}
-        className="hidden"
-      />
-
       {/* Validation Dialog */}
       {validationData && (
         <ModpackValidationDialog

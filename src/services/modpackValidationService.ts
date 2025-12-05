@@ -46,6 +46,32 @@ class ModpackValidationService {
   }
 
   /**
+   * Validate a modpack ZIP from a file path (for Tauri native file dialog)
+   * Reads the file and delegates to validateModpackZip
+   */
+  async validateModpackZipFromPath(filePath: string): Promise<ValidationResult> {
+    try {
+      const { readFile } = await import('@tauri-apps/plugin-fs');
+      const buffer = await readFile(filePath);
+
+      // Convert buffer to Blob and then to File
+      const blob = new Blob([buffer], { type: 'application/zip' });
+      const fileName = filePath.split('/').pop() || 'modpack.zip';
+      const file = new File([blob], fileName, { type: 'application/zip' });
+
+      return await this.validateModpackZip(file);
+    } catch (error) {
+      console.error('Error validating modpack from path:', error);
+      return {
+        success: false,
+        modsWithoutUrl: [],
+        modsInOverrides: [],
+        error: error instanceof Error ? error.message : 'Failed to read ZIP file'
+      };
+    }
+  }
+
+  /**
    * Validate a modpack ZIP file using Web Worker for non-blocking processing
    * - Parses manifest.json
    * - Checks which mods have empty downloadUrl

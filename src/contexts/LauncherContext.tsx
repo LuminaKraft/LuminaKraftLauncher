@@ -39,7 +39,7 @@ interface LauncherContextType {
   updateUserSettings: (_settings: Partial<UserSettings>) => Promise<void>;
   refreshData: () => Promise<void>;
   installModpack: (_id: string) => Promise<void>;
-  installModpackFromZip: (_file: File) => Promise<void>;
+  installModpackFromZip: (_filePath: string) => Promise<void>;
   updateModpack: (_id: string) => Promise<void>;
   launchModpack: (_id: string) => Promise<void>;
   repairModpack: (_id: string) => Promise<void>;
@@ -968,10 +968,14 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     (modpackState: ModpackState) => ['installing', 'updating', 'launching', 'stopping'].includes(modpackState.status)
   );
 
-  const installModpackFromZip = async (file: File) => {
+  const installModpackFromZip = async (filePath: string) => {
     try {
+      // Read the ZIP file from the provided path
+      const { readFile } = await import('@tauri-apps/plugin-fs');
+      const zipBuffer = await readFile(filePath);
+
       // Extract manifest to create a temporary modpack object
-      const zip = await JSZip.loadAsync(file);
+      const zip = await JSZip.loadAsync(zipBuffer);
       const manifestFile = zip.file('manifest.json');
 
       if (!manifestFile) {
@@ -982,7 +986,8 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
       const manifest = JSON.parse(manifestText);
 
       // Create a safe ID for event names (alphanumeric, -, /, :, _ only)
-      const safeName = (manifest.name || file.name.replace('.zip', ''))
+      const fileName = filePath.split('/').pop() || 'modpack';
+      const safeName = (manifest.name || fileName.replace('.zip', ''))
         .replace(/[^a-zA-Z0-9\-/:_]/g, '_')
         .replace(/_{2,}/g, '_')
         .toLowerCase();
@@ -1028,7 +1033,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
       };
 
       // Install the modpack
-      await launcherService.installModpackFromZip(file, onProgress);
+      await launcherService.installModpackFromZip(filePath, onProgress);
 
       // Update state to installed
       dispatch({
