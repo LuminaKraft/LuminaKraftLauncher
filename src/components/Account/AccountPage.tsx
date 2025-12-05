@@ -19,59 +19,101 @@ const AccountPage: React.FC = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   const [isSigningIn, setIsSigningIn] = useState(false);
+  const hasLoadedUserRef = React.useRef(false);
 
   const canUnlink = (luminaKraftUser?.identities?.length || 0) > 1;
 
   // Load LuminaKraft account session and listen for changes
   useEffect(() => {
+
     const setupAuth = async () => {
       try {
 
-        const fetchUserWithProfile = async (retries = 3) => {
-          // Use Promise.race to timeout getUser() if it takes too long
-          const getUserPromise = supabase.auth.getUser();
-          const timeoutPromise = new Promise<{ data: { user: null } }>((resolve) =>
-            setTimeout(() => {
-              resolve({ data: { user: null } });
-            }, 3000)
-          );
+        const fetchUserWithProfile = async (retries = 3, existingUser: any = null) => {
+          let user = existingUser;
 
-          const { data: { user } } = await Promise.race([getUserPromise, timeoutPromise]);
+          if (!user) {
+            // Use Promise.race to timeout getUser() if it takes too long
+            const getUserPromise = supabase.auth.getUser();
+            const timeoutPromise = new Promise<{ data: { user: null } }>((resolve) =>
+              setTimeout(() => {
+                resolve({ data: { user: null } });
+              }, 3000)
+            );
+            const { data: { user: fetchedUser } } = await Promise.race([getUserPromise, timeoutPromise]);
+            user = fetchedUser;
+          }
 
           if (!user) {
             setDiscordAccount(null);
             return null;
           }
 
-          // Fetch Discord account status
-          const authService = AuthService.getInstance();
-          const discord = await authService.getDiscordAccount();
-          setDiscordAccount(discord);
+          // Helper to timeout promises
+          // Note: <T,> syntax is required in TSX files
+          const timeout = <T,>(promise: Promise<T>, ms: number, fallback: T): Promise<T> => {
+            return Promise.race([
+              promise,
+              new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms))
+            ]);
+          };
 
-          // Fetch all linked providers
-          const providers = await authService.getLinkedProviders();
+          // Parallelize fetches to speed up loading
+          const authService = AuthService.getInstance();
+
+          const [discord, providers, profileData]: [any, any, any] = await Promise.all([
+            // 1. Discord Account
+            timeout(authService.getDiscordAccount(), 2000, null),
+            // 2. Linked Providers
+            timeout(authService.getLinkedProviders(), 2000, []),
+            // 3. Public Profile (Display Name)
+            (async () => {
+              try {
+                const profilePromise = supabase
+                  .from('users')
+                  .select('display_name, avatar_url')
+                  .eq('id', user.id)
+                  .single();
+                // Cast to any to handle Supabase builder type compatibility
+                const { data }: any = await timeout(profilePromise as any, 2000, { data: null });
+                return data;
+              } catch (e) { return null; }
+            })()
+          ]);
+
+          setDiscordAccount(discord);
           setLinkedProviders(providers);
 
-          // Fetch public profile to get up-to-date display_name
-          for (let i = 0; i < retries; i++) {
-            const { data: profile } = await supabase
-              .from('users')
-              .select('display_name, avatar_url')
-              .eq('id', user.id)
-              .single();
+          if (profileData) {
+            user.user_metadata = {
+              ...user.user_metadata,
+              display_name: (profileData as any).display_name,
+              avatar_url: (profileData as any).avatar_url,
+              // Also update full_name for compatibility if needed
+              full_name: (profileData as any).display_name || user.user_metadata.full_name
+            };
+          }
 
-            if (profile) {
-              // Merge DB profile into user metadata for UI consistency
-              user.user_metadata = {
-                ...user.user_metadata,
-                display_name: (profile as any).display_name,
-                avatar_url: (profile as any).avatar_url
-              };
-              return user;
-            }
+          // Fallback: If display_name is missing or "User", try to get it from identities
+          const currentName = user.user_metadata.display_name || user.user_metadata.full_name;
+          const isGenericName = !currentName || currentName === 'User';
 
-            if (i < retries - 1) {
-              await new Promise(resolve => setTimeout(resolve, 1000));
+          if (isGenericName) {
+            const targetIdentity = user.identities?.find((id: any) => id.provider === 'discord' || id.provider === 'google' || id.provider === 'azure') || user.identities?.[0];
+
+            if (targetIdentity?.identity_data) {
+              const data = targetIdentity.identity_data;
+              const betterName = data.full_name || data.name || data.user_name || data.display_name;
+              const betterAvatar = data.avatar_url || data.picture || data.avatar;
+
+              if (betterName) {
+                user.user_metadata = {
+                  ...user.user_metadata,
+                  display_name: betterName,
+                  full_name: betterName,
+                  avatar_url: user.user_metadata.avatar_url || betterAvatar
+                };
+              }
             }
           }
 
@@ -80,25 +122,48 @@ const AccountPage: React.FC = () => {
 
         const initialUser = await fetchUserWithProfile();
         setLuminaKraftUser(initialUser);
+        if (initialUser) hasLoadedUserRef.current = true;
         setIsLoadingLuminaKraft(false);
 
         // Listen for auth state changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          async (event) => {
-            if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
-              // Show loading state while fetching user profile
-              setIsLoadingLuminaKraft(true);
+          async (event, session) => {
+            // IGNORE TOKEN_REFRESHED to prevent flicker. 
+            // The session is automatically updated by Supabase client.
+            if (event === 'TOKEN_REFRESHED') {
+              return;
+            }
 
-              // Small delay to allow Supabase client to fully process the session
-              await new Promise(resolve => setTimeout(resolve, 200));
-              const updatedUser = await fetchUserWithProfile();
-              setLuminaKraftUser(updatedUser);
+            if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+              // If we already have a user and this is just a focus regain (SIGNED_IN), 
+              // DO NOT show loader to avoid flicker. 
+              // Only show loader if we have NO user yet.
+              // Only show loader if we haven't loaded a user yet
+              if (!hasLoadedUserRef.current) {
+                setIsLoadingLuminaKraft(true);
+              }
+
+              // Use session.user directly if available to avoid blocking getUser() call
+              const currentUser = session?.user;
+
+              // Pass currentUser to fetch function (we'll need to update signature)
+              // Or just use it if we refactor. 
+              // For now, let's just optimize the loading state.
+
+              // If we have a session user, we can try to use it to skip the timeout wait in fetchUserWithProfile
+              const updatedUser = await fetchUserWithProfile(3, currentUser);
+
+              if (updatedUser) {
+                setLuminaKraftUser(updatedUser);
+                hasLoadedUserRef.current = true;
+              }
 
               setIsLoadingLuminaKraft(false);
               // Hide loading modal when sign-in completes
               setIsSigningIn(false);
             } else if (event === 'SIGNED_OUT') {
               setLuminaKraftUser(null);
+              hasLoadedUserRef.current = false;
               setDiscordAccount(null);
               setLinkedProviders([]);
               setIsSigningIn(false);
