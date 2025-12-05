@@ -23,6 +23,7 @@ import { useTranslation } from 'react-i18next';
 function AppContent() {
   const [activeSection, setActiveSection] = useState('home');
   const [selectedModpackId, setSelectedModpackId] = useState<string | null>(null); // For edit modpack
+  const [lastPublishedSection, setLastPublishedSection] = useState<string>('published-modpacks'); // Remember last sub-section
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
@@ -144,9 +145,26 @@ function AppContent() {
       }
     }
 
-    // If clicking on published-modpacks while in publish-modpack or edit-modpack, stay in current sub-section
-    if (newSection === 'published-modpacks' && (activeSection === 'publish-modpack' || activeSection === 'edit-modpack')) {
-      return; // Don't navigate, keep the form open
+    // If clicking on published-modpacks, navigate to the last remembered sub-section
+    if (newSection === 'published-modpacks') {
+      // If already in a sub-section, stay there
+      if (activeSection === 'publish-modpack' || activeSection === 'edit-modpack') {
+        return;
+      }
+      // Otherwise, navigate to the last remembered sub-section
+      setIsTransitioning(true);
+      withDelay(() => {
+        setActiveSection(lastPublishedSection);
+        withDelay(() => {
+          setIsTransitioning(false);
+        }, 50);
+      }, 150);
+      return;
+    }
+
+    // Remember the current section if leaving published-modpacks area
+    if (activeSection === 'publish-modpack' || activeSection === 'edit-modpack' || activeSection === 'published-modpacks') {
+      setLastPublishedSection(activeSection);
     }
 
     setIsTransitioning(true);
@@ -185,6 +203,12 @@ function AppContent() {
       // Clear or set the modpackId based on what was passed
       setSelectedModpackId(modpackId || null);
       setActiveSection(section);
+
+      // Remember if navigating to a published-modpacks sub-section
+      if (section === 'publish-modpack' || section === 'edit-modpack' || section === 'published-modpacks') {
+        setLastPublishedSection(section);
+      }
+
       withDelay(() => {
         setIsTransitioning(false);
       }, 50);
