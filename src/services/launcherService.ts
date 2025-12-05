@@ -1052,6 +1052,7 @@ class LauncherService {
     resetAt: string;
     isAuthenticated: boolean;
     isDiscordMember: boolean;
+    errorCode?: string;
     message: string;
   }> {
     // Local modpacks don't have rate limits

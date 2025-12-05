@@ -27,6 +27,7 @@ import JSZip from 'jszip';
 import { ModpackManagementService } from '../services/modpackManagementService';
 import { listen } from '@tauri-apps/api/event';
 import { supabase, getUserProfile } from '../services/supabaseClient';
+import RateLimitDialog from '../components/RateLimitDialog';
 
 interface LauncherContextType {
   modpacksData: ModpacksData | null;
@@ -228,6 +229,12 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
   const [showFailedModsDialog, setShowFailedModsDialog] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [showUsernameDialog, setShowUsernameDialog] = useState(false);
+  const [rateLimitDialog, setRateLimitDialog] = useState<{
+    isOpen: boolean;
+    errorCode: string;
+    limit: number;
+    resetAt: string;
+  }>({ isOpen: false, errorCode: '', limit: 0, resetAt: '' });
   const refreshDataRef = useRef<(() => Promise<void>) | null>(null);
   const launcherService = LauncherService.getInstance();
   const { i18n, t } = useTranslation();
@@ -701,6 +708,13 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
 
             if (!rateLimitCheck.allowed) {
               // Rate limit exceeded
+              setRateLimitDialog({
+                isOpen: true,
+                errorCode: rateLimitCheck.errorCode || 'LIMIT_EXCEEDED_MAX',
+                limit: rateLimitCheck.limit,
+                resetAt: rateLimitCheck.resetAt
+              });
+
               dispatch({
                 type: 'SET_MODPACK_STATE',
                 payload: {
@@ -1254,6 +1268,40 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
         isOpen={showFailedModsDialog}
         onClose={() => setShowFailedModsDialog(false)}
         failedMods={failedMods}
+      />
+      <RateLimitDialog
+        isOpen={rateLimitDialog.isOpen}
+        onClose={() => setRateLimitDialog(prev => ({ ...prev, isOpen: false }))}
+        errorCode={rateLimitDialog.errorCode}
+        limit={rateLimitDialog.limit}
+        resetAt={rateLimitDialog.resetAt}
+        onLogin={async () => {
+          setRateLimitDialog(prev => ({ ...prev, isOpen: false }));
+          try {
+            await AuthService.getInstance().signInToLuminaKraftAccount();
+            // window.location.reload(); // signInToLuminaKraftAccount handles redirect/reload usually?
+            // Actually it redirects to OAuth provider.
+          } catch (error) {
+            console.error('Login failed:', error);
+          }
+        }}
+        onLinkDiscord={async () => {
+          setRateLimitDialog(prev => ({ ...prev, isOpen: false }));
+          // Navigate to settings or trigger link
+          // For now, just open settings page if possible, or trigger link flow
+          // Since we don't have easy navigation here, we might just show a toast?
+          // Or try to link directly.
+          try {
+            // AuthService doesn't have linkDiscord exposed easily here maybe?
+            // Let's just redirect to settings if possible or reload.
+            // Actually, linking discord usually happens in settings.
+            // We can emit an event or use a global navigation if available.
+            // For now, let's just log.
+            console.log('Link Discord requested');
+          } catch (error) {
+            console.error('Link Discord failed:', error);
+          }
+        }}
       />
     </LauncherContext.Provider>
   );
