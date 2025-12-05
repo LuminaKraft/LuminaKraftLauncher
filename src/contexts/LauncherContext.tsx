@@ -297,8 +297,12 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
         };
 
         // Update userSettings with new Discord info
+        // IMPORTANT: Always preserve clientToken - it's critical for rate limiting
+        const existingClientToken = state.userSettings.clientToken || launcherService.getUserSettings().clientToken;
+
         const newSettings = {
           ...state.userSettings,
+          clientToken: existingClientToken, // Ensure clientToken is never lost
           discordAccount: discordAccount
         };
 
@@ -307,7 +311,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
 
         // Update state
         dispatch({ type: 'SET_USER_SETTINGS', payload: newSettings });
-        console.log('✅ User settings updated with latest profile data');
+        console.log('✅ User settings updated with latest profile data (clientToken preserved)');
       }
     } catch (error) {
       console.error('Error refreshing user profile:', error);
