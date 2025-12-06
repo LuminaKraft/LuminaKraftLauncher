@@ -59,6 +59,10 @@ pub struct Modpack {
     /// Used to determine cleanup behavior and integrity verification
     #[serde(default)]
     pub category: Option<String>,
+    /// Expected SHA256 hash of the modpack ZIP file (from server)
+    /// Used to verify download integrity
+    #[serde(rename = "fileSha256", default)]
+    pub file_sha256: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

@@ -655,6 +655,7 @@ class LauncherService {
       logo: modpack.logo || '', // Use logo field directly
       urlModpackZip: modpack.urlModpackZip || '',
       category: modpack.category || null, // For cleanup/integrity behavior
+      fileSha256: modpack.fileSha256 || null, // For download verification
     };
 
 

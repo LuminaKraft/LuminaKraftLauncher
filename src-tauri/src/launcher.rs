@@ -183,6 +183,30 @@ where
             download_file(&modpack.url_modpack_zip, &temp_zip_path).await?;
         }
 
+        // Verify ZIP SHA256 if expected hash is provided (for all modpacks)
+        if let Some(expected_sha256) = &modpack.file_sha256 {
+            emit_progress("progress.verifyingDownload".to_string(), 78.0, "verifying_download".to_string());
+            
+            match crate::modpack::integrity::hash_file(&temp_zip_path) {
+                Ok(actual_sha256) => {
+                    if actual_sha256 != *expected_sha256 {
+                        // Clean up the corrupted file
+                        let _ = std::fs::remove_file(&temp_zip_path);
+                        return Err(anyhow!(
+                            "Descarga corrupta: el hash SHA256 no coincide.\nEsperado: {}...\nRecibido: {}...\n\nPor favor, vuelve a intentar la descarga.",
+                            &expected_sha256[..16.min(expected_sha256.len())],
+                            &actual_sha256[..16.min(actual_sha256.len())]
+                        ));
+                    }
+                    println!("✅ ZIP SHA256 verified: {}...", &actual_sha256[..16.min(actual_sha256.len())]);
+                }
+                Err(e) => {
+                    eprintln!("⚠️ Could not verify ZIP SHA256: {}", e);
+                    // Continue anyway - don't block installation for verification failures
+                }
+            }
+        }
+
         // Check if it's a CurseForge modpack
         let is_curseforge_modpack = match lyceris::util::extract::read_file_from_jar(&temp_zip_path, "manifest.json") {
             Ok(_) => true,
