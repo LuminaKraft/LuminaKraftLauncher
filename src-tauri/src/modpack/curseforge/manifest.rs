@@ -87,6 +87,64 @@ where
     Ok(())
 }
 
+/// Get filenames from overrides/mods and overrides/resourcepacks
+/// These files should be preserved during cleanup
+pub fn get_override_filenames(manifest: &CurseForgeManifest, temp_dir: &PathBuf) -> std::collections::HashSet<String> {
+    let mut filenames = std::collections::HashSet::new();
+    let overrides_dir = temp_dir.join(&manifest.overrides);
+    
+    if !overrides_dir.exists() || !overrides_dir.is_dir() {
+        return filenames;
+    }
+    
+    // Get .jar files from overrides/mods
+    let mods_dir = overrides_dir.join("mods");
+    if mods_dir.exists() && mods_dir.is_dir() {
+        if let Ok(entries) = fs::read_dir(&mods_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_file() {
+                    if let Some(ext) = path.extension() {
+                        if ext == "jar" {
+                            if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                                filenames.insert(name.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // Get .zip files from overrides/resourcepacks
+    let resourcepacks_dir = overrides_dir.join("resourcepacks");
+    if resourcepacks_dir.exists() && resourcepacks_dir.is_dir() {
+        if let Ok(entries) = fs::read_dir(&resourcepacks_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_file() {
+                    if let Some(ext) = path.extension() {
+                        if ext == "zip" {
+                            if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                                filenames.insert(name.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    if !filenames.is_empty() {
+        println!("📦 Found {} files in overrides that will be preserved", filenames.len());
+        for name in &filenames {
+            println!("  ✓ {}", name);
+        }
+    }
+    
+    filenames
+}
+
 /// Copy a directory and its contents recursively
 fn copy_dir_recursively(src: &Path, dst: &Path) -> Result<()> {
     if !src.is_dir() {

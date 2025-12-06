@@ -1,7 +1,7 @@
 use anyhow::{Result, anyhow};
 use std::path::PathBuf;
 use std::fs;
-use super::manifest::{read_manifest, get_modloader_info, process_overrides};
+use super::manifest::{read_manifest, get_modloader_info, process_overrides, get_override_filenames};
 use super::downloader::download_mods_with_filenames;
 use crate::modpack::extraction::extract_zip;
 
@@ -93,7 +93,19 @@ where
             91.0,
             "cleaning_removed_mods".to_string()
         );
-        cleanup_removed_files(&expected_filenames, instance_dir)?;
+        
+        // Get override filenames to preserve them during cleanup
+        let override_filenames = get_override_filenames(&manifest, &temp_dir);
+        
+        // Merge expected_filenames with override filenames
+        let mut all_expected_filenames = expected_filenames.clone();
+        all_expected_filenames.extend(override_filenames);
+        
+        println!("🔍 Expected filenames ({}):", all_expected_filenames.len());
+        for name in &all_expected_filenames {
+            println!("  ✓ {}", name);
+        }
+        cleanup_removed_files(&all_expected_filenames, instance_dir)?;
         println!("🛡️ Anti-cheat cleanup: removed unauthorized mods/resourcepacks (category: {})", category.unwrap_or("unknown"));
     } else {
         println!("📦 Preserving user mods (category: {})", category.unwrap_or("imported"));

@@ -695,7 +695,10 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    const actionStatus = action === 'launch' ? 'launching' : action === 'update' ? 'updating' : `${action}ing` as any;
+    const actionStatus = action === 'launch' ? 'launching'
+      : action === 'update' ? 'updating'
+        : action === 'repair' ? 'repairing'
+          : `${action}ing` as any;
 
     dispatch({
       type: 'SET_MODPACK_STATE',
@@ -1211,7 +1214,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
 
   // Check if there are any active operations
   const hasActiveOperations = Object.values(state.modpackStates).some(
-    (modpackState: ModpackState) => ['installing', 'updating', 'launching', 'stopping'].includes(modpackState.status)
+    (modpackState: ModpackState) => ['installing', 'updating', 'repairing', 'launching', 'stopping'].includes(modpackState.status)
   );
 
   const installModpackFromZip = async (filePath: string) => {
@@ -1423,10 +1426,14 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
                 {t('common.close', 'Cerrar')}
               </button>
               <button
-                onClick={async () => {
+                onClick={() => {
                   const modpackId = integrityErrorDialog.modpackId;
+                  console.log('🔧 Repair button clicked for:', modpackId);
                   setIntegrityErrorDialog({ isOpen: false, modpackId: '', issues: [] });
-                  await repairModpack(modpackId);
+                  // Don't await - let it run in background
+                  repairModpack(modpackId).catch(err => {
+                    console.error('❌ Repair failed:', err);
+                  });
                 }}
                 className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-lg transition-colors font-semibold flex items-center gap-2"
               >

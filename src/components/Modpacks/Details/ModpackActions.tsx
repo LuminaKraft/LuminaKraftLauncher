@@ -61,11 +61,16 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({
 
     // Read-only mode (Home/Explore): Show Install or Installed only
     if (isReadOnly) {
-      // Show installing/updating state in read-only mode
-      if (['installing', 'updating'].includes(state.status)) {
+      // Show installing/updating/repairing state in read-only mode
+      if (['installing', 'updating', 'repairing'].includes(state.status)) {
+        const labels: Record<string, string> = {
+          'installing': t('modpacks.installing'),
+          'updating': t('modpacks.updating'),
+          'repairing': t('modpacks.repairing')
+        };
         return {
           icon: Loader2,
-          label: state.status === 'installing' ? t('modpacks.installing') : t('modpacks.updating'),
+          label: labels[state.status] || t('modpacks.installing'),
           bgColor: 'bg-lumina-500/50 cursor-not-allowed',
           textColor: 'text-white/70',
           spinning: true,
@@ -150,14 +155,26 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({
         };
       case 'installing':
       case 'updating':
+      case 'repairing': {
+        const labels: Record<string, string> = {
+          'installing': t('modpacks.installing'),
+          'updating': t('modpacks.updating'),
+          'repairing': t('modpacks.repairing')
+        };
+        const bgColors: Record<string, string> = {
+          'installing': 'bg-lumina-500/50 cursor-not-allowed',
+          'updating': 'bg-orange-600/50 cursor-not-allowed',
+          'repairing': 'bg-orange-600/50 cursor-not-allowed'
+        };
         return {
           icon: Loader2,
-          label: state.status === 'installing' ? t('modpacks.installing') : t('modpacks.updating'),
-          bgColor: state.status === 'installing' ? 'bg-lumina-500/50 cursor-not-allowed' : 'bg-orange-600/50 cursor-not-allowed',
+          label: labels[state.status] || t('modpacks.installing'),
+          bgColor: bgColors[state.status] || 'bg-lumina-500/50 cursor-not-allowed',
           textColor: 'text-white/70',
           spinning: true,
           disabled: true
         };
+      }
       case 'launching':
         return {
           icon: Loader2,
@@ -312,7 +329,7 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({
         </button>
 
         {/* Progress Display */}
-        {['installing', 'updating', 'launching'].includes(state.status) && state.progress && (
+        {['installing', 'updating', 'repairing', 'launching'].includes(state.status) && state.progress && (
           <div className="space-y-3">
             {/* Progress header */}
             <div className="flex justify-between text-sm text-dark-300 mb-2">

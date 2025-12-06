@@ -120,13 +120,6 @@ where
 
     if is_update {
         emit_progress("progress.checking".to_string(), 10.0, "checking".to_string());
-        
-        if let Ok(Some(existing_metadata)) = filesystem::get_instance_metadata(&modpack.id).await {
-            if !minecraft::check_instance_needs_update(&modpack, &existing_metadata).await {
-                emit_progress("Instancia actualizada".to_string(), 100.0, "completed".to_string());
-                return Ok(Vec::new());
-            }
-        }
         // Note: Old mods/resourcepacks that are no longer in the manifest will be cleaned up
         // after processing the new manifest (see cleanup_removed_mods below)
     } else {
