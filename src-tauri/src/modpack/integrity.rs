@@ -50,8 +50,6 @@ pub enum IntegrityIssue {
     MissingFile { path: String },
     /// HMAC signature is invalid (metadata was tampered)
     InvalidSignature,
-    /// No integrity data found (legacy installation)
-    NoIntegrityData,
 }
 
 impl IntegrityResult {
@@ -224,8 +222,12 @@ pub fn verify_integrity(
 pub fn format_issues(issues: &[IntegrityIssue]) -> Vec<String> {
     issues.iter().map(|issue| {
         match issue {
-            IntegrityIssue::ModifiedFile { path, .. } => {
-                format!("Archivo modificado: {}", path)
+            IntegrityIssue::ModifiedFile { path, expected, actual } => {
+                format!("Archivo modificado: {} (esperado: {}..., actual: {}...)", 
+                    path,
+                    &expected[..8.min(expected.len())],
+                    &actual[..8.min(actual.len())]
+                )
             }
             IntegrityIssue::UnauthorizedFile { path } => {
                 format!("Archivo no autorizado: {}", path)
@@ -235,9 +237,6 @@ pub fn format_issues(issues: &[IntegrityIssue]) -> Vec<String> {
             }
             IntegrityIssue::InvalidSignature => {
                 "Firma de integridad inválida (posible manipulación)".to_string()
-            }
-            IntegrityIssue::NoIntegrityData => {
-                "Sin datos de integridad (instalación antigua)".to_string()
             }
         }
     }).collect()
