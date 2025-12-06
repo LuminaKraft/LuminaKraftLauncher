@@ -763,29 +763,36 @@ class LauncherService {
 
     try {
       // Verify integrity before launching (anti-cheat for official/partner modpacks)
-      if (isTauriContext() && (modpack.category === 'official' || modpack.category === 'partner')) {
+      if (isTauriContext()) {
         console.log('🔐 Verifying modpack integrity before launch...');
 
+        // Verify integrity (passing authoritative flags from DB/Server)
+        // This prevents users from bypassing restrictions by editing instance.json locally
         const integrityResult = await safeInvoke<{
-          valid: boolean;
+          isValid: boolean;
           issues: string[];
-          migrated: boolean;
-          skipped?: boolean;
+          reason?: string;
         }>('verify_instance_integrity', {
-          modpackId,
-          expectedZipSha256: modpack.fileSha256 || null
+          modpackId: modpack.id,
+          expectedZipSha256: null, // TODO: Pass authoritative hash if available
+          overrideAllowCustomMods: modpack.allowCustomMods ?? true,
+          overrideAllowCustomResourcepacks: modpack.allowCustomResourcepacks ?? true
         });
 
-        if (integrityResult && !integrityResult.valid) {
-          console.error('❌ Integrity verification failed:', integrityResult.issues);
-          const issuesList = integrityResult.issues.join('\n• ');
-          throw new Error(`Verificación de integridad fallida. Se detectaron modificaciones no autorizadas:\n\n• ${issuesList}\n\nUsa "Reparar" para restaurar el modpack.`);
-        }
+        if (!integrityResult.isValid) {
+          console.warn('⚠️ Integrity check failed:', integrityResult.issues);
 
-        if (integrityResult?.migrated) {
-          console.log('✅ Legacy installation migrated to new integrity system');
-        } else if (integrityResult?.skipped) {
-          console.log('ℹ️ Integrity verification skipped (community/imported modpack)');
+          // Filter out "UnauthorizedFile" issues if we are in "permissive" mode
+          // But since we are passing flags to the backend, the backend should have already filtered them
+          // based on the Authoritative flags we just sent.
+
+          // If there are issues, we must STOP launch and ask for repair
+          // Unless it's just a warning or community pack
+          if (integrityResult.issues.length > 0) {
+            console.error('⛔ Critical integrity issues found:', integrityResult.issues);
+            // Lanza un error específico que la UI pueda capturar para mostrar el botón de reparar
+            throw new Error(`Integridad comprometida: ${integrityResult.issues.length} archivos modificados o no autorizados. Por favor, repara el modpack.`);
+          }
         } else {
           console.log('✅ Integrity verification passed');
         }

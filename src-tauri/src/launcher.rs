@@ -265,7 +265,24 @@ where
         .unwrap_or(false)
     {
         emit_progress("progress.calculatingIntegrity".to_string(), 97.0, "calculating_integrity".to_string());
-        match crate::modpack::integrity::create_integrity_data(&instance_dirs.instance_dir, None) {
+        
+        // Calculate ZIP hash if we have the temp file
+        let zip_hash = if temp_zip_path.exists() {
+            match crate::modpack::integrity::calculate_file_hash(&temp_zip_path) {
+                Ok(hash) => {
+                    println!("🔐 Calculated ZIP hash: {}...", &hash[0..8.min(hash.len())]);
+                    Some(hash)
+                },
+                Err(e) => {
+                    eprintln!("⚠️ Warning: Failed to calculate ZIP hash: {}", e);
+                    None
+                }
+            }
+        } else {
+            None
+        };
+
+        match crate::modpack::integrity::create_integrity_data(&instance_dirs.instance_dir, zip_hash) {
             Ok(data) => {
                 println!("🔐 Integrity data calculated: {} files tracked", data.file_hashes.len());
                 Some(data)

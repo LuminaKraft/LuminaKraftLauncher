@@ -485,28 +485,25 @@ async fn launch_modpack(app: tauri::AppHandle, modpack: Modpack, settings: UserS
 async fn verify_instance_integrity(
     modpack_id: String,
     expected_zip_sha256: Option<String>,
+    override_allow_custom_mods: Option<bool>,
+    override_allow_custom_resourcepacks: Option<bool>
 ) -> Result<serde_json::Value, String> {
     use modpack::integrity::{verify_integrity, create_integrity_data, format_issues};
     
-    // Get instance metadata
-    let metadata = match filesystem::get_instance_metadata(&modpack_id).await {
-        Ok(Some(m)) => m,
-        Ok(None) => return Err("Instance not found".to_string()),
-        Err(e) => return Err(format!("Failed to get instance metadata: {}", e)),
-    };
+    println!("🔐 Verifying integrity for instance: {}", modpack_id);
     
-    // Check if this is an official/partner modpack that requires integrity verification
-    let requires_verification = metadata.category.as_ref()
-        .map(|c| c == "official" || c == "partner")
-        .unwrap_or(false);
-    
-    if !requires_verification {
-        // Community/imported modpacks don't need verification
-        return Ok(serde_json::json!({
-            "valid": true,
+    // Load metadata
+    let metadata = filesystem::get_instance_metadata(&modpack_id).await
+        .map_err(|e| format!("Failed to load instance metadata: {}", e))?
+        .ok_or_else(|| format!("Instance {} not found", modpack_id))?;
+        
+    // If it's a community or imported modpack, we skip detailed integrity checks
+    // EXCEPT if we want to enforce signatures later. For now, we trust community modpacks
+    // as they are "open" by definition.
+    if metadata.category.as_deref() != Some("official") && metadata.category.as_deref() != Some("partner") {
+         return Ok(serde_json::json!({
+            "isValid": true,
             "issues": [],
-            "migrated": false,
-            "skipped": true,
             "reason": "Community or imported modpack - no verification required"
         }));
     }
@@ -533,12 +530,16 @@ async fn verify_instance_integrity(
                 // If no local SHA256, user installed before this feature - skip this check
             }
             
-            // Verify file hashes (respecting allow_custom flags from metadata)
+            // Determine effective allow flags: Override (Authoritative) > Metadata (Local)
+            let effective_allow_mods = override_allow_custom_mods.unwrap_or(metadata.allow_custom_mods);
+            let effective_allow_resourcepacks = override_allow_custom_resourcepacks.unwrap_or(metadata.allow_custom_resourcepacks);
+
+            // Verify file hashes (respecting allow_custom flags)
             let result = verify_integrity(
                 &instance_dir,
                 integrity_data,
-                metadata.allow_custom_mods,
-                metadata.allow_custom_resourcepacks,
+                effective_allow_mods,
+                effective_allow_resourcepacks,
             );
             
             if !result.is_valid {
