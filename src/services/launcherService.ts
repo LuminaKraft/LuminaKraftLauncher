@@ -330,6 +330,7 @@ class LauncherService {
         downloads: statsMap.get(modpack.id)?.total_downloads || 0,
         allowCustomMods: modpack.allow_custom_mods ?? true,
         allowCustomResourcepacks: modpack.allow_custom_resourcepacks ?? true,
+        fileSha256: modpack.file_sha256, // SHA256 of the ZIP file
       })) || [];
 
       this.modpacksData = { modpacks };
@@ -774,7 +775,7 @@ class LauncherService {
           reason?: string;
         }>('verify_instance_integrity', {
           modpackId: modpack.id,
-          expectedZipSha256: null, // TODO: Pass authoritative hash if available
+          expectedZipSha256: modpack.fileSha256 || null,
           overrideAllowCustomMods: modpack.allowCustomMods ?? true,
           overrideAllowCustomResourcepacks: modpack.allowCustomResourcepacks ?? true
         });
