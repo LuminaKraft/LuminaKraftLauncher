@@ -231,6 +231,11 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     limit: number;
     resetAt: string;
   }>({ isOpen: false, errorCode: '', limit: 0, resetAt: '' });
+  const [integrityErrorDialog, setIntegrityErrorDialog] = useState<{
+    isOpen: boolean;
+    modpackId: string;
+    issues: string[];
+  }>({ isOpen: false, modpackId: '', issues: [] });
   const refreshDataRef = useRef<(() => Promise<void>) | null>(null);
   const launcherService = LauncherService.getInstance();
   const { i18n, t } = useTranslation();
@@ -983,6 +988,53 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
       const isRepairAction = action === 'repair';
       const repairPrefix = isRepairAction ? 'reparación' : (action === 'install' ? 'instalación' : action === 'update' ? 'actualización' : action);
 
+      // Check for integrity errors (anti-cheat)
+      if (errorMessage.includes('verificación de integridad') || errorMessage.includes('modificaciones no autorizadas')) {
+        // Parse issues from error message
+        const issuesMatch = errorMessage.match(/• ([^\n]+)/g);
+        const issues = issuesMatch ? issuesMatch.map(i => i.replace('• ', '')) : ['Archivo modificado o no autorizado'];
+
+        setIntegrityErrorDialog({
+          isOpen: true,
+          modpackId,
+          issues: issues.map(i => i.charAt(0).toUpperCase() + i.slice(1))
+        });
+
+        // Reset state to installed (not error)
+        dispatch({
+          type: 'SET_MODPACK_STATE',
+          payload: {
+            id: modpackId,
+            state: {
+              ...(state.modpackStates[modpackId] || createModpackState('installed')),
+              status: 'installed'
+            },
+          },
+        });
+        return false;
+      }
+
+      // Check for download corruption errors
+      if (errorMessage.includes('descarga corrupta') || errorMessage.includes('sha256 no coincide')) {
+        setIntegrityErrorDialog({
+          isOpen: true,
+          modpackId,
+          issues: ['La descarga del modpack está corrupta. Vuelve a intentar la instalación.']
+        });
+
+        dispatch({
+          type: 'SET_MODPACK_STATE',
+          payload: {
+            id: modpackId,
+            state: {
+              ...(state.modpackStates[modpackId] || createModpackState('not_installed')),
+              status: 'not_installed'
+            },
+          },
+        });
+        return false;
+      }
+
       if (errorMessage.includes('429') || errorMessage.includes('rate limit') || errorMessage.includes('too many requests')) {
         userFriendlyError = `Error durante la ${repairPrefix}: Límite de solicitudes alcanzado. Crea una cuenta de LuminaKraft para aumentar tus límites.`;
       } else if (errorMessage.includes('failed to extract zip file') || errorMessage.includes('no such file or directory')) {
@@ -1341,6 +1393,53 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
           }
         }}
       />
+      {/* Integrity Error Dialog */}
+      {integrityErrorDialog.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+          <div className="bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl border border-red-500/30">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 flex items-center justify-center bg-red-500/20 rounded-full">
+                <svg className="w-6 h-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-white">{t('errors.integrityFailed', 'Verificación de Integridad Fallida')}</h3>
+            </div>
+            <p className="text-gray-300 mb-4">{t('errors.integrityDescription', 'Se detectaron modificaciones no autorizadas en el modpack:')}</p>
+            <ul className="bg-gray-900/50 rounded-lg p-3 mb-4 max-h-40 overflow-y-auto">
+              {integrityErrorDialog.issues.map((issue, idx) => (
+                <li key={idx} className="text-red-300 text-sm flex items-start gap-2 py-1">
+                  <span className="text-red-400">•</span>
+                  <span>{issue}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-gray-400 text-sm mb-4">{t('errors.integrityRepairHelp', 'Usa "Reparar" para restaurar el modpack a su estado original.')}</p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setIntegrityErrorDialog({ isOpen: false, modpackId: '', issues: [] })}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+              >
+                {t('common.close', 'Cerrar')}
+              </button>
+              <button
+                onClick={async () => {
+                  const modpackId = integrityErrorDialog.modpackId;
+                  setIntegrityErrorDialog({ isOpen: false, modpackId: '', issues: [] });
+                  await repairModpack(modpackId);
+                }}
+                className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-lg transition-colors font-semibold flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                {t('modpack.repair', 'Reparar')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </LauncherContext.Provider>
   );
 }
