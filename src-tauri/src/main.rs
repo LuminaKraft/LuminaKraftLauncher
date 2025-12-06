@@ -548,13 +548,13 @@ async fn verify_instance_integrity(
             
             if all_issues.is_empty() {
                 Ok(serde_json::json!({
-                    "valid": true,
+                    "isValid": true,
                     "issues": [],
                     "migrated": false
                 }))
             } else {
                 Ok(serde_json::json!({
-                    "valid": false,
+                    "isValid": false,
                     "issues": all_issues,
                     "migrated": false
                 }))
@@ -575,7 +575,7 @@ async fn verify_instance_integrity(
                     if let Err(e) = filesystem::save_instance_metadata(&updated_metadata).await {
                         eprintln!("⚠️ Failed to save migrated integrity data: {}", e);
                         return Ok(serde_json::json!({
-                            "valid": true, // Allow launching anyway
+                            "isValid": true, // Allow launching anyway
                             "issues": ["Failed to save integrity data, will retry next time"],
                             "migrated": false
                         }));
@@ -587,7 +587,7 @@ async fn verify_instance_integrity(
                     );
                     
                     Ok(serde_json::json!({
-                        "valid": true,
+                        "isValid": true,
                         "issues": [],
                         "migrated": true
                     }))
@@ -596,7 +596,7 @@ async fn verify_instance_integrity(
                     eprintln!("⚠️ Failed to create integrity data: {}", e);
                     // Allow launching anyway for legacy installations
                     Ok(serde_json::json!({
-                        "valid": true,
+                        "isValid": true,
                         "issues": ["Could not create integrity data"],
                         "migrated": false
                     }))
