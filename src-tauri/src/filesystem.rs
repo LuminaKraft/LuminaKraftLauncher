@@ -495,6 +495,8 @@ pub fn create_instance_metadata(
         recommended_ram: None,
         ram_allocation: Some("global".to_string()),
         custom_ram: None,
+        integrity: None,
+        category: None,
     }
 }
 

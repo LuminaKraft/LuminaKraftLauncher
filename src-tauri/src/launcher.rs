@@ -50,6 +50,8 @@ pub async fn install_modpack(modpack: Modpack) -> Result<()> {
         recommended_ram: None,
         ram_allocation: Some("global".to_string()), // Use global RAM by default
         custom_ram: None,
+        integrity: None, // No integrity tracking for this simple path
+        category: None,  // No category for basic installs
     };
     
     filesystem::save_instance_metadata(&metadata).await?;
@@ -212,7 +214,8 @@ where
                     }
                 },
                 auth_token.as_deref(),
-                anon_key
+                anon_key,
+                modpack.category.as_deref(), // Pass category for cleanup behavior
             ).await?;
 
             // Store recommended RAM from manifest
@@ -235,6 +238,26 @@ where
     // Finalization steps after modpack processing
     emit_progress("progress.savingInstanceConfig".to_string(), 96.0, "saving_instance_config".to_string());
 
+    // Calculate integrity data for anti-cheat (official/partner modpacks)
+    let integrity_data = if modpack.category.as_ref()
+        .map(|c| c == "official" || c == "partner")
+        .unwrap_or(false)
+    {
+        emit_progress("progress.calculatingIntegrity".to_string(), 97.0, "calculating_integrity".to_string());
+        match crate::modpack::integrity::create_integrity_data(&instance_dirs.instance_dir, None) {
+            Ok(data) => {
+                println!("🔐 Integrity data calculated: {} files tracked", data.file_hashes.len());
+                Some(data)
+            }
+            Err(e) => {
+                eprintln!("⚠️ Warning: Failed to calculate integrity data: {}", e);
+                None
+            }
+        }
+    } else {
+        None
+    };
+
     // Save instance metadata
     let metadata = InstanceMetadata {
         id: modpack.id.clone(),
@@ -247,6 +270,8 @@ where
         recommended_ram: recommended_ram_from_manifest,
         ram_allocation: Some("recommended".to_string()), // Default to recommended RAM
         custom_ram: None,
+        integrity: integrity_data,
+        category: modpack.category.clone(),
     };
     
     filesystem::save_instance_metadata(&metadata).await?;

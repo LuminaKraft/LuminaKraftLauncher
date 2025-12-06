@@ -40,6 +40,9 @@ base64 = "0.22"
 tiny_http = "0.12"
 portpicker = "0.1"
 sysinfo = "0.32"
+sha2 = "0.10"
+hmac = "0.12"
+hex = "0.4"
 
 [features]
 # No features here, they're now in the tauri dependency

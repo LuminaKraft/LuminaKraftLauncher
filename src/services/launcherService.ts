@@ -387,6 +387,7 @@ class LauncherService {
             modloader_version,
             file_url,
             file_size,
+            file_sha256,
             created_at
           )
         `)
@@ -458,6 +459,7 @@ class LauncherService {
         youtubeEmbed: modpackData.youtube_embed || null,
         tiktokEmbed: modpackData.tiktok_embed || null,
         partnerId: modpackData.partner_id || null,
+        fileSha256: latestVersion?.file_sha256 || null, // SHA256 for integrity verification
         // Features
         features: featuresResult.data?.map((feature: any) => ({
           title: getTranslation(feature.title_i18n),
@@ -652,6 +654,7 @@ class LauncherService {
       modloaderVersion: modpack.modloaderVersion,
       logo: modpack.logo || '', // Use logo field directly
       urlModpackZip: modpack.urlModpackZip || '',
+      category: modpack.category || null, // For cleanup/integrity behavior
     };
 
 
@@ -754,6 +757,35 @@ class LauncherService {
     const modpack = await this.ensureModpackHasRequiredFields(modpackId);
 
     try {
+      // Verify integrity before launching (anti-cheat for official/partner modpacks)
+      if (isTauriContext() && (modpack.category === 'official' || modpack.category === 'partner')) {
+        console.log('🔐 Verifying modpack integrity before launch...');
+
+        const integrityResult = await safeInvoke<{
+          valid: boolean;
+          issues: string[];
+          migrated: boolean;
+          skipped?: boolean;
+        }>('verify_instance_integrity', {
+          modpackId,
+          expectedZipSha256: modpack.fileSha256 || null
+        });
+
+        if (integrityResult && !integrityResult.valid) {
+          console.error('❌ Integrity verification failed:', integrityResult.issues);
+          const issuesList = integrityResult.issues.join('\n• ');
+          throw new Error(`Verificación de integridad fallida. Se detectaron modificaciones no autorizadas:\n\n• ${issuesList}\n\nUsa "Reparar" para restaurar el modpack.`);
+        }
+
+        if (integrityResult?.migrated) {
+          console.log('✅ Legacy installation migrated to new integrity system');
+        } else if (integrityResult?.skipped) {
+          console.log('ℹ️ Integrity verification skipped (community/imported modpack)');
+        } else {
+          console.log('✅ Integrity verification passed');
+        }
+      }
+
       // Transform the modpack structure to match backend expectations
       const transformedModpack = this.transformModpackForBackend(modpack);
       const transformedSettings = await this.transformUserSettingsForBackend(this.userSettings);

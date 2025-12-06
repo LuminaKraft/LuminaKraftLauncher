@@ -6,12 +6,16 @@ use super::downloader::download_mods_with_filenames;
 use crate::modpack::extraction::extract_zip;
 
 /// Process a CurseForge modpack with progress tracking and failed mod detection
+/// category: "official" | "partner" | "community" | None (imported)
+/// - official/partner: Aggressive cleanup (anti-cheat for servers)
+/// - community/imported: Preserve user's custom mods
 pub async fn process_curseforge_modpack_with_failed_tracking<F>(
     modpack_zip_path: &PathBuf,
     instance_dir: &PathBuf,
     emit_progress: F,
     auth_token: Option<&str>,
     anon_key: &str,
+    category: Option<&str>,
 ) -> Result<(String, String, Option<u32>, Vec<serde_json::Value>)>
 where
     F: Fn(String, f32, String) + Send + Sync + 'static + Clone,
@@ -76,14 +80,24 @@ where
     
     let (failed_mods, expected_filenames) = download_mods_with_filenames(&manifest, instance_dir, emit_progress.clone(), 20.0, 90.0, auth_token, anon_key).await?;
     
-    // Clean up mods/resourcepacks that are no longer in the manifest (for updates)
-    // This runs BEFORE overrides so override files are never deleted
-    emit_progress(
-        "progress.cleaningRemovedMods".to_string(),
-        91.0,
-        "cleaning_removed_mods".to_string()
-    );
-    cleanup_removed_files(&expected_filenames, instance_dir)?;
+    // Cleanup behavior based on modpack category:
+    // - official/partner: Aggressive cleanup (anti-cheat for servers)
+    // - community/imported (None): Preserve user's custom mods
+    let should_cleanup = category
+        .map(|c| c == "official" || c == "partner")
+        .unwrap_or(false);
+    
+    if should_cleanup {
+        emit_progress(
+            "progress.cleaningRemovedMods".to_string(),
+            91.0,
+            "cleaning_removed_mods".to_string()
+        );
+        cleanup_removed_files(&expected_filenames, instance_dir)?;
+        println!("🛡️ Anti-cheat cleanup: removed unauthorized mods/resourcepacks (category: {})", category.unwrap_or("unknown"));
+    } else {
+        println!("📦 Preserving user mods (category: {})", category.unwrap_or("imported"));
+    }
     
     // Process overrides AFTER cleanup - files from overrides will not be deleted
     emit_progress(

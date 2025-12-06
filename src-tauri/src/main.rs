@@ -55,6 +55,10 @@ pub struct Modpack {
     pub ip: Option<String>,
     #[serde(rename = "leaderboardPath", default)]
     pub leaderboard_path: Option<String>,
+    /// Modpack category: "official" | "partner" | "community" | None (imported)
+    /// Used to determine cleanup behavior and integrity verification
+    #[serde(default)]
+    pub category: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -100,7 +104,7 @@ pub struct UserSettings {
     pub supabase_anon_key: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct InstanceMetadata {
     pub id: String,
     pub name: String,
@@ -118,6 +122,12 @@ pub struct InstanceMetadata {
     pub ram_allocation: Option<String>, // "curseforge" | "recommended" | "custom" | "global"
     #[serde(rename = "customRam", skip_serializing_if = "Option::is_none")]
     pub custom_ram: Option<u32>, // Custom RAM in MB (only used when ramAllocation is "custom")
+    /// Integrity data for anti-cheat verification (official/partner modpacks)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub integrity: Option<modpack::integrity::IntegrityData>,
+    /// Modpack category for determining verification behavior
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub category: Option<String>,
 }
 
 #[tauri::command]
@@ -439,6 +449,131 @@ async fn launch_modpack(app: tauri::AppHandle, modpack: Modpack, settings: UserS
     match launcher::launch_modpack_with_shared_storage_and_token_refresh(modpack, settings, app).await {
         Ok(_) => Ok(()),
         Err(e) => Err(format!("Failed to launch modpack: {}", e)),
+    }
+}
+
+/// Verify instance integrity before launching (anti-cheat for official/partner modpacks)
+/// Returns: { "valid": bool, "issues": string[], "migrated": bool }
+/// - valid: true if integrity check passed
+/// - issues: list of problems found (modified files, unauthorized mods, etc.)
+/// - migrated: true if this was a legacy installation that was auto-migrated
+/// - expected_zip_sha256: optional SHA256 from server (Supabase modpack_versions.file_sha256)
+#[tauri::command]
+async fn verify_instance_integrity(
+    modpack_id: String,
+    expected_zip_sha256: Option<String>,
+) -> Result<serde_json::Value, String> {
+    use modpack::integrity::{verify_integrity, create_integrity_data, format_issues};
+    
+    // Get instance metadata
+    let metadata = match filesystem::get_instance_metadata(&modpack_id).await {
+        Ok(Some(m)) => m,
+        Ok(None) => return Err("Instance not found".to_string()),
+        Err(e) => return Err(format!("Failed to get instance metadata: {}", e)),
+    };
+    
+    // Check if this is an official/partner modpack that requires integrity verification
+    let requires_verification = metadata.category.as_ref()
+        .map(|c| c == "official" || c == "partner")
+        .unwrap_or(false);
+    
+    if !requires_verification {
+        // Community/imported modpacks don't need verification
+        return Ok(serde_json::json!({
+            "valid": true,
+            "issues": [],
+            "migrated": false,
+            "skipped": true,
+            "reason": "Community or imported modpack - no verification required"
+        }));
+    }
+    
+    let instance_dir = filesystem::get_instance_dir(&modpack_id)
+        .map_err(|e| format!("Failed to get instance directory: {}", e))?;
+    
+    let mut all_issues: Vec<String> = Vec::new();
+    
+    // Check if we have integrity data
+    match &metadata.integrity {
+        Some(integrity_data) => {
+            // First, verify ZIP SHA256 against server if available
+            if let Some(ref server_sha256) = expected_zip_sha256 {
+                if let Some(ref local_sha256) = integrity_data.zip_sha256 {
+                    if local_sha256 != server_sha256 {
+                        all_issues.push(format!(
+                            "Versión del modpack no coincide con el servidor (instalado: {}..., servidor: {}...)",
+                            &local_sha256[..8.min(local_sha256.len())],
+                            &server_sha256[..8.min(server_sha256.len())]
+                        ));
+                    }
+                }
+                // If no local SHA256, user installed before this feature - skip this check
+            }
+            
+            // Verify file hashes
+            let result = verify_integrity(&instance_dir, integrity_data);
+            
+            if !result.is_valid {
+                all_issues.extend(format_issues(&result.issues));
+            }
+            
+            if all_issues.is_empty() {
+                Ok(serde_json::json!({
+                    "valid": true,
+                    "issues": [],
+                    "migrated": false
+                }))
+            } else {
+                Ok(serde_json::json!({
+                    "valid": false,
+                    "issues": all_issues,
+                    "migrated": false
+                }))
+            }
+        }
+        None => {
+            // Legacy installation - perform silent migration
+            println!("🔄 Legacy installation detected for {}. Performing silent migration...", modpack_id);
+            
+            // For legacy installations, we can't verify against server SHA256
+            // but we'll save it for future verifications if provided
+            match create_integrity_data(&instance_dir, expected_zip_sha256.clone()) {
+                Ok(new_integrity_data) => {
+                    // Update metadata with new integrity data
+                    let mut updated_metadata = metadata.clone();
+                    updated_metadata.integrity = Some(new_integrity_data.clone());
+                    
+                    if let Err(e) = filesystem::save_instance_metadata(&updated_metadata).await {
+                        eprintln!("⚠️ Failed to save migrated integrity data: {}", e);
+                        return Ok(serde_json::json!({
+                            "valid": true, // Allow launching anyway
+                            "issues": ["Failed to save integrity data, will retry next time"],
+                            "migrated": false
+                        }));
+                    }
+                    
+                    println!("✅ Silent migration complete: {} files tracked, zip_sha256: {:?}", 
+                        new_integrity_data.file_hashes.len(),
+                        new_integrity_data.zip_sha256.as_ref().map(|s| &s[..8.min(s.len())])
+                    );
+                    
+                    Ok(serde_json::json!({
+                        "valid": true,
+                        "issues": [],
+                        "migrated": true
+                    }))
+                }
+                Err(e) => {
+                    eprintln!("⚠️ Failed to create integrity data: {}", e);
+                    // Allow launching anyway for legacy installations
+                    Ok(serde_json::json!({
+                        "valid": true,
+                        "issues": ["Could not create integrity data"],
+                        "migrated": false
+                    }))
+                }
+            }
+        }
     }
 }
 
@@ -1183,6 +1318,7 @@ fn main() {
             install_modpack_with_failed_tracking,
             install_modpack_with_shared_storage,
             launch_modpack,
+            verify_instance_integrity,
             delete_instance,
             get_launcher_version,
             get_platform,
