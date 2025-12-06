@@ -157,9 +157,11 @@ where
     emit_progress("progress.installingModpackFiles".to_string(), 70.0, "installing_modpack_files".to_string());
     
     // Variable to store recommended RAM from manifest
+    // Variable to store recommended RAM from manifest
     let mut recommended_ram_from_manifest: Option<u32> = None;
-
-    let failed_mods = if !modpack.url_modpack_zip.is_empty() {
+    
+    // Process modpack (download, extract, install) and get failed mods + zip hash
+    let (failed_mods, zip_hash) = if !modpack.url_modpack_zip.is_empty() {
         // Download and extract modpack
         let temp_zip_path = app_data_dir.join("temp").join(format!("{}.zip", modpack.id));
         std::fs::create_dir_all(temp_zip_path.parent().unwrap())?;
@@ -201,74 +203,10 @@ where
                 }
             }
         }
-
-        // Check if it's a CurseForge modpack
-        let is_curseforge_modpack = match lyceris::util::extract::read_file_from_jar(&temp_zip_path, "manifest.json") {
-            Ok(_) => true,
-            Err(_) => false,
-        };
-
-        if is_curseforge_modpack {
-            emit_progress("progress.processingCurseforge".to_string(), 70.0, "processing_curseforge".to_string());
-            
-            let anon_key = settings.supabase_anon_key.as_deref().unwrap_or("").trim_matches('"');
-
-            // Prepare auth token for CurseForge API calls
-            // Only use Supabase token for Authorization header (Gateway requirement)
-            // If no user token, use Anon Key
-            let auth_token = if let Some(supabase_token) = &settings.supabase_access_token {
-                Some(format!("Bearer {}", supabase_token))
-            } else {
-                Some(format!("Bearer {}", anon_key))
-            };
-
-            let (_cf_modloader, _cf_version, recommended_ram, failed_mods) = curseforge::process_curseforge_modpack_with_failed_tracking(
-                &temp_zip_path,
-                &instance_dirs.instance_dir,
-                {
-                    let emit_progress = emit_progress.clone();
-                    move |message: String, percentage: f32, step: String| {
-                        let final_percentage = 70.0 + (percentage * 0.30); // 30% del total para CurseForge (70% to 100%)
-                        emit_progress(message, final_percentage, step);
-                    }
-                },
-                auth_token.as_deref(),
-                anon_key,
-                modpack.category.as_deref(), // Pass category for cleanup behavior
-                modpack.allow_custom_mods,   // Pass allow_custom_mods flag
-                modpack.allow_custom_resourcepacks, // Pass allow_custom_resourcepacks flag
-            ).await?;
-
-            // Store recommended RAM from manifest
-            recommended_ram_from_manifest = recommended_ram;
-
-            // Clean up temp file
-            cleanup_temp_file(&temp_zip_path);
-            failed_mods
-        } else {
-            // Regular ZIP modpack
-            emit_progress("progress.extractingModpack".to_string(), 85.0, "extracting_modpack".to_string());
-            extract_zip(&temp_zip_path, &instance_dirs.instance_dir)?;
-            cleanup_temp_file(&temp_zip_path);
-            Vec::new()
-        }
-    } else {
-        Vec::new()
-    };
-
-    // Finalization steps after modpack processing
-    emit_progress("progress.savingInstanceConfig".to_string(), 96.0, "saving_instance_config".to_string());
-
-    // Calculate integrity data for anti-cheat (official/partner modpacks)
-    let integrity_data = if modpack.category.as_ref()
-        .map(|c| c == "official" || c == "partner")
-        .unwrap_or(false)
-    {
-        emit_progress("progress.calculatingIntegrity".to_string(), 97.0, "calculating_integrity".to_string());
         
-        // Calculate ZIP hash if we have the temp file
-        let zip_hash = if temp_zip_path.exists() {
-            match crate::modpack::integrity::calculate_file_hash(&temp_zip_path) {
+        // Calculate ZIP hash for integrity data (if official/partner)
+        let calculated_zip_hash = if modpack.category.as_ref().map(|c| c == "official" || c == "partner").unwrap_or(false) {
+             match crate::modpack::integrity::hash_file(&temp_zip_path) {
                 Ok(hash) => {
                     println!("🔐 Calculated ZIP hash: {}...", &hash[0..8.min(hash.len())]);
                     Some(hash)
@@ -282,6 +220,65 @@ where
             None
         };
 
+        // Check if it's a CurseForge modpack
+        let is_curseforge_modpack = match lyceris::util::extract::read_file_from_jar(&temp_zip_path, "manifest.json") {
+            Ok(_) => true,
+            Err(_) => false,
+        };
+
+        let result_failed_mods = if is_curseforge_modpack {
+            emit_progress("progress.processingCurseforge".to_string(), 70.0, "processing_curseforge".to_string());
+            
+            let anon_key = settings.supabase_anon_key.as_deref().unwrap_or("").trim_matches('"');
+            let auth_token = if let Some(supabase_token) = &settings.supabase_access_token {
+                Some(format!("Bearer {}", supabase_token))
+            } else {
+                Some(format!("Bearer {}", anon_key))
+            };
+
+            let (_cf_modloader, _cf_version, recommended_ram, failed_mods) = curseforge::process_curseforge_modpack_with_failed_tracking(
+                &temp_zip_path,
+                &instance_dirs.instance_dir,
+                {
+                    let emit_progress = emit_progress.clone();
+                    move |message: String, percentage: f32, step: String| {
+                        let final_percentage = 70.0 + (percentage * 0.30);
+                        emit_progress(message, final_percentage, step);
+                    }
+                },
+                auth_token.as_deref(),
+                anon_key,
+                modpack.category.as_deref(),
+                modpack.allow_custom_mods,
+                modpack.allow_custom_resourcepacks,
+            ).await?;
+
+            recommended_ram_from_manifest = recommended_ram;
+            failed_mods
+        } else {
+            // Regular ZIP modpack
+            emit_progress("progress.extractingModpack".to_string(), 85.0, "extracting_modpack".to_string());
+            extract_zip(&temp_zip_path, &instance_dirs.instance_dir)?;
+            Vec::new()
+        };
+        
+        // Cleanup strictly AFTER processing and hashing
+        cleanup_temp_file(&temp_zip_path);
+        
+        (result_failed_mods, calculated_zip_hash)
+    } else {
+        (Vec::new(), None)
+    };
+
+    // Finalization steps after modpack processing
+    emit_progress("progress.savingInstanceConfig".to_string(), 96.0, "saving_instance_config".to_string());
+
+    // Calculate integrity data (using the zip hash we calculated earlier)
+    let integrity_data = if modpack.category.as_ref()
+        .map(|c| c == "official" || c == "partner")
+        .unwrap_or(false)
+    {
+        emit_progress("progress.calculatingIntegrity".to_string(), 97.0, "calculating_integrity".to_string());
         match crate::modpack::integrity::create_integrity_data(&instance_dirs.instance_dir, zip_hash) {
             Ok(data) => {
                 println!("🔐 Integrity data calculated: {} files tracked", data.file_hashes.len());
