@@ -25,13 +25,19 @@ export enum CacheBehaviour {
   Bypass = 'bypass'
 }
 
+import { open } from '@tauri-apps/plugin-shell';
+import { IntegrityError } from './IntegrityError';
+
 /**
  * Cache TTL constants in milliseconds
  */
 const CACHE_TTL = {
-  MODPACKS: 5 * 60 * 1000,      // 5 minutes for modpack list
-  MODPACK_DETAILS: 10 * 60 * 1000, // 10 minutes for modpack details
-  PARTNERS: 10 * 60 * 1000      // 10 minutes for partners
+  MODPACKS: 5 * 60 * 1000, // 5 minutes (reduced from 30)
+  FEATURED: 5 * 60 * 1000, // 5 minutes
+  CATEGORIES: 24 * 60 * 60 * 1000, // 24 hours
+  SEARCH: 2 * 60 * 1000, // 2 minutes
+  MODPACK_DETAILS: 10 * 60 * 1000, // 10 minutes
+  PARTNERS: 10 * 60 * 1000 // 10 minutes
 } as const;
 
 interface CacheEntry<T = any> {
@@ -769,6 +775,7 @@ class LauncherService {
 
         // Verify integrity (passing authoritative flags from DB/Server)
         // This prevents users from bypassing restrictions by editing instance.json locally
+
         const integrityResult = await safeInvoke<{
           isValid: boolean;
           issues: string[];
@@ -791,8 +798,8 @@ class LauncherService {
           // Unless it's just a warning or community pack
           if (integrityResult.issues.length > 0) {
             console.error('⛔ Critical integrity issues found:', integrityResult.issues);
-            // Lanza un error específico que la UI pueda capturar para mostrar el botón de reparar
-            throw new Error(`Integridad comprometida: ${integrityResult.issues.length} archivos modificados o no autorizados. Por favor, repara el modpack.`);
+            // Throw specific error for UI handling
+            throw new IntegrityError(integrityResult.issues);
           }
         } else {
           console.log('✅ Integrity verification passed');

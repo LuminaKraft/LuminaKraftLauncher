@@ -9,7 +9,10 @@ import type {
   ModpackStatus,
   MicrosoftAccount
 } from '../types/launcher';
+import { IntegrityError } from '../services/IntegrityError';
+import { IntegrityErrorModal } from '../components/Modpacks/IntegrityErrorModal';
 import { invoke } from '@tauri-apps/api/core';
+import toast from 'react-hot-toast';
 
 // Define LauncherState here since it is missing from types
 interface LauncherState {
@@ -235,6 +238,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     isOpen: boolean;
     modpackId: string;
     issues: string[];
+    modpackName?: string;
   }>({ isOpen: false, modpackId: '', issues: [] });
   const refreshDataRef = useRef<(() => Promise<void>) | null>(null);
   const launcherService = LauncherService.getInstance();
@@ -476,7 +480,11 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
 
   // Listen for Supabase auth changes (Sign Out)
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const {
+      data: {
+        subscription
+      }
+    } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_OUT') {
         console.log('👋 User signed out, clearing account data');
         updateUserSettings({
@@ -491,14 +499,26 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshData = async (retryCount = 0) => {
-    dispatch({ type: 'SET_LOADING', payload: true });
-    dispatch({ type: 'SET_ERROR', payload: null });
+    dispatch({
+      type: 'SET_LOADING',
+      payload: true
+    });
+    dispatch({
+      type: 'SET_ERROR',
+      payload: null
+    });
 
     try {
       // Load modpacks data
       const modpacksData = await launcherService.fetchModpacksData();
-      dispatch({ type: 'SET_MODPACKS_DATA', payload: modpacksData });
-      dispatch({ type: 'SET_LOADING', payload: false });
+      dispatch({
+        type: 'SET_MODPACKS_DATA',
+        payload: modpacksData
+      });
+      dispatch({
+        type: 'SET_LOADING',
+        payload: false
+      });
     } catch (error) {
       console.error('Error loading modpacks data:', error);
       // Retry logic for startup (max 2 retries)
@@ -509,10 +529,16 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
         }, 2000); // Wait 2 seconds before retry
         return;
       }
-      dispatch({ type: 'SET_ERROR', payload: 'Error loading modpacks data' });
+      dispatch({
+        type: 'SET_ERROR',
+        payload: 'Error loading modpacks data'
+      });
     } finally {
       if (retryCount >= 2) {
-        dispatch({ type: 'SET_LOADING', payload: false });
+        dispatch({
+          type: 'SET_LOADING',
+          payload: false
+        });
       }
     }
   };
@@ -537,7 +563,9 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
           type: 'SET_MODPACK_STATE',
           payload: {
             id: modpack.id,
-            state: createModpackState('error', { error: 'Error loading state' }),
+            state: createModpackState('error', {
+              error: 'Error loading state'
+            }),
           },
         });
       }
@@ -546,7 +574,9 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     // Also load local modpacks that are not in server data
     try {
       const localModpacksJson = await invoke<string>('get_local_modpacks');
-      const localModpacks: { id: string }[] = JSON.parse(localModpacksJson);
+      const localModpacks: {
+        id: string
+      }[] = JSON.parse(localModpacksJson);
       const serverModpackIds = new Set(state.modpacksData.modpacks.map(m => m.id));
 
       for (const localModpack of localModpacks) {
@@ -572,10 +602,13 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     const newSettings = {
       ...state.userSettings,
       ...settings,
-      clientToken: existingClientToken  // Always preserve clientToken
+      clientToken: existingClientToken // Always preserve clientToken
     };
-    launcherService.saveUserSettings(newSettings);  // Save FULL settings, not partial
-    dispatch({ type: 'SET_USER_SETTINGS', payload: newSettings });
+    launcherService.saveUserSettings(newSettings); // Save FULL settings, not partial
+    dispatch({
+      type: 'SET_USER_SETTINGS',
+      payload: newSettings
+    });
 
     // If username changed and user is authenticated, sync with Supabase
     if (settings.username && settings.username !== state.userSettings.username) {
@@ -589,16 +622,30 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
   const changeLanguage = async (language: string) => {
     try {
       await i18n.changeLanguage(language);
-      dispatch({ type: 'SET_LANGUAGE', payload: language });
-      updateUserSettings({ language });
+      dispatch({
+        type: 'SET_LANGUAGE',
+        payload: language
+      });
+      updateUserSettings({
+        language
+      });
 
       // Clear cache completely to force reload of all data
       launcherService.clearCache();
-      dispatch({ type: 'SET_LOADING', payload: true });
-      dispatch({ type: 'SET_ERROR', payload: null });
+      dispatch({
+        type: 'SET_LOADING',
+        payload: true
+      });
+      dispatch({
+        type: 'SET_ERROR',
+        payload: null
+      });
       try {
         const modpacksData = await launcherService.fetchModpacksData();
-        dispatch({ type: 'SET_MODPACKS_DATA', payload: modpacksData });
+        dispatch({
+          type: 'SET_MODPACKS_DATA',
+          payload: modpacksData
+        });
         if (modpacksData) {
           for (const modpack of modpacksData.modpacks) {
             try {
@@ -616,7 +663,9 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
                 type: 'SET_MODPACK_STATE',
                 payload: {
                   id: modpack.id,
-                  state: createModpackState('error', { error: 'Error loading modpack data' }),
+                  state: createModpackState('error', {
+                    error: 'Error loading modpack data'
+                  }),
                 },
               });
             }
@@ -624,13 +673,22 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
         }
       } catch (dataError) {
         console.error('Error reloading data after language change:', dataError);
-        dispatch({ type: 'SET_ERROR', payload: 'Error loading data in new language' });
+        dispatch({
+          type: 'SET_ERROR',
+          payload: 'Error loading data in new language'
+        });
       } finally {
-        dispatch({ type: 'SET_LOADING', payload: false });
+        dispatch({
+          type: 'SET_LOADING',
+          payload: false
+        });
       }
     } catch (error) {
       console.error('Error changing language:', error);
-      dispatch({ type: 'SET_LOADING', payload: false });
+      dispatch({
+        type: 'SET_LOADING',
+        payload: false
+      });
       throw error;
     }
   };
@@ -640,7 +698,9 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     action: 'install' | 'update' | 'launch' | 'repair' | 'stop',
     modpackId: string
   ): Promise<boolean> => {
-    const modpack = state.modpacksData?.modpacks.find((m: { id: string }) => m.id === modpackId);
+    const modpack = state.modpacksData?.modpacks.find((m: {
+      id: string
+    }) => m.id === modpackId);
 
     // For launch and stop actions, we don't need the modpack data from server
     // These actions work with locally installed modpacks
@@ -695,10 +755,10 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    const actionStatus = action === 'launch' ? 'launching'
-      : action === 'update' ? 'updating'
-        : action === 'repair' ? 'repairing'
-          : `${action}ing` as any;
+    const actionStatus = action === 'launch' ? 'launching' :
+      action === 'update' ? 'updating' :
+        action === 'repair' ? 'repairing' :
+          `${action}ing` as any;
 
     dispatch({
       type: 'SET_MODPACK_STATE',
@@ -879,7 +939,39 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
           }
 
           // Now launch the modpack (event will be caught by listeners configured above)
-          await launcherService.launchModpack(modpackId);
+          try {
+            await launcherService.launchModpack(modpackId);
+          } catch (err: any) {
+            console.error(`Failed to launch modpack ${modpackId}:`, err);
+
+            dispatch({
+              type: 'SET_MODPACK_STATE', // Changed from SET_MODPACK_STATUS to SET_MODPACK_STATE
+              payload: {
+                id: modpackId,
+                state: {
+                  ...(state.modpackStates[modpackId] || createModpackState('installed')), // Ensure existing state is preserved
+                  status: 'installed' // Reset status to installed or ready
+                }
+              },
+            });
+
+            // Handle integrity errors specifically
+            if (err instanceof IntegrityError || err.name === 'IntegrityError') {
+              const modpackName = state.modpacksData?.modpacks.find(m => m.id === modpackId)?.name || modpackId;
+              setIntegrityErrorDialog({
+                isOpen: true,
+                modpackId,
+                issues: err.issues,
+                modpackName
+              });
+              return false; // Indicate failure
+            }
+
+            toast.error(t('launcher.launchFailed', {
+              error: err.message
+            }));
+            return false; // Indicate failure
+          }
           break;
         }
         case 'repair':
@@ -1189,19 +1281,25 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
         if (key === 'progress.downloadingMinecraftFile') {
           // Format: "progress.downloadingMinecraftFile|fileName"
           const fileName = parts[1];
-          return t('progress.downloadingMinecraftFile', { fileName });
+          return t('progress.downloadingMinecraftFile', {
+            fileName
+          });
         }
 
         if (key === 'progress.installingComponent') {
           // Format: "progress.installingComponent|component"
           const component = parts[1];
-          return t('progress.installingComponent', { component });
+          return t('progress.installingComponent', {
+            component
+          });
         }
 
         if (key === 'progress.curseforgeApiError') {
           // Format: "progress.curseforgeApiError|error message"
           const error = parts[1];
-          return t('progress.curseforgeApiError', { error });
+          return t('progress.curseforgeApiError', {
+            error
+          });
         }
       }
 
@@ -1220,7 +1318,9 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
   const installModpackFromZip = async (filePath: string) => {
     try {
       // Read the ZIP file from the provided path
-      const { readFile } = await import('@tauri-apps/plugin-fs');
+      const {
+        readFile
+      } = await import('@tauri-apps/plugin-fs');
       const zipBuffer = await readFile(filePath);
 
       // Extract manifest to create a temporary modpack object
@@ -1381,72 +1481,26 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
         onJoinDiscord={async () => {
           setRateLimitDialog(prev => ({ ...prev, isOpen: false }));
           // Navigate to settings or trigger link
-          // For now, just open settings page if possible, or trigger link flow
-          // Since we don't have easy navigation here, we might just show a toast?
-          // Or try to link directly.
-          try {
-            // AuthService doesn't have linkDiscord exposed easily here maybe?
-            // Let's just redirect to settings if possible or reload.
-            // Actually, linking discord usually happens in settings.
-            // We can emit an event or use a global navigation if available.
-            // For now, let's just log.
-            console.log('Link Discord requested');
-          } catch (error) {
-            console.error('Link Discord failed:', error);
-          }
+          // For now, just open settings page if possible, or trigger link
+          // Actually, linking discord usually happens in settings.
+          // We can emit an event or use a global navigation if available.
+          // For now, let's just log.
+          console.log('Link Discord requested');
         }}
       />
-      {/* Integrity Error Dialog */}
-      {integrityErrorDialog.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-          <div className="bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl border border-red-500/30">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 flex items-center justify-center bg-red-500/20 rounded-full">
-                <svg className="w-6 h-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-white">{t('errors.integrityFailed', 'Verificación de Integridad Fallida')}</h3>
-            </div>
-            <p className="text-gray-300 mb-4">{t('errors.integrityDescription', 'Se detectaron modificaciones no autorizadas en el modpack:')}</p>
-            <ul className="bg-gray-900/50 rounded-lg p-3 mb-4 max-h-40 overflow-y-auto">
-              {integrityErrorDialog.issues.map((issue, idx) => (
-                <li key={idx} className="text-red-300 text-sm flex items-start gap-2 py-1">
-                  <span className="text-red-400">•</span>
-                  <span>{issue}</span>
-                </li>
-              ))}
-            </ul>
-            <p className="text-gray-400 text-sm mb-4">{t('errors.integrityRepairHelp', 'Usa "Reparar" para restaurar el modpack a su estado original.')}</p>
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => setIntegrityErrorDialog({ isOpen: false, modpackId: '', issues: [] })}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
-              >
-                {t('common.close', 'Cerrar')}
-              </button>
-              <button
-                onClick={() => {
-                  const modpackId = integrityErrorDialog.modpackId;
-                  console.log('🔧 Repair button clicked for:', modpackId);
-                  setIntegrityErrorDialog({ isOpen: false, modpackId: '', issues: [] });
-                  // Don't await - let it run in background
-                  repairModpack(modpackId).catch(err => {
-                    console.error('❌ Repair failed:', err);
-                  });
-                }}
-                className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-lg transition-colors font-semibold flex items-center gap-2"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                {t('modpack.repair', 'Reparar')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <IntegrityErrorModal
+        isOpen={integrityErrorDialog.isOpen}
+        onClose={() => setIntegrityErrorDialog(prev => ({ ...prev, isOpen: false }))}
+        onRepair={() => {
+          if (integrityErrorDialog.modpackId) {
+            const modpackId = integrityErrorDialog.modpackId;
+            setIntegrityErrorDialog(prev => ({ ...prev, isOpen: false }));
+            repairModpack(modpackId);
+          }
+        }}
+        issues={integrityErrorDialog.issues || []}
+        modpackName={integrityErrorDialog.modpackName}
+      />
     </LauncherContext.Provider>
   );
 }
