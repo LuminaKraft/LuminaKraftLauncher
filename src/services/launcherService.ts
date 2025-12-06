@@ -328,6 +328,8 @@ class LauncherService {
         partnerName: (modpack.partner_id || modpackPartnerMap.get(modpack.id)) ? partnersMap.get(modpack.partner_id || modpackPartnerMap.get(modpack.id)) : undefined,
         publishedAt: modpack.published_at,
         downloads: statsMap.get(modpack.id)?.total_downloads || 0,
+        allowCustomMods: modpack.allow_custom_mods ?? true,
+        allowCustomResourcepacks: modpack.allow_custom_resourcepacks ?? true,
       })) || [];
 
       this.modpacksData = { modpacks };
@@ -460,6 +462,8 @@ class LauncherService {
         tiktokEmbed: modpackData.tiktok_embed || null,
         partnerId: modpackData.partner_id || null,
         fileSha256: latestVersion?.file_sha256 || null, // SHA256 for integrity verification
+        allowCustomMods: modpackData.allow_custom_mods ?? true,
+        allowCustomResourcepacks: modpackData.allow_custom_resourcepacks ?? true,
         // Features
         features: featuresResult.data?.map((feature: any) => ({
           title: getTranslation(feature.title_i18n),

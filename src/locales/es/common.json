@@ -760,6 +760,15 @@
       "partnerInfo": "Partner: {{name}}",
       "note": "La publicación de modpacks comunitarios está temporalmente deshabilitada. Solo administradores y partners verificados pueden publicar modpacks en este momento."
     },
+    "userModifications": {
+      "title": "Modificaciones de Usuario",
+      "description": "Controla si los usuarios pueden añadir sus propios mods y paquetes de recursos a este modpack.",
+      "allowMods": "Permitir Mods Personalizados",
+      "allowModsDesc": "Los usuarios pueden añadir mods al modpack",
+      "allowResourcepacks": "Permitir Paquetes de Recursos",
+      "allowResourcepacksDesc": "Los usuarios pueden añadir paquetes de recursos al modpack",
+      "antiCheatNote": "Si tu modpack tiene servidor con anti-cheat, considera desactivar estas opciones para evitar conflictos."
+    },
     "basicInfo": {
       "title": "Información Básica",
       "name": "Nombre",

@@ -5,7 +5,7 @@ import { invoke } from '@tauri-apps/api/core';
 import {
   Save, Upload, Plus, X, Trash2, Image as ImageIcon,
   FileText, Package, Settings, Layers, History,
-  RefreshCw
+  RefreshCw, AlertCircle
 } from 'lucide-react';
 import ModpackManagementService from '../../services/modpackManagementService';
 import R2UploadService from '../../services/r2UploadService';
@@ -41,8 +41,11 @@ interface FormData {
   primaryColor: string;
   isActive: boolean;
   isComingSoon: boolean;
+  allowCustomMods: boolean;
+  allowCustomResourcepacks: boolean;
   logoUrl?: string;
   bannerUrl?: string;
+  category?: string;
 }
 
 interface EditModpackFormProps {
@@ -155,8 +158,11 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
         primaryColor: modpackData.primary_color || '#3b82f6',
         isActive: modpackData.is_active || false,
         isComingSoon: modpackData.is_coming_soon || false,
+        allowCustomMods: modpackData.allow_custom_mods ?? true,
+        allowCustomResourcepacks: modpackData.allow_custom_resourcepacks ?? true,
         logoUrl: modpackData.logo_url,
-        bannerUrl: modpackData.banner_url
+        bannerUrl: modpackData.banner_url,
+        category: modpackData.category
       });
 
       // 2. Fetch Features
@@ -1138,6 +1144,86 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                   </div>
                 </div>
               </div>
+
+              {/* User Modifications Section - Only for official/partner */}
+              {(formData.category === 'official' || formData.category === 'partner') && (
+                <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                      {t('publishModpack.userModifications.title')}
+                    </h2>
+                    {(formData.allowCustomMods || formData.allowCustomResourcepacks) && (
+                      <div className="group relative flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-medium rounded-md border border-amber-200 dark:border-amber-800 cursor-help">
+                        <AlertCircle className="w-3.5 h-3.5" />
+                        <span>Anti-Cheat</span>
+                        <div className="absolute bottom-full right-0 mb-2 w-64 p-3 bg-gray-900/95 backdrop-blur-sm text-white text-xs rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 border border-gray-700">
+                          {t('publishModpack.userModifications.antiCheatNote')}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Allow Custom Mods Toggle */}
+                    <label className={`relative flex items-center p-3 rounded-xl border-2 cursor-pointer transition-all ${formData.allowCustomMods
+                        ? 'border-blue-500/20 bg-blue-50/50 dark:bg-blue-900/10'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                      }`}>
+                      <div className={`p-2 rounded-lg mr-3 transition-colors ${formData.allowCustomMods ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'}`}>
+                        <Package className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1">
+                        <span className="block text-sm font-semibold text-gray-900 dark:text-white">
+                          {t('publishModpack.userModifications.allowMods')}
+                        </span>
+                      </div>
+                      <div className="relative ml-2">
+                        <input
+                          type="checkbox"
+                          checked={formData.allowCustomMods}
+                          onChange={async (e) => {
+                            const newValue = e.target.checked;
+                            setFormData(prev => prev ? ({ ...prev, allowCustomMods: newValue }) : null);
+                            await service.updateModpack(modpackId, { allowCustomMods: newValue });
+                          }}
+                          className="sr-only peer"
+                          disabled={isUpdating}
+                        />
+                        <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                      </div>
+                    </label>
+
+                    {/* Allow Custom Resourcepacks Toggle */}
+                    <label className={`relative flex items-center p-3 rounded-xl border-2 cursor-pointer transition-all ${formData.allowCustomResourcepacks
+                        ? 'border-blue-500/20 bg-blue-50/50 dark:bg-blue-900/10'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                      }`}>
+                      <div className={`p-2 rounded-lg mr-3 transition-colors ${formData.allowCustomResourcepacks ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'}`}>
+                        <Layers className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1">
+                        <span className="block text-sm font-semibold text-gray-900 dark:text-white">
+                          {t('publishModpack.userModifications.allowResourcepacks')}
+                        </span>
+                      </div>
+                      <div className="relative ml-2">
+                        <input
+                          type="checkbox"
+                          checked={formData.allowCustomResourcepacks}
+                          onChange={async (e) => {
+                            const newValue = e.target.checked;
+                            setFormData(prev => prev ? ({ ...prev, allowCustomResourcepacks: newValue }) : null);
+                            await service.updateModpack(modpackId, { allowCustomResourcepacks: newValue });
+                          }}
+                          className="sr-only peer"
+                          disabled={isUpdating}
+                        />
+                        <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              )}
 
               <div className="bg-red-50 dark:bg-red-900/10 rounded-lg p-6 border border-red-200 dark:border-red-900/30">
                 <h2 className="text-xl font-semibold mb-4 text-red-700 dark:text-red-400">{t('editModpack.settings.dangerZone')}</h2>

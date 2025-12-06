@@ -764,6 +764,15 @@
       "partnerInfo": "Partner: {{name}}",
       "note": "Community modpack publishing is temporarily disabled. Only admins and verified partners can publish modpacks at this time."
     },
+    "userModifications": {
+      "title": "User Modifications",
+      "description": "Control whether users can add their own mods and resource packs to this modpack.",
+      "allowMods": "Allow Custom Mods",
+      "allowModsDesc": "Users can add their own mods to this modpack",
+      "allowResourcepacks": "Allow Custom Resource Packs",
+      "allowResourcepacksDesc": "Users can add their own resource packs to this modpack",
+      "antiCheatNote": "If your modpack has a server with anti-cheat, consider disabling these options to avoid conflicts."
+    },
     "basicInfo": {
       "title": "Basic Information",
       "name": "Name",

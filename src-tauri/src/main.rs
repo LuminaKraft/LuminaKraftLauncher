@@ -14,6 +14,11 @@ mod modpack;
 mod utils;
 mod oauth;
 
+/// Helper function for serde default values
+fn default_true() -> bool {
+    true
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Modpack {
     pub id: String,
@@ -63,6 +68,14 @@ pub struct Modpack {
     /// Used to verify download integrity
     #[serde(rename = "fileSha256", default)]
     pub file_sha256: Option<String>,
+    /// Whether custom mods are allowed for this modpack
+    /// If false, aggressive cleanup removes user-added mods
+    #[serde(rename = "allowCustomMods", default = "default_true")]
+    pub allow_custom_mods: bool,
+    /// Whether custom resource packs are allowed for this modpack
+    /// If false, aggressive cleanup removes user-added resource packs
+    #[serde(rename = "allowCustomResourcepacks", default = "default_true")]
+    pub allow_custom_resourcepacks: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -132,6 +145,12 @@ pub struct InstanceMetadata {
     /// Modpack category for determining verification behavior
     #[serde(skip_serializing_if = "Option::is_none")]
     pub category: Option<String>,
+    /// Whether custom mods are allowed (only relevant for official/partner)
+    #[serde(rename = "allowCustomMods", default = "default_true")]
+    pub allow_custom_mods: bool,
+    /// Whether custom resource packs are allowed (only relevant for official/partner)
+    #[serde(rename = "allowCustomResourcepacks", default = "default_true")]
+    pub allow_custom_resourcepacks: bool,
 }
 
 #[tauri::command]
@@ -514,8 +533,13 @@ async fn verify_instance_integrity(
                 // If no local SHA256, user installed before this feature - skip this check
             }
             
-            // Verify file hashes
-            let result = verify_integrity(&instance_dir, integrity_data);
+            // Verify file hashes (respecting allow_custom flags from metadata)
+            let result = verify_integrity(
+                &instance_dir,
+                integrity_data,
+                metadata.allow_custom_mods,
+                metadata.allow_custom_resourcepacks,
+            );
             
             if !result.is_valid {
                 all_issues.extend(format_issues(&result.issues));

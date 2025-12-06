@@ -167,6 +167,8 @@ export class ModpackManagementService {
     serverIp?: string;
     primaryColor?: string;
     isComingSoon?: boolean;
+    allowCustomMods?: boolean;
+    allowCustomResourcepacks?: boolean;
   }): Promise<{ success: boolean; modpackId?: string; error?: string }> {
     try {
       // Check permissions (Discord authentication is required, not Microsoft)
@@ -224,6 +226,8 @@ export class ModpackManagementService {
           upload_status: modpackData.isComingSoon ? 'completed' : 'pending',
           is_active: false, // Activate after uploading files
           is_coming_soon: modpackData.isComingSoon || false,
+          allow_custom_mods: modpackData.allowCustomMods ?? true,
+          allow_custom_resourcepacks: modpackData.allowCustomResourcepacks ?? true,
         } as any)
         .select('id')
         .single();
@@ -392,6 +396,8 @@ export class ModpackManagementService {
       primaryColor: string;
       isActive: boolean;
       isComingSoon: boolean;
+      allowCustomMods: boolean;
+      allowCustomResourcepacks: boolean;
     }>
   ): Promise<{ success: boolean; error?: string }> {
     try {
@@ -407,6 +413,8 @@ export class ModpackManagementService {
       if (updates.serverIp !== undefined) updateData.server_ip = updates.serverIp;
       if (updates.primaryColor !== undefined) updateData.primary_color = updates.primaryColor;
       if (updates.isComingSoon !== undefined) updateData.is_coming_soon = updates.isComingSoon;
+      if (updates.allowCustomMods !== undefined) updateData.allow_custom_mods = updates.allowCustomMods;
+      if (updates.allowCustomResourcepacks !== undefined) updateData.allow_custom_resourcepacks = updates.allowCustomResourcepacks;
       if (updates.isActive !== undefined) {
         updateData.is_active = updates.isActive;
         // Set published_at and upload_status when making modpack public for the first time
@@ -859,9 +867,9 @@ export class ModpackManagementService {
       const isOwner = modpack.author_id === userData.id;
       const isAdmin = userData.role === 'admin';
       const isSamePartner = modpack.category === 'partner' &&
-                            userData.partner_id &&
-                            authorPartnerId &&
-                            userData.partner_id === authorPartnerId;
+        userData.partner_id &&
+        authorPartnerId &&
+        userData.partner_id === authorPartnerId;
 
       if (!isOwner && !isAdmin && !isSamePartner) {
         console.error('❌ Insufficient permissions. Author:', modpack.author_id, 'User:', userData.id, 'Category:', modpack.category);

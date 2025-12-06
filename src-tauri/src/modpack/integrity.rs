@@ -166,9 +166,12 @@ pub fn create_integrity_data(
 }
 
 /// Verify integrity of an instance
+/// allow_custom_mods/resourcepacks: If true, don't report extra files as unauthorized
 pub fn verify_integrity(
     instance_dir: &PathBuf,
     integrity_data: &IntegrityData,
+    allow_custom_mods: bool,
+    allow_custom_resourcepacks: bool,
 ) -> IntegrityResult {
     let mut issues = Vec::new();
     
@@ -204,10 +207,25 @@ pub fn verify_integrity(
         }
     }
     
-    // Check for unauthorized files
+    // Check for unauthorized files (only if custom files are not allowed)
     for path in current_hashes.keys() {
         if !integrity_data.file_hashes.contains_key(path) {
-            issues.push(IntegrityIssue::UnauthorizedFile { path: path.clone() });
+            // Determine if this is a mod or resourcepack
+            let is_mod = path.starts_with("mods/");
+            let is_resourcepack = path.starts_with("resourcepacks/");
+            
+            // Only report as unauthorized if custom files are NOT allowed for this type
+            let should_report = if is_mod {
+                !allow_custom_mods
+            } else if is_resourcepack {
+                !allow_custom_resourcepacks
+            } else {
+                true // Other files always reported
+            };
+            
+            if should_report {
+                issues.push(IntegrityIssue::UnauthorizedFile { path: path.clone() });
+            }
         }
     }
     

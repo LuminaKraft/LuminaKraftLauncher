@@ -30,6 +30,8 @@ export interface Modpack {
   primaryColor?: string; // Hex color for gradient backgrounds
   partnerId?: string; // Partner ID
   partnerName?: string; // Name of the partner if category is 'partner'
+  allowCustomMods?: boolean; // Allow users to add custom mods (default true)
+  allowCustomResourcepacks?: boolean; // Allow users to add custom resourcepacks (default true)
 }
 
 export interface Collaborator {

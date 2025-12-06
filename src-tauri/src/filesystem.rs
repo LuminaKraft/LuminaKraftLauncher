@@ -497,6 +497,8 @@ pub fn create_instance_metadata(
         custom_ram: None,
         integrity: None,
         category: None,
+        allow_custom_mods: true,
+        allow_custom_resourcepacks: true,
     }
 }
 

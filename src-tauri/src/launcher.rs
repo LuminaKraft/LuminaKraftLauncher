@@ -52,6 +52,8 @@ pub async fn install_modpack(modpack: Modpack) -> Result<()> {
         custom_ram: None,
         integrity: None, // No integrity tracking for this simple path
         category: None,  // No category for basic installs
+        allow_custom_mods: true,  // Allow custom mods by default for basic installs
+        allow_custom_resourcepacks: true,  // Allow custom resourcepacks by default for basic installs
     };
     
     filesystem::save_instance_metadata(&metadata).await?;
@@ -233,6 +235,8 @@ where
                 auth_token.as_deref(),
                 anon_key,
                 modpack.category.as_deref(), // Pass category for cleanup behavior
+                modpack.allow_custom_mods,   // Pass allow_custom_mods flag
+                modpack.allow_custom_resourcepacks, // Pass allow_custom_resourcepacks flag
             ).await?;
 
             // Store recommended RAM from manifest
@@ -289,6 +293,8 @@ where
         custom_ram: None,
         integrity: integrity_data,
         category: modpack.category.clone(),
+        allow_custom_mods: modpack.allow_custom_mods,
+        allow_custom_resourcepacks: modpack.allow_custom_resourcepacks,
     };
     
     filesystem::save_instance_metadata(&metadata).await?;

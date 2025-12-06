@@ -7,8 +7,8 @@ use crate::modpack::extraction::extract_zip;
 
 /// Process a CurseForge modpack with progress tracking and failed mod detection
 /// category: "official" | "partner" | "community" | None (imported)
-/// - official/partner: Aggressive cleanup (anti-cheat for servers)
-/// - community/imported: Preserve user's custom mods
+/// allow_custom_mods: Whether to preserve user-added mods (default true)
+/// allow_custom_resourcepacks: Whether to preserve user-added resourcepacks (default true)
 pub async fn process_curseforge_modpack_with_failed_tracking<F>(
     modpack_zip_path: &PathBuf,
     instance_dir: &PathBuf,
@@ -16,6 +16,8 @@ pub async fn process_curseforge_modpack_with_failed_tracking<F>(
     auth_token: Option<&str>,
     anon_key: &str,
     category: Option<&str>,
+    allow_custom_mods: bool,
+    allow_custom_resourcepacks: bool,
 ) -> Result<(String, String, Option<u32>, Vec<serde_json::Value>)>
 where
     F: Fn(String, f32, String) + Send + Sync + 'static + Clone,
@@ -80,14 +82,20 @@ where
     
     let (failed_mods, expected_filenames) = download_mods_with_filenames(&manifest, instance_dir, emit_progress.clone(), 20.0, 90.0, auth_token, anon_key).await?;
     
-    // Cleanup behavior based on modpack category:
-    // - official/partner: Aggressive cleanup (anti-cheat for servers)
-    // - community/imported (None): Preserve user's custom mods
-    let should_cleanup = category
+    // Determine cleanup behavior based on category and allow_custom flags
+    // - official/partner: Cleanup enabled by default, respects allow_custom flags
+    // - community/imported: No cleanup, preserve user's custom files
+    let is_managed = category
         .map(|c| c == "official" || c == "partner")
         .unwrap_or(false);
     
-    if should_cleanup {
+    // Only do cleanup for managed modpacks (official/partner)
+    // Cleanup mods if: is managed AND NOT allow_custom_mods
+    // Cleanup resourcepacks if: is managed AND NOT allow_custom_resourcepacks
+    let should_cleanup_mods = is_managed && !allow_custom_mods;
+    let should_cleanup_resourcepacks = is_managed && !allow_custom_resourcepacks;
+    
+    if should_cleanup_mods || should_cleanup_resourcepacks {
         emit_progress(
             "progress.cleaningRemovedMods".to_string(),
             91.0,
@@ -105,10 +113,12 @@ where
         for name in &all_expected_filenames {
             println!("  ✓ {}", name);
         }
-        cleanup_removed_files(&all_expected_filenames, instance_dir)?;
-        println!("🛡️ Anti-cheat cleanup: removed unauthorized mods/resourcepacks (category: {})", category.unwrap_or("unknown"));
+        cleanup_removed_files_selective(&all_expected_filenames, instance_dir, should_cleanup_mods, should_cleanup_resourcepacks)?;
+        println!("🛡️ Anti-cheat cleanup: mods={}, resourcepacks={} (category: {})", 
+            should_cleanup_mods, should_cleanup_resourcepacks, category.unwrap_or("unknown"));
     } else {
-        println!("📦 Preserving user mods (category: {})", category.unwrap_or("imported"));
+        println!("📦 Preserving user files (category: {}, allow_mods: {}, allow_resourcepacks: {})", 
+            category.unwrap_or("imported"), allow_custom_mods, allow_custom_resourcepacks);
     }
     
     // Process overrides AFTER cleanup - files from overrides will not be deleted
@@ -146,24 +156,34 @@ where
 /// Clean up mods and resourcepacks that are no longer in the manifest (useful for updates)
 /// Takes the list of expected filenames from the CurseForge API response
 /// Cleans .jar files from mods/ and .zip files from resourcepacks/
-fn cleanup_removed_files(expected_filenames: &std::collections::HashSet<String>, instance_dir: &PathBuf) -> Result<()> {
+/// With selective cleanup based on allow_custom flags
+fn cleanup_removed_files_selective(
+    expected_filenames: &std::collections::HashSet<String>,
+    instance_dir: &PathBuf,
+    cleanup_mods: bool,
+    cleanup_resourcepacks: bool
+) -> Result<()> {
     let mut total_removed = 0;
     
-    // Clean up mods directory (.jar files)
-    total_removed += cleanup_directory(
-        &instance_dir.join("mods"),
-        expected_filenames,
-        "jar",
-        "mod"
-    );
+    // Clean up mods directory (.jar files) only if cleanup_mods is true
+    if cleanup_mods {
+        total_removed += cleanup_directory(
+            &instance_dir.join("mods"),
+            expected_filenames,
+            "jar",
+            "mod"
+        );
+    }
     
-    // Clean up resourcepacks directory (.zip files)
-    total_removed += cleanup_directory(
-        &instance_dir.join("resourcepacks"),
-        expected_filenames,
-        "zip",
-        "resourcepack"
-    );
+    // Clean up resourcepacks directory (.zip files) only if cleanup_resourcepacks is true
+    if cleanup_resourcepacks {
+        total_removed += cleanup_directory(
+            &instance_dir.join("resourcepacks"),
+            expected_filenames,
+            "zip",
+            "resourcepack"
+        );
+    }
     
     if total_removed > 0 {
         println!("🧹 Cleaned up {} old file(s) total", total_removed);
