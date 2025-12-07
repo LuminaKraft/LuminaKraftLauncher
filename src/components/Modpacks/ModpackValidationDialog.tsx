@@ -44,25 +44,67 @@ export const ModpackValidationDialog: React.FC<ModpackValidationDialogProps> = (
     }
   };
 
-  const handleFileUpload = (mod: ModFileInfo, file: File) => {
+  /**
+   * Calculate SHA1 hash of a file using WebCrypto API
+   */
+  const calculateSHA1 = async (file: File): Promise<string> => {
+    const buffer = await file.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest('SHA-1', buffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  };
+
+  /**
+   * Get expected SHA1 hash from mod info
+   */
+  const getExpectedSHA1 = (mod: ModFileInfo): string | null => {
+    if (!mod.hashes) return null;
+    const sha1Hash = mod.hashes.find(h => h.algo === 1); // 1 = SHA1
+    return sha1Hash?.value?.toLowerCase() || null;
+  };
+
+  const handleFileUpload = async (mod: ModFileInfo, file: File) => {
     // Validate it's a JAR or ZIP file
     if (!file.name.endsWith('.jar') && !file.name.endsWith('.zip')) {
       toast.error(t('publishModpack.validation.invalidFileType'));
       return;
     }
 
-    // Validate filename matches (exact or without extension)
-    const modNameWithoutExt = mod.fileName.replace(/\.(jar|zip)$/i, '');
-    const fileNameWithoutExt = file.name.replace(/\.(jar|zip)$/i, '');
-    const isExactMatch = mod.fileName.toLowerCase() === file.name.toLowerCase();
-    const isNameMatch = modNameWithoutExt.toLowerCase() === fileNameWithoutExt.toLowerCase();
+    // Get expected SHA1 hash from CurseForge data
+    const expectedHash = getExpectedSHA1(mod);
 
-    if (!isExactMatch && !isNameMatch) {
-      toast.error(t('publishModpack.validation.filenameMismatch', {
-        expected: mod.fileName,
-        got: file.name
-      }));
-      return;
+    if (expectedHash) {
+      // Calculate SHA1 of uploaded file
+      const loadingToast = toast.loading(t('publishModpack.validation.verifyingHash'));
+      try {
+        const actualHash = await calculateSHA1(file);
+        toast.dismiss(loadingToast);
+
+        if (actualHash.toLowerCase() !== expectedHash.toLowerCase()) {
+          toast.error(t('publishModpack.validation.hashMismatch'));
+          return;
+        }
+      } catch (error) {
+        toast.dismiss(loadingToast);
+        console.error('Error calculating hash:', error);
+        // Fallback to size check if hash calculation fails
+        if (mod.fileLength && mod.fileLength > 0 && file.size !== mod.fileLength) {
+          toast.error(t('publishModpack.validation.fileSizeMismatch', {
+            expected: (mod.fileLength / 1024).toFixed(1),
+            got: (file.size / 1024).toFixed(1)
+          }));
+          return;
+        }
+      }
+    } else if (mod.fileLength && mod.fileLength > 0) {
+      // Fallback to size check if no hash available
+      if (file.size !== mod.fileLength) {
+        toast.error(t('publishModpack.validation.fileSizeMismatch', {
+          expected: (mod.fileLength / 1024).toFixed(1),
+          got: (file.size / 1024).toFixed(1)
+        }));
+        return;
+      }
     }
 
     const newFiles = new Map(uploadedFiles);
@@ -70,7 +112,7 @@ export const ModpackValidationDialog: React.FC<ModpackValidationDialogProps> = (
     setUploadedFiles(newFiles);
   };
 
-  const handleBulkFileUpload = (files: FileList | File[]) => {
+  const handleBulkFileUpload = async (files: FileList | File[]) => {
     const fileArray = Array.from(files);
     const validFiles = fileArray.filter(f => f.name.endsWith('.jar') || f.name.endsWith('.zip'));
 
@@ -79,30 +121,49 @@ export const ModpackValidationDialog: React.FC<ModpackValidationDialogProps> = (
       return;
     }
 
+    const loadingToast = toast.loading(t('publishModpack.validation.verifyingFiles', { count: validFiles.length }));
+
     const newFiles = new Map(uploadedFiles);
     let matchedCount = 0;
+    let verificationFailedCount = 0;
 
-    // Try to match each file with a missing mod by filename
-    validFiles.forEach(file => {
-      const matchingMod = missingMods.find(mod => {
-        // Try exact match first
-        if (mod.fileName.toLowerCase() === file.name.toLowerCase()) return true;
-        // Try without extension
-        const modNameWithoutExt = mod.fileName.replace(/\.(jar|zip)$/i, '');
-        const fileNameWithoutExt = file.name.replace(/\.(jar|zip)$/i, '');
-        return modNameWithoutExt.toLowerCase() === fileNameWithoutExt.toLowerCase();
-      });
+    // Try to match each file with a missing mod by hash first, then by size
+    for (const file of validFiles) {
+      let matchingMod: ModFileInfo | undefined;
 
-      if (matchingMod) {
+      // Priority 1: Match by SHA1 hash (100% accurate)
+      const fileHash = await calculateSHA1(file).catch(() => null);
+      if (fileHash) {
+        matchingMod = missingMods.find(mod => {
+          const expectedHash = getExpectedSHA1(mod);
+          return expectedHash && expectedHash.toLowerCase() === fileHash.toLowerCase();
+        });
+      }
+
+      // Priority 2: Match by exact file size (fallback if no hash match)
+      if (!matchingMod) {
+        matchingMod = missingMods.find(mod =>
+          mod.fileLength && mod.fileLength > 0 && file.size === mod.fileLength
+        );
+      }
+
+      if (matchingMod && !newFiles.has(matchingMod.fileName)) {
         newFiles.set(matchingMod.fileName, file);
         matchedCount++;
+      } else {
+        // File didn't match any mod's hash/size = verification failed
+        verificationFailedCount++;
       }
-    });
+    }
 
+    toast.dismiss(loadingToast);
     setUploadedFiles(newFiles);
 
-    if (validFiles.length > matchedCount) {
-      toast.error(t('publishModpack.validation.filesNotMatched', { count: validFiles.length - matchedCount }));
+    if (matchedCount > 0) {
+      toast.success(t('publishModpack.validation.filesMatched', { count: matchedCount }));
+    }
+    if (verificationFailedCount > 0) {
+      toast.error(t('publishModpack.validation.filesVerificationFailed', { count: verificationFailedCount }));
     }
   };
 
@@ -176,8 +237,8 @@ export const ModpackValidationDialog: React.FC<ModpackValidationDialogProps> = (
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
                   className={`mb-4 border-2 border-dashed rounded-lg p-4 text-center transition-all ${isDragging
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                      : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500'
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                    : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500'
                     }`}
                 >
                   <div className="flex flex-col items-center gap-2">
@@ -220,8 +281,8 @@ export const ModpackValidationDialog: React.FC<ModpackValidationDialogProps> = (
                     <div
                       key={index}
                       className={`p-3 rounded-lg border ${isResolved
-                          ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800'
-                          : 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800'
+                        ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800'
+                        : 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800'
                         }`}
                     >
                       <div className="flex items-center justify-between gap-3">
@@ -307,8 +368,8 @@ export const ModpackValidationDialog: React.FC<ModpackValidationDialogProps> = (
             onClick={() => onContinue(uploadedFiles.size > 0 ? uploadedFiles : undefined)}
             disabled={!canContinue}
             className={`px-4 py-2 rounded-lg transition-colors ${canContinue
-                ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                : 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+              ? 'bg-blue-600 hover:bg-blue-700 text-white'
+              : 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
               }`}
           >
             {canContinue ? (uploadedFiles.size > 0 ? t('publishModpack.validation.buttons.continueWithFiles', { count: uploadedFiles.size }) : t('publishModpack.validation.buttons.continue')) : t('publishModpack.validation.buttons.cannotImportYet')}

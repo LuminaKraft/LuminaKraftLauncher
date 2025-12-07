@@ -21,6 +21,8 @@ export interface ModFileInfo {
   fileName: string;
   downloadUrl: string | null;
   fileStatus: number;
+  fileLength: number; // File size in bytes for validation
+  hashes?: Array<{ algo: number; value: string }>; // 1=SHA1, 2=MD5
   isAvailable: boolean;
   modSlug?: string;
   modWebsiteUrl?: string;
