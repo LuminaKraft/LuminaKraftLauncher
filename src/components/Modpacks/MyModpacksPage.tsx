@@ -487,12 +487,20 @@ export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: My
   };
 
   /**
-   * Handle skip download - import without creating updated ZIP
+   * Handle skip download - import WITH uploaded files included (but don't download the updated ZIP to disk)
+   * This creates a temp ZIP with overrides and imports it, then cleans up
    */
   const handleSkipDownload = async () => {
     if (validationData) {
       try {
-        await performImport(validationData.filePath);
+        // If there are pending uploaded files, prepare the ZIP with overrides
+        let zipToImport = validationData.filePath;
+        if (pendingUploadedFiles && pendingUploadedFiles.size > 0) {
+          console.log(`[Import] Preparing ZIP with ${pendingUploadedFiles.size} uploaded file(s)...`);
+          zipToImport = await prepareZipWithOverrides(validationData.filePath, pendingUploadedFiles);
+        }
+
+        await performImport(zipToImport);
         setPendingUploadedFiles(null);
         setValidationData(null);
       } catch (error) {
@@ -862,11 +870,10 @@ export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: My
         onClose={() => setShowDownloadDialog(false)}
         onConfirm={handleDownloadDialogConfirm}
         onCancel={handleSkipDownload}
-        title="Download Updated Modpack?"
-        message={`You've uploaded ${pendingUploadedFiles?.size || 0
-          } file(s) that were missing from this modpack. Would you like to download an updated version of the ZIP file with these files included in the overrides folder?`}
-        confirmText="Download Updated ZIP"
-        cancelText="Skip Download"
+        title={t('myModpacks.downloadDialog.title')}
+        message={t('myModpacks.downloadDialog.message', { count: pendingUploadedFiles?.size || 0 })}
+        confirmText={t('myModpacks.downloadDialog.downloadButton')}
+        cancelText={t('myModpacks.downloadDialog.skipButton')}
         variant="info"
       />
 

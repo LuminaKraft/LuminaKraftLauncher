@@ -619,6 +619,12 @@
       "title": "No local modpacks yet",
       "description": "Import a CurseForge modpack to get started",
       "button": "Import Your First Modpack"
+    },
+    "downloadDialog": {
+      "title": "Download Updated Modpack?",
+      "message": "You've uploaded {{count}} file(s) that were missing from this modpack. Would you like to download an updated version of the ZIP file with these files included in the overrides folder?",
+      "downloadButton": "Download Updated ZIP",
+      "skipButton": "Continue Without Downloading"
     }
   },
   "rateLimit": {
@@ -908,6 +914,7 @@
       "remaining": "{{count}} remaining",
       "selectMultiple": "Select Multiple Files",
       "invalidFileType": "Please upload a .jar or .zip file",
+      "filenameMismatch": "Filename mismatch: expected \"{{expected}}\", got \"{{got}}\"",
       "noValidFiles": "No valid .jar or .zip files found",
       "filesMatched": "{{count}} file(s) matched and uploaded",
       "filesNotMatched": "{{count}} file(s) could not be matched",

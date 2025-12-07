@@ -51,6 +51,20 @@ export const ModpackValidationDialog: React.FC<ModpackValidationDialogProps> = (
       return;
     }
 
+    // Validate filename matches (exact or without extension)
+    const modNameWithoutExt = mod.fileName.replace(/\.(jar|zip)$/i, '');
+    const fileNameWithoutExt = file.name.replace(/\.(jar|zip)$/i, '');
+    const isExactMatch = mod.fileName.toLowerCase() === file.name.toLowerCase();
+    const isNameMatch = modNameWithoutExt.toLowerCase() === fileNameWithoutExt.toLowerCase();
+
+    if (!isExactMatch && !isNameMatch) {
+      toast.error(t('publishModpack.validation.filenameMismatch', {
+        expected: mod.fileName,
+        got: file.name
+      }));
+      return;
+    }
+
     const newFiles = new Map(uploadedFiles);
     newFiles.set(mod.fileName, file);
     setUploadedFiles(newFiles);
@@ -161,11 +175,10 @@ export const ModpackValidationDialog: React.FC<ModpackValidationDialogProps> = (
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
-                  className={`mb-4 border-2 border-dashed rounded-lg p-4 text-center transition-all ${
-                    isDragging
+                  className={`mb-4 border-2 border-dashed rounded-lg p-4 text-center transition-all ${isDragging
                       ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                       : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500'
-                  }`}
+                    }`}
                 >
                   <div className="flex flex-col items-center gap-2">
                     <Upload className="w-8 h-8 text-gray-400" />
@@ -206,11 +219,10 @@ export const ModpackValidationDialog: React.FC<ModpackValidationDialogProps> = (
                   return (
                     <div
                       key={index}
-                      className={`p-3 rounded-lg border ${
-                        isResolved
+                      className={`p-3 rounded-lg border ${isResolved
                           ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800'
                           : 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -294,11 +306,10 @@ export const ModpackValidationDialog: React.FC<ModpackValidationDialogProps> = (
           <button
             onClick={() => onContinue(uploadedFiles.size > 0 ? uploadedFiles : undefined)}
             disabled={!canContinue}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              canContinue
+            className={`px-4 py-2 rounded-lg transition-colors ${canContinue
                 ? 'bg-blue-600 hover:bg-blue-700 text-white'
                 : 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-            }`}
+              }`}
           >
             {canContinue ? (uploadedFiles.size > 0 ? t('publishModpack.validation.buttons.continueWithFiles', { count: uploadedFiles.size }) : t('publishModpack.validation.buttons.continue')) : t('publishModpack.validation.buttons.cannotImportYet')}
           </button>

@@ -655,19 +655,43 @@ pub async fn create_modpack_with_overrides(
     let output_file_buffered = std::io::BufWriter::new(output_file);
     let mut output_zip = ZipWriter::new(output_file_buffered);
 
-    // Copy all files from original ZIP to new ZIP using raw copy (faster)
+    // Build a set of files that will be added from uploaded files (to skip duplicates)
+    let mut files_to_replace = std::collections::HashSet::new();
+    for file_path in &uploaded_files {
+        if let Some(file_name) = file_path.file_name().and_then(|n| n.to_str()) {
+            let target_folder = if file_path.extension().and_then(|s| s.to_str()) == Some("jar") {
+                "overrides/mods"
+            } else if file_path.extension().and_then(|s| s.to_str()) == Some("zip") {
+                "overrides/resourcepacks"
+            } else {
+                continue;
+            };
+            let zip_path = format!("{}/{}", target_folder, file_name);
+            files_to_replace.insert(zip_path);
+        }
+    }
+
+    // Copy all files from original ZIP to new ZIP, skipping files that will be replaced
     let total_files = original_archive.len();
     let total_steps = total_files + uploaded_files.len() + 1; // +1 for finalization
 
     emit_progress("copying", &format!("Copying {} files from original ZIP", total_files), 0, total_steps);
     println!("📁 Copying {} entries from original ZIP...", total_files);
 
+    let mut skipped_count = 0;
     for i in 0..total_files {
         let mut file = original_archive.by_index(i)?;
         let file_name = file.name().to_string();
 
         // Skip directories
         if file.is_dir() {
+            continue;
+        }
+
+        // Skip files that will be replaced by uploaded files
+        if files_to_replace.contains(&file_name) {
+            println!("⏭️ Skipping {} (will be replaced by uploaded file)", file_name);
+            skipped_count += 1;
             continue;
         }
 
@@ -683,7 +707,7 @@ pub async fn create_modpack_with_overrides(
             emit_progress("copying", &format!("Copying files... ({}/{})", i + 1, total_files), i + 1, total_steps);
         }
     }
-    println!("✅ Finished copying original files");
+    println!("✅ Finished copying original files ({} skipped for replacement)", skipped_count);
 
     // Add uploaded files to overrides folder
     emit_progress("adding", &format!("Adding {} uploaded files to overrides", uploaded_files.len()), total_files, total_steps);

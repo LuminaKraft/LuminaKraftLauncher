@@ -617,6 +617,12 @@
       "title": "Aún no hay modpacks locales",
       "description": "Importa un modpack de CurseForge para comenzar",
       "button": "Importa Tu Primer Modpack"
+    },
+    "downloadDialog": {
+      "title": "¿Descargar Modpack Actualizado?",
+      "message": "Has subido {{count}} archivo(s) que faltaban en este modpack. ¿Te gustaría descargar una versión actualizada del archivo ZIP con estos archivos incluidos en la carpeta overrides?",
+      "downloadButton": "Descargar ZIP Actualizado",
+      "skipButton": "Continuar Sin Descargar"
     }
   },
   "rateLimit": {
@@ -906,6 +912,7 @@
       "remaining": "{{count}} restantes",
       "selectMultiple": "Seleccionar Múltiples Archivos",
       "invalidFileType": "Por favor sube un archivo .jar o .zip",
+      "filenameMismatch": "El nombre del archivo no coincide: se esperaba \"{{expected}}\", pero se subió \"{{got}}\"",
       "noValidFiles": "No se encontraron archivos .jar o .zip válidos",
       "filesMatched": "{{count}} archivo(s) igualados y subidos",
       "filesNotMatched": "{{count}} archivo(s) no pudieron ser igualados",
