@@ -27,30 +27,9 @@ import { OfflineBanner } from './components/Common/OfflineBanner';
 
 function AppContent() {
   const [activeSection, setActiveSection] = useState('home');
-  const [selectedModpackId, setSelectedModpackId] = useState<string | null>(() => {
-    // Restore selected modpack ID for edit-modpack from localStorage
-    try {
-      return localStorage.getItem('editModpackFormModpackId') || null;
-    } catch {
-      return null;
-    }
-  });
-  const [lastPublishedSection, setLastPublishedSection] = useState<string>(() => {
-    // If there's a saved edit modpack, remember we were in edit-modpack
-    try {
-      const savedModpackId = localStorage.getItem('editModpackFormModpackId');
-      if (savedModpackId) {
-        return 'edit-modpack';
-      }
-      const savedPublishStep = localStorage.getItem('publishModpackFormStep');
-      if (savedPublishStep && parseInt(savedPublishStep, 10) > 1) {
-        return 'publish-modpack';
-      }
-    } catch {
-      // ignore
-    }
-    return 'published-modpacks';
-  });
+  const [selectedModpackId, setSelectedModpackId] = useState<string | null>(null);
+  const [lastSelectedModpackId, setLastSelectedModpackId] = useState<string | null>(null);
+  const [lastPublishedSection, setLastPublishedSection] = useState<string>('published-modpacks');
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
@@ -207,6 +186,10 @@ function AppContent() {
       // Otherwise, navigate to the last remembered sub-section
       setIsTransitioning(true);
       withDelay(() => {
+        // Restore selected modpack ID if we're going back to edit mode
+        if (lastPublishedSection === 'edit-modpack' && lastSelectedModpackId) {
+          setSelectedModpackId(lastSelectedModpackId);
+        }
         setActiveSection(lastPublishedSection);
         withDelay(() => {
           setIsTransitioning(false);
@@ -218,6 +201,10 @@ function AppContent() {
     // Remember the current section if leaving published-modpacks area
     if (activeSection === 'publish-modpack' || activeSection === 'edit-modpack' || activeSection === 'published-modpacks') {
       setLastPublishedSection(activeSection);
+      // Remember the modpack ID if we're in edit mode
+      if (activeSection === 'edit-modpack') {
+        setLastSelectedModpackId(selectedModpackId);
+      }
     }
 
     setIsTransitioning(true);
@@ -254,12 +241,17 @@ function AppContent() {
     setIsTransitioning(true);
     withDelay(() => {
       // Clear or set the modpackId based on what was passed
-      setSelectedModpackId(modpackId || null);
+      const newModpackId = modpackId || null;
+      setSelectedModpackId(newModpackId);
       setActiveSection(section);
 
       // Remember if navigating to a published-modpacks sub-section
       if (section === 'publish-modpack' || section === 'edit-modpack' || section === 'published-modpacks') {
         setLastPublishedSection(section);
+        // If entering edit mode, save the ID
+        if (section === 'edit-modpack') {
+          setLastSelectedModpackId(newModpackId);
+        }
       }
 
       withDelay(() => {

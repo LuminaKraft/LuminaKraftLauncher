@@ -557,10 +557,10 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
           <p className="text-gray-500 dark:text-gray-400 mt-1">v{formData.version} • {formData.modloader} {formData.modloaderVersion}</p>
         </div>
         <button
-          onClick={() => onNavigate?.('my-modpacks')}
-          className="px-4 py-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 rounded-lg transition-colors"
+          onClick={() => onNavigate?.('published-modpacks')}
+          className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
         >
-          {t('editModpack.backToList')}
+          <X className="w-6 h-6" />
         </button>
       </div>
 
