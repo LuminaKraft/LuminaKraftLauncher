@@ -22,6 +22,7 @@ interface LauncherState {
   currentLanguage: string;
   isLoading: boolean;
   error: string | null;
+  isOnline: boolean;
 }
 import LauncherService from '../services/launcherService';
 import { FailedModsDialog } from '../components/FailedModsDialog';
@@ -54,6 +55,7 @@ interface LauncherContextType {
   removeModpack: (_id: string) => Promise<void>;
   showUsernameDialog: boolean;
   setShowUsernameDialog: (_value: boolean) => void;
+  isOnline: boolean;
 }
 
 type LauncherAction =
@@ -63,7 +65,8 @@ type LauncherAction =
   | { type: 'SET_LANGUAGE'; payload: string }
   | { type: 'SET_USER_SETTINGS'; payload: UserSettings }
   | { type: 'SET_MODPACK_STATE'; payload: { id: string; state: ModpackState } }
-  | { type: 'UPDATE_MODPACK_PROGRESS'; payload: { id: string; progress: ProgressInfo } };
+  | { type: 'UPDATE_MODPACK_PROGRESS'; payload: { id: string; progress: ProgressInfo } }
+  | { type: 'SET_ONLINE'; payload: boolean };
 
 // Load settings synchronously from launcherService to ensure onboardingCompleted 
 // and other persisted settings are available immediately on app start
@@ -77,6 +80,7 @@ const initialState: LauncherState = {
   currentLanguage: loadedSettings.language || 'en',
   isLoading: false,
   error: null,
+  isOnline: navigator.onLine,
 };
 
 function launcherReducer(state: LauncherState, action: LauncherAction): LauncherState {
@@ -85,6 +89,8 @@ function launcherReducer(state: LauncherState, action: LauncherAction): Launcher
       return { ...state, isLoading: action.payload };
     case 'SET_ERROR':
       return { ...state, error: action.payload, isLoading: false };
+    case 'SET_ONLINE':
+      return { ...state, isOnline: action.payload };
     case 'SET_MODPACKS_DATA':
       return { ...state, modpacksData: action.payload, isLoading: false };
     case 'SET_LANGUAGE':
@@ -279,8 +285,21 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
       }
     };
 
-
     initializeApp();
+  }, []);
+
+  // Listen for online/offline status
+  useEffect(() => {
+    const handleOnline = () => dispatch({ type: 'SET_ONLINE', payload: true });
+    const handleOffline = () => dispatch({ type: 'SET_ONLINE', payload: false });
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
 
   // Helper to refresh user profile from Supabase and update local settings
@@ -1467,6 +1486,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     removeModpack,
     showUsernameDialog,
     setShowUsernameDialog,
+    isOnline: state.isOnline,
   };
 
   // Update ref with refreshData so the cache-clear listener can call it

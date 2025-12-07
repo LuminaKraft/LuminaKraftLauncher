@@ -23,6 +23,7 @@ import { useTranslation } from 'react-i18next';
 import { UsernameRequiredDialog } from './components/UsernameRequiredDialog';
 import { LoadingModal } from './components/Common/LoadingModal';
 import { SetupWizard } from './components/Onboarding/SetupWizard';
+import { OfflineBanner } from './components/Common/OfflineBanner';
 
 function AppContent() {
   const [activeSection, setActiveSection] = useState('home');
@@ -58,7 +59,7 @@ function AppContent() {
   const [modpacksPageKey, setModpacksPageKey] = useState(0); // Key to force re-render of ModpacksPage
   const [showRestartModal, setShowRestartModal] = useState(false);
   const [isRestarting, setIsRestarting] = useState(false);
-  const { isLoading, error, modpacksData, isAuthenticating, setIsAuthenticating, refreshData, showUsernameDialog, userSettings } = useLauncher();
+  const { isLoading, error, modpacksData, isAuthenticating, setIsAuthenticating, refreshData, showUsernameDialog, userSettings, isOnline } = useLauncher();
   const [showSetupWizard, setShowSetupWizard] = useState(false);
   const [setupChecked, setSetupChecked] = useState(false);
   const { withDelay } = useAnimation();
@@ -338,7 +339,8 @@ function AppContent() {
         activeSection={activeSection}
         onSectionChange={handleSectionChange}
       />
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto relative">
+        {!isOnline && <OfflineBanner />}
         <div
           className={`h-full transition-all duration-200 ease-out ${isTransitioning
             ? 'opacity-0 scale-95 translate-y-2'

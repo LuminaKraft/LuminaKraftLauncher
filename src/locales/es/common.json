@@ -39,6 +39,9 @@
     "expand": "Expandir barra lateral",
     "collapse": "Contraer barra lateral"
   },
+  "status": {
+    "offlineMode": "Modo sin conexión"
+  },
   "home": {
     "hero": {
       "title": "¡Bienvenido de nuevo!",

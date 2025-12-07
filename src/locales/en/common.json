@@ -43,6 +43,9 @@
     "expand": "Expand sidebar",
     "collapse": "Collapse sidebar"
   },
+  "status": {
+    "offlineMode": "Offline Mode"
+  },
   "home": {
     "hero": {
       "title": "Welcome back!",
