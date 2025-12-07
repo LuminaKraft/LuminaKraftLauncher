@@ -405,8 +405,8 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
 
       // 1. Update modpack version FIRST (so edge function uses correct version)
       const updatePayload: any = { version: newVersion };
-      if (manifestParsed?.recommendedRam) {
-        updatePayload.recommendedRam = manifestParsed.recommendedRam;
+      if (typeof manifestParsed === 'object' && (manifestParsed as any)?.recommendedRam) {
+        updatePayload.recommendedRam = (manifestParsed as any).recommendedRam;
       }
       await service.updateModpack(modpackId, updatePayload);
 
@@ -545,6 +545,16 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
     { id: 'settings', label: t('editModpack.tabs.settings'), icon: Settings },
   ];
 
+  const handleClose = () => {
+    try {
+      localStorage.removeItem('editModpackFormTab');
+      localStorage.removeItem('editModpackFormModpackId');
+    } catch (e) {
+      console.warn('Failed to clear edit form state:', e);
+    }
+    onNavigate?.('published-modpacks');
+  };
+
   return (
     <div className="max-w-6xl mx-auto p-6">
       <div className="flex justify-between items-center mb-8">
@@ -561,7 +571,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
           <p className="text-gray-500 dark:text-gray-400 mt-1">v{formData.version} • {formData.modloader} {formData.modloaderVersion}</p>
         </div>
         <button
-          onClick={() => onNavigate?.('published-modpacks')}
+          onClick={handleClose}
           className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
         >
           <X className="w-6 h-6" />

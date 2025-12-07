@@ -835,6 +835,17 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
     }
   };
 
+  const handleClose = () => {
+    try {
+      localStorage.removeItem('publishModpackFormData');
+      localStorage.removeItem('publishModpackFormStep');
+      localStorage.removeItem('publishModpackFormLang');
+    } catch (e) {
+      console.warn('Failed to clear form state:', e);
+    }
+    onNavigate?.('published-modpacks');
+  };
+
   return (
     <div className="max-w-5xl mx-auto p-6">
       <div className="mb-8">
@@ -843,7 +854,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
             {t('publishModpack.title')}
           </h1>
           <button
-            onClick={() => onNavigate?.('published-modpacks')}
+            onClick={handleClose}
             className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
             <X className="w-6 h-6" />
@@ -1720,7 +1731,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
         <div className="flex justify-between pt-6 border-t border-gray-200 dark:border-gray-700 mt-8">
           <button
             type="button"
-            onClick={currentStep === 1 ? () => onNavigate?.('published-modpacks') : prevStep}
+            onClick={currentStep === 1 ? handleClose : prevStep}
             className="px-6 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 font-medium transition-colors flex items-center gap-2"
             disabled={isUploading}
           >
