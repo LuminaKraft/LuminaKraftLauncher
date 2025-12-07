@@ -1,4 +1,8 @@
 {
+  "launcher": {
+    "launchFailed": "Launch failed: {{error}}",
+    "launchSuccess": "Launch successful"
+  },
   "app": {
     "title": "LuminaKraft Launcher",
     "version": "Version {{version}}",

@@ -14,6 +14,8 @@ mod modpack;
 mod utils;
 mod oauth;
 
+use crate::launcher::launch_modpack_action;
+
 /// Helper function for serde default values
 fn default_true() -> bool {
     true
@@ -70,12 +72,12 @@ pub struct Modpack {
     pub file_sha256: Option<String>,
     /// Whether custom mods are allowed for this modpack
     /// If false, aggressive cleanup removes user-added mods
-    #[serde(rename = "allowCustomMods", default = "default_true")]
-    pub allow_custom_mods: bool,
+    #[serde(rename = "allowCustomMods")]
+    pub allow_custom_mods: Option<bool>,
     /// Whether custom resource packs are allowed for this modpack
     /// If false, aggressive cleanup removes user-added resource packs
-    #[serde(rename = "allowCustomResourcepacks", default = "default_true")]
-    pub allow_custom_resourcepacks: bool,
+    #[serde(rename = "allowCustomResourcepacks")]
+    pub allow_custom_resourcepacks: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -146,11 +148,11 @@ pub struct InstanceMetadata {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub category: Option<String>,
     /// Whether custom mods are allowed (only relevant for official/partner)
-    #[serde(rename = "allowCustomMods", default = "default_true")]
-    pub allow_custom_mods: bool,
+    #[serde(rename = "allowCustomMods")]
+    pub allow_custom_mods: Option<bool>,
     /// Whether custom resource packs are allowed (only relevant for official/partner)
-    #[serde(rename = "allowCustomResourcepacks", default = "default_true")]
-    pub allow_custom_resourcepacks: bool,
+    #[serde(rename = "allowCustomResourcepacks")]
+    pub allow_custom_resourcepacks: Option<bool>,
 }
 
 #[tauri::command]
@@ -462,18 +464,10 @@ async fn install_modpack_with_failed_tracking(app: tauri::AppHandle, modpack: Mo
     }
 }
 
-#[tauri::command]
-async fn launch_modpack(app: tauri::AppHandle, modpack: Modpack, settings: UserSettings) -> Result<(), String> {
-    // Validate modpack before launching
-    if let Err(e) = launcher::validate_modpack(&modpack) {
-        return Err(format!("Invalid modpack configuration: {}", e));
-    }
-    
-    match launcher::launch_modpack_with_shared_storage_and_token_refresh(modpack, settings, app).await {
-        Ok(_) => Ok(()),
-        Err(e) => Err(format!("Failed to launch modpack: {}", e)),
-    }
-}
+
+
+
+
 
 /// Verify instance integrity before launching (anti-cheat for official/partner modpacks)
 /// Returns: { "valid": bool, "issues": string[], "migrated": bool }
@@ -493,7 +487,7 @@ async fn verify_instance_integrity(
     println!("🔐 Verifying integrity for instance: {}", modpack_id);
     
     // Load metadata
-    let metadata = filesystem::get_instance_metadata(&modpack_id).await
+    let mut metadata = filesystem::get_instance_metadata(&modpack_id).await
         .map_err(|e| format!("Failed to load instance metadata: {}", e))?
         .ok_or_else(|| format!("Instance {} not found", modpack_id))?;
         
@@ -522,8 +516,8 @@ async fn verify_instance_integrity(
                     if local_sha256 != server_sha256 {
                         all_issues.push(format!(
                             "Versión del modpack no coincide con el servidor (instalado: {}..., servidor: {}...)",
-                            &local_sha256[..8.min(local_sha256.len())],
-                            &server_sha256[..8.min(server_sha256.len())]
+                            &local_sha256[..12.min(local_sha256.len())],
+                            &server_sha256[..12.min(server_sha256.len())]
                         ));
                     }
                 }
@@ -531,10 +525,49 @@ async fn verify_instance_integrity(
             }
             
             // Determine effective allow flags: Override (Authoritative) > Metadata (Local)
-            let effective_allow_mods = override_allow_custom_mods.unwrap_or(metadata.allow_custom_mods);
-            let effective_allow_resourcepacks = override_allow_custom_resourcepacks.unwrap_or(metadata.allow_custom_resourcepacks);
+            let mut changed = false;
 
-            // Verify file hashes (respecting allow_custom flags)
+            let effective_allow_mods = if let Some(ov) = override_allow_custom_mods {
+                // If metadata is None (old instance), we treat it as default=true.
+                // If it differs, we update it.
+                if Some(ov) != metadata.allow_custom_mods {
+                    metadata.allow_custom_mods = Some(ov);
+                    changed = true;
+                }
+                ov
+            } else {
+                metadata.allow_custom_mods.unwrap_or(true)
+            };
+
+            let effective_allow_resourcepacks = if let Some(ov) = override_allow_custom_resourcepacks {
+                if Some(ov) != metadata.allow_custom_resourcepacks {
+                    metadata.allow_custom_resourcepacks = Some(ov);
+                    changed = true;
+                }
+                ov
+            } else {
+                metadata.allow_custom_resourcepacks.unwrap_or(true)
+            };
+
+            if changed {
+                 println!("🔄 Syncing security flags to instance.json (during verification): mods={:?}, rp={:?}", 
+                     metadata.allow_custom_mods, metadata.allow_custom_resourcepacks);
+                 if let Err(e) = filesystem::save_instance_metadata(&metadata).await {
+                     println!("⚠️ Failed to save updated metadata during verification: {}", e);
+                 }
+            }
+
+            // If the modpack allows modifications, we skip strict integrity verification
+            // This prevents legit users/admins from being blocked when customizing
+            if effective_allow_mods {
+                println!("🔓 Skipping strict integrity check because custom mods are allowed");
+                return Ok(serde_json::json!({
+                    "isValid": true,
+                    "issues": [],
+                    "reason": "Custom mods allowed - skipping strict verification",
+                    "migrated": false
+                }));
+            }
             let result = verify_integrity(
                 &instance_dir,
                 integrity_data,
@@ -1346,7 +1379,7 @@ fn main() {
             install_modpack_with_minecraft,
             install_modpack_with_failed_tracking,
             install_modpack_with_shared_storage,
-            launch_modpack,
+            launch_modpack_action,
             verify_instance_integrity,
             delete_instance,
             get_launcher_version,

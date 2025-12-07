@@ -243,8 +243,8 @@ pub fn format_issues(issues: &[IntegrityIssue]) -> Vec<String> {
             IntegrityIssue::ModifiedFile { path, expected, actual } => {
                 format!("Archivo modificado: {} (esperado: {}..., actual: {}...)", 
                     path,
-                    &expected[..8.min(expected.len())],
-                    &actual[..8.min(actual.len())]
+                    &expected[..12.min(expected.len())],
+                    &actual[..12.min(actual.len())]
                 )
             }
             IntegrityIssue::UnauthorizedFile { path } => {

@@ -1,4 +1,5 @@
 use crate::{Modpack, InstanceMetadata, UserSettings, filesystem, minecraft, meta::{MetaDirectories, InstanceDirectories}};
+use tauri::{AppHandle, Emitter, Manager};
 use crate::modpack::{extract_zip, curseforge};
 use crate::utils::{cleanup_temp_file, download_file};
 use anyhow::{Result, anyhow};
@@ -52,8 +53,8 @@ pub async fn install_modpack(modpack: Modpack) -> Result<()> {
         custom_ram: None,
         integrity: None, // No integrity tracking for this simple path
         category: None,  // No category for basic installs
-        allow_custom_mods: true,  // Allow custom mods by default for basic installs
-        allow_custom_resourcepacks: true,  // Allow custom resourcepacks by default for basic installs
+        allow_custom_mods: Some(true),  // Allow custom mods by default for basic installs
+        allow_custom_resourcepacks: Some(true),  // Allow custom resourcepacks by default for basic installs
     };
     
     filesystem::save_instance_metadata(&metadata).await?;
@@ -249,8 +250,8 @@ where
                 auth_token.as_deref(),
                 anon_key,
                 modpack.category.as_deref(),
-                modpack.allow_custom_mods,
-                modpack.allow_custom_resourcepacks,
+                modpack.allow_custom_mods.unwrap_or(true),
+                modpack.allow_custom_resourcepacks.unwrap_or(true),
             ).await?;
 
             recommended_ram_from_manifest = recommended_ram;
@@ -307,8 +308,8 @@ where
         custom_ram: None,
         integrity: integrity_data,
         category: modpack.category.clone(),
-        allow_custom_mods: modpack.allow_custom_mods,
-        allow_custom_resourcepacks: modpack.allow_custom_resourcepacks,
+        allow_custom_mods: Some(modpack.allow_custom_mods.unwrap_or(true)),
+        allow_custom_resourcepacks: Some(modpack.allow_custom_resourcepacks.unwrap_or(true)),
     };
     
     filesystem::save_instance_metadata(&metadata).await?;
@@ -381,5 +382,60 @@ fn format_bytes(bytes: u64) -> String {
         format!("{} {}", bytes, UNITS[unit_index])
     } else {
         format!("{:.1} {}", size, UNITS[unit_index])
+    }
+}
+
+#[tauri::command]
+pub async fn launch_modpack_action(
+    mut modpack: Modpack,
+    settings: UserSettings,
+    app: AppHandle
+) -> Result<(), String> {
+    // Validate modpack before launching
+    if let Err(e) = validate_modpack(&modpack) {
+        return Err(format!("Invalid modpack configuration: {}", e));
+    }
+    
+    // Sync security flags from DB (modpack) to instance metadata (instance.json)
+    // This ensures that subsequent offline launches obey the latest permissions
+    if let Ok(Some(mut metadata)) = filesystem::get_instance_metadata(&modpack.id).await {
+        let mut changed = false;
+        
+        if let Some(new_allow_mods) = modpack.allow_custom_mods {
+            if metadata.allow_custom_mods != Some(new_allow_mods) {
+                metadata.allow_custom_mods = Some(new_allow_mods);
+                changed = true;
+            }
+        } else {
+             // Offline/Missing: Backfill from metadata so launcher.rs doesn't default to true
+             modpack.allow_custom_mods = metadata.allow_custom_mods;
+        }
+        
+        if let Some(new_allow_rp) = modpack.allow_custom_resourcepacks {
+            if metadata.allow_custom_resourcepacks != Some(new_allow_rp) {
+                metadata.allow_custom_resourcepacks = Some(new_allow_rp);
+                changed = true;
+            }
+        } else {
+             // Offline/Missing: Backfill from metadata
+             modpack.allow_custom_resourcepacks = metadata.allow_custom_resourcepacks;
+        }
+
+        if changed {
+             println!("🔄 Syncing security flags to instance.json: mods={:?}, rp={:?}", 
+                 metadata.allow_custom_mods, metadata.allow_custom_resourcepacks);
+             if let Err(e) = filesystem::save_instance_metadata(&metadata).await {
+                 println!("⚠️ Failed to save updated metadata: {}", e);
+             }
+        }
+    }
+    
+    // Fallback: If metadata load failed (new install), we default to true (Some(true)) implies "allow" logic in launcher
+    if modpack.allow_custom_mods.is_none() { modpack.allow_custom_mods = Some(true); }
+    if modpack.allow_custom_resourcepacks.is_none() { modpack.allow_custom_resourcepacks = Some(true); }
+    
+    match launch_modpack_with_shared_storage_and_token_refresh(modpack, settings, app).await {
+        Ok(_) => Ok(()),
+        Err(e) => Err(format!("Failed to launch modpack: {}", e)),
     }
 } 

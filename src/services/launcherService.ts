@@ -25,7 +25,7 @@ export enum CacheBehaviour {
   Bypass = 'bypass'
 }
 
-import { open } from '@tauri-apps/plugin-shell';
+// import { open } from '@tauri-apps/plugin-shell';
 import { IntegrityError } from './IntegrityError';
 
 /**
@@ -334,8 +334,8 @@ class LauncherService {
         partnerName: (modpack.partner_id || modpackPartnerMap.get(modpack.id)) ? partnersMap.get(modpack.partner_id || modpackPartnerMap.get(modpack.id)) : undefined,
         publishedAt: modpack.published_at,
         downloads: statsMap.get(modpack.id)?.total_downloads || 0,
-        allowCustomMods: modpack.allow_custom_mods ?? true,
-        allowCustomResourcepacks: modpack.allow_custom_resourcepacks ?? true,
+        allowCustomMods: modpack.allow_custom_mods,
+        allowCustomResourcepacks: modpack.allow_custom_resourcepacks,
         fileSha256: modpack.file_sha256, // SHA256 of the ZIP file
       })) || [];
 
@@ -638,13 +638,31 @@ class LauncherService {
         if (!modpack.modloaderVersion) {
           throw new Error(`Modpack ${modpackId} aún no tiene modloaderVersion después de refrescar. La API puede no estar actualizada.`);
         }
-
-        console.log(`✅ Successfully refreshed modpack data for ${modpackId}`);
-      } catch (refreshError) {
-        console.error('Failed to refresh modpack data:', refreshError);
-        throw new Error(`No se pudo obtener modloaderVersion para ${modpackId}. Intenta refrescar la aplicación.`);
+      } catch (e) {
+        console.warn(`Could not refresh modpack ${modpackId} data`, e);
       }
     }
+
+    // For official/partner modpacks, ALWAYS fetch fresh security flags (custom allowed, sha256)
+    // This ensures that if an admin changes permissions in DB, it is respected immediately without app restart
+    if (modpack && (modpack.category === 'official' || modpack.category === 'partner')) {
+      console.log(`🔒 verifying security flags for ${modpackId}...`);
+      try {
+        // We fetch full details to get fresh allow_custom_* and file_sha256
+        const details = await this.fetchModpackDetails(modpackId);
+        if (details) {
+          // Update the local modpack object directly (which is a reference to the cache)
+          modpack.allowCustomMods = details.allowCustomMods;
+          modpack.allowCustomResourcepacks = details.allowCustomResourcepacks;
+          modpack.fileSha256 = details.fileSha256;
+          console.log(`✅ Security flags updated: mods=${modpack.allowCustomMods}, rp=${modpack.allowCustomResourcepacks}`);
+        }
+      } catch (e) {
+        console.error(`Failed to refresh security flags`, e);
+      }
+    }
+
+
 
     return modpack;
   }
@@ -667,6 +685,8 @@ class LauncherService {
       urlModpackZip: modpack.urlModpackZip || '',
       category: modpack.category || null, // For cleanup/integrity behavior
       fileSha256: modpack.fileSha256 || null, // For download verification
+      allowCustomMods: modpack.allowCustomMods, // Pass boolean directly (defaults to true in Rust if undefined)
+      allowCustomResourcepacks: modpack.allowCustomResourcepacks,
     };
 
 
@@ -783,8 +803,8 @@ class LauncherService {
         }>('verify_instance_integrity', {
           modpackId: modpack.id,
           expectedZipSha256: modpack.fileSha256 || null,
-          overrideAllowCustomMods: modpack.allowCustomMods ?? true,
-          overrideAllowCustomResourcepacks: modpack.allowCustomResourcepacks ?? true
+          overrideAllowCustomMods: modpack.allowCustomMods ?? null,
+          overrideAllowCustomResourcepacks: modpack.allowCustomResourcepacks ?? null
         });
 
         if (!integrityResult.isValid) {
@@ -807,10 +827,16 @@ class LauncherService {
       }
 
       // Transform the modpack structure to match backend expectations
-      const transformedModpack = this.transformModpackForBackend(modpack);
+      // CRITICAL: Clear urlModpackZip when launching to prevent Rust from attempting to download it
+      // if we are offline. Note that integrity check has already passed or been skipped.
+      // We clone the object to avoid modifying the reference in modpacksData
+      const modpackForLaunch = { ...modpack, urlModpackZip: '' };
+      const transformedModpack = this.transformModpackForBackend(modpackForLaunch);
       const transformedSettings = await this.transformUserSettingsForBackend(this.userSettings);
 
-      await safeInvoke('launch_modpack', {
+      console.log('🚀 Launching modpack with payload:', JSON.stringify(transformedModpack, null, 2));
+
+      await safeInvoke('launch_modpack_action', {
         modpack: transformedModpack,
         settings: transformedSettings
       });

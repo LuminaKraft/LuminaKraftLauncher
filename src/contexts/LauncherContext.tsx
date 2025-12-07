@@ -239,6 +239,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     modpackId: string;
     issues: string[];
     modpackName?: string;
+    title?: string;
   }>({ isOpen: false, modpackId: '', issues: [] });
   const refreshDataRef = useRef<(() => Promise<void>) | null>(null);
   const launcherService = LauncherService.getInstance();
@@ -824,17 +825,36 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
                   },
                 },
               });
-            } catch (error) {
-              console.error('Error installing modpack:', error);
+            } catch (error: any) {
+              console.error('Installation failed:', error);
+
+              // Handle download corruption specifically
+              const errorMessage = error.message || String(error);
+              if (errorMessage.includes('Descarga corrupta') || errorMessage.includes('SHA256 mismatch')) {
+                const modpackName = state.modpacksData?.modpacks.find(m => m.id === modpackId)?.name || modpackId;
+                setIntegrityErrorDialog({
+                  isOpen: true,
+                  modpackId,
+                  issues: [errorMessage],
+                  modpackName,
+                  title: t('errors.downloadCorrupt', 'Descarga Corrupta')
+                });
+                // Reset state to not_installed so user can retry cleanly
+                dispatch({
+                  type: 'SET_MODPACK_STATE',
+                  payload: {
+                    id: modpackId,
+                    state: createModpackState('not_installed')
+                  },
+                });
+                return;
+              }
+
               dispatch({
                 type: 'SET_MODPACK_STATE',
                 payload: {
                   id: modpackId,
-                  state: {
-                    ...(state.modpackStates[modpackId] || createModpackState('not_installed')),
-                    status: 'error',
-                    error: String(error)
-                  },
+                  state: createModpackState('error', { error: errorMessage }),
                 },
               });
             }
@@ -1500,6 +1520,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
         }}
         issues={integrityErrorDialog.issues || []}
         modpackName={integrityErrorDialog.modpackName}
+        title={integrityErrorDialog.title}
       />
     </LauncherContext.Provider>
   );

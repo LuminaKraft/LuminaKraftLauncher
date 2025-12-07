@@ -522,7 +522,11 @@ pub async fn launch_minecraft_with_token_refresh(modpack: Modpack, settings: Use
         let config = config_builder.loader(loader).build();
     
         // Install/verify Minecraft installation first
-        install(&config, Some(&emitter)).await?;
+        // We wrap this in a customized error handling block to allow offline usage
+        match install(&config, Some(&emitter)).await {
+            Ok(_) => println!("✅ Minecraft verification passed"),
+            Err(e) => eprintln!("⚠️ Warning: Minecraft verification failed: {}. Assuming offline and attempting to launch...", e),
+        }
     
         // Launch Minecraft
         let child = launch(&config, Some(&emitter)).await?;
@@ -548,7 +552,11 @@ pub async fn launch_minecraft_with_token_refresh(modpack: Modpack, settings: Use
         let config = config_builder.build();
     
         // Install/verify Minecraft installation first
-        install(&config, Some(&emitter)).await?;
+        // We wrap this in a customized error handling block to allow offline usage
+        match install(&config, Some(&emitter)).await {
+            Ok(_) => println!("✅ Minecraft verification passed"),
+            Err(e) => eprintln!("⚠️ Warning: Minecraft verification failed: {}. Assuming offline and attempting to launch...", e),
+        }
     
         // Launch Minecraft
         let child = launch(&config, Some(&emitter)).await?;

@@ -550,6 +550,10 @@
     "cleanupDescription": "Eliminar archivos en caché que ya no se utilizan",
     "cacheSize": "Tamaño de la caché"
   },
+  "launcher": {
+    "launchFailed": "Error al iniciar: {{error}}",
+    "launchSuccess": "Lanzamiento exitoso"
+  },
   "common": {
     "showMore": "Mostrar Más",
     "showLess": "Mostrar Menos",
