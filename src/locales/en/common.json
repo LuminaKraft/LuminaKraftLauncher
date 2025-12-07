@@ -749,7 +749,8 @@
     "effectiveAllocation": "Effective Memory Allocation:",
     "cancel": "Cancel",
     "done": "Done",
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "unsafeRamWarning": "Exceeds safe memory. Using Global."
   },
   "publishModpack": {
     "title": "Publish Modpack",

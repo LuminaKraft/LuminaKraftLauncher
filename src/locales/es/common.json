@@ -745,7 +745,8 @@
     "effectiveAllocation": "Asignación de Memoria Efectiva:",
     "cancel": "Cancelar",
     "done": "Listo",
-    "saving": "Guardando..."
+    "saving": "Guardando...",
+    "unsafeRamWarning": "Excede memoria segura. Se usará Global."
   },
   "publishModpack": {
     "title": "Publicar Modpack",

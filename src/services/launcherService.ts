@@ -792,32 +792,35 @@ class LauncherService {
   async launchModpack(modpackId: string): Promise<void> {
 
     try {
+      // Retrieve modpack info from cache if available
+      const modpack = this.modpacksData?.modpacks.find(m => m.id === modpackId);
+
       // RAM Safety Check
-      if (isTauriContext() && modpack.recommendedRam) {
+      if (isTauriContext()) {
         try {
-          // Get current instance metadata to check if it's using "recommended" setting
+          // Get current instance metadata
           const metadata = await this.getInstanceMetadata(modpackId);
 
           // Only check if user is using "recommended" allocation (or default which might imply recommended behavior)
-          if (metadata && (metadata.ramAllocation === 'recommended' || !metadata.ramAllocation)) {
-            const systemRamGB = (navigator as any).deviceMemory; // Approximation in GB
+          if (metadata && metadata.recommendedRam && (metadata.ramAllocation === 'recommended' || !metadata.ramAllocation)) {
+            // Get accurate system memory from Rust backend (Bytes)
+            const systemRamBytes = await safeInvoke<number>('get_system_memory');
+            const systemRamGB = systemRamBytes / 1024 / 1024 / 1024;
 
             if (systemRamGB) {
-              const recommendedGB = modpack.recommendedRam / 1024;
+              const recommendedGB = metadata.recommendedRam / 1024;
               // Safety buffer: System RAM - 1.5GB (OS overhead)
               const safeLimit = systemRamGB - 1.5;
 
               if (recommendedGB > safeLimit) {
-                console.warn(`⚠️ Recommended RAM (${recommendedGB.toFixed(1)}GB) is unsafe for System RAM (${systemRamGB}GB). Switching to Global settings.`);
+                console.warn(`⚠️ Recommended RAM (${recommendedGB.toFixed(1)}GB) is unsafe for System RAM (${systemRamGB.toFixed(1)}GB). Switching to Global settings.`);
 
                 // Force switch to 'global' to prevent OOM/Crash
                 await safeInvoke('update_instance_ram_settings', {
-                  modpackId: modpack.id,
+                  modpackId: modpackId,
                   ramAllocation: 'global',
                   customRam: null
                 });
-
-                // Notify user potentially? For now we just switch silently/log it as per plan "fallback to global".
               }
             }
           }
@@ -832,16 +835,17 @@ class LauncherService {
 
         // Verify integrity (passing authoritative flags from DB/Server)
         // This prevents users from bypassing restrictions by editing instance.json locally
+        // If modpack data is missing (offline/error), we pass null and relies on local metadata (less secure but functional)
 
         const integrityResult = await safeInvoke<{
           isValid: boolean;
           issues: string[];
           reason?: string;
         }>('verify_instance_integrity', {
-          modpackId: modpack.id,
-          expectedZipSha256: modpack.fileSha256 || null,
-          overrideAllowCustomMods: modpack.allowCustomMods ?? null,
-          overrideAllowCustomResourcepacks: modpack.allowCustomResourcepacks ?? null
+          modpackId: modpackId,
+          expectedZipSha256: modpack?.fileSha256 || null,
+          overrideAllowCustomMods: modpack?.allowCustomMods ?? null,
+          overrideAllowCustomResourcepacks: modpack?.allowCustomResourcepacks ?? null
         });
 
         if (!integrityResult.isValid) {

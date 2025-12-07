@@ -665,6 +665,14 @@ async fn get_platform() -> Result<String, String> {
 }
 
 #[tauri::command]
+async fn get_system_memory() -> Result<u64, String> {
+    use sysinfo::System;
+    let mut sys = System::new_all();
+    sys.refresh_memory();
+    Ok(sys.total_memory())
+}
+
+#[tauri::command]
 async fn get_supported_loaders() -> Result<Vec<String>, String> {
     Ok(minecraft::get_supported_loaders().iter().map(|s| s.to_string()).collect())
 }
@@ -1237,19 +1245,7 @@ async fn install_modpack_from_local_zip(
     .map_err(|e: anyhow::Error| format!("Failed to install modpack from local ZIP: {}", e))
 }
 
-#[tauri::command]
-async fn get_system_ram() -> Result<u32, String> {
-    use sysinfo::System;
-    
-    let mut sys = System::new_all();
-    sys.refresh_memory();
-    
-    // Get total memory in bytes and convert to GB
-    let total_memory_bytes = sys.total_memory();
-    let total_memory_gb = (total_memory_bytes as f64 / 1_073_741_824.0).ceil() as u32;
-    
-    Ok(total_memory_gb)
-}
+
 
 #[tauri::command]
 async fn create_modpack_with_overrides(
@@ -1367,7 +1363,7 @@ fn main() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![
-            get_system_ram,
+
             get_instance_metadata,
             get_cached_modpack_data,
             update_modpack_cache_json,
@@ -1385,6 +1381,7 @@ fn main() {
             get_launcher_version,
             get_platform,
             get_supported_loaders,
+            get_system_memory,
             validate_modpack_config,
             check_instance_needs_update,
             check_curseforge_modpack,

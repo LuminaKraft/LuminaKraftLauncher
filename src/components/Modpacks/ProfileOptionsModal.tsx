@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, HardDrive } from 'lucide-react';
+import { X, HardDrive, AlertTriangle } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { appDataDir } from '@tauri-apps/api/path';
 import toast from 'react-hot-toast';
@@ -42,7 +42,7 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
     (metadata?.ramAllocation as 'recommended' | 'custom' | 'global') || 'recommended'
   );
   const [customRamValue, setCustomRamValue] = useState<number>(
-    metadata?.customRam || metadata?.recommendedRam || userSettings.allocatedRam * 1024 || 4096
+    metadata?.customRam || userSettings.allocatedRam * 1024 || 4096
   );
   const [isSaving, setIsSaving] = useState(false);
   const [editingName, setEditingName] = useState(false);
@@ -52,51 +52,61 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
   const [selectedBannerFile, setSelectedBannerFile] = useState<File | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [bannerPreviewUrl, setBannerPreviewUrl] = useState<string | null>(null);
+  const [systemRamMB, setSystemRamMB] = useState<number>(8192); // Default fallback
+  const [maxAllocatableRam, setMaxAllocatableRam] = useState<number>(32768);
 
-  // Load cached images when modal opens
+  // Load system memory and cached images when modal opens
   useEffect(() => {
-    if (!isOpen || !isLocalModpack) return;
+    if (!isOpen) return;
 
-    const loadImages = async () => {
+    const initData = async () => {
       try {
+        // Get system memory
+        const totalBytes = await invoke<number>('get_system_memory');
+        const totalMB = Math.floor(totalBytes / 1024 / 1024);
+        setSystemRamMB(totalMB);
+        setMaxAllocatableRam(totalMB); // Allow allocating up to total RAM (or maybe slightly less?)
+
         if (!appDataDirRef.current) {
           const appData = await appDataDir();
           appDataDirRef.current = appData.endsWith('/') ? appData.slice(0, -1) : appData;
         }
 
-        // Get cached modpack data to find correct image paths
-        const cachedData = await invoke<string | null>('get_cached_modpack_data', { modpackId });
-        if (cachedData) {
-          const cache = JSON.parse(cachedData);
+        if (isLocalModpack) {
+          // Get cached modpack data to find correct image paths
+          const cachedData = await invoke<string | null>('get_cached_modpack_data', { modpackId });
+          if (cachedData) {
+            const cache = JSON.parse(cachedData);
 
-          // Load logo if path exists in cache
-          if (cache.logo) {
-            try {
-              const fullLogoPath = `${appDataDirRef.current}/${cache.logo}`;
-              const logo = await invoke<string>('get_file_as_data_url', { filePath: fullLogoPath });
-              setLogoUrl(logo);
-            } catch {
-              setLogoUrl(null);
+            // Load logo if path exists in cache
+            if (cache.logo) {
+              try {
+                const fullLogoPath = `${appDataDirRef.current}/${cache.logo}`;
+                const logo = await invoke<string>('get_file_as_data_url', { filePath: fullLogoPath });
+                setLogoUrl(logo);
+              } catch {
+                setLogoUrl(null);
+              }
             }
-          }
 
-          // Load banner if path exists in cache
-          if (cache.backgroundImage) {
-            try {
-              const fullBannerPath = `${appDataDirRef.current}/${cache.backgroundImage}`;
-              const banner = await invoke<string>('get_file_as_data_url', { filePath: fullBannerPath });
-              setBannerUrl(banner);
-            } catch {
-              setBannerUrl(null);
+            // Load banner if path exists in cache
+            if (cache.backgroundImage) {
+              try {
+                const fullBannerPath = `${appDataDirRef.current}/${cache.backgroundImage}`;
+                const banner = await invoke<string>('get_file_as_data_url', { filePath: fullBannerPath });
+                setBannerUrl(banner);
+              } catch {
+                setBannerUrl(null);
+              }
             }
           }
         }
       } catch (error) {
-        console.error('Failed to load images:', error);
+        console.error('Failed to init modal data:', error);
       }
     };
 
-    loadImages();
+    initData();
   }, [isOpen, isLocalModpack, modpackId]);
 
   useEffect(() => {
@@ -106,9 +116,24 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
   useEffect(() => {
     if (metadata) {
       setRamMode((metadata.ramAllocation as 'recommended' | 'custom' | 'global') || 'recommended');
-      setCustomRamValue(metadata.customRam || metadata.recommendedRam || userSettings.allocatedRam * 1024 || 4096);
+      setCustomRamValue(metadata.customRam || userSettings.allocatedRam * 1024 || 4096);
     }
   }, [metadata, userSettings.allocatedRam]);
+
+  // Force global if recommended is unsafe
+  useEffect(() => {
+    if (metadata?.recommendedRam && systemRamMB > 0) {
+      const recommendedMB = metadata.recommendedRam;
+      // Use real system RAM from Rust (MB)
+      // Safety threshold: System RAM - 1.5GB (1536MB)
+      const safeLimitMB = systemRamMB - 1536;
+
+      if (recommendedMB > safeLimitMB && ramMode === 'recommended') {
+        console.warn(`Recommended RAM (${recommendedMB}MB) unsafe for System (${systemRamMB}MB), forcing global`);
+        setRamMode('global');
+      }
+    }
+  }, [metadata, ramMode, systemRamMB]);
 
   if (!isOpen) return null;
 
@@ -255,7 +280,7 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
   };
 
   const MIN_RAM = 512; // 512MB minimum
-  const MAX_RAM = 32768; // 32GB maximum
+
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-8 overflow-hidden pointer-events-auto">
@@ -383,27 +408,52 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
 
           <div className="space-y-3">
             {/* Recommended by Author Option */}
-            <label className="flex items-start space-x-3 p-4 rounded-lg border border-dark-600 hover:border-lumina-500/50 transition-colors cursor-pointer">
-              <input
-                type="radio"
-                name="ramMode"
-                value="recommended"
-                checked={ramMode === 'recommended'}
-                onChange={(e) => setRamMode(e.target.value as 'recommended')}
-                className="mt-1 w-4 h-4 text-lumina-600 bg-dark-700 border-dark-600 focus:ring-lumina-500 focus:ring-2"
-              />
-              <div className="flex-1">
-                <div className="text-white font-medium">
-                  {t('profileOptions.recommendedByAuthor')} - {metadata?.recommendedRam || userSettings.allocatedRam * 1024}MB
-                  {ramMode === 'recommended' && <span className="text-lumina-400 ml-2">{t('profileOptions.default')}</span>}
-                </div>
-                <div className="text-dark-300 text-sm">
-                  {metadata?.recommendedRam
-                    ? t('profileOptions.recommendedDescription')
-                    : t('profileOptions.globalFallback')}
-                </div>
-              </div>
-            </label>
+            {(() => {
+              // Calculate safety using real system memory
+              const recommendedMB = metadata?.recommendedRam || 4096;
+              const safeLimitMB = systemRamMB - 1536; // Buffer 1.5GB
+              const isUnsafe = recommendedMB > safeLimitMB;
+
+              return (
+                <label className={`flex items-start space-x-3 p-4 rounded-lg border transition-colors ${isUnsafe
+                  ? 'border-red-900/50 bg-red-900/10 opacity-75 cursor-not-allowed'
+                  : 'border-dark-600 hover:border-lumina-500/50 cursor-pointer'
+                  }`}>
+                  <input
+                    type="radio"
+                    name="ramMode"
+                    value="recommended"
+                    checked={ramMode === 'recommended'}
+                    onChange={(e) => {
+                      if (!isUnsafe) setRamMode(e.target.value as 'recommended');
+                    }}
+                    disabled={isUnsafe}
+                    className="mt-1 w-4 h-4 text-lumina-600 bg-dark-700 border-dark-600 focus:ring-lumina-500 focus:ring-2 disabled:opacity-50"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className={`font-medium ${isUnsafe ? 'text-red-400' : 'text-white'}`}>
+                        {t('profileOptions.recommendedByAuthor')} - {recommendedMB}MB
+                      </span>
+                      {ramMode === 'recommended' && !isUnsafe && <span className="text-lumina-400 ml-2">{t('profileOptions.default')}</span>}
+                    </div>
+
+                    <div className="text-dark-300 text-sm mt-1">
+                      {isUnsafe ? (
+                        <span className="text-red-400 flex items-center gap-1">
+                          <AlertTriangle className="w-4 h-4" />
+                          {t('profileOptions.unsafeRamWarning', 'Excede memoria segura. Se usará Global.')}
+                        </span>
+                      ) : (
+                        metadata?.recommendedRam
+                          ? t('profileOptions.recommendedDescription')
+                          : t('profileOptions.globalFallback')
+                      )}
+                    </div>
+                  </div>
+                </label>
+              );
+            })()}
 
             {/* Global Settings Option */}
             <label className="flex items-start space-x-3 p-4 rounded-lg border border-dark-600 hover:border-lumina-500/50 transition-colors cursor-pointer">
@@ -445,12 +495,12 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
                         <input
                           type="number"
                           min={MIN_RAM}
-                          max={MAX_RAM}
+                          max={maxAllocatableRam}
                           value={customRamValue}
                           onChange={(e) => {
                             const value = parseInt(e.target.value);
                             if (!isNaN(value)) {
-                              setCustomRamValue(Math.max(MIN_RAM, Math.min(MAX_RAM, value)));
+                              setCustomRamValue(Math.max(MIN_RAM, Math.min(maxAllocatableRam, value)));
                             }
                           }}
                           disabled={ramMode !== 'custom'}
@@ -463,7 +513,7 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
                     <input
                       type="range"
                       min={MIN_RAM}
-                      max={MAX_RAM}
+                      max={maxAllocatableRam}
                       step="256"
                       value={customRamValue}
                       onChange={(e) => setCustomRamValue(parseInt(e.target.value))}
@@ -471,13 +521,13 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
                       className="w-full h-2 bg-dark-600 rounded-lg appearance-none cursor-pointer slider disabled:opacity-50 disabled:cursor-not-allowed"
                       style={{
                         background: ramMode === 'custom'
-                          ? `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${((customRamValue - MIN_RAM) / (MAX_RAM - MIN_RAM)) * 100}%, #374151 ${((customRamValue - MIN_RAM) / (MAX_RAM - MIN_RAM)) * 100}%, #374151 100%)`
+                          ? `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${((customRamValue - MIN_RAM) / (maxAllocatableRam - MIN_RAM)) * 100}%, #374151 ${((customRamValue - MIN_RAM) / (maxAllocatableRam - MIN_RAM)) * 100}%, #374151 100%)`
                           : '#374151'
                       }}
                     />
                     <div className="flex justify-between text-xs text-dark-400">
                       <span>{MIN_RAM} MB</span>
-                      <span>{MAX_RAM} MB</span>
+                      <span>{maxAllocatableRam} MB</span>
                     </div>
                   </div>
                 </div>

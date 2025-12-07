@@ -45,8 +45,11 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
   useEffect(() => {
     const fetchSystemRam = async () => {
       try {
-        const ram = await invoke<number>('get_system_ram');
-        setSystemRam(ram);
+        const totalBytes = await invoke<number>('get_system_memory');
+        // Convert to GB for display and comparison, rounding up to nearest Int like the old backend did
+        // or keep precise? The old one did .ceil()
+        const totalGB = Math.ceil(totalBytes / 1024 / 1024 / 1024);
+        setSystemRam(totalGB);
       } catch (error) {
         console.error('Failed to get system RAM:', error);
         // Keep default of 64GB if fetch fails
@@ -288,8 +291,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
                     onChange={(e) => handleLanguageChange(e.target.value)}
                     disabled={hasActiveOperations}
                     className={`input-field w-full appearance-none pr-10 ${hasActiveOperations
-                        ? 'cursor-not-allowed opacity-50'
-                        : 'cursor-pointer'
+                      ? 'cursor-not-allowed opacity-50'
+                      : 'cursor-pointer'
                       }`}
                   >
                     {languageOptions.map(option => (
