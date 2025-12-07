@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { createPortal } from 'react-dom';
 import { supabase } from '../services/supabaseClient';
 import { appDataDir, join } from '@tauri-apps/api/path';
+import { writeFile, mkdir, exists } from '@tauri-apps/plugin-fs';
 
 
 interface FailedMod {
@@ -178,8 +179,8 @@ export const FailedModsDialog: React.FC<FailedModsDialogProps> = ({
 
     const loadingToast = toast.loading('Installing uploaded mods...');
     try {
-      // Dynamic import to avoid conflict with other files
-      const { writeFile, mkdir, exists } = await import('@tauri-apps/plugin-fs');
+      // Dynamic import removed
+      // const { writeFile, mkdir, exists } = await import('@tauri-apps/plugin-fs');
 
       // Write files to temporary directory first, then call Tauri command
       const tempDir = await join(await appDataDir(), 'temp', 'uploaded_mods');
@@ -271,8 +272,8 @@ export const FailedModsDialog: React.FC<FailedModsDialogProps> = ({
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
                   className={`mb-4 border-2 border-dashed rounded-lg p-4 text-center transition-all ${isDragging
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                      : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500'
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                    : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500'
                     }`}
                 >
                   <div className="flex flex-col items-center gap-2">
@@ -312,8 +313,8 @@ export const FailedModsDialog: React.FC<FailedModsDialogProps> = ({
                     <div
                       key={index}
                       className={`p-3 rounded-lg border ${isResolved
-                          ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800'
-                          : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600'
+                        ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800'
+                        : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600'
                         }`}
                     >
                       <div className="flex items-start justify-between gap-3">

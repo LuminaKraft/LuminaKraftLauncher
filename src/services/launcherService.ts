@@ -25,7 +25,7 @@ export enum CacheBehaviour {
   Bypass = 'bypass'
 }
 
-// import { open } from '@tauri-apps/plugin-shell';
+import { readFile } from '@tauri-apps/plugin-fs';
 import { IntegrityError } from './IntegrityError';
 
 /**
@@ -1368,7 +1368,7 @@ class LauncherService {
 
     try {
       // Read the ZIP file from the path to extract manifest
-      const { readFile } = await import('@tauri-apps/plugin-fs');
+      // Read the ZIP file from the path to extract manifest
       const zipBuffer = await readFile(filePath);
 
       // Extract and parse manifest from ZIP using JSZip

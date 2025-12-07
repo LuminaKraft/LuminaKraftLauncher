@@ -5,6 +5,7 @@ import { Download, FolderOpen, Loader } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import toast from 'react-hot-toast';
 import { appDataDir, tempDir } from '@tauri-apps/api/path';
+import { remove, readFile, writeFile } from '@tauri-apps/plugin-fs';
 import { open } from '@tauri-apps/plugin-dialog';
 import JSZip from 'jszip';
 import ModpackValidationService, { ModFileInfo } from '../../services/modpackValidationService';
@@ -527,7 +528,7 @@ export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: My
       // Clean up temp ZIP file if it was created
       if (tempZipPath) {
         try {
-          const { remove } = await import('@tauri-apps/plugin-fs');
+          // const { remove } = await import('@tauri-apps/plugin-fs');
           await remove(tempZipPath);
           console.log(`[Cleanup] Deleted temp ZIP: ${tempZipPath}`);
         } catch (cleanupError) {
@@ -585,7 +586,7 @@ export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: My
   const prepareZipWithOverrides = async (filePath: string, uploadedFiles: Map<string, File>): Promise<string> => {
     try {
       // Read original ZIP from path
-      const { readFile, writeFile } = await import('@tauri-apps/plugin-fs');
+      // const { readFile, writeFile } = await import('@tauri-apps/plugin-fs');
       const originalZipBuffer = await readFile(filePath);
       const originalZip = new JSZip();
       await originalZip.loadAsync(originalZipBuffer);

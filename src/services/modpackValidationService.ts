@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { readFile } from '@tauri-apps/plugin-fs';
 
 export interface ModpackManifest {
   name: string;
@@ -52,7 +53,7 @@ class ModpackValidationService {
    */
   async validateModpackZipFromPath(filePath: string): Promise<ValidationResult> {
     try {
-      const { readFile } = await import('@tauri-apps/plugin-fs');
+      // const { readFile } = await import('@tauri-apps/plugin-fs');
       const buffer = await readFile(filePath);
 
       // Convert buffer to Blob and then to File

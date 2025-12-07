@@ -12,6 +12,7 @@ import type {
 import { IntegrityError } from '../services/IntegrityError';
 import { IntegrityErrorModal } from '../components/Modpacks/IntegrityErrorModal';
 import { invoke } from '@tauri-apps/api/core';
+import { readFile } from '@tauri-apps/plugin-fs';
 import toast from 'react-hot-toast';
 
 // Define LauncherState here since it is missing from types
@@ -1357,9 +1358,9 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
   const installModpackFromZip = async (filePath: string) => {
     try {
       // Read the ZIP file from the provided path
-      const {
-        readFile
-      } = await import('@tauri-apps/plugin-fs');
+      // const {
+      //   readFile
+      // } = await import('@tauri-apps/plugin-fs');
       const zipBuffer = await readFile(filePath);
 
       // Extract manifest to create a temporary modpack object
