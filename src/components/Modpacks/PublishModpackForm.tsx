@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n';
 import { Plus, X, Upload, FileArchive, AlertCircle, RefreshCw, Check, ChevronRight, ChevronLeft, Info, Image as ImageIcon, FileText, Package, Layers } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
-import { downloadDir } from '@tauri-apps/api/path';
+import { save } from '@tauri-apps/plugin-dialog';
 import { listen } from '@tauri-apps/api/event';
 import JSZip from 'jszip';
 import { supabase } from '../../services/supabaseClient';
@@ -420,9 +420,20 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
         uploadedFilesData.push([file.name, bytes]);
       }
 
-      const downloadsFolder = await downloadDir();
       const outputFileName = zipFile.name.replace('.zip', '_updated.zip');
-      const outputZipPath = `${downloadsFolder}/${outputFileName}`;
+
+      const outputZipPath = await save({
+        defaultPath: outputFileName,
+        filters: [{
+          name: 'Modpack ZIP',
+          extensions: ['zip']
+        }]
+      });
+
+      if (!outputZipPath) {
+        setIsDownloadingZip(false);
+        return;
+      }
 
       setDownloadProgress(10);
 
