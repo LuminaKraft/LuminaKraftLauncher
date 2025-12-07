@@ -276,7 +276,8 @@ export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: My
                 backgroundImage: modpack.backgroundImage,
                 logo: modpack.logo,
                 name: modpack.name,
-                shortDescription: modpack.shortDescription
+                shortDescription: modpack.shortDescription,
+                description: modpack.description
               });
 
               // Required fields that should be in cache
