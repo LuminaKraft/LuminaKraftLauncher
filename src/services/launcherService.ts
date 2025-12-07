@@ -677,11 +677,13 @@ class LauncherService {
       id: modpack.id,
       nombre: modpack.name, // Transform 'name' to 'nombre'
       descripcion: modpack.description || '', // Add missing field
+      shortDescription: modpack.shortDescription || '', // Short description for cards
       version: modpack.version,
       minecraftVersion: modpack.minecraftVersion,
       modloader: modpack.modloader,
       modloaderVersion: modpack.modloaderVersion,
       logo: modpack.logo || '', // Use logo field directly
+      backgroundImage: modpack.backgroundImage || modpack.banner || '', // Banner/background image
       urlModpackZip: modpack.urlModpackZip || '',
       category: modpack.category || null, // For cleanup/integrity behavior
       fileSha256: modpack.fileSha256 || null, // For download verification

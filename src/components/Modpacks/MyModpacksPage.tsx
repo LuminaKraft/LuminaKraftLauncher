@@ -210,11 +210,13 @@ export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: My
           const savedData = localStorage.getItem(`installing_modpack_${id}`);
           if (savedData) {
             const modpack = JSON.parse(savedData);
-            // Save essential fields: user-editable + urlModpackZip for updates
+            // Save essential fields: user-editable + descriptions + urlModpackZip for updates
             const essentialMetadata = {
               name: modpack.name || '',
               logo: modpack.logo || '',
               backgroundImage: modpack.backgroundImage || '',
+              shortDescription: modpack.shortDescription || '',
+              description: modpack.description || '',
               urlModpackZip: modpack.urlModpackZip || '' // Needed for update functionality
             };
             console.log(`📝 Saving essential metadata for ${id}:`, essentialMetadata);
@@ -273,8 +275,55 @@ export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: My
               console.log(`📦 Loaded from cache ${id}:`, {
                 backgroundImage: modpack.backgroundImage,
                 logo: modpack.logo,
-                name: modpack.name
+                name: modpack.name,
+                shortDescription: modpack.shortDescription
               });
+
+              // Required fields that should be in cache
+              const requiredFields = ['name', 'logo', 'backgroundImage', 'shortDescription', 'description', 'urlModpackZip'];
+              const missingFields = requiredFields.filter(
+                field => !modpack[field as keyof typeof modpack]
+              );
+              const isCacheIncomplete = missingFields.length > 0;
+
+              if (isCacheIncomplete) {
+                // Try to enrich from server
+                console.log(`🔄 Cache incomplete for ${id} (missing: ${missingFields.join(', ')}), fetching from server...`);
+                try {
+                  const serverData = await launcherService.fetchModpackDetails(id);
+                  if (serverData) {
+                    // Merge: cache has priority for user-editable fields (name, logo, backgroundImage)
+                    // Server fills all other gaps
+                    const enrichedModpack = {
+                      ...serverData,
+                      ...modpack,
+                      // For these specific fields, prefer cache if set, otherwise use server
+                      name: modpack.name || serverData.name || '',
+                      shortDescription: modpack.shortDescription || serverData.shortDescription || '',
+                      description: modpack.description || serverData.description || '',
+                      urlModpackZip: modpack.urlModpackZip || serverData.urlModpackZip || '',
+                    };
+
+                    // Update cache file with complete data
+                    await invoke('save_modpack_metadata_json', {
+                      modpackId: id,
+                      modpackJson: JSON.stringify({
+                        name: enrichedModpack.name || '',
+                        logo: modpack.logo || serverData.logo || '', // Keep original (may be local path)
+                        backgroundImage: modpack.backgroundImage || serverData.backgroundImage || '', // Keep original
+                        shortDescription: enrichedModpack.shortDescription,
+                        description: enrichedModpack.description,
+                        urlModpackZip: enrichedModpack.urlModpackZip
+                      })
+                    });
+                    console.log(`✅ Cache updated for ${id}`);
+                    modpack = enrichedModpack;
+                  }
+                } catch (enrichError) {
+                  console.log(`Could not enrich cache for ${id}:`, enrichError);
+                }
+              }
+
               // Resolve relative image paths to file:// URLs
               modpack = await resolveImagePaths(modpack);
               dataMap.set(id, modpack);

@@ -148,7 +148,7 @@ pub async fn save_instance_metadata(metadata: &InstanceMetadata) -> Result<()> {
 }
 
 /// Save minimal modpack metadata to cache for display purposes
-/// Only saves UI-relevant data: name, logo, backgroundImage, urlModpackZip
+/// Only saves UI-relevant data: name, logo, backgroundImage, shortDescription, description, urlModpackZip
 /// Technical data (version, modloader, etc.) comes from instance.json
 /// IMPORTANT: Preserves existing values if new values are empty (for updates)
 pub async fn save_modpack_metadata(modpack: &crate::Modpack) -> Result<()> {
@@ -184,6 +184,8 @@ pub async fn save_modpack_metadata(modpack: &crate::Modpack) -> Result<()> {
     let name = if modpack.name.is_empty() { get_existing("name") } else { modpack.name.clone() };
     let logo = if modpack.logo.is_empty() { get_existing("logo") } else { modpack.logo.clone() };
     let background = if modpack.banner_url.is_empty() { get_existing("backgroundImage") } else { modpack.banner_url.clone() };
+    let short_desc = if modpack.short_description.is_empty() { get_existing("shortDescription") } else { modpack.short_description.clone() };
+    let description = if modpack.description.is_empty() { get_existing("description") } else { modpack.description.clone() };
     
     // urlModpackZip: only save if it's a valid HTTP URL, otherwise preserve existing
     let url_to_save = if modpack.url_modpack_zip.starts_with("http") {
@@ -196,6 +198,8 @@ pub async fn save_modpack_metadata(modpack: &crate::Modpack) -> Result<()> {
         "name": name,
         "logo": logo,
         "backgroundImage": background,
+        "shortDescription": short_desc,
+        "description": description,
         "urlModpackZip": url_to_save
     });
 

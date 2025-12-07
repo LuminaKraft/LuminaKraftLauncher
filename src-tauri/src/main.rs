@@ -26,6 +26,8 @@ pub struct Modpack {
     pub name: String,
     #[serde(alias = "descripcion")] // Accept both "description" and "descripcion" from JSON
     pub description: String,
+    #[serde(rename = "shortDescription", default)]
+    pub short_description: String,
     pub version: String,
     #[serde(rename = "minecraftVersion")]
     pub minecraft_version: String,
