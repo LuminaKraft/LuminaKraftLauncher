@@ -17,9 +17,7 @@ mod oauth;
 use crate::launcher::launch_modpack_action;
 
 /// Helper function for serde default values
-fn default_true() -> bool {
-    true
-}
+
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Modpack {

@@ -1,5 +1,5 @@
 use crate::{Modpack, InstanceMetadata, UserSettings, filesystem, minecraft, meta::{MetaDirectories, InstanceDirectories}};
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::AppHandle;
 use crate::modpack::{extract_zip, curseforge};
 use crate::utils::{cleanup_temp_file, download_file};
 use anyhow::{Result, anyhow};
