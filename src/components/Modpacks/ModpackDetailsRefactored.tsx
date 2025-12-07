@@ -290,8 +290,8 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
             <div className="flex-shrink-0">
               <div
                 className={`w-40 h-40 rounded-lg overflow-hidden flex items-center justify-center ${!modpack.logo || (modpack.logo && modpack.logo.length === 1)
-                    ? 'bg-gradient-to-br from-blue-500 to-purple-600'
-                    : ''
+                  ? 'bg-gradient-to-br from-blue-500 to-purple-600'
+                  : ''
                   }`}
                 style={getAnimationStyle({
                   animation: `fadeInUp 0.4s ease-out 0.05s backwards`
@@ -391,8 +391,8 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
                 <button
                   onClick={() => setActiveTab('content')}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-all duration-200 ${activeTab === 'content'
-                      ? 'bg-lumina-600 text-white shadow-lg'
-                      : 'text-dark-300 hover:text-white hover:bg-dark-700'
+                    ? 'bg-lumina-600 text-white shadow-lg'
+                    : 'text-dark-300 hover:text-white hover:bg-dark-700'
                     }`}
                 >
                   <Info className="w-4 h-4" />
@@ -403,8 +403,8 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
                   <button
                     onClick={() => setActiveTab('screenshots')}
                     className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-all duration-200 ${activeTab === 'screenshots'
-                        ? 'bg-lumina-600 text-white shadow-lg'
-                        : 'text-dark-300 hover:text-white hover:bg-dark-700'
+                      ? 'bg-lumina-600 text-white shadow-lg'
+                      : 'text-dark-300 hover:text-white hover:bg-dark-700'
                       }`}
                   >
                     <Image className="w-4 h-4" />
@@ -416,21 +416,24 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
                     )}
                   </button>
                 )}
-                <button
-                  onClick={() => setActiveTab('logs')}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-all duration-200 ${activeTab === 'logs'
+                {/* Logs Tab - Only show when NOT in read-only mode */}
+                {!isReadOnly && (
+                  <button
+                    onClick={() => setActiveTab('logs')}
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-all duration-200 ${activeTab === 'logs'
                       ? 'bg-lumina-600 text-white shadow-lg'
                       : 'text-dark-300 hover:text-white hover:bg-dark-700'
-                    }`}
-                >
-                  <Terminal className="w-4 h-4" />
-                  <span>{t('modpacks.logs')}</span>
-                  {logs.length > 0 && (
-                    <span className="bg-green-500 text-black text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
-                      {logs.length}
-                    </span>
-                  )}
-                </button>
+                      }`}
+                  >
+                    <Terminal className="w-4 h-4" />
+                    <span>{t('modpacks.logs')}</span>
+                    {logs.length > 0 && (
+                      <span className="bg-green-500 text-black text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+                        {logs.length}
+                      </span>
+                    )}
+                  </button>
+                )}
               </div>
 
               {/* Tab Content */}
