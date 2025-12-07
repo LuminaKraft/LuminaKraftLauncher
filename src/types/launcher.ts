@@ -89,6 +89,11 @@ export interface InstanceMetadata {
   modloader: string;
   modloaderVersion: string;
   minecraftVersion: string;
+  ramAllocation?: 'curseforge' | 'recommended' | 'custom' | 'global';
+  customRam?: number;
+  recommendedRam?: number;
+  allowCustomMods?: boolean;
+  allowCustomResourcepacks?: boolean;
 }
 
 export interface MicrosoftAccount {

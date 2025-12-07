@@ -404,7 +404,11 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
       await authService.syncDiscordRoles();
 
       // 1. Update modpack version FIRST (so edge function uses correct version)
-      await service.updateModpack(modpackId, { version: newVersion });
+      const updatePayload: any = { version: newVersion };
+      if (manifestParsed?.recommendedRam) {
+        updatePayload.recommendedRam = manifestParsed.recommendedRam;
+      }
+      await service.updateModpack(modpackId, updatePayload);
 
       // 2. Upload file using r2UploadService (edge function will create version entry)
       const uploadResult = await R2UploadService.uploadToR2(

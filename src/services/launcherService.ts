@@ -337,6 +337,7 @@ class LauncherService {
         allowCustomMods: modpack.allow_custom_mods,
         allowCustomResourcepacks: modpack.allow_custom_resourcepacks,
         fileSha256: modpack.file_sha256, // SHA256 of the ZIP file
+        recommendedRam: modpack.recommended_ram,
       })) || [];
 
       this.modpacksData = { modpacks };
@@ -471,6 +472,7 @@ class LauncherService {
         fileSha256: latestVersion?.file_sha256 || null, // SHA256 for integrity verification
         allowCustomMods: modpackData.allow_custom_mods ?? true,
         allowCustomResourcepacks: modpackData.allow_custom_resourcepacks ?? true,
+        recommendedRam: modpackData.recommended_ram,
         // Features
         features: featuresResult.data?.map((feature: any) => ({
           title: getTranslation(feature.title_i18n),
@@ -788,9 +790,42 @@ class LauncherService {
   }
 
   async launchModpack(modpackId: string): Promise<void> {
-    const modpack = await this.ensureModpackHasRequiredFields(modpackId);
 
     try {
+      // RAM Safety Check
+      if (isTauriContext() && modpack.recommendedRam) {
+        try {
+          // Get current instance metadata to check if it's using "recommended" setting
+          const metadata = await this.getInstanceMetadata(modpackId);
+
+          // Only check if user is using "recommended" allocation (or default which might imply recommended behavior)
+          if (metadata && (metadata.ramAllocation === 'recommended' || !metadata.ramAllocation)) {
+            const systemRamGB = (navigator as any).deviceMemory; // Approximation in GB
+
+            if (systemRamGB) {
+              const recommendedGB = modpack.recommendedRam / 1024;
+              // Safety buffer: System RAM - 1.5GB (OS overhead)
+              const safeLimit = systemRamGB - 1.5;
+
+              if (recommendedGB > safeLimit) {
+                console.warn(`⚠️ Recommended RAM (${recommendedGB.toFixed(1)}GB) is unsafe for System RAM (${systemRamGB}GB). Switching to Global settings.`);
+
+                // Force switch to 'global' to prevent OOM/Crash
+                await safeInvoke('update_instance_ram_settings', {
+                  modpackId: modpack.id,
+                  ramAllocation: 'global',
+                  customRam: null
+                });
+
+                // Notify user potentially? For now we just switch silently/log it as per plan "fallback to global".
+              }
+            }
+          }
+        } catch (e) {
+          console.error('Error during RAM safety check:', e);
+        }
+      }
+
       // Verify integrity before launching (anti-cheat for official/partner modpacks)
       if (isTauriContext()) {
         console.log('🔐 Verifying modpack integrity before launch...');

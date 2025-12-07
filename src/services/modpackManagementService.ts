@@ -398,6 +398,7 @@ export class ModpackManagementService {
       isComingSoon: boolean;
       allowCustomMods: boolean;
       allowCustomResourcepacks: boolean;
+      recommendedRam: number;
     }>
   ): Promise<{ success: boolean; error?: string }> {
     try {
@@ -415,6 +416,7 @@ export class ModpackManagementService {
       if (updates.isComingSoon !== undefined) updateData.is_coming_soon = updates.isComingSoon;
       if (updates.allowCustomMods !== undefined) updateData.allow_custom_mods = updates.allowCustomMods;
       if (updates.allowCustomResourcepacks !== undefined) updateData.allow_custom_resourcepacks = updates.allowCustomResourcepacks;
+      if (updates.recommendedRam !== undefined) updateData.recommended_ram = updates.recommendedRam;
       if (updates.isActive !== undefined) {
         updateData.is_active = updates.isActive;
         // Set published_at and upload_status when making modpack public for the first time
