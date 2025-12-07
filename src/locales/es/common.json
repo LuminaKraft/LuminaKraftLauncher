@@ -1120,7 +1120,8 @@
     "manifestNotFound": "No se encontró manifest.json en el archivo ZIP",
     "selectZipFile": "Por favor selecciona un archivo ZIP",
     "validZipRequired": "Por favor sube un archivo ZIP válido",
-    "versionAndZipRequired": "Se requieren versión y archivo ZIP",
+    "versionAndZipRequired": "La versión y el archivo ZIP son obligatorios",
+    "versionMustBeHigher": "La versión {{version}} debe ser superior a la última versión {{latest}}",
     "preparingForInstallation": "Preparando el modpack para la instalación. Esto puede tomar un momento..."
   },
   "errors": {

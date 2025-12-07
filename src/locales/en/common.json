@@ -1123,6 +1123,7 @@
     "selectZipFile": "Please select a ZIP file",
     "validZipRequired": "Please upload a valid ZIP file",
     "versionAndZipRequired": "Version and ZIP file are required",
+    "versionMustBeHigher": "Version {{version}} must be higher than the latest version {{latest}}",
     "preparingForInstallation": "Preparing the modpack for installation. This may take a moment..."
   },
   "errors": {

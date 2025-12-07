@@ -53,6 +53,32 @@ interface EditModpackFormProps {
   onNavigate?: (_section: string) => void;
 }
 
+// Helper for semantic version comparison
+// Returns: 1 if v1 > v2, -1 if v1 < v2, 0 if equal
+const compareVersions = (v1: string, v2: string): number => {
+  const cleanV1 = v1.replace(/^[vV]/, '').split('-')[0]; // Remove 'v' prefix and prerelease tags for basic comparison
+  const cleanV2 = v2.replace(/^[vV]/, '').split('-')[0];
+
+  const parts1 = cleanV1.split('.').map(Number);
+  const parts2 = cleanV2.split('.').map(Number);
+
+  const maxLength = Math.max(parts1.length, parts2.length);
+
+  for (let i = 0; i < maxLength; i++) {
+    const p1 = parts1[i] || 0;
+    const p2 = parts2[i] || 0;
+
+    if (p1 > p2) return 1;
+    if (p1 < p2) return -1;
+  }
+
+  // If base versions are equal, compare original strings to handle prerelease tags simply
+  // detailed prerelease semver is hard without a library, but this catches basic "1.0.0" vs "1.0.0"
+  if (v1 === v2) return 0;
+
+  return v1.localeCompare(v2);
+};
+
 export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps) {
   const { t } = useTranslation();
   const service = ModpackManagementService.getInstance();
@@ -95,6 +121,9 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
   const [isDraggingScreenshots, setIsDraggingScreenshots] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // State to store the full parsed manifest data
+  const [parsedManifestData, setParsedManifestData] = useState<any>(null);
+
   const {
     isParsing,
     validationData,
@@ -105,6 +134,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
     resetValidation
   } = useModpackValidation({
     onManifestParsed: (data) => {
+      setParsedManifestData(data);
       if (data.version) setNewVersion(data.version);
       // We don't auto-fill other fields here to avoid overwriting existing modpack data accidentally
       // but we could if we wanted to allow updating modpack metadata from the new version ZIP
@@ -361,6 +391,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
       return;
     }
     setZipFile(file);
+    setParsedManifestData(null);
     resetValidation();
     await validateAndParseManifest(file);
   };
@@ -398,6 +429,23 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
       if (!isValid) return;
     }
 
+    // Check version against existing versions
+    if (versions.length > 0) {
+      // Find highest version currently uploaded
+      // (Sort descenting to get max version)
+      const sortedVersions = [...versions].sort((a, b) => compareVersions(b.version, a.version));
+      const latestVersion = sortedVersions[0].version;
+
+      if (compareVersions(newVersion, latestVersion) <= 0) {
+        toast.error(t('validation.versionMustBeHigher', {
+          version: newVersion,
+          latest: latestVersion,
+          defaultValue: `Version ${newVersion} must be higher than the latest version ${latestVersion}`
+        }));
+        return;
+      }
+    }
+
     setIsUpdating(true);
     const toastId = toast.loading(t('toast.uploadingVersion'));
     try {
@@ -405,8 +453,8 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
 
       // 1. Update modpack version FIRST (so edge function uses correct version)
       const updatePayload: any = { version: newVersion };
-      if (typeof manifestParsed === 'object' && (manifestParsed as any)?.recommendedRam) {
-        updatePayload.recommendedRam = (manifestParsed as any).recommendedRam;
+      if (parsedManifestData?.recommendedRam) {
+        updatePayload.recommendedRam = parsedManifestData.recommendedRam;
       }
       await service.updateModpack(modpackId, updatePayload);
 
