@@ -5,6 +5,35 @@ All notable changes to the LuminaKraft Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2025-12-07
+
+### ✨ **Features**
+- **Modpack Management**
+  - Automatically update `recommended_ram` when uploading a new modpack version if the value differs from the DB
+  - Added "Active Players" count to modpack details
+  - Added ability to download full logs for better troubleshooting
+  - Implemented granular control for server modpacks (preventing modification of mods/resourcepacks)
+- **UI/UX**
+  - Display `recommended_ram` from the database in the System Requirements section
+
+### 🛡️ **Safety & Security**
+- **RAM Safety**
+  - Enhanced warnings if selected/recommended RAM exceeds system limits
+  - Automatic fallback to safe "Global" configuration when unsafe RAM is detected
+- **Version Control**
+  - Added validation to prevent uploading modpack versions lower than or equal to the latest version
+
+### 🐛 **Bug Fixes**
+- **Modpack Handling**
+  - Fixed an issue where `overrides` were missing some mods
+  - Fixed modpack validator issues to ensure correct manifest parsing
+  - Fixed duplicate modpack version uploads being allowed
+- **UI & System**
+  - Fixed short and long descriptions not displaying correctly in "My Modpacks"
+  - Fixed "Hours Played" tracking not saving correctly to the database
+  - Cleaned up "Home" and "Explore" views by removing debug logs
+  - Significantly improved log formatting and detail
+
 ## [0.1.0] - 2025-12-05
 
 ### ✨ **Features**
