@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { check, Update } from '@tauri-apps/plugin-updater';
-import { relaunch } from '@tauri-apps/plugin-process';
+import { relaunch, exit } from '@tauri-apps/plugin-process';
 
 export interface UpdateInfo {
   hasUpdate: boolean;
@@ -426,7 +426,15 @@ class UpdateService {
 
       setTimeout(async () => {
         try {
-          await relaunch();
+          // On Windows, we must exit completely to allow the installer (NSIS) to overwrite files.
+          // The installer typically handles restarting the app.
+          if (platform === 'windows') {
+            console.log('🏁 Exiting application for Windows update...');
+            await exit(0);
+          } else {
+            // On other platforms (macOS/Linux), relaunching is usually safe/required
+            await relaunch();
+          }
         } catch (error) {
           console.error('Failed to relaunch application:', error);
           // Emit event to show restart modal instead
