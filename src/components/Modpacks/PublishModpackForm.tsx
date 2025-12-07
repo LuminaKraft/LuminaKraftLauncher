@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
+import i18n from '../../i18n';
 import { Plus, X, Upload, FileArchive, AlertCircle, RefreshCw, Check, ChevronRight, ChevronLeft, Info, Image as ImageIcon, FileText, Package, Layers } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { downloadDir } from '@tauri-apps/api/path';
@@ -94,16 +95,10 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
     return 1;
   };
 
-  const getSavedLang = (): 'en' | 'es' => {
-    try {
-      const saved = localStorage.getItem('publishModpackFormLang');
-      if (saved === 'en' || saved === 'es') {
-        return saved;
-      }
-    } catch (e) {
-      console.warn('Failed to load saved lang:', e);
-    }
-    return 'en';
+  // Get user's current i18n language as the default
+  const getUserLang = (): 'en' | 'es' => {
+    const lang = i18n.language;
+    return lang === 'es' ? 'es' : 'en';
   };
 
   const [formData, setFormData] = useState<FormData>(getSavedFormData);
@@ -118,7 +113,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
   const [isDraggingLogo, setIsDraggingLogo] = useState(false);
   const [isDraggingBanner, setIsDraggingBanner] = useState(false);
   const [isDraggingScreenshots, setIsDraggingScreenshots] = useState(false);
-  const [currentLang, setCurrentLang] = useState<'en' | 'es'>(getSavedLang);
+  const [currentLang, setCurrentLang] = useState<'en' | 'es'>(getUserLang);
   const [currentStep, setCurrentStep] = useState(getSavedStep);
   const [nameError, setNameError] = useState<string | null>(null);
   const [isCheckingName, setIsCheckingName] = useState(false);
@@ -142,14 +137,10 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
     }
   }, [currentStep]);
 
-  // Save current language to localStorage
+  // Reset language to user's language when step changes
   useEffect(() => {
-    try {
-      localStorage.setItem('publishModpackFormLang', currentLang);
-    } catch (e) {
-      console.warn('Failed to save lang:', e);
-    }
-  }, [currentLang]);
+    setCurrentLang(getUserLang());
+  }, [currentStep]);
 
   const getSteps = () => [
     { id: 1, title: t('publishModpack.steps.upload'), icon: Upload, description: t('publishModpack.steps.uploadDesc') },
@@ -158,6 +149,53 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
     { id: 4, title: t('publishModpack.steps.media'), icon: ImageIcon, description: t('publishModpack.steps.mediaDesc') },
     { id: 5, title: t('publishModpack.steps.review'), icon: Check, description: t('publishModpack.steps.reviewDesc') }
   ];
+
+  // Helper to render language tabs with user's language first
+  const userLang = getUserLang();
+  const languageOrder: Array<'en' | 'es'> = userLang === 'es' ? ['es', 'en'] : ['en', 'es'];
+  const langLabels = {
+    en: t('publishModpack.language.english'),
+    es: t('publishModpack.language.spanish')
+  };
+
+  const renderLanguageTabs = () => (
+    <div className="flex gap-2 mb-6 border-b border-gray-200 dark:border-gray-700">
+      {languageOrder.map((lang) => (
+        <button
+          key={lang}
+          type="button"
+          onClick={() => setCurrentLang(lang)}
+          className={`px-4 py-2 font-medium transition-colors relative ${currentLang === lang
+            ? 'text-blue-600 dark:text-blue-400'
+            : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+            }`}
+        >
+          {langLabels[lang]}
+          {currentLang === lang && (
+            <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 dark:bg-blue-400 rounded-t-full"></span>
+          )}
+        </button>
+      ))}
+    </div>
+  );
+
+  const renderSmallLanguageTabs = () => (
+    <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mr-4">
+      {languageOrder.map((lang) => (
+        <button
+          key={lang}
+          type="button"
+          onClick={() => setCurrentLang(lang)}
+          className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${currentLang === lang
+            ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+            : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+            }`}
+        >
+          {lang.toUpperCase()}
+        </button>
+      ))}
+    </div>
+  );
 
   const steps = getSteps();
 
@@ -1115,8 +1153,8 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Allow Custom Mods Toggle */}
                   <label className={`relative flex items-center p-3 rounded-xl border-2 cursor-pointer transition-all ${formData.allowCustomMods !== false
-                      ? 'border-blue-500/20 bg-blue-50/50 dark:bg-blue-900/10'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                    ? 'border-blue-500/20 bg-blue-50/50 dark:bg-blue-900/10'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                     }`}>
                     <div className={`p-2 rounded-lg mr-3 transition-colors ${formData.allowCustomMods !== false ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'}`}>
                       <Package className="w-5 h-5" />
@@ -1139,8 +1177,8 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
 
                   {/* Allow Custom Resourcepacks Toggle */}
                   <label className={`relative flex items-center p-3 rounded-xl border-2 cursor-pointer transition-all ${formData.allowCustomResourcepacks !== false
-                      ? 'border-blue-500/20 bg-blue-50/50 dark:bg-blue-900/10'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                    ? 'border-blue-500/20 bg-blue-50/50 dark:bg-blue-900/10'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                     }`}>
                     <div className={`p-2 rounded-lg mr-3 transition-colors ${formData.allowCustomResourcepacks !== false ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'}`}>
                       <Layers className="w-5 h-5" />
@@ -1174,34 +1212,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                 <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
                   {t('publishModpack.steps.basicInfo')}
                 </h2>
-                <div className="flex gap-2 mb-6 border-b border-gray-200 dark:border-gray-700">
-                  <button
-                    type="button"
-                    onClick={() => setCurrentLang('en')}
-                    className={`px-4 py-2 font-medium transition-colors relative ${currentLang === 'en'
-                      ? 'text-blue-600 dark:text-blue-400'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                      }`}
-                  >
-                    {t('publishModpack.language.english')}
-                    {currentLang === 'en' && (
-                      <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 dark:bg-blue-400 rounded-t-full"></span>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCurrentLang('es')}
-                    className={`px-4 py-2 font-medium transition-colors relative ${currentLang === 'es'
-                      ? 'text-blue-600 dark:text-blue-400'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                      }`}
-                  >
-                    {t('publishModpack.language.spanish')}
-                    {currentLang === 'es' && (
-                      <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 dark:bg-blue-400 rounded-t-full"></span>
-                    )}
-                  </button>
-                </div>
+                {renderLanguageTabs()}
                 <div className="mb-4">
                   <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
                     {t('publishModpack.basicInfo.name')} <span className="text-red-500">*</span>
@@ -1346,34 +1357,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                 <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
                   {t('publishModpack.steps.details')}
                 </h2>
-                <div className="flex gap-2 mb-6 border-b border-gray-200 dark:border-gray-700">
-                  <button
-                    type="button"
-                    onClick={() => setCurrentLang('en')}
-                    className={`px-4 py-2 font-medium transition-colors relative ${currentLang === 'en'
-                      ? 'text-blue-600 dark:text-blue-400'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                      }`}
-                  >
-                    {t('publishModpack.language.english')}
-                    {currentLang === 'en' && (
-                      <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 dark:bg-blue-400 rounded-t-full"></span>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCurrentLang('es')}
-                    className={`px-4 py-2 font-medium transition-colors relative ${currentLang === 'es'
-                      ? 'text-blue-600 dark:text-blue-400'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                      }`}
-                  >
-                    {t('publishModpack.language.spanish')}
-                    {currentLang === 'es' && (
-                      <span className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 dark:bg-blue-400 rounded-t-full"></span>
-                    )}
-                  </button>
-                </div>
+                {renderLanguageTabs()}
                 <div className="mb-4">
                   <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
                     {t('publishModpack.details.shortDescription')} <span className="text-red-500">*</span>
@@ -1381,12 +1365,13 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                   <input
                     type="text"
                     required
+                    maxLength={50}
                     value={formData.shortDescription[currentLang]}
                     onChange={(e) => updateI18nField('shortDescription', currentLang, e.target.value)}
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow"
                     placeholder={currentLang === 'en' ? 'A brief description...' : 'Una breve descripción...'}
                   />
-                  <p className="text-xs text-gray-500 mt-1">{t('publishModpack.details.shortDescriptionHelper')}</p>
+                  <p className="text-xs text-gray-500 mt-1">{formData.shortDescription[currentLang].length}/50 - {t('publishModpack.details.shortDescriptionHelper')}</p>
                 </div>
                 <div className="mb-4">
                   <label className="block font-medium mb-2 text-gray-700 dark:text-gray-300">
@@ -1394,12 +1379,13 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                   </label>
                   <textarea
                     required
+                    maxLength={380}
                     value={formData.description[currentLang]}
                     onChange={(e) => updateI18nField('description', currentLang, e.target.value)}
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 min-h-[150px] transition-shadow"
                     placeholder={currentLang === 'en' ? 'Full description...' : 'Descripción completa...'}
                   />
-                  <p className="text-xs text-gray-500 mt-1">{t('publishModpack.details.fullDescriptionHelper')}</p>
+                  <p className="text-xs text-gray-500 mt-1">{formData.description[currentLang].length}/380 - {t('publishModpack.details.fullDescriptionHelper')}</p>
                 </div>
               </div>
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
@@ -1408,28 +1394,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                     {t('publishModpack.details.features')}
                   </h2>
                   <div className="flex gap-2">
-                    <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mr-4">
-                      <button
-                        type="button"
-                        onClick={() => setCurrentLang('en')}
-                        className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${currentLang === 'en'
-                          ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                          : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                          }`}
-                      >
-                        EN
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setCurrentLang('es')}
-                        className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${currentLang === 'es'
-                          ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                          : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                          }`}
-                      >
-                        ES
-                      </button>
-                    </div>
+                    {renderSmallLanguageTabs()}
                     <button
                       type="button"
                       onClick={addFeature}
