@@ -335,6 +335,24 @@ export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: My
             try {
               const modpack = await launcherService.fetchModpackDetails(id);
               if (modpack) {
+                // Save to cache for future use
+                console.log(`🔄 Cache miss for ${id}, saving server data to cache...`);
+                try {
+                  await invoke('save_modpack_metadata_json', {
+                    modpackId: id,
+                    modpackJson: JSON.stringify({
+                      name: modpack.name || '',
+                      logo: modpack.logo || '',
+                      backgroundImage: modpack.backgroundImage || '',
+                      shortDescription: modpack.shortDescription || '',
+                      description: modpack.description || '',
+                      urlModpackZip: modpack.urlModpackZip || ''
+                    })
+                  });
+                  console.log(`✅ Cache created for ${id}`);
+                } catch (saveError) {
+                  console.log(`Could not save cache for ${id}:`, saveError);
+                }
                 dataMap.set(id, modpack);
               }
             } catch (supabaseError) {
