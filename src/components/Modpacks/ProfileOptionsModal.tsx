@@ -514,7 +514,7 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
                       type="range"
                       min={MIN_RAM}
                       max={maxAllocatableRam}
-                      step="256"
+                      step="64"
                       value={customRamValue}
                       onChange={(e) => setCustomRamValue(parseInt(e.target.value))}
                       disabled={ramMode !== 'custom'}
