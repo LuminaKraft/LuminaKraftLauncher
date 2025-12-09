@@ -1,0 +1,147 @@
+{
+    "version": 1,
+    "lastUpdated": "2025-12-09",
+    "errors": [
+        {
+            "id": "eocd",
+            "patterns": [
+                "could not find eocd",
+                "invalid zip archive",
+                "zip.*corrupt"
+            ],
+            "canRetry": true,
+            "isAutoRetryable": true,
+            "en": {
+                "title": "Corrupted Download",
+                "solution": "The downloaded file is corrupted or incomplete.\n\n1. Click 'Retry' to download again\n2. Make sure you have a stable internet connection\n3. If the problem persists, delete the modpack and try again"
+            },
+            "es": {
+                "title": "Descarga Corrupta",
+                "solution": "El archivo descargado está corrupto o incompleto.\n\n1. Haz clic en 'Reintentar' para volver a descargar\n2. Asegúrate de tener una conexión a internet estable\n3. Si el problema persiste, elimina el modpack y vuelve a intentarlo"
+            }
+        },
+        {
+            "id": "os_error_32",
+            "patterns": [
+                "os error 32",
+                "being used by another process",
+                "utilizado por otro proceso"
+            ],
+            "canRetry": true,
+            "isAutoRetryable": false,
+            "en": {
+                "title": "File In Use",
+                "solution": "A file is being used by another process.\n\n1. Close Minecraft if it's running\n2. Close any file explorer windows showing the modpack folder\n3. Wait a few seconds and try again\n4. If it persists, restart your computer"
+            },
+            "es": {
+                "title": "Archivo en Uso",
+                "solution": "Un archivo está siendo utilizado por otro proceso.\n\n1. Cierra Minecraft si está abierto\n2. Cierra las ventanas del explorador de archivos que muestren la carpeta del modpack\n3. Espera unos segundos y vuelve a intentarlo\n4. Si persiste, reinicia el PC"
+            }
+        },
+        {
+            "id": "decoding_response",
+            "patterns": [
+                "error decoding response",
+                "failed to read chunk"
+            ],
+            "canRetry": true,
+            "isAutoRetryable": true,
+            "en": {
+                "title": "Connection Error",
+                "solution": "There was a network error during download.\n\n1. Click 'Retry' to try again\n2. Check your internet connection\n3. If using Wi-Fi, try moving closer to the router\n4. If the problem persists, try again later"
+            },
+            "es": {
+                "title": "Error de Conexión",
+                "solution": "Hubo un error de red durante la descarga.\n\n1. Haz clic en 'Reintentar' para intentarlo de nuevo\n2. Comprueba tu conexión a internet\n3. Si usas Wi-Fi, prueba a acercarte al router\n4. Si el problema persiste, inténtalo más tarde"
+            }
+        },
+        {
+            "id": "mojang_connection",
+            "patterns": [
+                "piston-meta.mojang.com",
+                "error sending request.*mojang",
+                "launchermeta.mojang.com"
+            ],
+            "canRetry": true,
+            "isAutoRetryable": true,
+            "en": {
+                "title": "Cannot Connect to Mojang",
+                "solution": "Could not connect to Mojang servers.\n\n1. Check your internet connection\n2. If using a VPN, try disabling it\n3. Check if your antivirus is blocking the launcher\n4. Try again in a few minutes (servers might be down)"
+            },
+            "es": {
+                "title": "No se Puede Conectar con Mojang",
+                "solution": "No se pudo conectar con los servidores de Mojang.\n\n1. Revisa tu conexión a internet\n2. Si usas VPN, prueba a desactivarla\n3. Comprueba que el antivirus no esté bloqueando el launcher\n4. Inténtalo en unos minutos (los servidores podrían estar caídos)"
+            }
+        },
+        {
+            "id": "gson_builder",
+            "patterns": [
+                "NoClassDefFoundError.*GsonBuilder",
+                "com/google/gson/GsonBuilder"
+            ],
+            "canRetry": true,
+            "isAutoRetryable": false,
+            "en": {
+                "title": "Antivirus Blocking Files",
+                "solution": "Your antivirus may be blocking or deleting required files.\n\n1. Add an exclusion for %APPDATA%\\LKLauncher in your antivirus\n2. Delete the folder %APPDATA%\\LKLauncher\\meta\\libraries\n3. Reinstall the modpack\n\nThis forces re-download of all required libraries."
+            },
+            "es": {
+                "title": "Antivirus Bloqueando Archivos",
+                "solution": "Tu antivirus puede estar bloqueando o eliminando archivos necesarios.\n\n1. Añade una exclusión para %APPDATA%\\LKLauncher en tu antivirus\n2. Borra la carpeta %APPDATA%\\LKLauncher\\meta\\libraries\n3. Reinstala el modpack\n\nEsto forzará la re-descarga de todas las librerías necesarias."
+            }
+        },
+        {
+            "id": "forge_installer",
+            "patterns": [
+                "FileNotFoundException.*forge-installer-extracts",
+                "forge-installer.*not found"
+            ],
+            "canRetry": false,
+            "isAutoRetryable": false,
+            "en": {
+                "title": "Forge Installation Failed",
+                "solution": "Forge installation files are corrupted or missing.\n\n1. Add an exclusion for %APPDATA%\\LKLauncher in your antivirus\n2. Uninstall this launcher completely\n3. Delete the folder %APPDATA%\\LKLauncher\n4. Reinstall the launcher and try again"
+            },
+            "es": {
+                "title": "Instalación de Forge Fallida",
+                "solution": "Los archivos de instalación de Forge están corruptos o faltan.\n\n1. Añade una exclusión para %APPDATA%\\LKLauncher en tu antivirus\n2. Desinstala este launcher completamente\n3. Borra la carpeta %APPDATA%\\LKLauncher\n4. Reinstala el launcher e inténtalo de nuevo"
+            }
+        },
+        {
+            "id": "java_exception",
+            "patterns": [
+                "java virtual machine launcher",
+                "a java exception has occurred"
+            ],
+            "canRetry": true,
+            "isAutoRetryable": false,
+            "en": {
+                "title": "Java Error",
+                "solution": "A Java error occurred, usually due to insufficient memory or antivirus interference.\n\n1. Close programs that use a lot of memory\n2. Check that your antivirus isn't blocking Java\n3. Try lowering the RAM allocation in Settings\n4. If it persists, delete the modpack and reinstall"
+            },
+            "es": {
+                "title": "Error de Java",
+                "solution": "Ocurrió un error de Java, normalmente por memoria insuficiente o interferencia del antivirus.\n\n1. Cierra programas que consuman mucha memoria\n2. Comprueba que el antivirus no esté bloqueando Java\n3. Prueba a reducir la asignación de RAM en Ajustes\n4. Si persiste, elimina el modpack y reinstálalo"
+            }
+        },
+        {
+            "id": "sha256_mismatch",
+            "patterns": [
+                "sha256.*no coincide",
+                "sha256.*mismatch",
+                "descarga corrupta",
+                "download corrupt"
+            ],
+            "canRetry": true,
+            "isAutoRetryable": true,
+            "en": {
+                "title": "Download Verification Failed",
+                "solution": "The downloaded file doesn't match the expected hash.\n\n1. Click 'Retry' to download again\n2. Make sure you have a stable internet connection\n3. If the problem persists, your connection may be unstable"
+            },
+            "es": {
+                "title": "Verificación de Descarga Fallida",
+                "solution": "El archivo descargado no coincide con el hash esperado.\n\n1. Haz clic en 'Reintentar' para volver a descargar\n2. Asegúrate de tener una conexión a internet estable\n3. Si el problema persiste, tu conexión puede ser inestable"
+            }
+        }
+    ]
+}

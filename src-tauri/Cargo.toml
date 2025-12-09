@@ -21,6 +21,7 @@ tauri-plugin-shell = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
+tauri-plugin-http = "2"
 once_cell = "1.19"
 
 # Using the same versions as lyceris to avoid conflicts

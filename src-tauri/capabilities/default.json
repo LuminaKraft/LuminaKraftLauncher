@@ -2,7 +2,9 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": ["main"],
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "core:default",
     "opener:default",
@@ -13,6 +15,14 @@
     "fs:allow-appdata-read-recursive",
     "fs:allow-download-write-recursive",
     "fs:allow-mkdir",
-    "fs:allow-exists"
+    "fs:allow-exists",
+    {
+      "identifier": "http:default",
+      "allow": [
+        {
+          "url": "https://raw.githubusercontent.com/**"
+        }
+      ]
+    }
   ]
 }

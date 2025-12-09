@@ -1,70 +1,129 @@
-# LKLauncher - Problemas Típicos y Soluciones
+# LKLauncher - Troubleshooting Guide
 
-## Autenticación
+> **Note:** The launcher now automatically detects these errors and shows solutions directly in the app.
 
-### OAuth Error: No se pudo conectar con el launcher
-**Error:** `ERR_BLOCKED_BY_CLIENT` o fallo al enviar tokens
+## Corrupted Download
 
-**Solución:** El error es porque tienes un adblocker u otra extensión del navegador que está bloqueando la autenticación. Desactívalo temporalmente para el proceso de login o prueba en modo incógnito/privado (con extensiones desactivadas).
+**Error patterns:** `could not find eocd`, `invalid zip archive`, `zip.*corrupt`
 
----
+**Solution:**
 
-## Instalación de Modpacks
+The downloaded file is corrupted or incomplete.
 
-### NoClassDefFoundError: com/google/gson/GsonBuilder
-**Error:** `Failed to install modpack: Operation failed: Processor failed: java.lang.NoClassDefFoundError: com/google/gson/GsonBuilder`
-
-**Solución:** Desactiva el antivirus y/o agrega exclusión a `%APPDATA%\LKLauncher`. Luego borra la carpeta `%APPDATA%\LKLauncher\meta\libraries` y vuelve a instalar el modpack, eso forzará que se descarguen de nuevo todas las librerías.
+1. Click 'Retry' to download again
+2. Make sure you have a stable internet connection
+3. If the problem persists, delete the modpack and try again
 
 ---
 
-### FileNotFoundException: forge-installer-extracts
-**Error:** `Failed to install modpack: Operation failed: Processor failed: java.io.FileNotFoundException: ...forge-installer-extracts...`
+## File In Use
 
-**Solución:** Desactiva el antivirus y/o agrega exclusión a `%APPDATA%\LKLauncher`. Desinstala el launcher y borra la carpeta `%APPDATA%\LKLauncher`. Luego reinstala el launcher y debería funcionar.
+**Error patterns:** `os error 32`, `being used by another process`, `utilizado por otro proceso`
 
----
+**Solution:**
 
-### Archivo utilizado por otro proceso (os error 32)
-**Error:** `Failed to install modpack: El proceso no tiene acceso al archivo porque está siendo utilizado por otro proceso. (os error 32)`
+A file is being used by another process.
 
-**Solución:** Cierra Minecraft si lo tienes abierto, cierra también la carpeta del modpack si la tienes abierta en el explorador y vuelve a intentarlo. Si sigue fallando, reinicia el PC.
-
----
-
-### Error al decodificar respuesta
-**Error:** `Failed to install modpack: Failed to read chunk: error decoding response body`
-
-**Solución:** Conexión inestable. Vuelve a intentar la instalación. Si persiste, comprueba tu conexión a internet.
+1. Close Minecraft if it's running
+2. Close any file explorer windows showing the modpack folder
+3. Wait a few seconds and try again
+4. If it persists, restart your computer
 
 ---
 
-### ZIP inválido (Could not find EOCD)
-**Error:** `Failed to install modpack: invalid Zip archive: Could not find EOCD`
+## Connection Error
 
-**Solución:** El archivo se descargó incompleto o corrupto. Cierra el launcher, borra el modpack desde "Mis Modpacks" si aparece, y vuelve a instalarlo. Asegúrate de tener buena conexión a internet.
+**Error patterns:** `error decoding response`, `failed to read chunk`
 
----
+**Solution:**
 
-### No se puede conectar con Mojang
-**Error:** `Failed to install modpack: error sending request for url (https://piston-meta.mojang.com/...)`
+There was a network error during download.
 
-**Solución:** No se pudo conectar con los servidores de Mojang. Revisa tu conexión a internet, si usas VPN desactívala, y comprueba que el antivirus no esté bloqueando el launcher. Puedes probar abriendo https://piston-meta.mojang.com/mc/game/version_manifest_v2.json en el navegador.
-
----
-
-## Ejecución del Juego
-
-### Java Exception has occurred
-**Error:** Popup de Windows "Java Virtual Machine Launcher: A Java Exception has occurred"
-
-**Solución:** Suele pasar cuando no hay suficiente RAM libre o el antivirus bloquea Java. Cierra programas que consuman mucha memoria, revisa que el antivirus no esté bloqueando nada, y si sigue fallando borra la carpeta del modpack e instálalo de nuevo.
+1. Click 'Retry' to try again
+2. Check your internet connection
+3. If using Wi-Fi, try moving closer to the router
+4. If the problem persists, try again later
 
 ---
 
-## Cómo obtener logs completos
+## Cannot Connect to Mojang
 
-### Logs de Minecraft
-Ubicación: `%APPDATA%\LKLauncher\instances\<id-del-modpack>\logs\latest.log`
+**Error patterns:** `piston-meta.mojang.com`, `error sending request.*mojang`, `launchermeta.mojang.com`
 
-Desde el launcher: en "Mis Modpacks", haz click en el botón de carpeta (Abrir Instancia) que aparece al lado del icono de configuración. Se abrirá el explorador de archivos en la carpeta del modpack. Dentro, entra a la carpeta `logs` y abre `latest.log`.
+**Solution:**
+
+Could not connect to Mojang servers.
+
+1. Check your internet connection
+2. If using a VPN, try disabling it
+3. Check if your antivirus is blocking the launcher
+4. Try again in a few minutes (servers might be down)
+
+---
+
+## Antivirus Blocking Files
+
+**Error patterns:** `NoClassDefFoundError.*GsonBuilder`, `com/google/gson/GsonBuilder`
+
+**Solution:**
+
+Your antivirus may be blocking or deleting required files.
+
+1. Add an exclusion for %APPDATA%\LKLauncher in your antivirus
+2. Delete the folder %APPDATA%\LKLauncher\meta\libraries
+3. Reinstall the modpack
+
+This forces re-download of all required libraries.
+
+---
+
+## Forge Installation Failed
+
+**Error patterns:** `FileNotFoundException.*forge-installer-extracts`, `forge-installer.*not found`
+
+**Solution:**
+
+Forge installation files are corrupted or missing.
+
+1. Add an exclusion for %APPDATA%\LKLauncher in your antivirus
+2. Uninstall this launcher completely
+3. Delete the folder %APPDATA%\LKLauncher
+4. Reinstall the launcher and try again
+
+---
+
+## Java Error
+
+**Error patterns:** `java virtual machine launcher`, `a java exception has occurred`
+
+**Solution:**
+
+A Java error occurred, usually due to insufficient memory or antivirus interference.
+
+1. Close programs that use a lot of memory
+2. Check that your antivirus isn't blocking Java
+3. Try lowering the RAM allocation in Settings
+4. If it persists, delete the modpack and reinstall
+
+---
+
+## Download Verification Failed
+
+**Error patterns:** `sha256.*no coincide`, `sha256.*mismatch`, `descarga corrupta`, `download corrupt`
+
+**Solution:**
+
+The downloaded file doesn't match the expected hash.
+
+1. Click 'Retry' to download again
+2. Make sure you have a stable internet connection
+3. If the problem persists, your connection may be unstable
+
+---
+
+## How to get logs
+
+### Minecraft logs
+Location: `%APPDATA%\LKLauncher\instances\<modpack-id>\logs\latest.log`
+
+From the launcher: In "My Modpacks", click the folder button (Open Instance) next to the settings icon. This opens the file explorer in the modpack folder. Inside, go to the `logs` folder and open `latest.log`.

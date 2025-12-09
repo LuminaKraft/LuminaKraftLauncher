@@ -2,13 +2,39 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Download, Play, RefreshCw, Wrench, FolderOpen, Trash2,
-  Loader2, StopCircle, Globe, AlertTriangle, Settings, Clock
+  Loader2, StopCircle, Globe, AlertTriangle, Settings, Clock, Info
 } from 'lucide-react';
 import type { Modpack, ModpackState, ProgressInfo } from '../../../types/launcher';
 import { useLauncher } from '../../../contexts/LauncherContext';
 import { useAnimation } from '../../../contexts/AnimationContext';
 import ConfirmDialog from '../../ConfirmDialog';
 import LauncherService from '../../../services/launcherService';
+import { UnknownErrorModal } from '../../UnknownErrorModal';
+
+// Helper component for clickable error message with modal
+const ErrorMessageClickable: React.FC<{ error: string; modpackId: string }> = ({ error, modpackId }) => {
+  const [showModal, setShowModal] = useState(false);
+  return (
+    <>
+      <button
+        onClick={() => setShowModal(true)}
+        className="p-3 bg-red-600/20 border border-red-600/30 rounded-lg w-full text-left hover:bg-red-600/30 transition-colors cursor-pointer group"
+      >
+        <div className="flex items-center space-x-2">
+          <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />
+          <span className="text-red-400 text-sm flex-1 line-clamp-2">{error}</span>
+          <Info className="w-4 h-4 text-red-400 opacity-50 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+        </div>
+      </button>
+      <UnknownErrorModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        modpackId={modpackId}
+        errorMessage={error}
+      />
+    </>
+  );
+};
 
 interface ModpackActionsProps {
   modpack: Modpack;
@@ -405,14 +431,9 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({
           </div>
         )}
 
-        {/* Error Message */}
+        {/* Error Message - Clickable to show modal */}
         {state.status === 'error' && state.error && (
-          <div className="p-3 bg-red-600/20 border border-red-600/30 rounded-lg">
-            <div className="flex items-center space-x-2">
-              <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />
-              <span className="text-red-400 text-sm">{state.error}</span>
-            </div>
-          </div>
+          <ErrorMessageClickable error={state.error} modpackId={modpack.id} />
         )}
 
         {/* Secondary Actions - only in full management mode */}

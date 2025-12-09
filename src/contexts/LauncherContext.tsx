@@ -33,6 +33,8 @@ import { ModpackManagementService } from '../services/modpackManagementService';
 import { listen } from '@tauri-apps/api/event';
 import { supabase, getUserProfile } from '../services/supabaseClient';
 import RateLimitDialog from '../components/RateLimitDialog';
+import { KnownErrorModal } from '../components/KnownErrorModal';
+import { matchKnownError, initKnownErrors, type KnownError } from '../utils/knownErrors';
 
 interface LauncherContextType {
   modpacksData: ModpacksData | null;
@@ -248,6 +250,12 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     modpackName?: string;
     title?: string;
   }>({ isOpen: false, modpackId: '', issues: [] });
+  const [knownErrorDialog, setKnownErrorDialog] = useState<{
+    isOpen: boolean;
+    modpackId: string;
+    knownError: KnownError | null;
+    originalError: string;
+  }>({ isOpen: false, modpackId: '', knownError: null, originalError: '' });
   const refreshDataRef = useRef<(() => Promise<void>) | null>(null);
   const launcherService = LauncherService.getInstance();
   const { i18n, t } = useTranslation();
@@ -264,6 +272,9 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
 
         // Synchronize language with react-i18next
         await i18n.changeLanguage(settings.language);
+
+        // Pre-load known errors from remote (for error modal)
+        initKnownErrors().catch(err => console.warn('Failed to init known errors:', err));
 
         // If user has Microsoft account, set it in modpack management service (for Minecraft launching)
         if (settings.authMethod === 'microsoft' && settings.microsoftAccount) {
@@ -1230,6 +1241,18 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
           },
         },
       });
+
+      // Check if this is a known error and show the helpful modal
+      const knownError = matchKnownError(errorMessage);
+      if (knownError) {
+        setKnownErrorDialog({
+          isOpen: true,
+          modpackId,
+          knownError,
+          originalError: errorMessage
+        });
+      }
+
       throw error;
     }
   };
@@ -1542,6 +1565,20 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
         issues={integrityErrorDialog.issues || []}
         modpackName={integrityErrorDialog.modpackName}
         title={integrityErrorDialog.title}
+      />
+      <KnownErrorModal
+        isOpen={knownErrorDialog.isOpen}
+        onClose={() => setKnownErrorDialog(prev => ({ ...prev, isOpen: false }))}
+        onRepair={() => {
+          if (knownErrorDialog.modpackId) {
+            const modpackId = knownErrorDialog.modpackId;
+            setKnownErrorDialog(prev => ({ ...prev, isOpen: false }));
+            repairModpack(modpackId);
+          }
+        }}
+        knownError={knownErrorDialog.knownError!}
+        modpackId={knownErrorDialog.modpackId}
+        originalError={knownErrorDialog.originalError}
       />
     </LauncherContext.Provider>
   );

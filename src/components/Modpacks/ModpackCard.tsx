@@ -1,6 +1,6 @@
 import React, { useState, useEffect, memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Download, Play, RefreshCw, Wrench, AlertTriangle, Loader2, Globe, Trash2, FolderOpen, StopCircle, Clock, Settings } from 'lucide-react';
+import { Download, Play, RefreshCw, Wrench, AlertTriangle, Loader2, Globe, Trash2, FolderOpen, StopCircle, Clock, Settings, Info } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import type { Modpack, ModpackState, ProgressInfo } from '../../types/launcher';
 import { useLauncher } from '../../contexts/LauncherContext';
@@ -8,6 +8,7 @@ import { useAnimation } from '../../contexts/AnimationContext';
 import ConfirmDialog from '../ConfirmDialog';
 import ProfileOptionsModal from './ProfileOptionsModal';
 import LauncherService from '../../services/launcherService';
+import { UnknownErrorModal } from '../UnknownErrorModal';
 
 interface ModpackCardProps {
   modpack: Modpack;
@@ -30,6 +31,7 @@ const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect
   const [isRemoving, setIsRemoving] = useState(false);
   const [showProfileOptionsModal, setShowProfileOptionsModal] = useState(false);
   const [instanceMetadata, setInstanceMetadata] = useState<any>(null);
+  const [showErrorModal, setShowErrorModal] = useState(false);
 
   const getServerStatusBadge = () => {
     // Priority: New > Coming Soon (don't show Active if it's New or Coming Soon)
@@ -608,14 +610,21 @@ const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect
           </div>
         )}
 
-        {/* Error Message */}
+        {/* Error Message - Clickable to show modal */}
         {state.status === 'error' && state.error && (
-          <div className="mt-3 p-2 bg-red-600/20 border border-red-600/30 rounded-lg">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowErrorModal(true);
+            }}
+            className="mt-3 p-2 bg-red-600/20 border border-red-600/30 rounded-lg w-full text-left hover:bg-red-600/30 transition-colors cursor-pointer group"
+          >
             <div className="flex items-center space-x-2">
               <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />
-              <span className="text-red-400 text-sm">{state.error}</span>
+              <span className="text-red-400 text-sm flex-1 line-clamp-2">{state.error}</span>
+              <Info className="w-4 h-4 text-red-400 opacity-50 group-hover:opacity-100 transition-opacity flex-shrink-0" />
             </div>
-          </div>
+          </button>
         )}
       </div>
 
@@ -709,6 +718,14 @@ const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect
         metadata={instanceMetadata}
         onSaveComplete={reloadInstanceMetadata}
         onModpackUpdated={onModpackUpdated}
+      />
+
+      {/* Error Modal */}
+      <UnknownErrorModal
+        isOpen={showErrorModal}
+        onClose={() => setShowErrorModal(false)}
+        modpackId={modpack.id}
+        errorMessage={state.error || ''}
       />
     </div>
   );

@@ -189,6 +189,7 @@
     "downloadingMinecraft": "Descargando archivos de Minecraft...",
     "installingMinecraft": "Instalando Minecraft y modloader...",
     "downloadingModpackFiles": "Descargando modpack...",
+    "retryingDownload": "Reintentando descarga...",
     "extractingModpack": "Extrayendo modpack...",
     "finalizing": "Finalizando...",
     "completed": "Completado",
@@ -1129,6 +1130,7 @@
   },
   "errors": {
     "unknown": "Error desconocido",
+    "errorOccurred": "Ha ocurrido un error",
     "downloadFailed": "Error al descargar archivos del modpack",
     "extractionFailed": "Error al extraer archivos del modpack",
     "fileNotFound": "Archivo requerido no encontrado: {{file}}",
@@ -1198,6 +1200,46 @@
       "invalidResponse": "Respuesta inválida de GitHub API",
       "noValidReleases": "No se encontraron releases válidas",
       "updateCheckFailed": "Error al verificar actualizaciones"
+    }
+  },
+  "knownErrors": {
+    "solution": "Solución",
+    "showTechnicalDetails": "Mostrar detalles técnicos",
+    "retryButton": "Reintentar",
+    "openFolder": "Abrir Carpeta",
+    "needHelp": "¿Necesitas más ayuda?",
+    "openTicket": "Abre un ticket en Discord",
+    "eocd": {
+      "title": "Descarga Corrupta",
+      "solution": "El archivo descargado está corrupto o incompleto.\n\n1. Haz clic en 'Reintentar' para volver a descargar\n2. Asegúrate de tener una conexión a internet estable\n3. Si el problema persiste, elimina el modpack y vuelve a intentarlo"
+    },
+    "osError32": {
+      "title": "Archivo en Uso",
+      "solution": "Un archivo está siendo utilizado por otro proceso.\n\n1. Cierra Minecraft si está abierto\n2. Cierra las ventanas del explorador de archivos que muestren la carpeta del modpack\n3. Espera unos segundos y vuelve a intentarlo\n4. Si persiste, reinicia el PC"
+    },
+    "decodingResponse": {
+      "title": "Error de Conexión",
+      "solution": "Hubo un error de red durante la descarga.\n\n1. Haz clic en 'Reintentar' para intentarlo de nuevo\n2. Comprueba tu conexión a internet\n3. Si usas Wi-Fi, prueba a acercarte al router\n4. Si el problema persiste, inténtalo más tarde"
+    },
+    "mojangConnection": {
+      "title": "No se Puede Conectar con Mojang",
+      "solution": "No se pudo conectar con los servidores de Mojang.\n\n1. Revisa tu conexión a internet\n2. Si usas VPN, prueba a desactivarla\n3. Comprueba que el antivirus no esté bloqueando el launcher\n4. Inténtalo en unos minutos (los servidores podrían estar caídos)"
+    },
+    "gsonBuilder": {
+      "title": "Antivirus Bloqueando Archivos",
+      "solution": "Tu antivirus puede estar bloqueando o eliminando archivos necesarios.\n\n1. Añade una exclusión para %APPDATA%\\LKLauncher en tu antivirus\n2. Borra la carpeta %APPDATA%\\LKLauncher\\meta\\libraries\n3. Reinstala el modpack\n\nEsto forzará la re-descarga de todas las librerías necesarias."
+    },
+    "forgeInstaller": {
+      "title": "Instalación de Forge Fallida",
+      "solution": "Los archivos de instalación de Forge están corruptos o faltan.\n\n1. Añade una exclusión para %APPDATA%\\LKLauncher en tu antivirus\n2. Desinstala este launcher completamente\n3. Borra la carpeta %APPDATA%\\LKLauncher\n4. Reinstala el launcher e inténtalo de nuevo"
+    },
+    "javaException": {
+      "title": "Error de Java",
+      "solution": "Ocurrió un error de Java, normalmente por memoria insuficiente o interferencia del antivirus.\n\n1. Cierra programas que consuman mucha memoria\n2. Comprueba que el antivirus no esté bloqueando Java\n3. Prueba a reducir la asignación de RAM en Ajustes\n4. Si persiste, elimina el modpack y reinstálalo"
+    },
+    "sha256Mismatch": {
+      "title": "Verificación de Descarga Fallida",
+      "solution": "El archivo descargado no coincide con el hash esperado.\n\n1. Haz clic en 'Reintentar' para volver a descargar\n2. Asegúrate de tener una conexión a internet estable\n3. Si el problema persiste, tu conexión puede ser inestable"
     }
   }
 }

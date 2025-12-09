@@ -176,31 +176,70 @@ where
             emit_progress("progress.copyingModpack".to_string(), 75.0, "copying_modpack".to_string());
             std::fs::copy(&modpack.url_modpack_zip, &temp_zip_path)?;
         } else {
-            // It's a remote URL, download it
-            emit_progress("progress.downloadingModpackFiles".to_string(), 75.0, "downloading_modpack".to_string());
-            download_file(&modpack.url_modpack_zip, &temp_zip_path).await?;
-        }
-
-        // Verify ZIP SHA256 if expected hash is provided (for all modpacks)
-        if let Some(expected_sha256) = &modpack.file_sha256 {
-            emit_progress("progress.verifyingDownload".to_string(), 78.0, "verifying_download".to_string());
+            // It's a remote URL, download it with retry logic
+            let max_download_retries = 3;
+            let mut download_attempt = 0;
             
-            match crate::modpack::integrity::hash_file(&temp_zip_path) {
-                Ok(actual_sha256) => {
-                    if actual_sha256 != *expected_sha256 {
-                        // Clean up the corrupted file
-                        let _ = std::fs::remove_file(&temp_zip_path);
-                        return Err(anyhow!(
-                            "Descarga corrupta: el hash SHA256 no coincide.\nEsperado: {}...\nRecibido: {}...\n\nPor favor, vuelve a intentar la descarga.",
-                            &expected_sha256[..16.min(expected_sha256.len())],
-                            &actual_sha256[..16.min(actual_sha256.len())]
-                        ));
-                    }
-                    println!("✅ ZIP SHA256 verified: {}...", &actual_sha256[..16.min(actual_sha256.len())]);
+            loop {
+                download_attempt += 1;
+                
+                if download_attempt > 1 {
+                    emit_progress(
+                        format!("progress.retryingDownload|{}/{}", download_attempt, max_download_retries),
+                        75.0,
+                        "retrying_download".to_string()
+                    );
+                    // Wait before retry
+                    tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+                } else {
+                    emit_progress("progress.downloadingModpackFiles".to_string(), 75.0, "downloading_modpack".to_string());
                 }
-                Err(e) => {
-                    eprintln!("⚠️ Could not verify ZIP SHA256: {}", e);
-                    // Continue anyway - don't block installation for verification failures
+                
+                // Attempt download
+                match download_file(&modpack.url_modpack_zip, &temp_zip_path).await {
+                    Ok(()) => {
+                        // Verify ZIP SHA256 if expected hash is provided
+                        if let Some(expected_sha256) = &modpack.file_sha256 {
+                            emit_progress("progress.verifyingDownload".to_string(), 78.0, "verifying_download".to_string());
+                            
+                            match crate::modpack::integrity::hash_file(&temp_zip_path) {
+                                Ok(actual_sha256) => {
+                                    if actual_sha256 != *expected_sha256 {
+                                        // Clean up the corrupted file
+                                        let _ = std::fs::remove_file(&temp_zip_path);
+                                        
+                                        if download_attempt >= max_download_retries {
+                                            return Err(anyhow!(
+                                                "Descarga corrupta: el hash SHA256 no coincide después de {} intentos.\nEsperado: {}...\nRecibido: {}...",
+                                                max_download_retries,
+                                                &expected_sha256[..16.min(expected_sha256.len())],
+                                                &actual_sha256[..16.min(actual_sha256.len())]
+                                            ));
+                                        }
+                                        
+                                        println!("⚠️ SHA256 mismatch, retrying download (attempt {}/{})", download_attempt, max_download_retries);
+                                        continue; // Retry
+                                    }
+                                    println!("✅ ZIP SHA256 verified: {}...", &actual_sha256[..16.min(actual_sha256.len())]);
+                                }
+                                Err(e) => {
+                                    eprintln!("⚠️ Could not verify ZIP SHA256: {}", e);
+                                    // Continue anyway - don't block installation for verification failures
+                                }
+                            }
+                        }
+                        break; // Download successful
+                    }
+                    Err(e) => {
+                        let _ = std::fs::remove_file(&temp_zip_path);
+                        
+                        if download_attempt >= max_download_retries {
+                            return Err(anyhow!("Error al descargar el modpack después de {} intentos: {}", max_download_retries, e));
+                        }
+                        
+                        println!("⚠️ Download failed, retrying (attempt {}/{}): {}", download_attempt, max_download_retries, e);
+                        continue; // Retry
+                    }
                 }
             }
         }
