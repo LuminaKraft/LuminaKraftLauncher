@@ -280,8 +280,36 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
   };
 
   const MIN_RAM = 512; // 512MB minimum
+  const SNAP_RANGE = 256; // Snap to common values if within this range
 
+  // Generate snap points (powers of 2 starting from 1024: 1GB, 2GB, 4GB, 8GB, 16GB, 32GB...)
+  const snapPoints = React.useMemo(() => {
+    const points: number[] = [];
+    let memory = 1024; // Start at 1 GB
+    while (memory <= maxAllocatableRam) {
+      points.push(memory);
+      memory *= 2;
+    }
+    return points;
+  }, [maxAllocatableRam]);
 
+  // Find if value is close to a snap point
+  const snapToNearestPoint = (value: number): number => {
+    for (const point of snapPoints) {
+      if (Math.abs(value - point) <= SNAP_RANGE) {
+        return point;
+      }
+    }
+    return value;
+  };
+
+  const handleCustomRamSliderChange = (value: number) => {
+    // Round to nearest 64 MB step
+    const stepped = Math.round(value / 64) * 64;
+    // Snap to common values if close
+    const snapped = snapToNearestPoint(stepped);
+    setCustomRamValue(Math.max(MIN_RAM, Math.min(maxAllocatableRam, snapped)));
+  };
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-8 overflow-hidden pointer-events-auto">
       <div className="bg-dark-800 rounded-lg p-6 max-w-2xl w-full border border-dark-600 max-h-[90vh] overflow-y-auto pointer-events-auto">
@@ -516,7 +544,7 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
                       max={maxAllocatableRam}
                       step="64"
                       value={customRamValue}
-                      onChange={(e) => setCustomRamValue(parseInt(e.target.value))}
+                      onChange={(e) => handleCustomRamSliderChange(parseInt(e.target.value))}
                       disabled={ramMode !== 'custom'}
                       className="w-full h-2 bg-dark-600 rounded-lg appearance-none cursor-pointer slider disabled:opacity-50 disabled:cursor-not-allowed"
                       style={{

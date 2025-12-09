@@ -170,11 +170,35 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
   const MIN_RAM = 512; // 512 MB minimum
   const MAX_RAM = systemRam; // Use system RAM as maximum (in MB)
   const RAM_STEP = 64; // 64 MB steps
+  const SNAP_RANGE = 256; // Snap to common values if within this range
+
+  // Generate snap points (powers of 2 starting from 1024: 1GB, 2GB, 4GB, 8GB, 16GB, 32GB...)
+  const snapPoints = React.useMemo(() => {
+    const points: number[] = [];
+    let memory = 1024; // Start at 1 GB
+    while (memory <= MAX_RAM) {
+      points.push(memory);
+      memory *= 2;
+    }
+    return points;
+  }, [MAX_RAM]);
+
+  // Find if value is close to a snap point
+  const snapToNearestPoint = (value: number): number => {
+    for (const point of snapPoints) {
+      if (Math.abs(value - point) <= SNAP_RANGE) {
+        return point;
+      }
+    }
+    return value;
+  };
 
   const handleRamSliderChange = (value: number) => {
-    // Round to nearest step and clamp
+    // Round to nearest step
     const stepped = Math.round(value / RAM_STEP) * RAM_STEP;
-    const clampedValue = Math.max(MIN_RAM, Math.min(MAX_RAM, stepped));
+    // Snap to common values if close
+    const snapped = snapToNearestPoint(stepped);
+    const clampedValue = Math.max(MIN_RAM, Math.min(MAX_RAM, snapped));
     handleInputChange('allocatedRam', clampedValue);
   };
 
@@ -186,7 +210,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
 
     const numValue = parseInt(value, 10);
     if (!isNaN(numValue)) {
-      // Round to nearest step and clamp
+      // Round to nearest step and clamp (no snap for manual input)
       const stepped = Math.round(numValue / RAM_STEP) * RAM_STEP;
       const clampedValue = Math.max(MIN_RAM, Math.min(MAX_RAM, stepped));
       handleInputChange('allocatedRam', clampedValue);
