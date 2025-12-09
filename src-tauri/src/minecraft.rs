@@ -460,8 +460,9 @@ pub async fn launch_minecraft_with_token_refresh(modpack: Modpack, settings: Use
     }
     
     // Configure memory using Lyceris' built-in system
-    let memory_gb = settings.allocated_ram.max(1);
-    println!("Configuring memory: {}GB", memory_gb);
+    // allocated_ram is stored in MB (e.g., 4096 for 4GB)
+    let memory_mb = settings.allocated_ram.max(512);
+    println!("Configuring memory: {}MB ({}GB)", memory_mb, memory_mb / 1024);
 
     let (auth_method, refreshed_account) = get_auth_method_with_validation(&settings).await?;
     
@@ -513,8 +514,8 @@ pub async fn launch_minecraft_with_token_refresh(modpack: Modpack, settings: Use
     ))
     .runtime_dir(meta_dirs.java_dir.clone());
     
-    // Set memory using Lyceris' memory system
-    config_builder = config_builder.memory(lyceris::minecraft::config::Memory::Gigabyte(memory_gb as u16));
+    // Set memory using Lyceris' memory system (allocated_ram is in MB)
+    config_builder = config_builder.memory(lyceris::minecraft::config::Memory::Megabyte(memory_mb as u64));
     
     // Build config with or without mod loader
     if !modpack.modloader.is_empty() && !modpack.modloader_version.is_empty() {
