@@ -332,20 +332,13 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
                     <Languages className={`w-5 h-5 ${hasActiveOperations ? 'text-dark-500' : 'text-dark-400'}`} />
                   </div>
                 </div>
-                {hasActiveOperations ? (
+                {hasActiveOperations && (
                   <div className="mt-2 p-3 bg-orange-600/20 border border-orange-600/30 rounded-lg">
                     <p className="text-orange-400 text-sm">
                       {t('settings.languageDisabledDuringOperations')}
                     </p>
                   </div>
-                ) : (
-                  <p className="text-dark-400 text-sm mt-2">
-                    {t('settings.currentLanguage', { language: languageOptions.find(l => l.value === currentLanguage)?.name })}
-                  </p>
                 )}
-                <p className="text-dark-400 text-xs mt-1">
-                  {t('settings.languageDescription')}
-                </p>
               </div>
             </div>
           </div>
@@ -529,12 +522,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
                     <div className="w-11 h-6 bg-dark-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-lumina-300/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-lumina-600"></div>
                   </label>
                 </div>
-              </div>
-
-              <div className={`p-3 rounded-lg ${formData.enableAnimations !== false ? 'bg-green-600/20 border border-green-600/30' : 'bg-orange-600/20 border border-orange-600/30'}`}>
-                <p className={`text-sm ${formData.enableAnimations !== false ? 'text-green-300' : 'text-orange-300'}`}>
-                  {formData.enableAnimations !== false ? t('settings.animationsEnabled') : t('settings.animationsDisabled')}
-                </p>
               </div>
             </div>
           </div>

@@ -21,7 +21,7 @@ const AboutPage: React.FC = () => {
       try {
         const version = await invoke<string>('get_launcher_version');
         setLoadedVersion(version);
-        
+
         // Check for cached update info
         const cached = updateService.getCachedUpdateInfo();
         if (cached) {
@@ -38,7 +38,7 @@ const AboutPage: React.FC = () => {
   const handleCheckForUpdates = async () => {
     setIsCheckingUpdate(true);
     setUpdateError(null);
-    
+
     try {
       const info = await updateService.checkForUpdates();
       setUpdateInfo(info);
@@ -52,10 +52,10 @@ const AboutPage: React.FC = () => {
 
   const handleDownloadUpdate = async () => {
     if (!updateInfo?.hasUpdate) return;
-    
+
     setIsDownloadingUpdate(true);
     setUpdateError(null);
-    
+
     try {
       await updateService.downloadAndInstallUpdate((progress, total) => {
         setDownloadProgress({ current: progress, total });
@@ -95,9 +95,9 @@ const AboutPage: React.FC = () => {
           <div className="card">
             <div className="flex items-start space-x-6">
               <div className="w-20 h-20 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
-                <img 
-                  src="/luminakraft-logo.svg" 
-                  alt="LuminaKraft Logo" 
+                <img
+                  src="/luminakraft-logo.svg"
+                  alt="LuminaKraft Logo"
                   className="w-full h-full object-contain"
                   onError={(e) => {
                     // Fallback to the original "L" if SVG fails to load
@@ -111,13 +111,13 @@ const AboutPage: React.FC = () => {
                   <span className="text-white font-bold text-2xl">L</span>
                 </div>
               </div>
-              
+
               <div className="flex-1">
                 <h2 className="text-white text-2xl font-bold mb-2">LuminaKraft Launcher</h2>
                 <p className="text-dark-300 mb-4">
                   {t('about.descriptionLong')}
                 </p>
-                
+
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-dark-400">{t('about.versionLabel')}</span>
@@ -134,7 +134,7 @@ const AboutPage: React.FC = () => {
 
           {/* Update Section */}
           <div className="card">
-              <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between">
               <div className="flex-1">
                 <h3 className="text-white font-semibold text-lg mb-2">{t('about.updates')}</h3>
                 {isCheckingUpdate ? (
@@ -165,31 +165,31 @@ const AboutPage: React.FC = () => {
                 ) : (
                   <p className="text-dark-300">{t('about.checkingUpdates')}</p>
                 )}
-                </div>
+              </div>
               <div className="flex space-x-2">
                 {updateInfo?.hasUpdate && (
-                <button
-                  onClick={handleDownloadUpdate}
-                  disabled={isDownloadingUpdate}
-                  className="inline-flex items-center px-4 py-2 bg-lumina-600 hover:bg-lumina-700 disabled:bg-gray-600 text-white rounded-lg transition-colors"
-                >
-                  {isDownloadingUpdate ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      {downloadProgress.total > 0 && (
-                        <span className="text-sm">
-                          {Math.round((downloadProgress.current / downloadProgress.total) * 100)}%
-                        </span>
-                      )}
-                      <span className="ml-2">{t('progress.installing')}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Download className="w-4 h-4 mr-2" />
-                      {t('about.installUpdate')}
-                    </>
-                  )}
-                </button>
+                  <button
+                    onClick={handleDownloadUpdate}
+                    disabled={isDownloadingUpdate}
+                    className="inline-flex items-center px-4 py-2 bg-lumina-600 hover:bg-lumina-700 disabled:bg-gray-600 text-white rounded-lg transition-colors"
+                  >
+                    {isDownloadingUpdate ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        {downloadProgress.total > 0 && (
+                          <span className="text-sm">
+                            {Math.round((downloadProgress.current / downloadProgress.total) * 100)}%
+                          </span>
+                        )}
+                        <span className="ml-2">{t('progress.installing')}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4 mr-2" />
+                        {t('about.installUpdate')}
+                      </>
+                    )}
+                  </button>
                 )}
                 <button
                   onClick={handleCheckForUpdates}
@@ -209,21 +209,21 @@ const AboutPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-3">
                 <div className="flex items-start space-x-3">
-                  <div className="w-2 h-2 bg-lumina-500 rounded-full mt-2 flex-shrink-0" />
+                  <Download className="w-5 h-5 text-lumina-500 mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="text-white font-medium">{t('about.feature1')}</p>
                     <p className="text-dark-400 text-sm">{t('about.feature1Desc')}</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
-                  <div className="w-2 h-2 bg-lumina-500 rounded-full mt-2 flex-shrink-0" />
+                  <RefreshCw className="w-5 h-5 text-lumina-500 mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="text-white font-medium">{t('about.feature2')}</p>
                     <p className="text-dark-400 text-sm">{t('about.feature2Desc')}</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
-                  <div className="w-2 h-2 bg-lumina-500 rounded-full mt-2 flex-shrink-0" />
+                  <Globe className="w-5 h-5 text-lumina-500 mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="text-white font-medium">{t('about.feature3')}</p>
                     <p className="text-dark-400 text-sm">{t('about.feature3Desc')}</p>
@@ -232,21 +232,21 @@ const AboutPage: React.FC = () => {
               </div>
               <div className="space-y-3">
                 <div className="flex items-start space-x-3">
-                  <div className="w-2 h-2 bg-lumina-500 rounded-full mt-2 flex-shrink-0" />
+                  <Heart className="w-5 h-5 text-lumina-500 mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="text-white font-medium">{t('about.feature4')}</p>
                     <p className="text-dark-400 text-sm">{t('about.feature4Desc')}</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
-                  <div className="w-2 h-2 bg-lumina-500 rounded-full mt-2 flex-shrink-0" />
+                  <CheckCircle className="w-5 h-5 text-lumina-500 mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="text-white font-medium">{t('about.feature7')}</p>
                     <p className="text-dark-400 text-sm">{t('about.feature7Desc')}</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
-                  <div className="w-2 h-2 bg-lumina-500 rounded-full mt-2 flex-shrink-0" />
+                  <ExternalLink className="w-5 h-5 text-lumina-500 mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="text-white font-medium">{t('about.feature9')}</p>
                     <p className="text-dark-400 text-sm">{t('about.feature9Desc')}</p>
@@ -267,7 +267,7 @@ const AboutPage: React.FC = () => {
                   <span>{t('about.byTeam')}</span>
                 </div>
               </div>
-              
+
               <div>
                 <h4 className="text-lumina-400 font-medium mb-2">{t('about.technologiesUsed')}</h4>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm text-dark-300">
@@ -299,7 +299,7 @@ const AboutPage: React.FC = () => {
                 </div>
                 <ExternalLink className="w-4 h-4 text-dark-400" />
               </button>
-              
+
               <button
                 onClick={() => handleOpenUrl('https://discord.gg/UJZRrcUFMj')}
                 className="flex items-center space-x-3 p-3 bg-dark-700 rounded-lg hover:bg-dark-600 transition-colors group w-full text-left"
