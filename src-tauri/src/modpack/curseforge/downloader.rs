@@ -9,11 +9,14 @@ use super::types::{CurseForgeManifest, ModFileInfo, ApiResponse, GetModFilesRequ
 
 
 /// Fetch mod file information in batches from CurseForge API
-pub async fn fetch_mod_files_batch(file_ids: &[i64], auth_token: Option<&str>, anon_key: &str) -> Result<Vec<ModFileInfo>> {
+pub async fn fetch_mod_files_batch<P>(file_ids: &[i64], auth_token: Option<&str>, anon_key: &str, on_progress: P) -> Result<Vec<ModFileInfo>> 
+where P: Fn(usize, usize) + Send + Sync
+{
     let client = Client::builder()
         .user_agent("LKLauncher/1.0 (CurseForge API Client)")
         .timeout(std::time::Duration::from_secs(30))
         .connect_timeout(std::time::Duration::from_secs(10))
+        .pool_idle_timeout(std::time::Duration::from_secs(30))
         .pool_idle_timeout(std::time::Duration::from_secs(30))
         .pool_max_idle_per_host(10)
         .build()?;
@@ -24,7 +27,11 @@ pub async fn fetch_mod_files_batch(file_ids: &[i64], auth_token: Option<&str>, a
     let mut all_file_infos = Vec::new();
     let mut last_error = None;
     
-    for chunk in file_ids.chunks(BATCH_SIZE) {
+    let total_batches = (file_ids.len() + BATCH_SIZE - 1) / BATCH_SIZE;
+    
+    for (batch_idx, chunk) in file_ids.chunks(BATCH_SIZE).enumerate() {
+        let current_batch = batch_idx + 1;
+        
         // Wrap request in Edge Function format
         let edge_request = EdgeFunctionRequest {
             endpoint: "/mods/files".to_string(),
@@ -38,9 +45,14 @@ pub async fn fetch_mod_files_batch(file_ids: &[i64], auth_token: Option<&str>, a
         let mut response = None;
         let mut batch_error = None;
 
+        // Report progress
+        on_progress(current_batch, total_batches);
+
         for attempt in 1..=max_retries {
             if attempt == 1 {
-                println!("🌐 Fetching mod info from Supabase Edge Function (batch size: {})", chunk.len());
+                println!("🌐 Fetching mod info batch {}/{} (size: {})", current_batch, total_batches, chunk.len());
+            } else {
+                 println!("🌐 Retrying mod info batch {}/{} (attempt {}/{})", current_batch, total_batches, attempt, max_retries);
             }
 
             // Build the request with optional auth
@@ -207,6 +219,7 @@ pub async fn download_mods_with_failed_tracking<F>(
     auth_token: Option<&str>,
     anon_key: &str,
     override_filenames: &std::collections::HashSet<String>,
+    pre_fetched_infos: Option<Vec<ModFileInfo>>,
 ) -> Result<Vec<serde_json::Value>>
 where
     F: Fn(String, f32, String) + Send + Sync + 'static,
@@ -224,15 +237,41 @@ where
         "fetching_mod_info".to_string()
     );
     
-    let all_file_infos = match fetch_mod_files_batch(&file_ids, auth_token, anon_key).await {
-        Ok(infos) => infos,
-        Err(e) => {
-            emit_progress(
-                format!("progress.curseforgeApiError|{}", e),
-                start_percentage,
-                "curseforge_api_error".to_string()
-            );
-            return Err(e);
+    let all_file_infos = if let Some(infos) = pre_fetched_infos {
+        infos
+    } else {
+        // Infinite retry loop for fetching mod info
+        loop {
+            match fetch_mod_files_batch(&file_ids, auth_token, anon_key, |current, total| {
+                let percent = start_percentage + (current as f32 / total as f32) * 5.0;
+                emit_progress(
+                    format!("progress.fetchingModInfoBatch|{}|{}", current, total),
+                    percent,
+                    "fetching_mod_info".to_string()
+                );
+            }).await {
+                Ok(infos) => break infos,
+                Err(e) => {
+                    let error_msg = e.to_string();
+                    println!("DEBUG: Fetch mod info error: {:?}", e);
+                    
+                    if error_msg.contains("Error de red") || error_msg.contains("TIMEDOUT") || error_msg.contains("unreachable") || error_msg.to_lowercase().contains("offline") 
+                        || error_msg.contains("dns") || error_msg.contains("connection closed") || error_msg.contains("hyper::Error") {
+                         
+                         emit_progress("progress.waitingForNetwork".to_string(), start_percentage, "waiting_for_network".to_string());
+                         println!("⚠️ Network error fetching mod info, waiting for connection...");
+                         tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+                         continue;
+                    }
+
+                    emit_progress(
+                        format!("progress.curseforgeApiError|{}", e),
+                        start_percentage,
+                        "curseforge_api_error".to_string()
+                    );
+                    return Err(e);
+                }
+            }
         }
     };
     
@@ -339,32 +378,62 @@ where
         );
         
         // Download the file
-        match download_file(download_url, &mod_path).await {
-            Ok(_) => {
-                if verify_file_hash(&mod_path, &file_info.hashes) {
-                    let completed_progress = start_percentage + ((index + 1) as f32 / total_mods as f32) * progress_range;
-                    emit_progress(
-                        format!("mod_completed:{}", file_name),
-                        completed_progress,
-                        "mod_downloaded_verified".to_string()
-                    );
-                } else {
-                    emit_progress(
-                        format!("mod_error:{}", file_name),
-                        mod_progress,
-                        "mod_hash_mismatch".to_string()
-                    );
-                    if mod_path.exists() {
-                        std::fs::remove_file(&mod_path).ok();
+        // Infinite retry loop for network errors
+        loop {
+            match download_file(download_url, &mod_path).await {
+                Ok(()) => {
+                    // Check if file is valid
+                    if verify_file_hash(&mod_path, &file_info.hashes) {
+                        emit_progress(
+                            format!("mod_downloaded:{}:{}", index + 1, total_mods),
+                            mod_progress,
+                            "mod_downloaded".to_string()
+                        );
+                        break; // Success
+                    } else {
+                        // Hash mismatch - download completed but corrupt
+                        // If we want to retry corrupt downloads indefinitely, we can continue here
+                        // But verifying hash usually implies file content issue, not network
+                        println!("⚠️ Hash mismatch for {}, retrying...", file_name);
+                        // We continue the loop to retry download (download_file overwrites)
+                        // But we should probably limit corruption retries? 
+                        // For now let's treat corruption as a retryable error
+                        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+                        continue;
                     }
+                },
+                Err(e) => {
+                    let error_msg = e.to_string();
+                    println!("DEBUG: Download error caught: {:?}", e); // Debug log for offline detection
+                    
+                    // Check if it's a network error (from utils/downloader.rs or generic)
+                    if error_msg.contains("Error de red") || error_msg.contains("TIMEDOUT") || error_msg.contains("unreachable") || error_msg.to_lowercase().contains("offline") {
+                         emit_progress(
+                             "progress.waitingForNetwork".to_string(),
+                             mod_progress,
+                             "waiting_for_network".to_string()
+                         );
+                         println!("⚠️ Network error for {}, waiting for connection...", file_name);
+                         tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+                         continue; // Infinite retry
+                    }
+                    
+                    // Fatal error (e.g. 404, permissions)
+                    println!("❌ Failed to download {}: {}", file_name, e);
+                    failed_mods.push(serde_json::json!({
+                        "fileId": file_info.id,
+                        "fileName": file_name,
+                        "url": download_url,
+                        "error": error_msg
+                    }));
+                    
+                    emit_progress(
+                        format!("mod_download_error:{}:{}", file_name, e),
+                        mod_progress,
+                        "mod_download_error".to_string()
+                    );
+                    break; // Give up on this file
                 }
-            },
-            Err(e) => {
-                emit_progress(
-                    format!("mod_download_error:{}:{}", file_name, e),
-                    mod_progress,
-                    "mod_download_error".to_string()
-                );
             }
         }
     }
@@ -397,7 +466,34 @@ where
         "fetching_mod_info".to_string()
     );
     
-    let all_file_infos = fetch_mod_files_batch(&file_ids, auth_token, anon_key).await?;
+    // Infinite retry loop for fetching filenames
+    let all_file_infos = loop {
+        match fetch_mod_files_batch(&file_ids, auth_token, anon_key, |current, total| {
+            let percent = start_percentage + (current as f32 / total as f32) * 5.0;
+            emit_progress(
+                format!("progress.fetchingModInfoBatch|{}|{}", current, total),
+                percent,
+                "fetching_mod_info".to_string()
+            );
+        }).await {
+            Ok(infos) => break infos,
+            Err(e) => {
+                let error_msg = e.to_string();
+                println!("DEBUG: Fetch filenames error: {:?}", e);
+                
+                if error_msg.contains("Error de red") || error_msg.contains("TIMEDOUT") || error_msg.contains("unreachable") || error_msg.to_lowercase().contains("offline") 
+                    || error_msg.contains("dns") || error_msg.contains("connection closed") || error_msg.contains("hyper::Error") {
+                        
+                        emit_progress("progress.waitingForNetwork".to_string(), start_percentage + 2.0, "waiting_for_network".to_string());
+                        println!("⚠️ Network error fetching filenames, waiting for connection...");
+                        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+                        continue;
+                }
+                
+                return Err(e);
+            }
+        }
+    };
     
     // Collect expected filenames for cleanup
     let expected_filenames: std::collections::HashSet<String> = all_file_infos
@@ -408,7 +504,18 @@ where
     println!("📋 Expected {} mod files from manifest", expected_filenames.len());
     
     // Now do the actual download using the existing function
-    let failed_mods = download_mods_with_failed_tracking(manifest, instance_dir, emit_progress, start_percentage, end_percentage, auth_token, anon_key, override_filenames).await?;
+    // Now do the actual download using the existing function, passing the already fetched infos
+    let failed_mods = download_mods_with_failed_tracking(
+        manifest, 
+        instance_dir, 
+        emit_progress, 
+        start_percentage, 
+        end_percentage, 
+        auth_token, 
+        anon_key, 
+        override_filenames,
+        Some(all_file_infos)
+    ).await?;
     
     Ok((failed_mods, expected_filenames))
 } 

@@ -74,8 +74,8 @@ where
     );
     
     // Get override filenames BEFORE downloading mods
-    // This allows us to skip marking mods as "failed" if they are present in overrides
     let override_filenames = get_override_filenames(&manifest, &temp_dir);
+    
     if !override_filenames.is_empty() {
         println!("📦 Found {} files in overrides that will be available during download check", override_filenames.len());
     }

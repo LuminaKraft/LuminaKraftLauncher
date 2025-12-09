@@ -1364,6 +1364,15 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
             error
           });
         }
+        if (key === 'progress.fetchingModInfoBatch') {
+          // Format: "progress.fetchingModInfoBatch|current|total"
+          const current = parts[1];
+          const total = parts[2];
+          return t('progress.fetchingModInfoBatch', {
+            current,
+            total
+          });
+        }
       }
 
       // Simple translation key

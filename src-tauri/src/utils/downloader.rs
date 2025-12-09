@@ -15,6 +15,7 @@ pub async fn download_file(url: &str, output_path: &PathBuf) -> Result<()> {
     let client = Client::builder()
         .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36")
         .timeout(std::time::Duration::from_secs(300)) // 5 minute timeout
+        .connect_timeout(std::time::Duration::from_secs(10)) // 10s connect timeout
         .build()?;
     
     let max_retries = 3;
@@ -79,6 +80,7 @@ pub async fn download_file(url: &str, output_path: &PathBuf) -> Result<()> {
                 return Ok(());
             },
             Err(e) => {
+                println!("DEBUG: RAW NETWORK ERROR in download_file: {:?}", e);
                 retry_count += 1;
                 if retry_count >= max_retries {
                     return Err(anyhow!("Error de red después de {} intentos: {}", max_retries, e));

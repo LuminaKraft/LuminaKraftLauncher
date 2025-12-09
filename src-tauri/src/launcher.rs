@@ -136,13 +136,34 @@ where
     if !meta_dirs.is_version_installed(&modpack.minecraft_version).await {
         emit_progress("progress.downloadingMinecraft".to_string(), 20.0, "downloading_minecraft".to_string());
         
-        minecraft::install_minecraft_with_lyceris_progress(&modpack, &settings, meta_dirs.meta_dir.clone(), {
-            let emit_progress = emit_progress.clone();
-            move |message: String, percentage: f32, step: String| {
-                let final_percentage = 20.0 + (percentage * 0.4); // 40% del total para Minecraft
-                emit_progress(message, final_percentage, step);
+        // Infinite retry loop for Minecraft installation (libraries/assets)
+        loop {
+            match minecraft::install_minecraft_with_lyceris_progress(&modpack, &settings, meta_dirs.meta_dir.clone(), {
+                let emit_progress = emit_progress.clone();
+                move |message: String, percentage: f32, step: String| {
+                    let final_percentage = 20.0 + (percentage * 0.4); // 40% del total para Minecraft
+                    emit_progress(message, final_percentage, step);
+                }
+            }).await {
+                Ok(_) => break, // Success
+                Err(e) => {
+                    let error_msg = e.to_string();
+                    println!("DEBUG: Minecraft Install error: {:?}", e); // Debug log
+                    
+                    // Check for network error - Infinite Retry
+                    if error_msg.contains("Error de red") || error_msg.contains("TIMEDOUT") || error_msg.contains("unreachable") || error_msg.to_lowercase().contains("offline") 
+                        || error_msg.contains("dns") || error_msg.contains("connection closed") || error_msg.contains("hyper::Error") {
+                         
+                         emit_progress("progress.waitingForNetwork".to_string(), 20.0, "waiting_for_network".to_string());
+                         println!("⚠️ Network error installing Minecraft, waiting for connection...");
+                         tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+                         continue;
+                    }
+                    
+                    return Err(e); // Fatal error
+                }
             }
-        }).await?;
+        }
 
         // Mark version as installed
         meta_dirs.mark_libraries_installed(&modpack.minecraft_version).await?;
@@ -178,19 +199,25 @@ where
         } else {
             // It's a remote URL, download it with retry logic
             let max_download_retries = 3;
-            let mut download_attempt = 0;
+            let mut failed_attempts = 0;
+            let mut total_attempts = 0;
             
             loop {
-                download_attempt += 1;
+                total_attempts += 1;
                 
-                if download_attempt > 1 {
-                    emit_progress(
-                        format!("progress.retryingDownload|{}/{}", download_attempt, max_download_retries),
+                if total_attempts > 1 {
+                     // Determine message based on why we are retrying?
+                     // For now just generic retry message unless we are in network wait
+                     // Actually, if we just came from network wait, we might want to say "Resuming..."
+                     // But emit_progress is transient.
+                     
+                     // Only show "Retrying" if it's NOT just a network blip that we handled silently?
+                     // No, let's simple logic:
+                     emit_progress(
+                        format!("progress.retryingDownload|{}/{}", failed_attempts + 1, max_download_retries),
                         75.0,
                         "retrying_download".to_string()
                     );
-                    // Wait before retry
-                    tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
                 } else {
                     emit_progress("progress.downloadingModpackFiles".to_string(), 75.0, "downloading_modpack".to_string());
                 }
@@ -208,7 +235,8 @@ where
                                         // Clean up the corrupted file
                                         let _ = std::fs::remove_file(&temp_zip_path);
                                         
-                                        if download_attempt >= max_download_retries {
+                                        failed_attempts += 1;
+                                        if failed_attempts >= max_download_retries {
                                             return Err(anyhow!(
                                                 "Descarga corrupta: el hash SHA256 no coincide después de {} intentos.\nEsperado: {}...\nRecibido: {}...",
                                                 max_download_retries,
@@ -217,7 +245,8 @@ where
                                             ));
                                         }
                                         
-                                        println!("⚠️ SHA256 mismatch, retrying download (attempt {}/{})", download_attempt, max_download_retries);
+                                        println!("⚠️ SHA256 mismatch, retrying download (attempt {}/{})", failed_attempts, max_download_retries);
+                                        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
                                         continue; // Retry
                                     }
                                     println!("✅ ZIP SHA256 verified: {}...", &actual_sha256[..16.min(actual_sha256.len())]);
@@ -232,12 +261,25 @@ where
                     }
                     Err(e) => {
                         let _ = std::fs::remove_file(&temp_zip_path);
+                        let error_msg = e.to_string();
+                        println!("DEBUG: Modpack Zip Download error caught: {:?}", e); // Debug log
                         
-                        if download_attempt >= max_download_retries {
+                        // Check for network error - Infinite Retry
+                        if error_msg.contains("Error de red") || error_msg.contains("TIMEDOUT") || error_msg.contains("unreachable") || error_msg.to_lowercase().contains("offline") {
+                             emit_progress("progress.waitingForNetwork".to_string(), 75.0, "waiting_for_network".to_string());
+                             println!("⚠️ Network error downloading ZIP, waiting for connection...");
+                             tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+                             // Do not increment failed_attempts
+                             continue;
+                        }
+                        
+                        failed_attempts += 1;
+                        if failed_attempts >= max_download_retries {
                             return Err(anyhow!("Error al descargar el modpack después de {} intentos: {}", max_download_retries, e));
                         }
                         
-                        println!("⚠️ Download failed, retrying (attempt {}/{}): {}", download_attempt, max_download_retries, e);
+                        println!("⚠️ Download failed, retrying (attempt {}/{}): {}", failed_attempts, max_download_retries, e);
+                        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
                         continue; // Retry
                     }
                 }
@@ -361,7 +403,11 @@ where
     emit_progress("progress.finalizingInstallation".to_string(), 98.0, "finalizing_installation".to_string());
 
     emit_progress("progress.installationCompleted".to_string(), 100.0, "completed".to_string());
-    println!("✅ Instance installation completed successfully!");
+    if failed_mods.is_empty() {
+        println!("✅ Instance installation completed successfully!");
+    } else {
+        println!("⚠️ Instance installation completed with {} failed mods.", failed_mods.len());
+    }
     
     Ok(failed_mods)
 }
