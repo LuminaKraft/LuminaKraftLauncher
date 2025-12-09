@@ -5,6 +5,14 @@ All notable changes to the LuminaKraft Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] - 2025-12-09
+
+### 🐛 **Critical Bug Fixes**
+- **RAM Allocation**
+  - Fixed Java VM crash caused by RAM being passed in wrong units (GB instead of MB)
+  - Fixed instance-specific RAM settings being ignored (always used global RAM)
+  - Now correctly respects per-modpack RAM allocation: recommended, custom, or global
+
 ## [0.1.2] - 2025-12-09
 
 ### ✨ **Features**
