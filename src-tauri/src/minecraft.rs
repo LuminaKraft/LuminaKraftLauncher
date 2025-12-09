@@ -459,9 +459,33 @@ pub async fn launch_minecraft_with_token_refresh(modpack: Modpack, settings: Use
         });
     }
     
-    // Configure memory using Lyceris' built-in system
-    // allocated_ram is stored in MB (e.g., 4096 for 4GB)
-    let memory_mb = settings.allocated_ram.max(512);
+    // Determine effective RAM based on instance metadata
+    // Priority: instance RAM allocation > global settings
+    let memory_mb = {
+        let instance_metadata = filesystem::get_instance_metadata(&modpack.id).await.ok().flatten();
+        
+        if let Some(ref metadata) = instance_metadata {
+            let ram_allocation = metadata.ram_allocation.as_deref().unwrap_or("global");
+            
+            match ram_allocation {
+                "recommended" => {
+                    // Use recommended RAM from manifest
+                    metadata.recommended_ram.unwrap_or(settings.allocated_ram).max(512)
+                },
+                "custom" => {
+                    // Use custom RAM set by user
+                    metadata.custom_ram.unwrap_or(settings.allocated_ram).max(512)
+                },
+                _ => {
+                    // "global" or unknown - use global settings
+                    settings.allocated_ram.max(512)
+                }
+            }
+        } else {
+            // No metadata found - use global settings
+            settings.allocated_ram.max(512)
+        }
+    };
     println!("Configuring memory: {}MB ({}GB)", memory_mb, memory_mb / 1024);
 
     let (auth_method, refreshed_account) = get_auth_method_with_validation(&settings).await?;
