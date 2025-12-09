@@ -461,8 +461,25 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
                   </div>
                 </div>
 
-                {/* Slider */}
+                {/* Slider with snap point markers */}
                 <div className="mb-4">
+                  {/* Snap point markers */}
+                  <div className="relative h-3 mb-1">
+                    <div className="absolute inset-0" style={{ marginLeft: '6px', marginRight: '6px' }}>
+                      {snapPoints.map((point) => (
+                        <div
+                          key={point}
+                          className={`absolute w-1 h-3 rounded-sm transition-colors ${point <= formData.allocatedRam ? 'bg-blue-500' : 'bg-dark-500'
+                            }`}
+                          style={{
+                            left: `${((point - MIN_RAM) / (MAX_RAM - MIN_RAM)) * 100}%`,
+                            transform: 'translateX(-50%)'
+                          }}
+                          title={`${point} MB (${(point / 1024).toFixed(0)} GB)`}
+                        />
+                      ))}
+                    </div>
+                  </div>
                   <input
                     type="range"
                     min={MIN_RAM}

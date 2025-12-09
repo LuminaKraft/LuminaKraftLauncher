@@ -135,6 +135,39 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
     }
   }, [metadata, ramMode, systemRamMB]);
 
+  // Constants for RAM settings (must be before any conditional returns)
+  const MIN_RAM = 512; // 512MB minimum
+  const SNAP_RANGE = 256; // Snap to common values if within this range
+
+  // Generate snap points (powers of 2 starting from 1024: 1GB, 2GB, 4GB, 8GB, 16GB, 32GB...)
+  const snapPoints = React.useMemo(() => {
+    const points: number[] = [];
+    let memory = 1024; // Start at 1 GB
+    while (memory <= maxAllocatableRam) {
+      points.push(memory);
+      memory *= 2;
+    }
+    return points;
+  }, [maxAllocatableRam]);
+
+  // Find if value is close to a snap point
+  const snapToNearestPoint = React.useCallback((value: number): number => {
+    for (const point of snapPoints) {
+      if (Math.abs(value - point) <= SNAP_RANGE) {
+        return point;
+      }
+    }
+    return value;
+  }, [snapPoints]);
+
+  const handleCustomRamSliderChange = React.useCallback((value: number) => {
+    // Round to nearest 64 MB step
+    const stepped = Math.round(value / 64) * 64;
+    // Snap to common values if close
+    const snapped = snapToNearestPoint(stepped);
+    setCustomRamValue(Math.max(MIN_RAM, Math.min(maxAllocatableRam, snapped)));
+  }, [snapToNearestPoint, maxAllocatableRam]);
+
   if (!isOpen) return null;
 
   // RAM values based on mode
@@ -279,37 +312,6 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
     reader.readAsDataURL(file);
   };
 
-  const MIN_RAM = 512; // 512MB minimum
-  const SNAP_RANGE = 256; // Snap to common values if within this range
-
-  // Generate snap points (powers of 2 starting from 1024: 1GB, 2GB, 4GB, 8GB, 16GB, 32GB...)
-  const snapPoints = React.useMemo(() => {
-    const points: number[] = [];
-    let memory = 1024; // Start at 1 GB
-    while (memory <= maxAllocatableRam) {
-      points.push(memory);
-      memory *= 2;
-    }
-    return points;
-  }, [maxAllocatableRam]);
-
-  // Find if value is close to a snap point
-  const snapToNearestPoint = (value: number): number => {
-    for (const point of snapPoints) {
-      if (Math.abs(value - point) <= SNAP_RANGE) {
-        return point;
-      }
-    }
-    return value;
-  };
-
-  const handleCustomRamSliderChange = (value: number) => {
-    // Round to nearest 64 MB step
-    const stepped = Math.round(value / 64) * 64;
-    // Snap to common values if close
-    const snapped = snapToNearestPoint(stepped);
-    setCustomRamValue(Math.max(MIN_RAM, Math.min(maxAllocatableRam, snapped)));
-  };
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-8 overflow-hidden pointer-events-auto">
       <div className="bg-dark-800 rounded-lg p-6 max-w-2xl w-full border border-dark-600 max-h-[90vh] overflow-y-auto pointer-events-auto">
@@ -535,6 +537,24 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
                           className="bg-dark-700 border border-dark-600 text-white text-sm rounded px-3 py-1 w-24 text-right disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                         <span className="text-white text-sm font-medium">MB</span>
+                      </div>
+                    </div>
+
+                    {/* Snap point markers */}
+                    <div className={`relative h-2 mb-1 ${ramMode !== 'custom' ? 'opacity-50' : ''}`}>
+                      <div className="absolute inset-0" style={{ marginLeft: '4px', marginRight: '4px' }}>
+                        {snapPoints.map((point) => (
+                          <div
+                            key={point}
+                            className={`absolute w-1 h-2 rounded-sm transition-colors ${point <= customRamValue ? 'bg-blue-500' : 'bg-dark-500'
+                              }`}
+                            style={{
+                              left: `${((point - MIN_RAM) / (maxAllocatableRam - MIN_RAM)) * 100}%`,
+                              transform: 'translateX(-50%)'
+                            }}
+                            title={`${point} MB (${(point / 1024).toFixed(0)} GB)`}
+                          />
+                        ))}
                       </div>
                     </div>
 
