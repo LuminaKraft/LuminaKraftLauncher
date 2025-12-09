@@ -79,6 +79,17 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({
       }
 
       if (['installed', 'outdated', 'error'].includes(state.status)) {
+        // Show Repair for error state, Installed for others
+        if (state.status === 'error') {
+          return {
+            icon: Wrench,
+            label: t('modpacks.repair'),
+            bgColor: 'bg-orange-600 hover:bg-orange-700',
+            textColor: 'text-white',
+            action: () => repairModpack(modpack.id),
+            disabled: false
+          };
+        }
         return {
           icon: Download,
           label: t('modpacks.installed'),

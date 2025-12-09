@@ -106,6 +106,16 @@ const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect
       }
 
       if (['installed', 'outdated', 'error'].includes(state.status)) {
+        // Show Repair for error state, Installed for others
+        if (state.status === 'error') {
+          return {
+            text: t('modpacks.repair'),
+            icon: Wrench,
+            onClick: () => repairModpack(modpack.id),
+            className: 'btn-warning',
+            disabled: false
+          };
+        }
         return {
           text: t('modpacks.installed'),
           icon: Download,
