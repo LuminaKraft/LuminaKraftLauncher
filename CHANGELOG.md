@@ -5,6 +5,44 @@ All notable changes to the LuminaKraft Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] - 2025-12-09
+
+### ✨ **Features**
+- **RAM Allocation Improvements**
+  - Changed RAM storage from GB to MB for finer control
+  - Added magnetic snap points to RAM sliders (512MB, 1GB, 2GB, 4GB, 6GB, 8GB)
+  - Reduced minimum RAM to 512MB with 64MB step increments
+  - Visual snap point markers on slider for better UX
+
+- **Dynamic Known Errors System**
+  - New error recognition system that matches errors against known patterns
+  - Shows actionable solutions for common issues with one-click fixes
+  - Discord support link in error modals for community help
+  - Remotely updatable error database from GitHub
+
+- **Installation Robustness**
+  - Infinite retry loops for network errors during downloads
+  - Visual "Waiting for network..." status when connection is lost
+  - Connection timeouts (10s) to fail fast instead of hanging
+  - Granular progress updates for mod info fetching (batch X/Y)
+  - Fixed duplicate mod info fetching that was wasting API calls
+
+### 🎨 **UI/UX Improvements**
+- Show "Repair" button instead of "Installed" when modpack has errors
+- Moved donation section higher in About page with translations
+- Made Settings and About pages more minimal and focused
+- Improved ProfileOptionsModal cleanup and macOS restart handling
+
+### 🐛 **Bug Fixes**
+- Fixed Vite warning for mixed static/dynamic imports in App.tsx
+- Fixed hooks being called after early return statements
+- Fixed macOS restart after updates not working reliably
+
+### 🔧 **Technical Improvements**
+- Added connection timeout to all HTTP clients for faster failure detection
+- Debug logging for network errors to aid troubleshooting
+- Improved error message matching for offline scenarios
+
 ## [0.1.1] - 2025-12-07
 
 ### ✨ **Features**
