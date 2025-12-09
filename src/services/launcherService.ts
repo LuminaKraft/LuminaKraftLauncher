@@ -126,7 +126,7 @@ class LauncherService {
   private loadUserSettings(): UserSettings {
     const defaultSettings: UserSettings = {
       username: 'Player',
-      allocatedRam: 4,
+      allocatedRam: 4096, // Default 4GB in MB
       language: this.detectDefaultLanguage(),
       authMethod: 'offline',
       clientToken: this.generateClientToken() // Generate immediately, not undefined
@@ -135,7 +135,8 @@ class LauncherService {
     try {
       const saved = localStorage.getItem('LuminaKraftLauncher_settings');
       if (saved) {
-        const merged = { ...defaultSettings, ...JSON.parse(saved) } as UserSettings;
+        const parsed = JSON.parse(saved);
+        const merged = { ...defaultSettings, ...parsed } as UserSettings;
 
         // CRITICAL: Always ensure we have a client token for offline auth
         if (!merged.clientToken) {
@@ -143,7 +144,19 @@ class LauncherService {
           merged.clientToken = this.generateClientToken();
         }
 
-        // Save the merged settings with guaranteed clientToken
+        // RAM Migration: Convert old GB values to MB
+        // Old versions stored RAM in GB (e.g., 4, 6.5, 8)
+        // New versions store in MB (e.g., 4096, 6656, 8192)
+        // Detection: If value < 128, it's likely in GB (no one allocates less than 128 MB)
+        // Also handle decimal values which would fail u32 conversion in backend
+        if (merged.allocatedRam < 128 || !Number.isInteger(merged.allocatedRam)) {
+          const oldValue = merged.allocatedRam;
+          // Convert GB to MB and round to nearest integer
+          merged.allocatedRam = Math.round(oldValue * 1024);
+          console.log(`🔄 RAM Migration: ${oldValue} GB → ${merged.allocatedRam} MB`);
+        }
+
+        // Save the merged settings with guaranteed clientToken and migrated RAM
         try {
           localStorage.setItem('LuminaKraftLauncher_settings', JSON.stringify(merged));
         } catch (saveError) {

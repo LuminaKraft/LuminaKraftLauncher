@@ -122,7 +122,7 @@ export interface DiscordAccount {
 
 export interface UserSettings {
   username: string;
-  allocatedRam: number; // in GB
+  allocatedRam: number; // in MB (e.g., 4096 for 4GB)
   // launcherDataUrl removed, endpoint is now hardcoded
   language: string; // 'es' | 'en'
   authMethod: 'offline' | 'microsoft' | 'discord' | 'both'; // Updated to include Discord

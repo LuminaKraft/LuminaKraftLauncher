@@ -29,7 +29,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
     return saved ? Number(saved) : null;
   });
   const [isTestingConnection, setIsTestingConnection] = useState(false);
-  const [systemRam, setSystemRam] = useState<number>(64); // Default to 64GB, will be updated
+  const [systemRam, setSystemRam] = useState<number>(65536); // Default to 64GB in MB, will be updated
   // Java runtime handled internally by Lyceris; no user-facing settings.
 
   useEffect(() => {
@@ -41,18 +41,17 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
     setHasChanges(isDifferent);
   }, [formData, userSettings]);
 
-  // Fetch system RAM on mount
+  // Fetch system RAM on mount (in MB)
   useEffect(() => {
     const fetchSystemRam = async () => {
       try {
         const totalBytes = await invoke<number>('get_system_memory');
-        // Convert to GB for display and comparison, rounding up to nearest Int like the old backend did
-        // or keep precise? The old one did .ceil()
-        const totalGB = Math.ceil(totalBytes / 1024 / 1024 / 1024);
-        setSystemRam(totalGB);
+        // Convert to MB for RAM settings
+        const totalMB = Math.floor(totalBytes / 1024 / 1024);
+        setSystemRam(totalMB);
       } catch (error) {
         console.error('Failed to get system RAM:', error);
-        // Keep default of 64GB if fetch fails
+        // Keep default of 65536 MB (64GB) if fetch fails
       }
     };
     fetchSystemRam();
@@ -168,11 +167,14 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
     };
   }, [hasChanges, onNavigationBlocked]);
 
-  const MIN_RAM = 1;
-  const MAX_RAM = systemRam; // Use system RAM as maximum
+  const MIN_RAM = 1024; // 1 GB in MB
+  const MAX_RAM = systemRam; // Use system RAM as maximum (in MB)
+  const RAM_STEP = 512; // 512 MB steps
 
   const handleRamSliderChange = (value: number) => {
-    const clampedValue = Math.max(MIN_RAM, Math.min(MAX_RAM, value));
+    // Round to nearest step and clamp
+    const stepped = Math.round(value / RAM_STEP) * RAM_STEP;
+    const clampedValue = Math.max(MIN_RAM, Math.min(MAX_RAM, stepped));
     handleInputChange('allocatedRam', clampedValue);
   };
 
@@ -182,17 +184,18 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
       return;
     }
 
-    const numValue = parseFloat(value);
+    const numValue = parseInt(value, 10);
     if (!isNaN(numValue)) {
-      const clampedValue = Math.max(MIN_RAM, Math.min(MAX_RAM, numValue));
-      const roundedValue = Math.round(clampedValue * 2) / 2; // Round to nearest 0.5
-      handleInputChange('allocatedRam', roundedValue);
+      // Round to nearest step and clamp
+      const stepped = Math.round(numValue / RAM_STEP) * RAM_STEP;
+      const clampedValue = Math.max(MIN_RAM, Math.min(MAX_RAM, stepped));
+      handleInputChange('allocatedRam', clampedValue);
     }
   };
 
   const handleRamTextBlur = (value: string) => {
     // On blur, ensure we have a valid value
-    const numValue = parseFloat(value);
+    const numValue = parseInt(value, 10);
     if (isNaN(numValue) || value === '') {
       // Reset to current value if invalid
       const input = document.querySelector('input[type="number"]') as HTMLInputElement;
@@ -421,13 +424,13 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
                       type="number"
                       min={MIN_RAM}
                       max={MAX_RAM}
-                      step="0.5"
+                      step={RAM_STEP}
                       value={formData.allocatedRam}
                       onChange={(e) => handleRamTextChange(e.target.value)}
                       onBlur={(e) => handleRamTextBlur(e.target.value)}
-                      className="bg-transparent border-0 text-white text-lg font-medium w-16 text-center focus:outline-none focus:bg-dark-700 rounded px-1"
+                      className="bg-transparent border-0 text-white text-lg font-medium w-20 text-center focus:outline-none focus:bg-dark-700 rounded px-1"
                     />
-                    <span className="text-white text-lg font-medium">GB</span>
+                    <span className="text-white text-lg font-medium">MB</span>
                   </div>
                   <div className="text-dark-400 text-sm">
                     <p>{t('settings.ramRecommended')}</p>
@@ -440,17 +443,17 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
                     type="range"
                     min={MIN_RAM}
                     max={MAX_RAM}
-                    step="0.5"
+                    step={RAM_STEP}
                     value={formData.allocatedRam}
-                    onChange={(e) => handleRamSliderChange(parseFloat(e.target.value))}
+                    onChange={(e) => handleRamSliderChange(parseInt(e.target.value, 10))}
                     className="w-full h-2 bg-dark-600 rounded-lg appearance-none cursor-pointer slider"
                     style={{
                       background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${((formData.allocatedRam - MIN_RAM) / (MAX_RAM - MIN_RAM)) * 100}%, #374151 ${((formData.allocatedRam - MIN_RAM) / (MAX_RAM - MIN_RAM)) * 100}%, #374151 100%)`
                     }}
                   />
                   <div className="flex justify-between text-xs text-dark-400 mt-1">
-                    <span>{MIN_RAM} GB</span>
-                    <span>{MAX_RAM} GB</span>
+                    <span>{MIN_RAM} MB</span>
+                    <span>{MAX_RAM} MB</span>
                   </div>
                 </div>
               </div>

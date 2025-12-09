@@ -42,7 +42,7 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
     (metadata?.ramAllocation as 'recommended' | 'custom' | 'global') || 'recommended'
   );
   const [customRamValue, setCustomRamValue] = useState<number>(
-    metadata?.customRam || userSettings.allocatedRam * 1024 || 4096
+    metadata?.customRam || userSettings.allocatedRam || 4096
   );
   const [isSaving, setIsSaving] = useState(false);
   const [editingName, setEditingName] = useState(false);
@@ -116,7 +116,7 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
   useEffect(() => {
     if (metadata) {
       setRamMode((metadata.ramAllocation as 'recommended' | 'custom' | 'global') || 'recommended');
-      setCustomRamValue(metadata.customRam || userSettings.allocatedRam * 1024 || 4096);
+      setCustomRamValue(metadata.customRam || userSettings.allocatedRam || 4096);
     }
   }, [metadata, userSettings.allocatedRam]);
 
@@ -141,11 +141,11 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
   const getEffectiveRam = (): number => {
     switch (ramMode) {
       case 'recommended':
-        return metadata?.recommendedRam || userSettings.allocatedRam * 1024 || 4096;
+        return metadata?.recommendedRam || userSettings.allocatedRam || 4096;
       case 'custom':
         return customRamValue;
       case 'global':
-        return userSettings.allocatedRam * 1024;
+        return userSettings.allocatedRam;
       default:
         return 4096;
     }
@@ -467,7 +467,7 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
               />
               <div className="flex-1">
                 <div className="text-white font-medium">
-                  {t('profileOptions.globalSettings')} - {userSettings.allocatedRam * 1024}MB
+                  {t('profileOptions.globalSettings')} - {userSettings.allocatedRam}MB
                 </div>
                 <div className="text-dark-300 text-sm">{t('profileOptions.globalDescription')}</div>
               </div>
