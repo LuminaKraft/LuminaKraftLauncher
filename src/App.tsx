@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { relaunch } from '@tauri-apps/plugin-process';
+import { relaunch, exit } from '@tauri-apps/plugin-process';
 import { LauncherProvider, useLauncher } from './contexts/LauncherContext';
 import { AnimationProvider, useAnimation } from './contexts/AnimationContext';
 import Sidebar from './components/Layout/Sidebar';
@@ -154,7 +154,6 @@ function AppContent() {
         // On macOS, relaunch() doesn't work reliably for signed apps
         // So we just exit - user will need to reopen the app manually
         // The update is already installed, so the new version will start
-        const { exit } = await import('@tauri-apps/plugin-process');
         await exit(0);
       } else {
         await relaunch();
