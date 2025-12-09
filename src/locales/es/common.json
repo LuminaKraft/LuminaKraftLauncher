@@ -538,6 +538,9 @@
     "copyright": "© 2025 LuminaKraft Studios. Todos los derechos reservados.",
     "license": "Licencia",
     "minecraftTrademark": "Minecraft es una marca registrada de Mojang Studios",
+    "supportUs": "Apóyanos",
+    "supportDescription": "LuminaKraft es un proyecto comunitario desarrollado con cariño. Si te gusta el launcher, considera apoyarnos para ayudar a cubrir los costes de desarrollo y hosting.",
+    "donatePaypal": "Donar con PayPal",
     "contributors": "Colaboradores"
   },
   "notifications": {

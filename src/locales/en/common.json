@@ -543,6 +543,9 @@
     "copyright": "© 2025 LuminaKraft Studios. All rights reserved.",
     "license": "License",
     "minecraftTrademark": "Minecraft is a registered trademark of Mojang Studios",
+    "supportUs": "Support Us",
+    "supportDescription": "LuminaKraft is a community project developed with love. If you enjoy the launcher, consider supporting us to help cover development and hosting costs.",
+    "donatePaypal": "Donate with PayPal",
     "contributors": "Contributors"
   },
   "notifications": {

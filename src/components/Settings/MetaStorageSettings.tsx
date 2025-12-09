@@ -56,12 +56,6 @@ const MetaStorageSettings: React.FC = () => {
         <p className="text-white text-lg font-semibold">{formatBytes(storageInfo.total_size)}</p>
       </div>
 
-      {/* Cache size */}
-      <div className="p-4 bg-dark-700 rounded-lg">
-        <p className="text-dark-300 text-sm font-medium mb-1">{t('metaStorage.cacheSize')}</p>
-        <p className="text-white text-lg font-semibold">{formatBytes(storageInfo.cache_size)}</p>
-      </div>
-
       {/* Minecraft versions */}
       <div className="p-4 bg-dark-700 rounded-lg cursor-pointer" onClick={toggleMinecraft}>
         <p className="text-dark-300 text-sm font-medium mb-1 flex justify-between items-center">
