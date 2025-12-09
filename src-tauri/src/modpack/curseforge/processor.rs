@@ -73,6 +73,13 @@ where
         "modpack_info".to_string()
     );
     
+    // Get override filenames BEFORE downloading mods
+    // This allows us to skip marking mods as "failed" if they are present in overrides
+    let override_filenames = get_override_filenames(&manifest, &temp_dir);
+    if !override_filenames.is_empty() {
+        println!("📦 Found {} files in overrides that will be available during download check", override_filenames.len());
+    }
+    
     // Download mods - this also returns the expected filenames for cleanup
     emit_progress(
         "".to_string(),
@@ -80,7 +87,7 @@ where
         "preparing_mod_downloads".to_string()
     );
     
-    let (failed_mods, expected_filenames) = download_mods_with_filenames(&manifest, instance_dir, emit_progress.clone(), 20.0, 90.0, auth_token, anon_key).await?;
+    let (failed_mods, expected_filenames) = download_mods_with_filenames(&manifest, instance_dir, emit_progress.clone(), 20.0, 90.0, auth_token, anon_key, &override_filenames).await?;
     
     // Determine cleanup behavior based on category and allow_custom flags
     // - official/partner: Cleanup enabled by default, respects allow_custom flags

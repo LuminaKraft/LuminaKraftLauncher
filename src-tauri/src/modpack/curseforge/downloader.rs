@@ -196,6 +196,8 @@ pub fn verify_file_hash(file_path: &PathBuf, expected_hashes: &[FileHash]) -> bo
 
 /// Download mods with progress tracking and failed mod detection
 /// Progress ranges from start_percentage to end_percentage proportionally
+/// override_filenames: Set of filenames present in the modpack's overrides folder
+///                     These files will NOT be marked as failed even if they have no download URL
 pub async fn download_mods_with_failed_tracking<F>(
     manifest: &CurseForgeManifest, 
     instance_dir: &PathBuf,
@@ -204,6 +206,7 @@ pub async fn download_mods_with_failed_tracking<F>(
     end_percentage: f32,
     auth_token: Option<&str>,
     anon_key: &str,
+    override_filenames: &std::collections::HashSet<String>,
 ) -> Result<Vec<serde_json::Value>>
 where
     F: Fn(String, f32, String) + Send + Sync + 'static,
@@ -283,7 +286,18 @@ where
                     continue;
                 }
 
-                // File doesn't exist in either location - mark as failed
+                // Check if file is in overrides - these will be extracted later, so don't mark as failed
+                if override_filenames.contains(file_name) {
+                    emit_progress(
+                        format!("mod_in_overrides:{}", file_name),
+                        mod_progress,
+                        "mod_in_overrides".to_string()
+                    );
+                    println!("✓ File {} will be extracted from overrides", file_name);
+                    continue;
+                }
+
+                // File doesn't exist in either location and not in overrides - mark as failed
                 let project_id = file_id_to_project.get(&file_info.id).copied().unwrap_or(file_info.mod_id.unwrap_or(-1));
                 let failed_mod = serde_json::json!({
                     "projectId": project_id,
@@ -360,6 +374,7 @@ where
 
 /// Download mods with progress tracking and return expected filenames for cleanup
 /// This wraps download_mods_with_failed_tracking and also returns the set of expected filenames
+/// override_filenames: Set of filenames present in the modpack's overrides folder
 pub async fn download_mods_with_filenames<F>(
     manifest: &CurseForgeManifest, 
     instance_dir: &PathBuf,
@@ -368,6 +383,7 @@ pub async fn download_mods_with_filenames<F>(
     end_percentage: f32,
     auth_token: Option<&str>,
     anon_key: &str,
+    override_filenames: &std::collections::HashSet<String>,
 ) -> Result<(Vec<serde_json::Value>, std::collections::HashSet<String>)>
 where
     F: Fn(String, f32, String) + Send + Sync + 'static + Clone,
@@ -392,7 +408,7 @@ where
     println!("📋 Expected {} mod files from manifest", expected_filenames.len());
     
     // Now do the actual download using the existing function
-    let failed_mods = download_mods_with_failed_tracking(manifest, instance_dir, emit_progress, start_percentage, end_percentage, auth_token, anon_key).await?;
+    let failed_mods = download_mods_with_failed_tracking(manifest, instance_dir, emit_progress, start_percentage, end_percentage, auth_token, anon_key, override_filenames).await?;
     
     Ok((failed_mods, expected_filenames))
 } 
