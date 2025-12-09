@@ -167,7 +167,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
     };
   }, [hasChanges, onNavigationBlocked]);
 
-  const MIN_RAM = 1024; // 1 GB in MB
+  const MIN_RAM = 512; // 512 MB minimum
   const MAX_RAM = systemRam; // Use system RAM as maximum (in MB)
   const RAM_STEP = 64; // 64 MB steps
 
