@@ -170,20 +170,6 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
 
   if (!isOpen) return null;
 
-  // RAM values based on mode
-  const getEffectiveRam = (): number => {
-    switch (ramMode) {
-      case 'recommended':
-        return metadata?.recommendedRam || userSettings.allocatedRam || 4096;
-      case 'custom':
-        return customRamValue;
-      case 'global':
-        return userSettings.allocatedRam;
-      default:
-        return 4096;
-    }
-  };
-
   // Generate random ID for image filenames
   const generateImageId = () => Math.random().toString(36).substring(2, 10);
 
@@ -327,39 +313,38 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
           </button>
         </div>
 
-        {/* Name Section */}
-        <div className="mb-6">
-          <label className="block text-dark-300 text-sm font-medium mb-2">
-            {t('profileOptions.name')} {isLocalModpack && !editingName && <span className="text-xs text-lumina-400">(Click para editar)</span>}
-          </label>
-          {editingName && isLocalModpack ? (
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                className="input-field w-full flex-1"
-                autoFocus
-              />
-              <button
-                onClick={() => setEditingName(false)}
-                className="px-3 py-2 bg-lumina-600 hover:bg-lumina-700 text-white rounded-lg text-sm transition-colors"
+        {/* Name Section - Only for local modpacks */}
+        {isLocalModpack && (
+          <div className="mb-6">
+            <label className="block text-dark-300 text-sm font-medium mb-2">
+              {t('profileOptions.name')} {!editingName && <span className="text-xs text-lumina-400">(Click para editar)</span>}
+            </label>
+            {editingName ? (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  className="input-field w-full flex-1"
+                  autoFocus
+                />
+                <button
+                  onClick={() => setEditingName(false)}
+                  className="px-3 py-2 bg-lumina-600 hover:bg-lumina-700 text-white rounded-lg text-sm transition-colors"
+                >
+                  {t('app.confirm')}
+                </button>
+              </div>
+            ) : (
+              <div
+                onClick={() => setEditingName(true)}
+                className="input-field w-full transition-colors cursor-pointer hover:border-lumina-400/50 bg-dark-700 hover:bg-dark-600 p-2"
               >
-                {t('app.confirm')}
-              </button>
-            </div>
-          ) : (
-            <div
-              onClick={() => isLocalModpack && setEditingName(true)}
-              className={`input-field w-full transition-colors ${isLocalModpack
-                ? 'cursor-pointer hover:border-lumina-400/50 bg-dark-700 hover:bg-dark-600'
-                : 'cursor-not-allowed bg-dark-700 opacity-70'
-                } p-2`}
-            >
-              <span className={isLocalModpack ? 'text-white' : 'text-dark-400'}>{displayName}</span>
-            </div>
-          )}
-        </div>
+                <span className="text-white">{displayName}</span>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Image Settings for Local Modpacks */}
         {isLocalModpack && (
@@ -580,14 +565,6 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
                   </div>
                 </div>
               </label>
-            </div>
-          </div>
-
-          {/* Current Allocation Display */}
-          <div className="mt-4 p-3 bg-dark-700 rounded-lg">
-            <div className="flex justify-between items-center">
-              <span className="text-dark-300 text-sm">{t('profileOptions.effectiveAllocation')}</span>
-              <span className="text-lumina-400 font-semibold">{getEffectiveRam()} MB ({(getEffectiveRam() / 1024).toFixed(1)} GB)</span>
             </div>
           </div>
         </div>

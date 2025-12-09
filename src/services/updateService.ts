@@ -426,13 +426,36 @@ class UpdateService {
 
       setTimeout(async () => {
         try {
+          const platform = await invoke<string>('get_platform');
+
           // On Windows, we must exit completely to allow the installer (NSIS) to overwrite files.
           // The installer typically handles restarting the app.
           if (platform === 'windows') {
             console.log('🏁 Exiting application for Windows update...');
             await exit(0);
+          } else if (platform === 'darwin') {
+            // On macOS, relaunch() is unreliable for signed apps
+            // Instead, we'll exit and let the user restart manually
+            // But first try relaunch with a timeout fallback
+            console.log('🔄 Attempting macOS relaunch...');
+
+            // Set a timeout - if relaunch doesn't work in 2 seconds, show modal
+            const relaunchTimeout = setTimeout(() => {
+              console.log('⚠️ macOS relaunch seems to have failed, showing restart modal...');
+              this.emit('restart-failed', {});
+            }, 2000);
+
+            try {
+              await relaunch();
+              clearTimeout(relaunchTimeout);
+            } catch (error) {
+              clearTimeout(relaunchTimeout);
+              console.error('macOS relaunch failed:', error);
+              // Show restart modal instead
+              this.emit('restart-failed', {});
+            }
           } else {
-            // On other platforms (macOS/Linux), relaunching is usually safe/required
+            // On Linux, relaunching is usually safe
             await relaunch();
           }
         } catch (error) {

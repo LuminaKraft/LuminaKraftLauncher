@@ -148,7 +148,17 @@ function AppContent() {
   const handleManualRestart = async () => {
     setIsRestarting(true);
     try {
-      await relaunch();
+      const platform = await invoke<string>('get_platform');
+
+      if (platform === 'darwin') {
+        // On macOS, relaunch() doesn't work reliably for signed apps
+        // So we just exit - user will need to reopen the app manually
+        // The update is already installed, so the new version will start
+        const { exit } = await import('@tauri-apps/plugin-process');
+        await exit(0);
+      } else {
+        await relaunch();
+      }
     } catch (error) {
       console.error('Failed to restart application:', error);
       setIsRestarting(false);
