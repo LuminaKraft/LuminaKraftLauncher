@@ -1070,7 +1070,11 @@
       "changelogSpanish": "Changelog (ES)",
       "changelogEn": "Changelog (EN)",
       "changelogEs": "Changelog (ES)",
-      "publishVersion": "Publish Version"
+      "publishVersion": "Publish Version",
+      "deleteVersion": "Delete Version",
+      "deleteVersionTitle": "Delete Version?",
+      "deleteVersionMessage": "Are you sure you want to delete version {{version}}? This action cannot be undone.",
+      "deleteVersionConfirm": "Delete Version"
     },
     "settings": {
       "visibility": "Visibility",
@@ -1109,6 +1113,9 @@
     "screenshotDeleted": "Screenshot deleted",
     "featuresSaved": "Features saved",
     "versionPublished": "New version published!",
+    "deletingVersion": "Deleting version...",
+    "versionDeleted": "Version deleted successfully",
+    "filesAddedToUpload": "{{count}} file(s) will be added to the modpack",
     "activatingModpack": "Activating modpack...",
     "deactivatingModpack": "Deactivating modpack...",
     "verifyingPermissions": "Verifying permissions...",
@@ -1163,6 +1170,7 @@
     "failedDeleteScreenshot": "Failed to delete screenshot",
     "failedSaveFeatures": "Failed to save features",
     "failedUploadVersion": "Failed to upload version",
+    "failedDeleteVersion": "Failed to delete version",
     "failedUpdateVisibility": "Failed to update visibility",
     "failedUpdateComingSoon": "Failed to update Coming Soon status",
     "failedDeleteModpack": "Failed to delete modpack",

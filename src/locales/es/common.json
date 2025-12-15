@@ -1068,7 +1068,11 @@
       "changelogSpanish": "Registro de Cambios (ES)",
       "changelogEn": "Registro de Cambios (EN)",
       "changelogEs": "Registro de Cambios (ES)",
-      "publishVersion": "Publicar Versión"
+      "publishVersion": "Publicar Versión",
+      "deleteVersion": "Eliminar Versión",
+      "deleteVersionTitle": "¿Eliminar Versión?",
+      "deleteVersionMessage": "¿Estás seguro de que quieres eliminar la versión {{version}}? Esta acción no se puede deshacer.",
+      "deleteVersionConfirm": "Eliminar Versión"
     },
     "settings": {
       "visibility": "Visibilidad",
@@ -1107,6 +1111,9 @@
     "screenshotDeleted": "Captura de pantalla eliminada",
     "featuresSaved": "Características guardadas",
     "versionPublished": "¡Nueva versión publicada!",
+    "deletingVersion": "Eliminando versión...",
+    "versionDeleted": "Versión eliminada exitosamente",
+    "filesAddedToUpload": "{{count}} archivo(s) serán añadidos al modpack",
     "activatingModpack": "Activando modpack...",
     "deactivatingModpack": "Desactivando modpack...",
     "verifyingPermissions": "Verificando permisos...",
@@ -1161,6 +1168,7 @@
     "failedDeleteScreenshot": "Error al eliminar captura de pantalla",
     "failedSaveFeatures": "Error al guardar características",
     "failedUploadVersion": "Error al subir versión",
+    "failedDeleteVersion": "Error al eliminar versión",
     "failedUpdateVisibility": "Error al actualizar visibilidad",
     "failedUpdateComingSoon": "Error al actualizar estado de Próximamente",
     "failedDeleteModpack": "Error al eliminar modpack",

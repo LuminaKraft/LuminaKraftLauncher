@@ -591,7 +591,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
     if (!versionToDelete) return;
 
     setIsUpdating(true);
-    const toastId = toast.loading(t('toast.deletingVersion', { defaultValue: 'Deleting version...' }));
+    const toastId = toast.loading(t('toast.deletingVersion'));
     try {
       const result = await service.deleteModpackVersion(versionToDelete.id, modpackId);
 
@@ -599,7 +599,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
         throw new Error(result.error || 'Failed to delete version');
       }
 
-      toast.success(t('toast.versionDeleted', { defaultValue: 'Version deleted successfully' }), { id: toastId });
+      toast.success(t('toast.versionDeleted'), { id: toastId });
 
       // Refresh versions list
       const versionsResult = await service.getModpackVersions(modpackId);
@@ -616,7 +616,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
       }
     } catch (error) {
       console.error('Error deleting version:', error);
-      toast.error(t('errors.failedDeleteVersion', { defaultValue: 'Failed to delete version' }), { id: toastId });
+      toast.error(t('errors.failedDeleteVersion'), { id: toastId });
     } finally {
       setIsUpdating(false);
       setShowDeleteVersionDialog(false);
@@ -1451,12 +1451,9 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
           setVersionToDelete(null);
         }}
         onConfirm={handleDeleteVersion}
-        title={t('editModpack.versions.deleteVersionTitle', { defaultValue: 'Delete Version' })}
-        message={t('editModpack.versions.deleteVersionMessage', {
-          version: versionToDelete?.version || '',
-          defaultValue: `Are you sure you want to delete version ${versionToDelete?.version}? This action cannot be undone.`
-        })}
-        confirmText={t('editModpack.versions.deleteVersionConfirm', { defaultValue: 'Delete Version' })}
+        title={t('editModpack.versions.deleteVersionTitle')}
+        message={t('editModpack.versions.deleteVersionMessage', { version: versionToDelete?.version || '' })}
+        confirmText={t('editModpack.versions.deleteVersionConfirm')}
         variant="danger"
       />
 
@@ -1475,7 +1472,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
             setShowValidationDialog(false);
             if (uploadedFiles && uploadedFiles.size > 0) {
               setPendingUploadedFiles(uploadedFiles);
-              toast.success(t('toast.filesAddedToUpload', { count: uploadedFiles.size, defaultValue: `${uploadedFiles.size} file(s) will be added to the modpack` }));
+              toast.success(t('toast.filesAddedToUpload', { count: uploadedFiles.size }));
             }
           }}
           modpackName={validationData.modpackName}
