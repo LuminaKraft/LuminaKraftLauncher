@@ -94,6 +94,70 @@ export class ModpackManagementService {
   }
 
   /**
+   * Verify if the current user has permission to modify a specific modpack
+   * Returns true if user is: owner, admin, or same-partner member
+   */
+  async verifyModpackOwnership(modpackId: string): Promise<{ hasPermission: boolean; error?: string }> {
+    try {
+      // Get authenticated user
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+      if (authError || !authUser) {
+        return { hasPermission: false, error: 'User not authenticated' };
+      }
+
+      // Get modpack details
+      const { data: modpack, error: modpackError } = await supabase
+        .from('modpacks')
+        .select('author_id, category')
+        .eq('id', modpackId)
+        .single() as { data: { author_id: string; category: string } | null; error: any };
+
+      if (modpackError || !modpack) {
+        return { hasPermission: false, error: 'Modpack not found' };
+      }
+
+      // Get user profile
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id, role, partner_id')
+        .eq('id', authUser.id)
+        .single() as { data: { id: string; role: string; partner_id: string | null } | null; error: any };
+
+      if (userError || !userData) {
+        return { hasPermission: false, error: 'User profile not found' };
+      }
+
+      // Check if owner
+      if (modpack.author_id === userData.id) {
+        return { hasPermission: true };
+      }
+
+      // Check if admin
+      if (userData.role === 'admin') {
+        return { hasPermission: true };
+      }
+
+      // Check if same partner (for partner category modpacks)
+      if (modpack.category === 'partner' && userData.partner_id) {
+        const { data: authorData } = await supabase
+          .from('users')
+          .select('partner_id')
+          .eq('id', modpack.author_id)
+          .single() as { data: { partner_id: string | null } | null };
+
+        if (authorData?.partner_id && authorData.partner_id === userData.partner_id) {
+          return { hasPermission: true };
+        }
+      }
+
+      return { hasPermission: false, error: 'Insufficient permissions' };
+    } catch (error) {
+      console.error('Error verifying modpack ownership:', error);
+      return { hasPermission: false, error: 'Failed to verify permissions' };
+    }
+  }
+
+  /**
    * Parse manifest.json from a CurseForge modpack ZIP
    * Extracts metadata like version, modloader, etc.
    */
@@ -402,6 +466,13 @@ export class ModpackManagementService {
     }>
   ): Promise<{ success: boolean; error?: string }> {
     try {
+      // Verify permissions first
+      const permissionCheck = await this.verifyModpackOwnership(modpackId);
+      if (!permissionCheck.hasPermission) {
+        console.error('❌ Permission denied:', permissionCheck.error);
+        return { success: false, error: permissionCheck.error || 'Insufficient permissions' };
+      }
+
       const updateData: any = {};
 
       if (updates.name) updateData.name_i18n = updates.name;
@@ -469,6 +540,13 @@ export class ModpackManagementService {
     imageType: 'logo' | 'banner'
   ): Promise<{ success: boolean; imageUrl?: string; error?: string }> {
     try {
+      // Verify permissions first
+      const permissionCheck = await this.verifyModpackOwnership(modpackId);
+      if (!permissionCheck.hasPermission) {
+        console.error('❌ Permission denied:', permissionCheck.error);
+        return { success: false, error: permissionCheck.error || 'Insufficient permissions' };
+      }
+
       console.log(`📤 Uploading ${imageType}:`, file.name, file.size, 'bytes');
 
       // Create FormData with file and modpackId
@@ -571,6 +649,13 @@ export class ModpackManagementService {
     try {
       if (files.length === 0) {
         return { success: true };
+      }
+
+      // Verify permissions first
+      const permissionCheck = await this.verifyModpackOwnership(modpackId);
+      if (!permissionCheck.hasPermission) {
+        console.error('❌ Permission denied:', permissionCheck.error);
+        return { success: false, error: permissionCheck.error || 'Insufficient permissions' };
       }
 
       // Get session for authorization
@@ -790,6 +875,13 @@ export class ModpackManagementService {
   async deleteModpackVersion(versionId: string, modpackId: string): Promise<{ success: boolean; error?: string }> {
     try {
       console.log('🗑️ Deleting version:', versionId);
+
+      // 0. Verify permissions first
+      const permissionCheck = await this.verifyModpackOwnership(modpackId);
+      if (!permissionCheck.hasPermission) {
+        console.error('❌ Permission denied:', permissionCheck.error);
+        return { success: false, error: permissionCheck.error || 'Insufficient permissions' };
+      }
 
       // 1. Get the version to find the file URL
       const { data: version, error: versionError } = await supabase
