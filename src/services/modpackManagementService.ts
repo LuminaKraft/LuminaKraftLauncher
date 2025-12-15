@@ -784,6 +784,73 @@ export class ModpackManagementService {
   }
 
   /**
+   * Delete a modpack version
+   * Will also delete the associated file from R2 if it exists
+   */
+  async deleteModpackVersion(versionId: string, modpackId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      console.log('🗑️ Deleting version:', versionId);
+
+      // 1. Get the version to find the file URL
+      const { data: version, error: versionError } = await supabase
+        .from('modpack_versions')
+        .select('file_url, version')
+        .eq('id', versionId)
+        .single() as { data: { file_url: string | null; version: string } | null; error: any };
+
+      if (versionError) {
+        console.error('Error fetching version:', versionError);
+        return { success: false, error: versionError.message };
+      }
+
+      // 2. Delete the file from R2 if it exists
+      if (version?.file_url) {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          const functionUrl = `${supabaseUrl}/functions/v1/delete-modpack-files`;
+
+          const response = await fetch(functionUrl, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${session?.access_token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              modpackId,
+              filePaths: [version.file_url]
+            })
+          });
+
+          if (!response.ok) {
+            console.warn('⚠️ Failed to delete file from R2 (continuing anyway)');
+          } else {
+            console.log('✅ File deleted from R2');
+          }
+        } catch (r2Error) {
+          console.warn('⚠️ Error deleting file from R2 (continuing anyway):', r2Error);
+        }
+      }
+
+      // 3. Delete the version from the database
+      const { error: deleteError } = await supabase
+        .from('modpack_versions')
+        .delete()
+        .eq('id', versionId);
+
+      if (deleteError) {
+        console.error('Error deleting version:', deleteError);
+        return { success: false, error: deleteError.message };
+      }
+
+      console.log('✅ Version deleted successfully');
+      return { success: true };
+    } catch (error) {
+      console.error('Error deleting version:', error);
+      return { success: false, error: 'Failed to delete version' };
+    }
+  }
+
+  /**
    * Delete a modpack and all its associated files from R2
    */
   async deleteModpack(modpackId: string): Promise<{ success: boolean; error?: string }> {

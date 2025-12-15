@@ -145,6 +145,8 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
 
   // Dialog State
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showDeleteVersionDialog, setShowDeleteVersionDialog] = useState(false);
+  const [versionToDelete, setVersionToDelete] = useState<{ id: string; version: string } | null>(null);
 
   // Save activeTab and modpackId to localStorage
   useEffect(() => {
@@ -582,6 +584,43 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
       toast.error(t('errors.failedUploadVersion'), { id: toastId });
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const handleDeleteVersion = async () => {
+    if (!versionToDelete) return;
+
+    setIsUpdating(true);
+    const toastId = toast.loading(t('toast.deletingVersion', { defaultValue: 'Deleting version...' }));
+    try {
+      const result = await service.deleteModpackVersion(versionToDelete.id, modpackId);
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to delete version');
+      }
+
+      toast.success(t('toast.versionDeleted', { defaultValue: 'Version deleted successfully' }), { id: toastId });
+
+      // Refresh versions list
+      const versionsResult = await service.getModpackVersions(modpackId);
+      if (versionsResult.success && versionsResult.data) {
+        setVersions(versionsResult.data);
+
+        // If we deleted the current version, update formData to the latest
+        if (formData?.version === versionToDelete.version && versionsResult.data.length > 0) {
+          const latestVersion = versionsResult.data[0].version;
+          setFormData(prev => prev ? ({ ...prev, version: latestVersion }) : null);
+          // Also update the modpack's main version
+          await service.updateModpack(modpackId, { version: latestVersion });
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting version:', error);
+      toast.error(t('errors.failedDeleteVersion', { defaultValue: 'Failed to delete version' }), { id: toastId });
+    } finally {
+      setIsUpdating(false);
+      setShowDeleteVersionDialog(false);
+      setVersionToDelete(null);
     }
   };
 
@@ -1101,19 +1140,33 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                               Released on {new Date(v.created_at).toLocaleDateString()}
                             </p>
                           </div>
-                          <button
-                            onClick={async () => {
-                              try {
-                                await invoke('open_url', { url: v.file_url });
-                              } catch (error) {
-                                console.error('Failed to open URL:', error);
-                                toast.error('Failed to open download link');
-                              }
-                            }}
-                            className="text-blue-600 hover:text-blue-700 text-sm font-medium hover:underline"
-                          >
-                            {t('editModpack.versions.downloadZip')}
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await invoke('open_url', { url: v.file_url });
+                                } catch (error) {
+                                  console.error('Failed to open URL:', error);
+                                  toast.error('Failed to open download link');
+                                }
+                              }}
+                              className="text-blue-600 hover:text-blue-700 text-sm font-medium hover:underline"
+                            >
+                              {t('editModpack.versions.downloadZip')}
+                            </button>
+                            {versions.length > 1 && (
+                              <button
+                                onClick={() => {
+                                  setVersionToDelete({ id: v.id, version: v.version });
+                                  setShowDeleteVersionDialog(true);
+                                }}
+                                className="text-red-500 hover:text-red-600 text-sm font-medium hover:underline"
+                                title={t('editModpack.versions.deleteVersion')}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
                         </div>
                         {v.changelog_i18n && (
                           <div className="mt-3 text-sm text-gray-600 dark:text-gray-300">
@@ -1388,6 +1441,22 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
         title={t('editModpack.settings.deleteModpackTitle')}
         message={t('editModpack.settings.deleteModpackMessage', { name: formData.name.en })}
         confirmText={t('editModpack.settings.deleteForever')}
+        variant="danger"
+      />
+
+      <ConfirmDialog
+        isOpen={showDeleteVersionDialog}
+        onClose={() => {
+          setShowDeleteVersionDialog(false);
+          setVersionToDelete(null);
+        }}
+        onConfirm={handleDeleteVersion}
+        title={t('editModpack.versions.deleteVersionTitle', { defaultValue: 'Delete Version' })}
+        message={t('editModpack.versions.deleteVersionMessage', {
+          version: versionToDelete?.version || '',
+          defaultValue: `Are you sure you want to delete version ${versionToDelete?.version}? This action cannot be undone.`
+        })}
+        confirmText={t('editModpack.versions.deleteVersionConfirm', { defaultValue: 'Delete Version' })}
         variant="danger"
       />
 
