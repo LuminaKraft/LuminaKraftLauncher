@@ -5,6 +5,20 @@ All notable changes to the LuminaKraft Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] - 2025-12-15
+
+### ✨ **Features**
+- Added ability to delete modpack versions (with confirmation dialog)
+- Delete button hidden if only one version exists
+- Auto-deletes associated ZIP from R2 and updates modpack version
+
+### 🐛 **Bug Fixes**
+- Fixed override files not being included when uploading new versions
+- Improved loading animation and added `+N` file indicator
+
+### 🔐 **Security**
+- Added permission verification to `updateModpack`, `uploadModpackImage`, `uploadModpackScreenshots`, and `deleteModpackVersion`
+
 ## [0.1.3] - 2025-12-09
 
 ### 🐛 **Critical Bug Fixes**
