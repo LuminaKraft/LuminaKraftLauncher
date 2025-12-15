@@ -14,6 +14,7 @@ import { supabase } from '../../services/supabaseClient';
 import { ConfirmDialog } from '../Common/ConfirmDialog';
 import { useModpackValidation } from '../../hooks/useModpackValidation';
 import { ModpackValidationDialog } from './ModpackValidationDialog';
+import JSZip from 'jszip';
 
 interface Feature {
   id?: string;
@@ -114,6 +115,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
   const [newVersion, setNewVersion] = useState('');
   const [changelog, setChangelog] = useState({ en: '', es: '' });
   const [zipFile, setZipFile] = useState<File | null>(null);
+  const [pendingUploadedFiles, setPendingUploadedFiles] = useState<Map<string, File> | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [isDraggingLogo, setIsDraggingLogo] = useState(false);
@@ -417,6 +419,52 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
     }
   };
 
+  // Prepare ZIP with overrides if needed (adds pending uploaded files to the ZIP)
+  const prepareZipForUpload = async (): Promise<File> => {
+    // If no pending files, return original ZIP
+    if (!pendingUploadedFiles || pendingUploadedFiles.size === 0 || !zipFile) {
+      return zipFile!;
+    }
+
+    // Create updated ZIP with overrides using JSZip
+    try {
+      // Read original ZIP
+      const originalZipBuffer = await zipFile.arrayBuffer();
+      const originalZip = new JSZip();
+      await originalZip.loadAsync(originalZipBuffer);
+
+      // Add uploaded files to appropriate overrides folder based on file type
+      for (const file of pendingUploadedFiles.values()) {
+        const fileBuffer = await file.arrayBuffer();
+
+        // Determine target folder based on file extension
+        let filePath: string;
+        if (file.name.endsWith('.jar')) {
+          filePath = `overrides/mods/${file.name}`;
+        } else if (file.name.endsWith('.zip')) {
+          filePath = `overrides/resourcepacks/${file.name}`;
+        } else {
+          console.warn(`[ZIP] Unknown file extension, skipping: ${file.name}`);
+          continue;
+        }
+
+        originalZip.file(filePath, fileBuffer);
+        console.log(`[ZIP] Added to ZIP: ${filePath}`);
+      }
+
+      // Generate new ZIP
+      const updatedZipBlob = await originalZip.generateAsync({ type: 'blob' });
+      const updatedFile = new File([updatedZipBlob], zipFile.name, { type: 'application/zip' });
+
+      console.log(`[ZIP] Created updated ZIP with ${pendingUploadedFiles.size} file(s)`);
+      return updatedFile;
+    } catch (error) {
+      console.error('[ZIP] Failed to create updated ZIP, using original:', error);
+      toast.error(t('publishModpack.messages.failedCreateZip'));
+      return zipFile!;
+    }
+  };
+
   const handleUploadNewVersion = async () => {
     if (!zipFile || !newVersion) {
       toast.error(t('validation.versionAndZipRequired'));
@@ -458,9 +506,15 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
       }
       await service.updateModpack(modpackId, updatePayload);
 
-      // 2. Upload file using r2UploadService (edge function will create version entry)
+      // 2. Prepare ZIP with overrides if needed
+      let zipToUpload = zipFile;
+      if (pendingUploadedFiles && pendingUploadedFiles.size > 0) {
+        zipToUpload = await prepareZipForUpload();
+      }
+
+      // 3. Upload file using r2UploadService (edge function will create version entry)
       const uploadResult = await R2UploadService.uploadToR2(
-        zipFile,
+        zipToUpload,
         modpackId,
         'modpack',
         (progress) => setUploadProgress(progress.percent)
@@ -510,6 +564,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
       setNewVersion('');
       setChangelog({ en: '', es: '' });
       setZipFile(null);
+      setPendingUploadedFiles(null);
       resetValidation();
       setUploadProgress(0);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -1096,14 +1151,27 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                         ref={fileInputRef}
                       />
                       <label htmlFor="zip-upload" className="cursor-pointer flex flex-col items-center">
-                        <Package className="w-12 h-12 text-gray-400 mb-2" />
-                        <span className="text-blue-600 font-medium hover:underline">{t('editModpack.versions.clickToUploadZip')}</span>
-                        {zipFile && (
-                          <div className="mt-2 bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full text-blue-700 dark:text-blue-300 text-sm">
-                            {zipFile.name} ({(zipFile.size / 1024 / 1024).toFixed(2)} MB)
-                          </div>
+                        {isParsing ? (
+                          <>
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600 mb-2"></div>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">{t('editModpack.versions.validating')}</p>
+                          </>
+                        ) : (
+                          <>
+                            <Package className="w-12 h-12 text-gray-400 mb-2" />
+                            <span className="text-blue-600 font-medium hover:underline">{t('editModpack.versions.clickToUploadZip')}</span>
+                            {zipFile && (
+                              <div className="mt-2 flex items-center gap-2 bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full text-blue-700 dark:text-blue-300 text-sm">
+                                <span>{zipFile.name} ({(zipFile.size / 1024 / 1024).toFixed(2)} MB)</span>
+                                {pendingUploadedFiles && pendingUploadedFiles.size > 0 && (
+                                  <span className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded font-medium text-xs">
+                                    +{pendingUploadedFiles.size}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </>
                         )}
-                        {isParsing && <p className="text-sm text-gray-500 mt-2">{t('editModpack.versions.validating')}</p>}
                       </label>
                     </div>
                   </div>
@@ -1334,13 +1402,12 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
               fileInputRef.current.value = '';
             }
           }}
-          onContinue={() => {
-            // For Edit form, we might want to handle overrides differently or just allow proceed
-            // Currently ModpackValidationDialog returns uploadedFiles but we don't have logic to merge them in Edit form yet
-            // So we might just close and let them proceed if they really want to (or block if strict)
-            // For now, let's just close and allow the user to try again or we can implement the merge logic later
+          onContinue={(uploadedFiles) => {
             setShowValidationDialog(false);
-            toast.success('Validation warning acknowledged. You can proceed with upload.');
+            if (uploadedFiles && uploadedFiles.size > 0) {
+              setPendingUploadedFiles(uploadedFiles);
+              toast.success(t('toast.filesAddedToUpload', { count: uploadedFiles.size, defaultValue: `${uploadedFiles.size} file(s) will be added to the modpack` }));
+            }
           }}
           modpackName={validationData.modpackName}
           modsWithoutUrl={validationData.modsWithoutUrl}
