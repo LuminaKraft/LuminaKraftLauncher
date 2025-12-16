@@ -1,6 +1,7 @@
 use anyhow::{Result, anyhow};
 use std::path::PathBuf;
 use std::fs;
+use std::collections::HashSet;
 use super::manifest::{read_manifest, get_modloader_info, process_overrides, get_override_filenames};
 use super::downloader::download_mods_with_filenames;
 use crate::modpack::extraction::extract_zip;
@@ -9,6 +10,8 @@ use crate::modpack::extraction::extract_zip;
 /// category: "official" | "partner" | "community" | None (imported)
 /// allow_custom_mods: Whether to preserve user-added mods (default true)
 /// allow_custom_resourcepacks: Whether to preserve user-added resourcepacks (default true)
+/// old_installed_files: Files from previous version's integrity.file_hashes (for update comparison)
+/// is_legacy_instance: If true, this is a migration from old launcher - do aggressive disk cleanup
 pub async fn process_curseforge_modpack_with_failed_tracking<F>(
     modpack_zip_path: &PathBuf,
     instance_dir: &PathBuf,
@@ -18,6 +21,8 @@ pub async fn process_curseforge_modpack_with_failed_tracking<F>(
     category: Option<&str>,
     allow_custom_mods: bool,
     allow_custom_resourcepacks: bool,
+    old_installed_files: Option<HashSet<String>>,
+    is_legacy_instance: bool,
 ) -> Result<(String, String, Option<u32>, Vec<serde_json::Value>)>
 where
     F: Fn(String, f32, String) + Send + Sync + 'static + Clone,
@@ -89,43 +94,75 @@ where
     
     let (failed_mods, expected_filenames) = download_mods_with_filenames(&manifest, instance_dir, emit_progress.clone(), 20.0, 90.0, auth_token, anon_key, &override_filenames).await?;
     
-    // Determine cleanup behavior based on category and allow_custom flags
-    // - official/partner: Cleanup enabled by default, respects allow_custom flags
-    // - community/imported: No cleanup, preserve user's custom files
-    let is_managed = category
-        .map(|c| c == "official" || c == "partner")
-        .unwrap_or(false);
+    // ===== UPDATE FLOW CLEANUP =====
+    // This section ensures that mods/resourcepacks removed in new versions are deleted.
+    //
+    // Two modes:
+    // 1. Legacy migration (is_legacy_instance=true): Compare DISK vs NEW MANIFEST
+    //    - Deletes ALL files not in new manifest (including orphans from old updates)
+    //    - May delete user-added mods, but this is a one-time migration
+    // 2. Normal update (is_legacy_instance=false): Compare OLD INTEGRITY vs NEW MANIFEST
+    //    - Only deletes files we previously installed that are no longer needed
+    //    - User-added files are preserved (they're not in old_installed_files)
     
-    // Only do cleanup for managed modpacks (official/partner)
-    // Cleanup mods if: is managed AND NOT allow_custom_mods
-    // Cleanup resourcepacks if: is managed AND NOT allow_custom_resourcepacks
-    let should_cleanup_mods = is_managed && !allow_custom_mods;
-    let should_cleanup_resourcepacks = is_managed && !allow_custom_resourcepacks;
+    // Build complete list of expected files (manifest + overrides)
+    let mut all_new_expected: HashSet<String> = HashSet::new();
     
-    if should_cleanup_mods || should_cleanup_resourcepacks {
+    // Add mods from expected_filenames (from CurseForge API)
+    for filename in &expected_filenames {
+        all_new_expected.insert(format!("mods/{}", filename));
+    }
+    
+    // Add files from overrides (mods and resourcepacks)
+    for filename in &override_filenames {
+        // Overrides can be in mods/ or resourcepacks/
+        if filename.ends_with(".jar") {
+            all_new_expected.insert(format!("mods/{}", filename));
+        } else if filename.ends_with(".zip") {
+            all_new_expected.insert(format!("resourcepacks/{}", filename));
+        }
+    }
+    
+    // Perform cleanup based on instance type
+    if is_legacy_instance {
+        // Legacy migration: aggressive cleanup - compare disk vs manifest
         emit_progress(
             "progress.cleaningRemovedMods".to_string(),
             91.0,
             "cleaning_removed_mods".to_string()
         );
         
-        // Get override filenames to preserve them during cleanup
-        let override_filenames = get_override_filenames(&manifest, &temp_dir);
+        println!("🔄 Legacy instance migration: performing disk-vs-manifest cleanup");
+        let removed = cleanup_disk_vs_manifest(instance_dir, &all_new_expected);
+        println!("🧹 Legacy migration: removed {} old files", removed);
         
-        // Merge expected_filenames with override filenames
-        let mut all_expected_filenames = expected_filenames.clone();
-        all_expected_filenames.extend(override_filenames);
-        
-        println!("🔍 Expected filenames ({}):", all_expected_filenames.len());
-        for name in &all_expected_filenames {
-            println!("  ✓ {}", name);
+    } else if let Some(ref old_files) = old_installed_files {
+        // Normal update: compare old integrity files vs new manifest
+        if !old_files.is_empty() {
+            emit_progress(
+                "progress.cleaningRemovedMods".to_string(),
+                91.0,
+                "cleaning_removed_mods".to_string()
+            );
+            
+            println!("🔄 Update flow: comparing {} old files vs {} new files", old_files.len(), all_new_expected.len());
+            let removed = cleanup_old_vs_new(old_files, &all_new_expected, instance_dir);
+            println!("🧹 Update cleanup: removed {} old files", removed);
         }
-        cleanup_removed_files_selective(&all_expected_filenames, instance_dir, should_cleanup_mods, should_cleanup_resourcepacks)?;
-        println!("🛡️ Anti-cheat cleanup: mods={}, resourcepacks={} (category: {})", 
-            should_cleanup_mods, should_cleanup_resourcepacks, category.unwrap_or("unknown"));
-    } else {
-        println!("📦 Preserving user files (category: {}, allow_mods: {}, allow_resourcepacks: {})", 
-            category.unwrap_or("imported"), allow_custom_mods, allow_custom_resourcepacks);
+    }
+    
+    // Legacy cleanup for anti-cheat (when custom mods NOT allowed)
+    // This is separate from update flow - it removes ALL unauthorized files
+    let is_managed = category
+        .map(|c| c == "official" || c == "partner")
+        .unwrap_or(false);
+    
+    let should_cleanup_mods = is_managed && !allow_custom_mods;
+    let should_cleanup_resourcepacks = is_managed && !allow_custom_resourcepacks;
+    
+    if should_cleanup_mods || should_cleanup_resourcepacks {
+        println!("🛡️ Anti-cheat cleanup: mods={}, resourcepacks={}", should_cleanup_mods, should_cleanup_resourcepacks);
+        cleanup_removed_files_selective(&expected_filenames, instance_dir, should_cleanup_mods, should_cleanup_resourcepacks)?;
     }
     
     // Process overrides AFTER cleanup - files from overrides will not be deleted
@@ -250,4 +287,90 @@ fn cleanup_directory(
     }
     
     removed_count
+}
+
+/// Legacy migration cleanup: Remove ALL files from disk that are NOT in the new manifest
+/// This is aggressive - it will remove user-added mods too, but is only used once for migration
+fn cleanup_disk_vs_manifest(instance_dir: &PathBuf, new_expected_files: &HashSet<String>) -> usize {
+    let mut removed = 0;
+    
+    // Clean mods directory
+    let mods_dir = instance_dir.join("mods");
+    if mods_dir.exists() {
+        if let Ok(entries) = fs::read_dir(&mods_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_file() {
+                    if let Some(ext) = path.extension() {
+                        if ext == "jar" {
+                            if let Some(filename) = path.file_name().and_then(|n| n.to_str()) {
+                                let relative_path = format!("mods/{}", filename);
+                                if !new_expected_files.contains(&relative_path) {
+                                    if let Ok(_) = fs::remove_file(&path) {
+                                        println!("🗑️ [Legacy] Removed: {}", relative_path);
+                                        removed += 1;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // Clean resourcepacks directory
+    let resourcepacks_dir = instance_dir.join("resourcepacks");
+    if resourcepacks_dir.exists() {
+        if let Ok(entries) = fs::read_dir(&resourcepacks_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_file() {
+                    if let Some(ext) = path.extension() {
+                        if ext == "zip" {
+                            if let Some(filename) = path.file_name().and_then(|n| n.to_str()) {
+                                let relative_path = format!("resourcepacks/{}", filename);
+                                if !new_expected_files.contains(&relative_path) {
+                                    if let Ok(_) = fs::remove_file(&path) {
+                                        println!("🗑️ [Legacy] Removed: {}", relative_path);
+                                        removed += 1;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    removed
+}
+
+/// Normal update cleanup: Remove files that were in the OLD manifest but are NOT in the NEW manifest
+/// This preserves user-added files because they were never in old_installed_files
+fn cleanup_old_vs_new(
+    old_installed_files: &HashSet<String>,
+    new_expected_files: &HashSet<String>,
+    instance_dir: &PathBuf
+) -> usize {
+    let mut removed = 0;
+    
+    for old_file in old_installed_files {
+        // Skip if file is in new manifest (still needed)
+        if new_expected_files.contains(old_file) {
+            continue;
+        }
+        
+        // File was in old manifest but not in new - delete it
+        let file_path = instance_dir.join(old_file);
+        if file_path.exists() {
+            if let Ok(_) = fs::remove_file(&file_path) {
+                println!("🗑️ [Update] Removed: {}", old_file);
+                removed += 1;
+            }
+        }
+    }
+    
+    removed
 }

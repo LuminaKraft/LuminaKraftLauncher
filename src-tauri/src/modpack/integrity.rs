@@ -161,7 +161,7 @@ pub fn create_integrity_data(
         file_hashes,
         signature,
         zip_sha256,
-        version: 1,
+        version: 2, // v2: Includes proper update flow cleanup
     })
 }
 

@@ -121,14 +121,43 @@ where
     // Check if instance already exists
     let is_update = instance_dirs.instance_dir.exists();
 
-    if is_update {
+    // For updates, read existing metadata to get old installed files and detect legacy
+    let (old_installed_files, is_legacy_instance) = if is_update {
         emit_progress("progress.checking".to_string(), 10.0, "checking".to_string());
-        // Note: Old mods/resourcepacks that are no longer in the manifest will be cleaned up
-        // after processing the new manifest (see cleanup_removed_mods below)
+        
+        match filesystem::get_instance_metadata(&modpack.id).await {
+            Ok(Some(existing_metadata)) => {
+                // Check if this is a legacy instance (integrity version < 2)
+                let is_legacy = existing_metadata.integrity
+                    .as_ref()
+                    .map(|i| i.version < 2)
+                    .unwrap_or(true); // No integrity = legacy
+                
+                // Get old installed files from integrity data
+                let old_files: std::collections::HashSet<String> = existing_metadata.integrity
+                    .as_ref()
+                    .map(|i| i.file_hashes.keys().cloned().collect())
+                    .unwrap_or_default();
+                
+                if is_legacy {
+                    println!("🔄 Detected legacy instance (integrity v{}) - will perform migration cleanup", 
+                        existing_metadata.integrity.as_ref().map(|i| i.version).unwrap_or(0));
+                } else {
+                    println!("📋 Update flow: {} files tracked from previous version", old_files.len());
+                }
+                
+                (Some(old_files), is_legacy)
+            },
+            _ => {
+                println!("⚠️ Could not read existing metadata, treating as fresh install");
+                (None, false)
+            }
+        }
     } else {
-        // Create instance directories
+        // Fresh install - no old files, not legacy
         instance_dirs.ensure_directories().await?;
-    }
+        (None, false)
+    };
 
     emit_progress("progress.installingMinecraft".to_string(), 15.0, "installing_minecraft".to_string());
 
@@ -333,6 +362,8 @@ where
                 modpack.category.as_deref(),
                 modpack.allow_custom_mods.unwrap_or(true),
                 modpack.allow_custom_resourcepacks.unwrap_or(true),
+                old_installed_files.clone(),
+                is_legacy_instance,
             ).await?;
 
             recommended_ram_from_manifest = recommended_ram;
