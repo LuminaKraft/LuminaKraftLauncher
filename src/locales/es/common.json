@@ -752,7 +752,16 @@
     "cancel": "Cancelar",
     "done": "Listo",
     "saving": "Guardando...",
-    "unsafeRamWarning": "Excede memoria segura. Se usará Global."
+    "unsafeRamWarning": "Excede memoria segura. Se usará Global.",
+    "repair": {
+      "title": "Reparar Instancia",
+      "button": "Reparar instancia...",
+      "hint": "Reinstala las dependencias de Minecraft y verifica corrupciones",
+      "confirmTitle": "¿Reparar instancia?",
+      "confirmDescription": "Reparar reinstala las dependencias de Minecraft y verifica corrupciones. Esto puede resolver problemas si tu juego no inicia debido a errores del launcher, pero no resolverá problemas o crashes relacionados con mods instalados.",
+      "confirm": "Reparar",
+      "repairing": "Reparando..."
+    }
   },
   "publishModpack": {
     "title": "Publicar Modpack",

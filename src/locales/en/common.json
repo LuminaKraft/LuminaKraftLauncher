@@ -756,7 +756,16 @@
     "cancel": "Cancel",
     "done": "Done",
     "saving": "Saving...",
-    "unsafeRamWarning": "Exceeds safe memory. Using Global."
+    "unsafeRamWarning": "Exceeds safe memory. Using Global.",
+    "repair": {
+      "title": "Repair Instance",
+      "button": "Repair instance...",
+      "hint": "Reinstalls Minecraft dependencies and checks for corruption",
+      "confirmTitle": "Repair instance?",
+      "confirmDescription": "Repairing reinstalls Minecraft dependencies and checks for corruption. This may resolve issues if your game is not launching due to launcher-related errors, but will not resolve issues or crashes related to installed mods.",
+      "confirm": "Repair",
+      "repairing": "Repairing..."
+    }
   },
   "publishModpack": {
     "title": "Publish Modpack",

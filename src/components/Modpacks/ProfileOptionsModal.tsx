@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, HardDrive, AlertTriangle } from 'lucide-react';
+import { X, HardDrive, AlertTriangle, Wrench } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { appDataDir } from '@tauri-apps/api/path';
 import toast from 'react-hot-toast';
@@ -32,7 +32,7 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
   metadata
 }) => {
   const { t } = useTranslation();
-  const { userSettings } = useLauncher();
+  const { userSettings, repairModpack } = useLauncher();
   const logoInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const appDataDirRef = useRef<string | null>(null);
@@ -54,6 +54,10 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
   const [bannerPreviewUrl, setBannerPreviewUrl] = useState<string | null>(null);
   const [systemRamMB, setSystemRamMB] = useState<number>(8192); // Default fallback
   const [maxAllocatableRam, setMaxAllocatableRam] = useState<number>(32768);
+
+  // Repair confirmation state
+  const [showRepairConfirm, setShowRepairConfirm] = useState(false);
+  const [isRepairing, setIsRepairing] = useState(false);
 
   // Load system memory and cached images when modal opens
   useEffect(() => {
@@ -567,6 +571,71 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
               </label>
             </div>
           </div>
+        </div>
+
+        {/* Repair Section */}
+        <div className="mb-6">
+          <div className="flex items-center space-x-3 mb-4">
+            <Wrench className="w-5 h-5 text-orange-500" />
+            <h3 className="text-white text-lg font-semibold">{t('profileOptions.repair.title', 'Repair Instance')}</h3>
+          </div>
+
+          {!showRepairConfirm ? (
+            <button
+              onClick={() => setShowRepairConfirm(true)}
+              className="w-full px-4 py-3 bg-orange-600/20 hover:bg-orange-600/30 text-orange-400 border border-orange-600/30 rounded-lg transition-colors text-left"
+              disabled={isRepairing || isSaving}
+            >
+              <div className="font-medium">{t('profileOptions.repair.button', 'Repair instance...')}</div>
+              <div className="text-sm text-orange-300/70 mt-1">
+                {t('profileOptions.repair.hint', 'Reinstalls Minecraft dependencies and checks for corruption')}
+              </div>
+            </button>
+          ) : (
+            <div className="p-4 rounded-lg border border-orange-600/50 bg-orange-900/20">
+              <div className="flex items-start gap-3 mb-4">
+                <AlertTriangle className="w-5 h-5 text-orange-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-white font-medium mb-2">
+                    {t('profileOptions.repair.confirmTitle', 'Repair instance?')}
+                  </h4>
+                  <p className="text-dark-300 text-sm">
+                    {t('profileOptions.repair.confirmDescription', 'Repairing reinstalls Minecraft dependencies and checks for corruption. This may resolve issues if your game is not launching due to launcher-related errors, but will not resolve issues or crashes related to installed mods.')}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={async () => {
+                    setIsRepairing(true);
+                    setShowRepairConfirm(false);
+                    onClose();
+                    await repairModpack(modpackId);
+                    setIsRepairing(false);
+                  }}
+                  className="flex-1 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors font-medium"
+                  disabled={isRepairing}
+                >
+                  {isRepairing ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      {t('profileOptions.repair.repairing', 'Repairing...')}
+                    </div>
+                  ) : (
+                    t('profileOptions.repair.confirm', 'Repair')
+                  )}
+                </button>
+                <button
+                  onClick={() => setShowRepairConfirm(false)}
+                  className="px-4 py-2 bg-dark-600 hover:bg-dark-500 text-white rounded-lg transition-colors"
+                  disabled={isRepairing}
+                >
+                  {t('profileOptions.cancel')}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Action Buttons */}
