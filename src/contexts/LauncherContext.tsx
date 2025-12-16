@@ -742,8 +742,8 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     }
 
     // Verificar si el modpack requiere ZIP (no es vanilla/paper)
-    // Only check for actions that need download
-    if (modpack && !modpack.urlModpackZip && (action === 'install' || action === 'update' || action === 'repair')) {
+    // Only check for actions that need download from catalog (not reinstall - reads from instance metadata)
+    if (modpack && !modpack.urlModpackZip && (action === 'install' || action === 'update')) {
       if (modpack.ip) {
         // Es un servidor vanilla/paper, solo se puede "conectar"
         throw new Error(`Este es un servidor ${modpack.modloader}. IP: ${modpack.ip}`);
@@ -791,7 +791,8 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     const actionStatus = action === 'launch' ? 'launching' :
       action === 'update' ? 'updating' :
         action === 'repair' ? 'repairing' :
-          `${action}ing` as any;
+          action === 'reinstall' ? 'reinstalling' :
+            `${action}ing` as any;
 
     dispatch({
       type: 'SET_MODPACK_STATE',
