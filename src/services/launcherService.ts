@@ -913,6 +913,7 @@ class LauncherService {
    */
   async repairModpack(modpackId: string, _onProgress?: (_progress: ProgressInfo) => void): Promise<any[]> {
     let unlistenProgress: (() => void) | undefined;
+    let lastPercentage = 0; // Track last valid percentage
 
     // Setup progress listener
     if (_onProgress && isTauriContext()) {
@@ -921,10 +922,12 @@ class LauncherService {
         (_event: any) => {
           const data = _event.payload;
           if (data) {
-            // -1 from backend means "don't update percentage" - filter it out
-            const percentage = (data.percentage >= 0) ? data.percentage : 0;
+            // -1 from backend means "don't update percentage" - keep previous value
+            if (data.percentage >= 0) {
+              lastPercentage = data.percentage;
+            }
             _onProgress({
-              percentage,
+              percentage: lastPercentage,
               currentFile: data.detailMessage || '',
               downloadSpeed: '',
               eta: '',
