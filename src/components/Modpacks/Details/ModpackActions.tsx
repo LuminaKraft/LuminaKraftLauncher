@@ -87,12 +87,13 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({
 
     // Read-only mode (Home/Explore): Show Install or Installed only
     if (isReadOnly) {
-      // Show installing/updating/repairing state in read-only mode
-      if (['installing', 'updating', 'repairing'].includes(state.status)) {
+      // Show installing/updating/repairing/reinstalling state in read-only mode
+      if (['installing', 'updating', 'repairing', 'reinstalling'].includes(state.status)) {
         const labels: Record<string, string> = {
           'installing': t('modpacks.installing'),
           'updating': t('modpacks.updating'),
-          'repairing': t('modpacks.repairing')
+          'repairing': t('modpacks.repairing'),
+          'reinstalling': t('modpacks.reinstalling')
         };
         return {
           icon: Loader2,
@@ -192,16 +193,19 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({
         };
       case 'installing':
       case 'updating':
-      case 'repairing': {
+      case 'repairing':
+      case 'reinstalling': {
         const labels: Record<string, string> = {
           'installing': t('modpacks.installing'),
           'updating': t('modpacks.updating'),
-          'repairing': t('modpacks.repairing')
+          'repairing': t('modpacks.repairing'),
+          'reinstalling': t('modpacks.reinstalling')
         };
         const bgColors: Record<string, string> = {
           'installing': 'bg-lumina-500/50 cursor-not-allowed',
           'updating': 'bg-orange-600/50 cursor-not-allowed',
-          'repairing': 'bg-orange-600/50 cursor-not-allowed'
+          'repairing': 'bg-orange-600/50 cursor-not-allowed',
+          'reinstalling': 'bg-red-600/50 cursor-not-allowed'
         };
         return {
           icon: Loader2,
@@ -366,7 +370,7 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({
         </button>
 
         {/* Progress Display */}
-        {['installing', 'updating', 'repairing', 'launching'].includes(state.status) && state.progress && (
+        {['installing', 'updating', 'repairing', 'reinstalling', 'launching'].includes(state.status) && state.progress && (
           <div className="space-y-3">
             {/* Progress header */}
             <div className="flex justify-between text-sm text-dark-300 mb-2">
