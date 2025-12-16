@@ -765,6 +765,15 @@
       "confirmDescription": "Repairing reinstalls Minecraft dependencies and checks for corruption. This may resolve issues if your game is not launching due to launcher-related errors, but will not resolve issues or crashes related to installed mods.",
       "confirm": "Repair",
       "repairing": "Repairing..."
+    },
+    "reinstall": {
+      "title": "Reinstall Modpack",
+      "button": "Reinstall modpack...",
+      "hint": "Resets the instance to its original state, removing any mods you have added",
+      "confirmTitle": "Are you sure you want to reinstall this instance?",
+      "confirmDescription": "Reinstalling will reset all installed or modified content to what is provided by the modpack, removing any mods or content you have added on top of the original installation. This may fix unexpected behavior if changes have been made to the instance, but if your worlds now depend on additional installed content, it may break existing worlds.",
+      "confirm": "Reinstall modpack",
+      "reinstalling": "Reinstalling..."
     }
   },
   "publishModpack": {

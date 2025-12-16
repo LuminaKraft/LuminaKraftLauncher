@@ -430,7 +430,7 @@ async fn install_modpack_with_shared_storage(app: tauri::AppHandle, modpack: Mod
 }
 
 #[tauri::command]
-async fn install_modpack_with_failed_tracking(app: tauri::AppHandle, modpack: Modpack, settings: UserSettings, is_repair: Option<bool>) -> Result<Vec<serde_json::Value>, String> {
+async fn install_modpack_with_failed_tracking(app: tauri::AppHandle, modpack: Modpack, settings: UserSettings, force_clean_install: Option<bool>) -> Result<Vec<serde_json::Value>, String> {
     // Validate modpack before installation
     if let Err(e) = launcher::validate_modpack(&modpack) {
         return Err(format!("Invalid modpack configuration: {}", e));
@@ -458,7 +458,7 @@ async fn install_modpack_with_failed_tracking(app: tauri::AppHandle, modpack: Mo
         }
     };
     
-    match launcher::install_modpack_with_shared_storage(modpack, settings, emit_progress, is_repair.unwrap_or(false)).await {
+    match launcher::install_modpack_with_shared_storage(modpack, settings, emit_progress, force_clean_install.unwrap_or(false)).await {
         Ok(failed_mods) => Ok(failed_mods),
         Err(e) => Err(format!("Failed to install modpack: {}", e)),
     }

@@ -99,7 +99,7 @@ pub async fn install_modpack_with_shared_storage<F>(
     modpack: Modpack,
     settings: UserSettings,
     emit_progress: F,
-    is_repair: bool,
+    force_clean_install: bool,
 ) -> Result<Vec<serde_json::Value>>
 where
     F: Fn(String, f32, String) + Send + Sync + 'static + Clone,
@@ -122,11 +122,11 @@ where
     // Check if instance already exists
     let is_update = instance_dirs.instance_dir.exists();
 
-    // For updates/repairs, read existing metadata to get old installed files and detect if aggressive cleanup needed
+    // For updates/reinstalls, read existing metadata to get old installed files and detect if aggressive cleanup needed
     // Aggressive cleanup (disk vs manifest) happens when:
-    // 1. is_repair=true (user explicitly wants reset), OR
+    // 1. force_clean_install=true (user explicitly wants reset via reinstall), OR
     // 2. Legacy instance (integrity.version < 2)
-    let (old_installed_files, force_aggressive_cleanup) = if is_update {
+    let (old_installed_files, do_aggressive_cleanup) = if is_update {
         emit_progress("progress.checking".to_string(), 10.0, "checking".to_string());
         
         match filesystem::get_instance_metadata(&modpack.id).await {
@@ -143,11 +143,11 @@ where
                     .map(|i| i.file_hashes.keys().cloned().collect())
                     .unwrap_or_default();
                 
-                // Force aggressive cleanup for repair OR legacy migration
-                let aggressive = is_repair || is_legacy;
+                // Force aggressive cleanup for reinstall OR legacy migration
+                let aggressive = force_clean_install || is_legacy;
                 
-                if is_repair {
-                    println!("🔧 Repair mode: will perform aggressive cleanup (reset to clean state)");
+                if force_clean_install {
+                    println!("🔄 Reinstall mode: will perform aggressive cleanup (reset to clean state)");
                 } else if is_legacy {
                     println!("🔄 Detected legacy instance (integrity v{}) - will perform migration cleanup", 
                         existing_metadata.integrity.as_ref().map(|i| i.version).unwrap_or(0));
@@ -372,7 +372,7 @@ where
                 modpack.allow_custom_mods.unwrap_or(true),
                 modpack.allow_custom_resourcepacks.unwrap_or(true),
                 old_installed_files.clone(),
-                force_aggressive_cleanup,
+                do_aggressive_cleanup,
             ).await?;
 
             recommended_ram_from_manifest = recommended_ram;

@@ -906,13 +906,14 @@ class LauncherService {
     }
   }
 
+  /**
+   * Light repair - reinstalls Minecraft dependencies without aggressive mod cleanup.
+   * Use this when game won't launch due to corrupted assets/libraries.
+   */
   async repairModpack(modpackId: string, _onProgress?: (_progress: ProgressInfo) => void): Promise<any[]> {
-    // For repair, use installModpackWithFailedTracking to get detailed information
-    // about any issues and show specific errors
     try {
-      console.log(`🔧 Starting repair for modpack: ${modpackId}`);
+      console.log(`🔧 Starting light repair for modpack: ${modpackId}`);
 
-      // Report initial progress specific to repair
       if (_onProgress) {
         _onProgress({
           percentage: 0,
@@ -925,21 +926,19 @@ class LauncherService {
         });
       }
 
-      // Use installModpackWithFailedTracking with isRepair=true for aggressive cleanup
-      // This ensures repair resets to clean state (like Modrinth)
-      const failedMods = await this.installModpackWithFailedTracking(modpackId, _onProgress, true);
+      // Light repair - isRepair=false means no aggressive cleanup
+      // Will reinstall Minecraft dependencies but preserve user-added mods
+      const failedMods = await this.installModpackWithFailedTracking(modpackId, _onProgress, false);
 
-      console.log(`✅ Repair completed for modpack: ${modpackId}`, { failedMods: failedMods.length });
+      console.log(`✅ Light repair completed for modpack: ${modpackId}`, { failedMods: failedMods.length });
       return failedMods;
 
     } catch (error) {
       console.error(`❌ Repair failed for modpack: ${modpackId}`, error);
 
-      // Improve error message to be more specific about repair
       if (error instanceof Error) {
         const originalMessage = error.message;
 
-        // If error is already specific, keep it
         if (originalMessage.includes('authentication') ||
           originalMessage.includes('forbidden') ||
           originalMessage.includes('network') ||
@@ -948,17 +947,68 @@ class LauncherService {
           originalMessage.includes('permission') ||
           originalMessage.includes('space') ||
           originalMessage.includes('java')) {
-          throw error; // Keep specific error
+          throw error;
         }
 
-        // For generic errors, create a more useful message
         const repairError = new Error(`Error durante la reparación: ${originalMessage}`);
         repairError.stack = error.stack;
         throw repairError;
       }
 
-      // For non-specific errors
       throw new Error(`Error durante la reparación del modpack: ${String(error)}`);
+    }
+  }
+
+  /**
+   * Aggressive reinstall - resets instance to clean state, removing user-added mods.
+   * Use this to completely restore the modpack to its original state.
+   */
+  async reinstallModpack(modpackId: string, _onProgress?: (_progress: ProgressInfo) => void): Promise<any[]> {
+    try {
+      console.log(`🔄 Starting full reinstall for modpack: ${modpackId}`);
+
+      if (_onProgress) {
+        _onProgress({
+          percentage: 0,
+          currentFile: '',
+          downloadSpeed: '',
+          eta: '',
+          step: 'checking',
+          generalMessage: i18next.t('progress.startingReinstall', 'Reinstalling modpack...'),
+          detailMessage: i18next.t('progress.resettingInstance', 'Resetting instance to clean state')
+        });
+      }
+
+      // Aggressive reinstall - forceCleanInstall=true triggers full cleanup
+      // Will remove ALL files not in the modpack manifest
+      const failedMods = await this.installModpackWithFailedTracking(modpackId, _onProgress, true);
+
+      console.log(`✅ Full reinstall completed for modpack: ${modpackId}`, { failedMods: failedMods.length });
+      return failedMods;
+
+    } catch (error) {
+      console.error(`❌ Reinstall failed for modpack: ${modpackId}`, error);
+
+      if (error instanceof Error) {
+        const originalMessage = error.message;
+
+        if (originalMessage.includes('authentication') ||
+          originalMessage.includes('forbidden') ||
+          originalMessage.includes('network') ||
+          originalMessage.includes('download') ||
+          originalMessage.includes('extraction') ||
+          originalMessage.includes('permission') ||
+          originalMessage.includes('space') ||
+          originalMessage.includes('java')) {
+          throw error;
+        }
+
+        const reinstallError = new Error(`Error durante la reinstalación: ${originalMessage}`);
+        reinstallError.stack = error.stack;
+        throw reinstallError;
+      }
+
+      throw new Error(`Error durante la reinstalación del modpack: ${String(error)}`);
     }
   }
 
@@ -1100,7 +1150,7 @@ class LauncherService {
     }
   }
 
-  async installModpackWithFailedTracking(modpackId: string, _onProgress?: (_progress: ProgressInfo) => void, isRepair: boolean = false): Promise<any[]> {
+  async installModpackWithFailedTracking(modpackId: string, _onProgress?: (_progress: ProgressInfo) => void, forceCleanInstall: boolean = false): Promise<any[]> {
     const modpack = await this.ensureModpackHasRequiredFields(modpackId);
 
     let unlistenProgress: (() => void) | undefined;
@@ -1142,7 +1192,7 @@ class LauncherService {
       const failedMods = await safeInvoke<any[]>('install_modpack_with_failed_tracking', {
         modpack: transformedModpack,
         settings: transformedSettings,
-        isRepair: isRepair  // Pass repair flag to backend for aggressive cleanup
+        forceCleanInstall: forceCleanInstall  // true = aggressive cleanup that resets to clean state
       });
 
       return failedMods;

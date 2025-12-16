@@ -761,6 +761,15 @@
       "confirmDescription": "Reparar reinstala las dependencias de Minecraft y verifica corrupciones. Esto puede resolver problemas si tu juego no inicia debido a errores del launcher, pero no resolverá problemas o crashes relacionados con mods instalados.",
       "confirm": "Reparar",
       "repairing": "Reparando..."
+    },
+    "reinstall": {
+      "title": "Reinstalar Modpack",
+      "button": "Reinstalar modpack...",
+      "hint": "Restablece la instancia a su estado original, eliminando cualquier mod que hayas añadido",
+      "confirmTitle": "¿Estás seguro de que quieres reinstalar esta instancia?",
+      "confirmDescription": "Reinstalar restablecerá todo el contenido instalado o modificado a lo que proporciona el modpack, eliminando cualquier mod o contenido que hayas añadido encima de la instalación original. Esto puede arreglar comportamiento inesperado si se han hecho cambios a la instancia, pero si tus mundos ahora dependen de contenido adicional instalado, puede romper mundos existentes.",
+      "confirm": "Reinstalar modpack",
+      "reinstalling": "Reinstalando..."
     }
   },
   "publishModpack": {

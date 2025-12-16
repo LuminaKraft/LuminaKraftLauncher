@@ -53,6 +53,7 @@ interface LauncherContextType {
   updateModpack: (_id: string) => Promise<boolean>;
   launchModpack: (_id: string) => Promise<boolean>;
   repairModpack: (_id: string) => Promise<boolean>;
+  reinstallModpack: (_id: string) => Promise<boolean>;
   stopInstance: (_id: string) => Promise<boolean>;
   changeLanguage: (_language: string) => Promise<void>;
   removeModpack: (_id: string) => Promise<void>;
@@ -727,7 +728,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
 
 
   const performModpackAction = async (
-    action: 'install' | 'update' | 'launch' | 'repair' | 'stop',
+    action: 'install' | 'update' | 'launch' | 'repair' | 'reinstall' | 'stop',
     modpackId: string
   ): Promise<boolean> => {
     const modpack = state.modpacksData?.modpacks.find((m: {
@@ -1026,9 +1027,18 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
           break;
         }
         case 'repair':
+          // Light repair - only reinstalls Minecraft dependencies, doesn't touch mods
           const repairFailedModsResult = await launcherService.repairModpack(modpackId, onProgress);
           if (repairFailedModsResult && repairFailedModsResult.length > 0) {
             setFailedMods(repairFailedModsResult);
+            setShowFailedModsDialog(true);
+          }
+          break;
+        case 'reinstall':
+          // Aggressive reinstall - resets instance to clean state (removes added mods)
+          const reinstallFailedModsResult = await launcherService.reinstallModpack(modpackId, onProgress);
+          if (reinstallFailedModsResult && reinstallFailedModsResult.length > 0) {
+            setFailedMods(reinstallFailedModsResult);
             setShowFailedModsDialog(true);
           }
           break;
@@ -1261,6 +1271,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
   const updateModpack = (id: string) => performModpackAction('update', id);
   const launchModpack = (id: string) => performModpackAction('launch', id);
   const repairModpack = (id: string) => performModpackAction('repair', id);
+  const reinstallModpack = (id: string) => performModpackAction('reinstall', id);
 
   const removeModpack = async (id: string) => {
     try {
@@ -1514,6 +1525,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     updateModpack,
     launchModpack,
     repairModpack,
+    reinstallModpack,
     stopInstance: (id: string) => performModpackAction('stop', id), // Added stopInstance
     changeLanguage,
     removeModpack,

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, HardDrive, AlertTriangle, Wrench } from 'lucide-react';
+import { X, HardDrive, AlertTriangle, Wrench, RefreshCcw } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { appDataDir } from '@tauri-apps/api/path';
 import toast from 'react-hot-toast';
@@ -32,7 +32,7 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
   metadata
 }) => {
   const { t } = useTranslation();
-  const { userSettings, repairModpack } = useLauncher();
+  const { userSettings, repairModpack, reinstallModpack } = useLauncher();
   const logoInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const appDataDirRef = useRef<string | null>(null);
@@ -55,9 +55,11 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
   const [systemRamMB, setSystemRamMB] = useState<number>(8192); // Default fallback
   const [maxAllocatableRam, setMaxAllocatableRam] = useState<number>(32768);
 
-  // Repair confirmation state
+  // Repair and reinstall confirmation state
   const [showRepairConfirm, setShowRepairConfirm] = useState(false);
   const [isRepairing, setIsRepairing] = useState(false);
+  const [showReinstallConfirm, setShowReinstallConfirm] = useState(false);
+  const [isReinstalling, setIsReinstalling] = useState(false);
 
   // Load system memory and cached images when modal opens
   useEffect(() => {
@@ -630,6 +632,71 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
                   onClick={() => setShowRepairConfirm(false)}
                   className="px-4 py-2 bg-dark-600 hover:bg-dark-500 text-white rounded-lg transition-colors"
                   disabled={isRepairing}
+                >
+                  {t('profileOptions.cancel')}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Reinstall Section */}
+        <div className="mb-6">
+          <div className="flex items-center space-x-3 mb-4">
+            <RefreshCcw className="w-5 h-5 text-red-500" />
+            <h3 className="text-white text-lg font-semibold">{t('profileOptions.reinstall.title', 'Reinstall Modpack')}</h3>
+          </div>
+
+          {!showReinstallConfirm ? (
+            <button
+              onClick={() => setShowReinstallConfirm(true)}
+              className="w-full px-4 py-3 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-600/30 rounded-lg transition-colors text-left"
+              disabled={isReinstalling || isSaving || isRepairing}
+            >
+              <div className="font-medium">{t('profileOptions.reinstall.button', 'Reinstall modpack...')}</div>
+              <div className="text-sm text-red-300/70 mt-1">
+                {t('profileOptions.reinstall.hint', 'Resets the instance to its original state, removing any mods you have added')}
+              </div>
+            </button>
+          ) : (
+            <div className="p-4 rounded-lg border border-red-600/50 bg-red-900/20">
+              <div className="flex items-start gap-3 mb-4">
+                <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-white font-medium mb-2">
+                    {t('profileOptions.reinstall.confirmTitle', 'Are you sure you want to reinstall this instance?')}
+                  </h4>
+                  <p className="text-dark-300 text-sm">
+                    {t('profileOptions.reinstall.confirmDescription', 'Reinstalling will reset all installed or modified content to what is provided by the modpack, removing any mods or content you have added on top of the original installation. This may fix unexpected behavior if changes have been made to the instance, but if your worlds now depend on additional installed content, it may break existing worlds.')}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={async () => {
+                    setIsReinstalling(true);
+                    setShowReinstallConfirm(false);
+                    onClose();
+                    await reinstallModpack(modpackId);
+                    setIsReinstalling(false);
+                  }}
+                  className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium"
+                  disabled={isReinstalling}
+                >
+                  {isReinstalling ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      {t('profileOptions.reinstall.reinstalling', 'Reinstalling...')}
+                    </div>
+                  ) : (
+                    t('profileOptions.reinstall.confirm', 'Reinstall modpack')
+                  )}
+                </button>
+                <button
+                  onClick={() => setShowReinstallConfirm(false)}
+                  className="px-4 py-2 bg-dark-600 hover:bg-dark-500 text-white rounded-lg transition-colors"
+                  disabled={isReinstalling}
                 >
                   {t('profileOptions.cancel')}
                 </button>
