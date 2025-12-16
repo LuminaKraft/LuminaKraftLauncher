@@ -92,6 +92,7 @@
     "installing": "Instalando...",
     "updating": "Actualizando...",
     "repairing": "Reparando...",
+    "reinstalling": "Reinstalando...",
     "downloading": "Descargando...",
     "extracting": "Extrayendo...",
     "progress": "Progreso: {{percent}}%",

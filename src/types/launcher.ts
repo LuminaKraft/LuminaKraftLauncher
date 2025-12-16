@@ -159,6 +159,7 @@ export type ModpackStatus =
   | 'installing'
   | 'updating'
   | 'repairing'
+  | 'reinstalling'
   | 'launching'
   | 'running'
   | 'stopping'

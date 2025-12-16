@@ -96,6 +96,7 @@
     "installing": "Installing...",
     "updating": "Updating...",
     "repairing": "Repairing...",
+    "reinstalling": "Reinstalling...",
     "extracting": "Extracting...",
     "progress": "Progress: {{percent}}%",
     "comingSoon": "Coming Soon",

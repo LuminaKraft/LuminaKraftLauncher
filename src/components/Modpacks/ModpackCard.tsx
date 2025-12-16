@@ -96,10 +96,12 @@ const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect
 
     // Read-only mode (Home/Explore): Show Install or Installed (disabled) only
     if (isReadOnly) {
-      // Show installing/updating state
-      if (['installing', 'updating'].includes(state.status)) {
+      // Show installing/updating/reinstalling state
+      if (['installing', 'updating', 'reinstalling'].includes(state.status)) {
         return {
-          text: state.status === 'installing' ? t('modpacks.installing') : t('modpacks.updating'),
+          text: state.status === 'installing' ? t('modpacks.installing')
+            : state.status === 'reinstalling' ? t('modpacks.reinstalling', 'Reinstalling...')
+              : t('modpacks.updating'),
           icon: Loader2,
           onClick: () => { },
           className: 'btn-secondary',
@@ -171,10 +173,12 @@ const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect
       case 'installing':
       case 'updating':
       case 'repairing':
+      case 'reinstalling':
         return {
           text: state.status === 'installing' ? t('modpacks.installing')
             : state.status === 'updating' ? t('modpacks.updating')
-              : t('modpacks.repairing'),
+              : state.status === 'reinstalling' ? t('modpacks.reinstalling', 'Reinstalling...')
+                : t('modpacks.repairing'),
           icon: Loader2,
           onClick: () => { },
           className: 'btn-secondary',
@@ -248,7 +252,7 @@ const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect
 
   const buttonConfig = getButtonConfig();
   const ButtonIcon = buttonConfig.icon;
-  const isLoading = ['installing', 'updating', 'repairing', 'launching', 'stopping'].includes(state.status);
+  const isLoading = ['installing', 'updating', 'repairing', 'reinstalling', 'launching', 'stopping'].includes(state.status);
 
   // Fake progress for the "launching" phase
   const [fakeLaunchProgress, setFakeLaunchProgress] = useState(0);
