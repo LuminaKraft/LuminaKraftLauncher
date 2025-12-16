@@ -1191,6 +1191,7 @@ class LauncherService {
     const modpack = await this.ensureModpackHasRequiredFields(modpackId);
 
     let unlistenProgress: (() => void) | undefined;
+    let lastPercentage = 0; // Track last valid percentage
 
     // Configurar listener de progreso si se proporciona callback
     if (_onProgress && isTauriContext()) {
@@ -1207,8 +1208,13 @@ class LauncherService {
               currentFile = data.message;
             }
 
+            // -1 from backend means "don't update percentage" - keep previous value
+            if (data.percentage >= 0) {
+              lastPercentage = data.percentage;
+            }
+
             _onProgress({
-              percentage: data.percentage || 0,
+              percentage: lastPercentage,
               currentFile: currentFile,
               downloadSpeed: data.downloadSpeed || '',
               eta: data.eta || '', // ETA del backend (por ahora vacío, se calcula en frontend)
