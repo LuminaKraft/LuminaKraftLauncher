@@ -925,8 +925,9 @@ class LauncherService {
         });
       }
 
-      // Use installModpackWithFailedTracking to get detailed information
-      const failedMods = await this.installModpackWithFailedTracking(modpackId, _onProgress);
+      // Use installModpackWithFailedTracking with isRepair=true for aggressive cleanup
+      // This ensures repair resets to clean state (like Modrinth)
+      const failedMods = await this.installModpackWithFailedTracking(modpackId, _onProgress, true);
 
       console.log(`✅ Repair completed for modpack: ${modpackId}`, { failedMods: failedMods.length });
       return failedMods;
@@ -1099,7 +1100,7 @@ class LauncherService {
     }
   }
 
-  async installModpackWithFailedTracking(modpackId: string, _onProgress?: (_progress: ProgressInfo) => void): Promise<any[]> {
+  async installModpackWithFailedTracking(modpackId: string, _onProgress?: (_progress: ProgressInfo) => void, isRepair: boolean = false): Promise<any[]> {
     const modpack = await this.ensureModpackHasRequiredFields(modpackId);
 
     let unlistenProgress: (() => void) | undefined;
@@ -1140,7 +1141,8 @@ class LauncherService {
 
       const failedMods = await safeInvoke<any[]>('install_modpack_with_failed_tracking', {
         modpack: transformedModpack,
-        settings: transformedSettings
+        settings: transformedSettings,
+        isRepair: isRepair  // Pass repair flag to backend for aggressive cleanup
       });
 
       return failedMods;

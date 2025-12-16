@@ -396,7 +396,7 @@ async fn install_modpack_with_minecraft(app: tauri::AppHandle, modpack: Modpack,
         }
     };
     
-    match launcher::install_modpack_with_shared_storage(modpack, settings, emit_progress).await {
+    match launcher::install_modpack_with_shared_storage(modpack, settings, emit_progress, false).await {
         Ok(_) => Ok(()),
         Err(e) => Err(format!("Failed to install modpack: {}", e)),
     }
@@ -423,14 +423,14 @@ async fn install_modpack_with_shared_storage(app: tauri::AppHandle, modpack: Mod
         }
     };
     
-    match launcher::install_modpack_with_shared_storage(modpack, settings, emit_progress).await {
+    match launcher::install_modpack_with_shared_storage(modpack, settings, emit_progress, false).await {
         Ok(failed_mods) => Ok(failed_mods),
         Err(e) => Err(format!("Failed to install modpack: {}", e)),
     }
 }
 
 #[tauri::command]
-async fn install_modpack_with_failed_tracking(app: tauri::AppHandle, modpack: Modpack, settings: UserSettings) -> Result<Vec<serde_json::Value>, String> {
+async fn install_modpack_with_failed_tracking(app: tauri::AppHandle, modpack: Modpack, settings: UserSettings, is_repair: Option<bool>) -> Result<Vec<serde_json::Value>, String> {
     // Validate modpack before installation
     if let Err(e) = launcher::validate_modpack(&modpack) {
         return Err(format!("Invalid modpack configuration: {}", e));
@@ -458,7 +458,7 @@ async fn install_modpack_with_failed_tracking(app: tauri::AppHandle, modpack: Mo
         }
     };
     
-    match launcher::install_modpack_with_shared_storage(modpack, settings, emit_progress).await {
+    match launcher::install_modpack_with_shared_storage(modpack, settings, emit_progress, is_repair.unwrap_or(false)).await {
         Ok(failed_mods) => Ok(failed_mods),
         Err(e) => Err(format!("Failed to install modpack: {}", e)),
     }
@@ -1236,7 +1236,7 @@ async fn install_modpack_from_local_zip(
             };
 
             // Use existing install logic with progress
-            launcher::install_modpack_with_shared_storage(local_modpack, settings, emit_progress).await?;
+            launcher::install_modpack_with_shared_storage(local_modpack, settings, emit_progress, false).await?;
             Ok(())
         })
     })

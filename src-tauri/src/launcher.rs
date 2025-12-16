@@ -98,7 +98,8 @@ pub fn validate_modpack(modpack: &Modpack) -> Result<()> {
 pub async fn install_modpack_with_shared_storage<F>(
     modpack: Modpack,
     settings: UserSettings,
-    emit_progress: F
+    emit_progress: F,
+    is_repair: bool,
 ) -> Result<Vec<serde_json::Value>>
 where
     F: Fn(String, f32, String) + Send + Sync + 'static + Clone,
@@ -121,8 +122,11 @@ where
     // Check if instance already exists
     let is_update = instance_dirs.instance_dir.exists();
 
-    // For updates, read existing metadata to get old installed files and detect legacy
-    let (old_installed_files, is_legacy_instance) = if is_update {
+    // For updates/repairs, read existing metadata to get old installed files and detect if aggressive cleanup needed
+    // Aggressive cleanup (disk vs manifest) happens when:
+    // 1. is_repair=true (user explicitly wants reset), OR
+    // 2. Legacy instance (integrity.version < 2)
+    let (old_installed_files, force_aggressive_cleanup) = if is_update {
         emit_progress("progress.checking".to_string(), 10.0, "checking".to_string());
         
         match filesystem::get_instance_metadata(&modpack.id).await {
@@ -139,14 +143,19 @@ where
                     .map(|i| i.file_hashes.keys().cloned().collect())
                     .unwrap_or_default();
                 
-                if is_legacy {
+                // Force aggressive cleanup for repair OR legacy migration
+                let aggressive = is_repair || is_legacy;
+                
+                if is_repair {
+                    println!("🔧 Repair mode: will perform aggressive cleanup (reset to clean state)");
+                } else if is_legacy {
                     println!("🔄 Detected legacy instance (integrity v{}) - will perform migration cleanup", 
                         existing_metadata.integrity.as_ref().map(|i| i.version).unwrap_or(0));
                 } else {
                     println!("📋 Update flow: {} files tracked from previous version", old_files.len());
                 }
                 
-                (Some(old_files), is_legacy)
+                (Some(old_files), aggressive)
             },
             _ => {
                 println!("⚠️ Could not read existing metadata, treating as fresh install");
@@ -363,7 +372,7 @@ where
                 modpack.allow_custom_mods.unwrap_or(true),
                 modpack.allow_custom_resourcepacks.unwrap_or(true),
                 old_installed_files.clone(),
-                is_legacy_instance,
+                force_aggressive_cleanup,
             ).await?;
 
             recommended_ram_from_manifest = recommended_ram;
