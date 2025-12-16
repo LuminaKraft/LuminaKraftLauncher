@@ -921,8 +921,10 @@ class LauncherService {
         (_event: any) => {
           const data = _event.payload;
           if (data) {
+            // -1 from backend means "don't update percentage" - filter it out
+            const percentage = (data.percentage >= 0) ? data.percentage : 0;
             _onProgress({
-              percentage: data.percentage || 0,
+              percentage,
               currentFile: data.detailMessage || '',
               downloadSpeed: '',
               eta: '',
