@@ -1580,7 +1580,8 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
           if (integrityErrorDialog.modpackId) {
             const modpackId = integrityErrorDialog.modpackId;
             setIntegrityErrorDialog(prev => ({ ...prev, isOpen: false }));
-            repairModpack(modpackId);
+            // Installation errors require full reinstall, not just Minecraft repair
+            reinstallModpack(modpackId);
           }
         }}
         issues={integrityErrorDialog.issues || []}
@@ -1594,7 +1595,8 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
           if (knownErrorDialog.modpackId) {
             const modpackId = knownErrorDialog.modpackId;
             setKnownErrorDialog(prev => ({ ...prev, isOpen: false }));
-            repairModpack(modpackId);
+            // Installation errors require full reinstall, not just Minecraft repair
+            reinstallModpack(modpackId);
           }
         }}
         knownError={knownErrorDialog.knownError!}
