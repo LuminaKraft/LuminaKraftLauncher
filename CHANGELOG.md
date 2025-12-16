@@ -5,6 +5,24 @@ All notable changes to the LuminaKraft Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.5] - 2025-12-17
+
+### ✨ **Features**
+- **Separated Repair and Reinstall actions**:
+  - **Repair** (green): Only reinstalls Minecraft dependencies (libraries, assets, Java, modloader) — doesn't touch mods
+  - **Reinstall Modpack** (red): Aggressive cleanup that resets instance to clean state, removes user-added content
+- Added Repair and Reinstall buttons to Profile Options modal
+
+### 🐛 **Bug Fixes**
+- **Fixed orphan mods accumulating across version updates**:
+  - Legacy instances (v1) get one-time aggressive cleanup on next update
+  - Normal updates (v2) only delete files that were in old manifest but not in new
+  - Bumped integrity.version to 2 for improved install tracking
+- Fixed progress bar showing -1% (backend signal for "don't update" was shown literally)
+- Fixed reinstall not showing progress in UI (missing `reinstalling` status)
+- Error modals now trigger Reinstall instead of Repair (installation errors need full reset)
+- Added missing translations for repair/reinstall progress messages
+
 ## [0.1.4] - 2025-12-15
 
 ### ✨ **Features**
