@@ -575,28 +575,28 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
           </div>
         </div>
 
-        {/* Repair Section */}
+        {/* Repair Section - Safe action (green) - Only reinstalls Minecraft deps */}
         <div className="mb-6">
           <div className="flex items-center space-x-3 mb-4">
-            <Wrench className="w-5 h-5 text-orange-500" />
+            <Wrench className="w-5 h-5 text-green-500" />
             <h3 className="text-white text-lg font-semibold">{t('profileOptions.repair.title', 'Repair Instance')}</h3>
           </div>
 
           {!showRepairConfirm ? (
             <button
               onClick={() => setShowRepairConfirm(true)}
-              className="w-full px-4 py-3 bg-orange-600/20 hover:bg-orange-600/30 text-orange-400 border border-orange-600/30 rounded-lg transition-colors text-left"
+              className="w-full px-4 py-3 bg-green-600/20 hover:bg-green-600/30 text-green-400 border border-green-600/30 rounded-lg transition-colors text-left"
               disabled={isRepairing || isSaving}
             >
               <div className="font-medium">{t('profileOptions.repair.button', 'Repair instance...')}</div>
-              <div className="text-sm text-orange-300/70 mt-1">
+              <div className="text-sm text-green-300/70 mt-1">
                 {t('profileOptions.repair.hint', 'Reinstalls Minecraft dependencies and checks for corruption')}
               </div>
             </button>
           ) : (
-            <div className="p-4 rounded-lg border border-orange-600/50 bg-orange-900/20">
+            <div className="p-4 rounded-lg border border-green-600/50 bg-green-900/20">
               <div className="flex items-start gap-3 mb-4">
-                <AlertTriangle className="w-5 h-5 text-orange-400 flex-shrink-0 mt-0.5" />
+                <Wrench className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
                 <div>
                   <h4 className="text-white font-medium mb-2">
                     {t('profileOptions.repair.confirmTitle', 'Repair instance?')}
@@ -616,7 +616,7 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
                     await repairModpack(modpackId);
                     setIsRepairing(false);
                   }}
-                  className="flex-1 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors font-medium"
+                  className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors font-medium"
                   disabled={isRepairing}
                 >
                   {isRepairing ? (

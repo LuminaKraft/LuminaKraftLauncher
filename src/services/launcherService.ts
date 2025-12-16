@@ -907,12 +907,36 @@ class LauncherService {
   }
 
   /**
-   * Light repair - reinstalls Minecraft dependencies without aggressive mod cleanup.
-   * Use this when game won't launch due to corrupted assets/libraries.
+   * Light repair - ONLY reinstalls Minecraft dependencies (libraries, assets, Java, modloader).
+   * Does NOT touch modpack mods at all. Use this when game won't launch due to corrupted
+   * Minecraft installation (launcher-related errors), matching Modrinth's repair behavior.
    */
   async repairModpack(modpackId: string, _onProgress?: (_progress: ProgressInfo) => void): Promise<any[]> {
+    let unlistenProgress: (() => void) | undefined;
+
+    // Setup progress listener
+    if (_onProgress && isTauriContext()) {
+      unlistenProgress = await listen(
+        `modpack-progress-${modpackId}`,
+        (_event: any) => {
+          const data = _event.payload;
+          if (data) {
+            _onProgress({
+              percentage: data.percentage || 0,
+              currentFile: data.detailMessage || '',
+              downloadSpeed: '',
+              eta: '',
+              step: data.step || 'repairing',
+              generalMessage: data.generalMessage || i18next.t('progress.startingRepair'),
+              detailMessage: data.detailMessage || ''
+            });
+          }
+        }
+      );
+    }
+
     try {
-      console.log(`🔧 Starting light repair for modpack: ${modpackId}`);
+      console.log(`🔧 Starting Minecraft repair for modpack: ${modpackId}`);
 
       if (_onProgress) {
         _onProgress({
@@ -920,21 +944,24 @@ class LauncherService {
           currentFile: '',
           downloadSpeed: '',
           eta: '',
-          step: 'checking',
+          step: 'repairing',
           generalMessage: i18next.t('progress.startingRepair'),
-          detailMessage: i18next.t('progress.verifyingModpackStatus')
+          detailMessage: i18next.t('progress.reinstallingMinecraftDeps', 'Reinstalling Minecraft dependencies...')
         });
       }
 
-      // Light repair - isRepair=false means no aggressive cleanup
-      // Will reinstall Minecraft dependencies but preserve user-added mods
-      const failedMods = await this.installModpackWithFailedTracking(modpackId, _onProgress, false);
+      // Call new repair_minecraft command - ONLY reinstalls Minecraft deps, NOT mods
+      const transformedSettings = await this.transformUserSettingsForBackend(this.userSettings);
+      await safeInvoke('repair_minecraft', {
+        modpackId,
+        settings: transformedSettings
+      });
 
-      console.log(`✅ Light repair completed for modpack: ${modpackId}`, { failedMods: failedMods.length });
-      return failedMods;
+      console.log(`✅ Minecraft repair completed for modpack: ${modpackId}`);
+      return []; // No failed mods since we don't touch mods
 
     } catch (error) {
-      console.error(`❌ Repair failed for modpack: ${modpackId}`, error);
+      console.error(`❌ Minecraft repair failed for modpack: ${modpackId}`, error);
 
       if (error instanceof Error) {
         const originalMessage = error.message;
@@ -956,6 +983,11 @@ class LauncherService {
       }
 
       throw new Error(`Error durante la reparación del modpack: ${String(error)}`);
+    } finally {
+      // Clean up event listener
+      if (unlistenProgress) {
+        unlistenProgress();
+      }
     }
   }
 

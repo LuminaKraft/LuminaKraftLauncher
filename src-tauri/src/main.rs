@@ -464,6 +464,81 @@ async fn install_modpack_with_failed_tracking(app: tauri::AppHandle, modpack: Mo
     }
 }
 
+/// Repair Minecraft installation for an instance - ONLY reinstalls Minecraft dependencies
+/// (libraries, assets, Java runtime, modloader) without touching the modpack mods.
+/// This is a lightweight repair for launcher-related issues, matching Modrinth's repair behavior.
+#[tauri::command]
+async fn repair_minecraft(app: tauri::AppHandle, modpack_id: String, settings: UserSettings) -> Result<(), String> {
+    // Get instance metadata to know Minecraft version and modloader
+    let instance_metadata = filesystem::get_instance_metadata(&modpack_id)
+        .await
+        .map_err(|e| format!("Failed to get instance metadata: {}", e))?
+        .ok_or_else(|| format!("Instance not found: {}", modpack_id))?;
+    
+    // Create a minimal modpack object with the info needed for Minecraft installation
+    let modpack = Modpack {
+        id: modpack_id.clone(),
+        name: instance_metadata.name.clone(),
+        version: instance_metadata.version.clone(),
+        minecraft_version: instance_metadata.minecraft_version.clone(),
+        modloader: instance_metadata.modloader.clone(),
+        modloader_version: instance_metadata.modloader_version.clone(),
+        // These fields aren't needed for repair - use defaults
+        description: String::new(),
+        short_description: String::new(),
+        url_modpack_zip: String::new(),
+        gamemode: String::new(),
+        is_new: false,
+        is_active: true,
+        is_coming_soon: false,
+        images: Vec::new(),
+        logo: String::new(),
+        banner_url: String::new(),
+        feature_icons: Vec::new(),
+        collaborators: Vec::new(),
+        youtube_embed: None,
+        tiktok_embed: None,
+        ip: None,
+        leaderboard_path: None,
+        category: None,
+        file_sha256: None,
+        allow_custom_mods: None,
+        allow_custom_resourcepacks: None,
+    };
+    
+    let instance_dir = filesystem::get_instance_dir(&modpack_id)
+        .map_err(|e| format!("Failed to get instance directory: {}", e))?;
+    
+    // Create progress emitter
+    let emit_progress = {
+        let app = app.clone();
+        let modpack_id = modpack_id.clone();
+        
+        let last_detail_message = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
+        let last_general_message = std::sync::Arc::new(std::sync::Mutex::new("progress.repairing".to_string()));
+        
+        move |message: String, percentage: f32, step: String| {
+            let (general_message, detail_message) = handle_progress_message(&message, &step, &last_detail_message, &last_general_message);
+            
+            let _ = app.emit(&format!("modpack-progress-{}", modpack_id), serde_json::json!({
+                "generalMessage": general_message,
+                "detailMessage": detail_message,
+                "percentage": percentage,
+                "step": step
+            }));
+        }
+    };
+    
+    // Only reinstall Minecraft dependencies - does NOT touch mods
+    match minecraft::install_minecraft_with_lyceris_progress(&modpack, &settings, instance_dir, emit_progress).await {
+        Ok(_) => {
+            println!("✅ Minecraft repair completed for instance: {}", modpack_id);
+            Ok(())
+        },
+        Err(e) => Err(format!("Failed to repair Minecraft: {}", e)),
+    }
+}
+
 
 
 
@@ -1376,6 +1451,7 @@ fn main() {
             install_modpack_with_minecraft,
             install_modpack_with_failed_tracking,
             install_modpack_with_shared_storage,
+            repair_minecraft,
             launch_modpack_action,
             verify_instance_integrity,
             delete_instance,
