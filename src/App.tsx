@@ -343,10 +343,11 @@ function AppContent() {
       <main className="flex-1 overflow-auto relative">
         {!isOnline && <OfflineBanner />}
         <div
-          className={`h-full transition-all duration-200 ease-out ${isTransitioning
-            ? 'opacity-0 scale-95 translate-y-2'
-            : 'opacity-100 scale-100 translate-y-0'
+          className={`h-full transition-all duration-75 ${isTransitioning
+            ? 'opacity-0 scale-[0.98]'
+            : 'opacity-100 scale-100'
             }`}
+          style={{ transitionTimingFunction: 'cubic-bezier(0.2, 0, 0, 1)' }}
         >
           {renderContent()}
         </div>

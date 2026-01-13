@@ -220,10 +220,10 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
         {statsDisplay.map((stat, index) => (
           <div
             key={index}
-            className={`bg-dark-800 rounded-xl p-4 border border-dark-700 group ${getAnimationClass('hover:border-lumina-400/50 transition-all duration-200', 'hover:scale-105')
+            className={`bg-dark-800 rounded-xl p-4 border border-dark-700 group ${getAnimationClass('hover:border-lumina-400/50 transition-all duration-75', 'hover:scale-105')
               }`}
             style={getAnimationStyle({
-              animation: `fadeInUp 0.4s ease-out ${index * 0.05}s backwards`
+              animation: `fadeInUp 0.15s ease-out ${index * 0.02}s backwards`
             })}
           >
             <stat.icon className={`w-5 h-5 text-lumina-400 mb-2 ${getAnimationClass('transition-transform duration-150', 'group-hover:scale-105')
@@ -256,7 +256,7 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
       {/* Back button - Fixed position */}
       <button
         onClick={onBack}
-        className={`absolute top-6 left-6 z-40 flex items-center space-x-2 px-3 py-2 bg-dark-800/80 backdrop-blur-sm text-dark-400 hover:text-white rounded-lg border border-dark-700/50 ${getAnimationClass('transition-all duration-200', 'hover:scale-105 hover:bg-dark-700/90')
+        className={`absolute top-6 left-6 z-40 flex items-center space-x-2 px-3 py-2 bg-dark-800/80 backdrop-blur-sm text-dark-400 hover:text-white rounded-lg border border-dark-700/50 ${getAnimationClass('transition-all duration-75', 'hover:scale-105 hover:bg-dark-700/90')
           }`}
         style={getAnimationStyle({})}
       >
@@ -295,7 +295,7 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
                   : ''
                   }`}
                 style={getAnimationStyle({
-                  animation: `fadeInUp 0.4s ease-out 0.05s backwards`
+                  animation: `fadeInUp 0.15s ease-out 0.02s backwards`
                 })}
               >
                 {modpack.logo && modpack.logo.length === 1 ? (
@@ -328,19 +328,19 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                 <div className="min-w-0 flex-1">
                   <h1
-                    className={`text-4xl font-bold text-white mb-2 ${getAnimationClass('transition-all duration-200')
+                    className={`text-4xl font-bold text-white mb-2 ${getAnimationClass('transition-all duration-75')
                       }`}
                     style={getAnimationStyle({
-                      animation: `fadeInUp 0.4s ease-out 0.1s backwards`
+                      animation: `fadeInUp 0.15s ease-out 0.05s backwards`
                     })}
                   >
                     {displayName}
                   </h1>
                   <p
-                    className={`text-lg text-dark-300 leading-relaxed ${getAnimationClass('transition-all duration-200')
+                    className={`text-lg text-dark-300 leading-relaxed ${getAnimationClass('transition-all duration-75')
                       }`}
                     style={getAnimationStyle({
-                      animation: `fadeInUp 0.4s ease-out 0.15s backwards`
+                      animation: `fadeInUp 0.15s ease-out 0.1s backwards`
                     })}
                   >
                     {displayDescription}
@@ -349,7 +349,7 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
                 <div
                   className="flex-shrink-0"
                   style={getAnimationStyle({
-                    animation: `fadeInUp 0.4s ease-out 0.2s backwards`
+                    animation: `fadeInUp 0.15s ease-out 0.15s backwards`
                   })}
                 >
                   {getServerStatusBadge()}
@@ -364,9 +364,9 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Mobile Actions First */}
             <div
-              className={`lg:hidden ${getAnimationClass('transition-all duration-200')}`}
+              className={`lg:hidden ${getAnimationClass('transition-all duration-75')}`}
               style={getAnimationStyle({
-                animation: `fadeInUp 0.3s ease-out 0.1s backwards`
+                animation: `fadeInUp 0.15s ease-out 0.05s backwards`
               })}
             >
               <ModpackActions
@@ -383,15 +383,15 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
             <div className="lg:col-span-2 space-y-8">
               {/* Tab Navigation */}
               <div
-                className={`flex space-x-1 bg-dark-800 p-1 rounded-lg ${getAnimationClass('transition-all duration-200')
+                className={`flex space-x-1 bg-dark-800 p-1 rounded-lg ${getAnimationClass('transition-all duration-75')
                   }`}
                 style={getAnimationStyle({
-                  animation: `fadeInUp 0.3s ease-out 0.1s backwards`
+                  animation: `fadeInUp 0.15s ease-out 0.05s backwards`
                 })}
               >
                 <button
                   onClick={() => setActiveTab('content')}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-all duration-200 ${activeTab === 'content'
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-all duration-75 ${activeTab === 'content'
                     ? 'bg-lumina-600 text-white shadow-lg'
                     : 'text-dark-300 hover:text-white hover:bg-dark-700'
                     }`}
@@ -403,7 +403,7 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
                 {isReadOnly && (
                   <button
                     onClick={() => setActiveTab('screenshots')}
-                    className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-all duration-200 ${activeTab === 'screenshots'
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-all duration-75 ${activeTab === 'screenshots'
                       ? 'bg-lumina-600 text-white shadow-lg'
                       : 'text-dark-300 hover:text-white hover:bg-dark-700'
                       }`}
@@ -421,7 +421,7 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
                 {!isReadOnly && (
                   <button
                     onClick={() => setActiveTab('logs')}
-                    className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-all duration-200 ${activeTab === 'logs'
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-all duration-75 ${activeTab === 'logs'
                       ? 'bg-lumina-600 text-white shadow-lg'
                       : 'text-dark-300 hover:text-white hover:bg-dark-700'
                       }`}
@@ -439,7 +439,7 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
                 {isReadOnly && (
                   <button
                     onClick={() => setActiveTab('versions')}
-                    className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-all duration-200 ${activeTab === 'versions'
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-all duration-75 ${activeTab === 'versions'
                       ? 'bg-lumina-600 text-white shadow-lg'
                       : 'text-dark-300 hover:text-white hover:bg-dark-700'
                       }`}
@@ -467,9 +467,9 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
             {/* Right Column - Desktop Actions */}
             <div className="hidden lg:block">
               <div
-                className={`space-y-6 ${getAnimationClass('transition-all duration-200')}`}
+                className={`space-y-6 ${getAnimationClass('transition-all duration-75')}`}
                 style={getAnimationStyle({
-                  animation: `fadeInUp 0.3s ease-out 0.2s backwards`
+                  animation: `fadeInUp 0.15s ease-out 0.1s backwards`
                 })}
               >
                 <ModpackActions

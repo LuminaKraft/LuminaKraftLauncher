@@ -70,8 +70,8 @@ const ModpacksPage: React.FC<ModpacksPageProps> = ({ initialModpackId, onNavigat
       }
       withDelay(() => {
         setIsTransitioning(false);
-      }, 100);
-    }, 100);
+      }, 50);
+    }, 50);
   };
 
   const handleBackToList = () => {
@@ -81,7 +81,7 @@ const ModpacksPage: React.FC<ModpacksPageProps> = ({ initialModpackId, onNavigat
     withDelay(() => {
       setSelectedModpack(null);
       setIsTransitioning(false);
-    }, 100);
+    }, 50);
   };
 
   const handleRefresh = async () => {
@@ -94,7 +94,7 @@ const ModpacksPage: React.FC<ModpacksPageProps> = ({ initialModpackId, onNavigat
     } finally {
       withDelay(() => {
         setIsRefreshAnimating(false);
-      }, 200);
+      }, 100);
     }
   };
 
@@ -128,7 +128,7 @@ const ModpacksPage: React.FC<ModpacksPageProps> = ({ initialModpackId, onNavigat
       status: 'not_installed' as const
     };
     return (
-      <div className={`h-full w-full ${getAnimationClass('transition-opacity duration-200 ease-out', '')
+      <div className={`h-full w-full ${getAnimationClass('transition-opacity duration-75 ease-out', '')
         } ${showingDetails && !isTransitioning
           ? 'opacity-100'
           : 'opacity-0'
@@ -153,7 +153,7 @@ const ModpacksPage: React.FC<ModpacksPageProps> = ({ initialModpackId, onNavigat
   }
 
   return (
-    <div className={`h-full flex flex-col ${getAnimationClass('transition-opacity duration-200 ease-out', '')
+    <div className={`h-full flex flex-col ${getAnimationClass('transition-opacity duration-75 ease-out', '')
       } ${isTransitioning
         ? 'opacity-0'
         : 'opacity-100'
@@ -164,7 +164,7 @@ const ModpacksPage: React.FC<ModpacksPageProps> = ({ initialModpackId, onNavigat
       <div
         className="p-6 border-b border-dark-700"
         style={{
-          animation: 'fadeInUp 0.4s ease-out',
+          animation: 'fadeInUp 0.15s ease-out',
           ...getAnimationStyle({})
         }}
       >
@@ -181,7 +181,7 @@ const ModpacksPage: React.FC<ModpacksPageProps> = ({ initialModpackId, onNavigat
           <div
             className="flex items-center space-x-3"
             style={{
-              animation: 'fadeInRight 0.4s ease-out 0.1s backwards',
+              animation: 'fadeInRight 0.15s ease-out 0.05s backwards',
               ...getAnimationStyle({})
             }}
           >
@@ -193,7 +193,7 @@ const ModpacksPage: React.FC<ModpacksPageProps> = ({ initialModpackId, onNavigat
                 placeholder={t('modpacks.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className={`input-field pl-10 w-64 transition-all duration-200 ${getAnimationClass('', 'focus:ring-2 focus:ring-lumina-400/50 focus:border-lumina-400')
+                className={`input-field pl-10 w-64 transition-all duration-75 ${getAnimationClass('', 'focus:ring-2 focus:ring-lumina-400/50 focus:border-lumina-400')
                   }`}
                 style={getAnimationStyle({})}
               />
@@ -202,7 +202,7 @@ const ModpacksPage: React.FC<ModpacksPageProps> = ({ initialModpackId, onNavigat
             <button
               onClick={handleRefresh}
               disabled={isLoading || hasActiveInstallation}
-              className={`btn-secondary transition-transform duration-200 group ${getAnimationClass('', 'hover:scale-105')
+              className={`btn-secondary transition-transform duration-75 group ${getAnimationClass('', 'hover:scale-105')
                 }`}
               style={getAnimationStyle({})}
               title={hasActiveInstallation ? t('modpacks.refreshDisabledDuringInstall') : t('modpacks.refresh')}
@@ -286,7 +286,7 @@ const ModpacksPage: React.FC<ModpacksPageProps> = ({ initialModpackId, onNavigat
                         <div
                           key={modpack.id}
                           style={{
-                            animation: `fadeInUp 0.4s ease-out ${index * 0.05 + 0.2}s backwards`,
+                            animation: `fadeInUp 0.15s ease-out ${index * 0.02 + 0.1}s backwards`,
                             ...getAnimationStyle({})
                           }}
                         >

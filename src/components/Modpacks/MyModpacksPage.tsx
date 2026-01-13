@@ -404,8 +404,8 @@ export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: My
       setSelectedModpackId(modpackId);
       setTimeout(() => {
         setIsTransitioning(false);
-      }, 100);
-    }, 100);
+      }, 50);
+    }, 50);
   };
 
   /**
@@ -416,7 +416,7 @@ export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: My
     setTimeout(() => {
       setSelectedModpackId(null);
       setIsTransitioning(false);
-    }, 100);
+    }, 50);
   };
 
   /**
@@ -754,7 +754,7 @@ export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: My
     if (modpack && state) {
       return (
         <div
-          className={`h-full w-full transition-opacity duration-200 ease-out ${isTransitioning ? 'opacity-0' : 'opacity-100'
+          className={`h-full w-full transition-opacity duration-75 ease-out ${isTransitioning ? 'opacity-0' : 'opacity-100'
             }`}
         >
           <ModpackDetailsRefactored
@@ -777,7 +777,7 @@ export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: My
   // Main list view
   return (
     <div
-      className={`max-w-7xl mx-auto p-6 transition-opacity duration-200 ease-out ${isTransitioning ? 'opacity-0' : 'opacity-100'
+      className={`max-w-7xl mx-auto p-6 transition-opacity duration-75 ease-out ${isTransitioning ? 'opacity-0' : 'opacity-100'
         }`}
     >
       {/* Validation Dialog */}

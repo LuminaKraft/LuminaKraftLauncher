@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### ✨ **Features**
+- **Ultra-Responsive UI**:
+  - Dramatically accelerated all animations and transitions (50ms-150ms) across the entire application.
+  - Reduced navigation delays and page transition durations for an instantaneous feel.
+  - Snappy hover effects and interactive elements.
+- **macOS Experience Optimization**:
+  - Disabled trackpad pinch-to-zoom gestures.
+  - Restricted content dragging to prevent "rubber-band" effect on windows.
+  - Applied `position: fixed` scrolling body to mimic native app behavior.
 - **Stability & Protection Integration**:
   - Implemented professional "Shield" UI for modpack stability management in Publish and Edit forms.
   - Added `allowCustomConfigs` field to modpack settings for granular configuration control.
@@ -18,6 +26,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Improved log level coloring: Prioritizes explicit tags (e.g. `[main/WARN]`) over content monitoring
   - "Scroll to bottom" button is now a compact icon inside the logs container
   - "Download Logs" now downloads the full `latest.log` file from disk instead of just the visible buffer
+
+### 🐛 **Bug Fixes**
+- **Drag & Drop Fixes**:
+  - Resolved issue where `.mrpack` files were rejected when dragged into Publish and Edit forms.
+  - Implemented case-insensitive extension validation (e.g., accepts `.mrpack` and `.MRPACK`).
+  - Improved drop zone reliability across different components.
 
 ### 🔧 **Technical Improvements**
 - **Structural Integrity**:

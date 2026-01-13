@@ -399,7 +399,8 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
   // --- Versions Tab Handlers ---
 
   const handleZipFile = async (file: File) => {
-    if (!file.name.endsWith('.zip') && !file.name.endsWith('.mrpack')) {
+    const fileName = file.name.toLowerCase();
+    if (!fileName.endsWith('.zip') && !fileName.endsWith('.mrpack')) {
       toast.error(t('validation.selectZipFile'));
       return;
     }
@@ -423,11 +424,14 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer.files[0];
-    if (file && (file.name.endsWith('.zip') || file.name.endsWith('.mrpack'))) {
-      handleZipFile(file);
-    } else {
-      toast.error(t('validation.validZipRequired'));
+    if (file) {
+      const fileName = file.name.toLowerCase();
+      if (fileName.endsWith('.zip') || fileName.endsWith('.mrpack')) {
+        handleZipFile(file);
+        return;
+      }
     }
+    toast.error(t('validation.validZipRequired'));
   };
 
   // Prepare ZIP with overrides if needed (adds pending uploaded files to the ZIP)

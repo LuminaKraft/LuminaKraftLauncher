@@ -416,7 +416,8 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
   };
 
   const handleZipFile = async (file: File) => {
-    if (!file.name.endsWith('.zip') && !file.name.endsWith('.mrpack')) {
+    const fileName = file.name.toLowerCase();
+    if (!fileName.endsWith('.zip') && !fileName.endsWith('.mrpack')) {
       toast.error(t('publishModpack.validation.zipRequired'));
       return;
     }
@@ -561,7 +562,12 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
     e.preventDefault();
     setIsDragging(false);
     const files = Array.from(e.dataTransfer.files);
-    const zipFile = files.find(f => f.name.endsWith('.zip'));
+    // Support both .zip and .mrpack, case-insensitive
+    const zipFile = files.find(f => {
+      const name = f.name.toLowerCase();
+      return name.endsWith('.zip') || name.endsWith('.mrpack');
+    });
+
     if (zipFile) {
       await handleZipFile(zipFile);
     } else {
