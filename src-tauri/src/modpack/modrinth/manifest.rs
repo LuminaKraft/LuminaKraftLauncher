@@ -105,10 +105,9 @@ where
     Ok(())
 }
 
-/// Get filenames from overrides/mods and overrides/resourcepacks
-/// These files should be preserved during cleanup
-pub fn get_override_filenames(temp_dir: &PathBuf) -> std::collections::HashSet<String> {
-    let mut filenames = std::collections::HashSet::new();
+/// Get relative paths from overrides/ and client-overrides/ recursively
+pub fn get_override_relative_paths(temp_dir: &PathBuf) -> std::collections::HashSet<String> {
+    let mut paths = std::collections::HashSet::new();
     
     // Check both overrides and client-overrides
     for override_folder in &["overrides", "client-overrides"] {
@@ -118,53 +117,30 @@ pub fn get_override_filenames(temp_dir: &PathBuf) -> std::collections::HashSet<S
             continue;
         }
         
-        // Get .jar files from overrides/mods
-        let mods_dir = overrides_dir.join("mods");
-        if mods_dir.exists() && mods_dir.is_dir() {
-            if let Ok(entries) = fs::read_dir(&mods_dir) {
+        // Walk recursively to collect all file paths relative to the override folder
+        fn walk(current_path: PathBuf, base_dir: &PathBuf, paths: &mut std::collections::HashSet<String>) {
+            if let Ok(entries) = fs::read_dir(current_path) {
                 for entry in entries.flatten() {
                     let path = entry.path();
-                    if path.is_file() {
-                        if let Some(ext) = path.extension() {
-                            if ext == "jar" {
-                                if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                                    filenames.insert(name.to_string());
-                                }
-                            }
+                    if path.is_dir() {
+                        walk(path, base_dir, paths);
+                    } else if path.is_file() {
+                        if let Ok(relative) = path.strip_prefix(base_dir) {
+                            paths.insert(relative.to_string_lossy().into_owned());
                         }
                     }
                 }
             }
         }
         
-        // Get .zip files from overrides/resourcepacks
-        let resourcepacks_dir = overrides_dir.join("resourcepacks");
-        if resourcepacks_dir.exists() && resourcepacks_dir.is_dir() {
-            if let Ok(entries) = fs::read_dir(&resourcepacks_dir) {
-                for entry in entries.flatten() {
-                    let path = entry.path();
-                    if path.is_file() {
-                        if let Some(ext) = path.extension() {
-                            if ext == "zip" {
-                                if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                                    filenames.insert(name.to_string());
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        walk(overrides_dir.clone(), &overrides_dir, &mut paths);
     }
     
-    if !filenames.is_empty() {
-        println!("📦 [Modrinth] Found {} files in overrides that will be preserved", filenames.len());
-        for name in &filenames {
-            println!("  ✓ {}", name);
-        }
+    if !paths.is_empty() {
+        println!("📦 [Modrinth] Found {} files in overrides/client-overrides", paths.len());
     }
     
-    filenames
+    paths
 }
 
 /// Copy a directory and its contents recursively

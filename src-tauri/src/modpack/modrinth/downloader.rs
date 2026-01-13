@@ -84,13 +84,13 @@ where
         }
         
         // Check if file is in overrides - will be extracted later
-        if override_filenames.contains(&filename) {
+        if override_filenames.contains(&file.path) {
             emit_progress(
                 format!("file_in_overrides:{}", filename),
                 mod_progress,
                 "file_in_overrides".to_string()
             );
-            println!("✓ [Modrinth] File {} will be extracted from overrides", filename);
+            println!("✓ [Modrinth] File {} will be extracted from overrides", file.path);
             continue;
         }
         

@@ -781,6 +781,24 @@
       "confirmDescription": "Reinstalling will reset all installed or modified content to what is provided by the modpack, removing any mods or content you have added on top of the original installation. This may fix unexpected behavior if changes have been made to the instance, but if your worlds now depend on additional installed content, it may break existing worlds.",
       "confirm": "Reinstall modpack",
       "reinstalling": "Reinstalling..."
+    },
+    "stability": {
+      "title": "Modpack Stability & Protection",
+      "protectionMode": "Protection Mode",
+      "protected": "Protected",
+      "protectedDesc": "Enforces original files (mods, resource packs, and config). Essential for gameplay integrity and anti-cheat.",
+      "open": "Open",
+      "openDesc": "Unlimited customization. You can add or modify any files without warnings, but stability might be affected.",
+      "advancedMode": "Advanced Mode",
+      "foldersTable": {
+        "folder": "Folder",
+        "status": "Protection",
+        "mods": "Mods & Core Files",
+        "resourcepacks": "Resource Packs (Anti-Cheat)",
+        "configs": "Configurations & Scripts",
+        "shaders": "Shaders & Aesthetics",
+        "unprotected": "Not Protected"
+      }
     }
   },
   "publishModpack": {
@@ -811,10 +829,10 @@
       "parsing": "Parsing manifest.json...",
       "parseSuccess": "Manifest parsed successfully",
       "dragDrop": "Drop your modpack ZIP here",
-      "dragDropAlt": "Drag and drop your modpack ZIP file here, or click to select",
+      "dragDropAlt": "Drag and drop your modpack ZIP or MrPack file here, or click to select",
       "uploading": "Uploading...",
       "remove": "Remove file",
-      "formatInfo": "Supports CurseForge format"
+      "formatInfo": "Supports CurseForge (.zip) and Modrinth (.mrpack) formats"
     },
     "category": {
       "title": "Category",
@@ -832,7 +850,12 @@
       "allowModsDesc": "Users can add their own mods to this modpack",
       "allowResourcepacks": "Allow Custom Resource Packs",
       "allowResourcepacksDesc": "Users can add their own resource packs to this modpack",
-      "antiCheatNote": "If your modpack has a server with anti-cheat, consider disabling these options to avoid conflicts."
+      "allowConfigs": "Allow Custom Configs",
+      "allowConfigsDesc": "Users can modify configurations and adding custom scripts",
+      "antiCheatNote": "If your modpack has a server with anti-cheat, consider disabling these options to avoid conflicts.",
+      "allowed": "Allowed",
+      "restricted": "Restricted",
+      "advancedOptions": "Advanced Options"
     },
     "basicInfo": {
       "title": "Basic Information",
@@ -996,8 +1019,8 @@
       "versionRequired": "Version is required",
       "minecraftVersionRequired": "Minecraft version is required",
       "modloaderVersionRequired": "Modloader version is required",
-      "zipFileRequired": "Modpack ZIP file is required for active modpacks",
-      "zipFileOptionalMessage": "Please upload a modpack ZIP file (optional for Coming Soon modpacks)",
+      "zipFileRequired": "Modpack file is required for active modpacks",
+      "zipFileOptionalMessage": "Please upload a modpack file (ZIP/MrPack) (optional for Coming Soon modpacks)",
       "logoRequired": "Logo is required for all modpacks",
       "bannerRequired": "Banner is required for all modpacks",
       "categoryRequired": "Please select a category for the modpack",
@@ -1084,9 +1107,9 @@
       "uploadNew": "Upload New Version",
       "uploadNewVersion": "Upload New Version",
       "downloadZip": "Download ZIP",
-      "modpackZipFile": "Modpack ZIP File",
-      "clickToUpload": "Click to upload ZIP",
-      "clickToUploadZip": "Click to upload ZIP",
+      "modpackZipFile": "Modpack File (ZIP or MrPack)",
+      "clickToUpload": "Click to upload file",
+      "clickToUploadZip": "Click to upload ZIP or MrPack",
       "validating": "Validating...",
       "newVersionNumber": "New Version Number",
       "example": "e.g. 1.1.0",
@@ -1150,17 +1173,17 @@
     "installingMods": "Installing uploaded mods..."
   },
   "validation": {
-    "invalidFile": "Please upload a .jar or .zip file",
-    "noValidFiles": "No valid .jar or .zip files found",
+    "invalidFile": "Please upload a .jar, .zip or .mrpack file",
+    "noValidFiles": "No valid .jar, .zip or .mrpack files found",
     "filesNotMatched": "{{count}} file(s) could not be matched",
     "displayNameEmpty": "Display name cannot be empty",
     "usernameEmpty": "Username cannot be empty",
     "duplicateModpackName": "A modpack with this name already exists. Please choose a different name.",
     "modpackNameTaken": "This modpack name is already taken.",
     "manifestNotFound": "No manifest.json found in ZIP file",
-    "selectZipFile": "Please select a ZIP file",
-    "validZipRequired": "Please upload a valid ZIP file",
-    "versionAndZipRequired": "Version and ZIP file are required",
+    "selectZipFile": "Please select a ZIP or MrPack file",
+    "validZipRequired": "Please upload a valid ZIP or MrPack file",
+    "versionAndZipRequired": "Version and modpack file are required",
     "versionMustBeHigher": "Version {{version}} must be higher than the latest version {{latest}}",
     "preparingForInstallation": "Preparing the modpack for installation. This may take a moment..."
   },

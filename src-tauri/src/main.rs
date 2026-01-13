@@ -78,6 +78,10 @@ pub struct Modpack {
     /// If false, aggressive cleanup removes user-added resource packs
     #[serde(rename = "allowCustomResourcepacks")]
     pub allow_custom_resourcepacks: Option<bool>,
+    /// Whether custom configurations are allowed for this modpack
+    /// If false, aggressive cleanup removes user-added configs
+    #[serde(rename = "allowCustomConfigs")]
+    pub allow_custom_configs: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -153,6 +157,9 @@ pub struct InstanceMetadata {
     /// Whether custom resource packs are allowed (only relevant for official/partner)
     #[serde(rename = "allowCustomResourcepacks")]
     pub allow_custom_resourcepacks: Option<bool>,
+    /// Whether custom configurations are allowed (only relevant for official/partner)
+    #[serde(rename = "allowCustomConfigs")]
+    pub allow_custom_configs: Option<bool>,
 }
 
 #[tauri::command]
@@ -504,6 +511,7 @@ async fn repair_minecraft(app: tauri::AppHandle, modpack_id: String, settings: U
         file_sha256: None,
         allow_custom_mods: None,
         allow_custom_resourcepacks: None,
+        allow_custom_configs: None,
     };
     
     let instance_dir = filesystem::get_instance_dir(&modpack_id)
@@ -555,7 +563,8 @@ async fn verify_instance_integrity(
     modpack_id: String,
     expected_zip_sha256: Option<String>,
     override_allow_custom_mods: Option<bool>,
-    override_allow_custom_resourcepacks: Option<bool>
+    override_allow_custom_resourcepacks: Option<bool>,
+    override_allow_custom_configs: Option<bool>
 ) -> Result<serde_json::Value, String> {
     use modpack::integrity::{verify_integrity, create_integrity_data, format_issues};
     
@@ -624,9 +633,19 @@ async fn verify_instance_integrity(
                 metadata.allow_custom_resourcepacks.unwrap_or(true)
             };
 
+            let effective_allow_configs = if let Some(ov) = override_allow_custom_configs {
+                if Some(ov) != metadata.allow_custom_configs {
+                    metadata.allow_custom_configs = Some(ov);
+                    changed = true;
+                }
+                ov
+            } else {
+                metadata.allow_custom_configs.unwrap_or(true)
+            };
+
             if changed {
-                 println!("🔄 Syncing security flags to instance.json (during verification): mods={:?}, rp={:?}", 
-                     metadata.allow_custom_mods, metadata.allow_custom_resourcepacks);
+                 println!("🔄 Syncing security flags to instance.json: mods={:?}, rp={:?}, configs={:?}", 
+                     metadata.allow_custom_mods, metadata.allow_custom_resourcepacks, metadata.allow_custom_configs);
                  if let Err(e) = filesystem::save_instance_metadata(&metadata).await {
                      println!("⚠️ Failed to save updated metadata during verification: {}", e);
                  }
@@ -648,6 +667,7 @@ async fn verify_instance_integrity(
                 integrity_data,
                 effective_allow_mods,
                 effective_allow_resourcepacks,
+                effective_allow_configs,
             );
             
             if !result.is_valid {

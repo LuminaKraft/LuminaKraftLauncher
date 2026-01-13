@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, HardDrive, AlertTriangle, Wrench, RefreshCcw } from 'lucide-react';
+import { X, HardDrive, AlertTriangle, Wrench, RefreshCcw, Shield, ShieldOff, ChevronDown, ChevronUp } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { appDataDir } from '@tauri-apps/api/path';
 import toast from 'react-hot-toast';
@@ -18,6 +18,10 @@ interface ProfileOptionsModalProps {
     recommendedRam?: number;
     ramAllocation?: string;
     customRam?: number;
+    allow_custom_mods?: boolean;
+    allow_custom_resourcepacks?: boolean;
+    allow_custom_configs?: boolean;
+    category?: string;
   };
 }
 
@@ -62,6 +66,17 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
   const [isRepairing, setIsRepairing] = useState(false);
   const [showReinstallConfirm, setShowReinstallConfirm] = useState(false);
   const [isReinstalling, setIsReinstalling] = useState(false);
+
+  // Protection Mode State
+  const [allowCustomMods, setAllowCustomMods] = useState(metadata?.allow_custom_mods ?? true);
+  const [allowCustomResourcepacks, setAllowCustomResourcepacks] = useState(metadata?.allow_custom_resourcepacks ?? true);
+  const [allowCustomConfigs, setAllowCustomConfigs] = useState(metadata?.allow_custom_configs ?? true);
+  const [showAdvancedProtection, setShowAdvancedProtection] = useState(false);
+
+  // Derived state for protection mode
+  const isProtected = !allowCustomMods && !allowCustomResourcepacks && !allowCustomConfigs;
+  const isFullyOpen = allowCustomMods && allowCustomResourcepacks && allowCustomConfigs;
+  const isCustomMode = !isProtected && !isFullyOpen;
 
   // Load system memory and cached images when modal opens
   useEffect(() => {
@@ -126,6 +141,10 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
       const initialMode = (metadata.ramAllocation as 'recommended' | 'custom' | 'global') || (metadata.recommendedRam ? 'recommended' : 'global');
       setRamMode(initialMode === 'recommended' && !metadata.recommendedRam ? 'global' : initialMode);
       setCustomRamValue(metadata.customRam || userSettings.allocatedRam || 4096);
+
+      setAllowCustomMods(metadata.allow_custom_mods ?? true);
+      setAllowCustomResourcepacks(metadata.allow_custom_resourcepacks ?? true);
+      setAllowCustomConfigs(metadata.allow_custom_configs ?? true);
     }
   }, [metadata, userSettings.allocatedRam]);
 
@@ -267,7 +286,10 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
       await invoke('update_instance_ram_settings', {
         modpackId,
         ramAllocation: ramMode,
-        customRam: ramMode === 'custom' ? customRamValue : null
+        customRam: ramMode === 'custom' ? customRamValue : null,
+        allowCustomMods,
+        allowCustomResourcepacks,
+        allowCustomConfigs
       });
 
       toast.success(t('settings.saved'));
@@ -419,6 +441,145 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
                   if (file) handleImageUpload('banner', file);
                 }}
               />
+            </div>
+          </div>
+        )}
+
+        {/* Protection Mode Section (Official/Partner only) */}
+        {!isLocalModpack && metadata?.category && (metadata.category === 'official' || metadata.category === 'partner' || metadata.category === 'community') && (
+          <div className="mb-6">
+            <div className="flex items-center space-x-3 mb-4">
+              <Shield className="w-5 h-5 text-lumina-500" />
+              <h3 className="text-white text-lg font-semibold">{t('profileOptions.stability.title')}</h3>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              {/* Protected (Recommended) */}
+              <button
+                type="button"
+                onClick={() => {
+                  setAllowCustomMods(false);
+                  setAllowCustomResourcepacks(false);
+                  setAllowCustomConfigs(false);
+                }}
+                className={`flex flex-col items-start p-4 rounded-lg border transition-all text-left group ${isProtected
+                    ? 'border-lumina-500 bg-lumina-500/10'
+                    : 'border-dark-600 hover:border-lumina-500/50 bg-dark-700/50'
+                  }`}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <Shield className={`w-4 h-4 ${isProtected ? 'text-lumina-400' : 'text-dark-400'}`} />
+                  <span className={`font-semibold ${isProtected ? 'text-white' : 'text-dark-300'}`}>
+                    {t('profileOptions.stability.protected')}
+                  </span>
+                </div>
+                <p className="text-xs text-dark-400 leading-relaxed">
+                  {t('profileOptions.stability.protectedDesc')}
+                </p>
+              </button>
+
+              {/* Open */}
+              <button
+                type="button"
+                onClick={() => {
+                  setAllowCustomMods(true);
+                  setAllowCustomResourcepacks(true);
+                  setAllowCustomConfigs(true);
+                }}
+                className={`flex flex-col items-start p-4 rounded-lg border transition-all text-left group ${isFullyOpen
+                    ? 'border-emerald-500 bg-emerald-500/10'
+                    : 'border-dark-600 hover:border-emerald-500/50 bg-dark-700/50'
+                  }`}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <ShieldOff className={`w-4 h-4 ${isFullyOpen ? 'text-emerald-400' : 'text-dark-400'}`} />
+                  <span className={`font-semibold ${isFullyOpen ? 'text-white' : 'text-dark-300'}`}>
+                    {t('profileOptions.stability.open')}
+                  </span>
+                </div>
+                <p className="text-xs text-dark-400 leading-relaxed">
+                  {t('profileOptions.stability.openDesc')}
+                </p>
+              </button>
+            </div>
+
+            {/* Advanced Toggle */}
+            <div className="border-t border-dark-600 pt-3">
+              <button
+                type="button"
+                onClick={() => setShowAdvancedProtection(!showAdvancedProtection)}
+                className="flex items-center justify-between w-full text-dark-400 hover:text-white transition-colors text-sm"
+              >
+                <span className="flex items-center gap-2">
+                  <Shield className="w-4 h-4" />
+                  {t('profileOptions.stability.advancedMode')}
+                  {isCustomMode && <span className="text-lumina-400 text-[10px] uppercase font-bold px-1.5 py-0.5 bg-lumina-500/10 rounded ml-2">Custom</span>}
+                </span>
+                {showAdvancedProtection ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
+
+              {showAdvancedProtection && (
+                <div className="mt-4 space-y-3 bg-dark-900/40 p-4 rounded-lg border border-dark-700/50">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-dark-500 border-b border-dark-700">
+                        <th className="text-left font-medium pb-2">{t('profileOptions.stability.foldersTable.folder')}</th>
+                        <th className="text-right font-medium pb-2">{t('profileOptions.stability.foldersTable.status')}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-dark-700/50">
+                      <tr>
+                        <td className="py-2.5 text-white">/mods</td>
+                        <td className="py-2.5 text-right">
+                          <button
+                            type="button"
+                            onClick={() => setAllowCustomMods(!allowCustomMods)}
+                            className={`text-xs px-2 py-1 rounded transition-colors ${!allowCustomMods ? 'bg-lumina-500/20 text-lumina-400' : 'bg-dark-700 text-dark-400'
+                              }`}
+                          >
+                            {!allowCustomMods ? t('profileOptions.stability.protected') : t('profileOptions.stability.foldersTable.unprotected')}
+                          </button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="py-2.5 text-white">/resourcepacks</td>
+                        <td className="py-2.5 text-right">
+                          <button
+                            type="button"
+                            onClick={() => setAllowCustomResourcepacks(!allowCustomResourcepacks)}
+                            className={`text-xs px-2 py-1 rounded transition-colors ${!allowCustomResourcepacks ? 'bg-lumina-500/20 text-lumina-400' : 'bg-dark-700 text-dark-400'
+                              }`}
+                          >
+                            {!allowCustomResourcepacks ? t('profileOptions.stability.protected') : t('profileOptions.stability.foldersTable.unprotected')}
+                          </button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="py-2.5 text-white">/config & /scripts</td>
+                        <td className="py-2.5 text-right">
+                          <button
+                            type="button"
+                            onClick={() => setAllowCustomConfigs(!allowCustomConfigs)}
+                            className={`text-xs px-2 py-1 rounded transition-colors ${!allowCustomConfigs ? 'bg-lumina-500/20 text-lumina-400' : 'bg-dark-700 text-dark-400'
+                              }`}
+                          >
+                            {!allowCustomConfigs ? t('profileOptions.stability.protected') : t('profileOptions.stability.foldersTable.unprotected')}
+                          </button>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="py-2.5 text-white">/shaderpacks & others</td>
+                        <td className="py-2.5 text-right text-emerald-500/60 italic text-[11px]">
+                          {t('profileOptions.stability.foldersTable.unprotected')}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <p className="text-[10px] text-dark-500 mt-2 italic">
+                    * Shaders, screenshots and aesthetic mods are never restricted.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         )}

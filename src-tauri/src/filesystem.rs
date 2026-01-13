@@ -503,6 +503,7 @@ pub fn create_instance_metadata(
         category: None,
         allow_custom_mods: Some(true),
         allow_custom_resourcepacks: Some(true),
+        allow_custom_configs: Some(true),
     }
 }
 

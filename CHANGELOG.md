@@ -27,6 +27,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated `modpackManagementService.ts` to parse both manifest formats and return source type
 - Added English and Spanish translations for Modrinth-related progress messages
 
+### 🎨 **UI/UX Improvements**
+- **User Modifications UI Refactor**:
+  - Implemented master toggle for "User Modifications" in Publish/Edit forms
+  - Added granular "Advanced Options" for Mods, Resource Packs, and Configs
+  - Unified UI between Publish and Edit forms with consistent styling
+  - Enhanced visual feedback with icons and clearer status indicators
+
+### 🔧 **Technical Improvements**
+- **Modrinth Support**:
+  - Enhanced `mrpack` manifest parsing and downloading logic in Rust backend
+  - Improved handling of Modrinth dependencies and overrides
+- **Database**:
+  - Added `allow_custom_configs` flag to modpack structure
+  - Updated modpack management service to handle new permission flags
+
 ## [0.1.5] - 2025-12-17
 
 ### ✨ **Features**

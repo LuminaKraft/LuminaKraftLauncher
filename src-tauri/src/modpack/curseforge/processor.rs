@@ -2,7 +2,7 @@ use anyhow::{Result, anyhow};
 use std::path::PathBuf;
 use std::fs;
 use std::collections::HashSet;
-use super::manifest::{read_manifest, get_modloader_info, process_overrides, get_override_filenames};
+use super::manifest::{read_manifest, get_modloader_info, process_overrides, get_override_relative_paths};
 use super::downloader::download_mods_with_filenames;
 use crate::modpack::extraction::extract_zip;
 
@@ -21,9 +21,10 @@ pub async fn process_curseforge_modpack_with_failed_tracking<F>(
     category: Option<&str>,
     allow_custom_mods: bool,
     allow_custom_resourcepacks: bool,
+    allow_custom_configs: bool,
     old_installed_files: Option<HashSet<String>>,
     is_legacy_instance: bool,
-) -> Result<(String, String, Option<u32>, Vec<serde_json::Value>)>
+) -> Result<(String, String, Option<u32>, Vec<serde_json::Value>, HashSet<String>)>
 where
     F: Fn(String, f32, String) + Send + Sync + 'static + Clone,
 {
@@ -79,10 +80,10 @@ where
     );
     
     // Get override filenames BEFORE downloading mods
-    let override_filenames = get_override_filenames(&manifest, &temp_dir);
+    let override_paths = get_override_relative_paths(&manifest, &temp_dir);
     
-    if !override_filenames.is_empty() {
-        println!("📦 Found {} files in overrides that will be available during download check", override_filenames.len());
+    if !override_paths.is_empty() {
+        println!("📦 Found {} files in overrides that will be available during download check", override_paths.len());
     }
     
     // Download mods - this also returns the expected filenames for cleanup
@@ -92,7 +93,7 @@ where
         "preparing_mod_downloads".to_string()
     );
     
-    let (failed_mods, expected_filenames) = download_mods_with_filenames(&manifest, instance_dir, emit_progress.clone(), 20.0, 90.0, auth_token, anon_key, &override_filenames).await?;
+    let (failed_mods, expected_filenames) = download_mods_with_filenames(&manifest, instance_dir, emit_progress.clone(), 20.0, 90.0, auth_token, anon_key, &override_paths).await?;
     
     // ===== UPDATE FLOW CLEANUP =====
     // This section ensures that mods/resourcepacks removed in new versions are deleted.
@@ -113,14 +114,9 @@ where
         all_new_expected.insert(format!("mods/{}", filename));
     }
     
-    // Add files from overrides (mods and resourcepacks)
-    for filename in &override_filenames {
-        // Overrides can be in mods/ or resourcepacks/
-        if filename.ends_with(".jar") {
-            all_new_expected.insert(format!("mods/{}", filename));
-        } else if filename.ends_with(".zip") {
-            all_new_expected.insert(format!("resourcepacks/{}", filename));
-        }
+    // Add files from overrides
+    for path in &override_paths {
+        all_new_expected.insert(path.clone());
     }
     
     // Perform cleanup based on instance type
@@ -157,12 +153,13 @@ where
         .map(|c| c == "official" || c == "partner")
         .unwrap_or(false);
     
+    let should_cleanup_configs = is_managed && !allow_custom_configs;
     let should_cleanup_mods = is_managed && !allow_custom_mods;
     let should_cleanup_resourcepacks = is_managed && !allow_custom_resourcepacks;
     
-    if should_cleanup_mods || should_cleanup_resourcepacks {
-        println!("🛡️ Anti-cheat cleanup: mods={}, resourcepacks={}", should_cleanup_mods, should_cleanup_resourcepacks);
-        cleanup_removed_files_selective(&expected_filenames, instance_dir, should_cleanup_mods, should_cleanup_resourcepacks)?;
+    if should_cleanup_mods || should_cleanup_resourcepacks || should_cleanup_configs {
+        println!("🛡️ Anti-cheat cleanup: mods={}, resourcepacks={}, configs={}", should_cleanup_mods, should_cleanup_resourcepacks, should_cleanup_configs);
+        cleanup_unauthorized_files(instance_dir, &all_new_expected, should_cleanup_mods, should_cleanup_resourcepacks, should_cleanup_configs)?;
     }
     
     // Process overrides AFTER cleanup - files from overrides will not be deleted
@@ -194,100 +191,96 @@ where
         "curseforge_completed".to_string()
     );
 
-    Ok((modloader, modloader_version, recommended_ram, failed_mods))
+    Ok((modloader, modloader_version, recommended_ram, failed_mods, all_new_expected))
 }
 
-/// Clean up mods and resourcepacks that are no longer in the manifest (useful for updates)
-/// Takes the list of expected filenames from the CurseForge API response
-/// Cleans .jar files from mods/ and .zip files from resourcepacks/
-/// With selective cleanup based on allow_custom flags
-fn cleanup_removed_files_selective(
-    expected_filenames: &std::collections::HashSet<String>,
+/// Clean up files not in the new manifest (for managed modpacks)
+fn cleanup_unauthorized_files(
     instance_dir: &PathBuf,
+    expected_files: &HashSet<String>,
     cleanup_mods: bool,
-    cleanup_resourcepacks: bool
+    cleanup_resourcepacks: bool,
+    cleanup_configs: bool,
 ) -> Result<()> {
     let mut total_removed = 0;
     
-    // Clean up mods directory (.jar files) only if cleanup_mods is true
     if cleanup_mods {
-        total_removed += cleanup_directory(
-            &instance_dir.join("mods"),
-            expected_filenames,
-            "jar",
-            "mod"
-        );
+        total_removed += cleanup_directory_by_path(instance_dir, "mods", expected_files, "jar", false);
     }
     
-    // Clean up resourcepacks directory (.zip files) only if cleanup_resourcepacks is true
     if cleanup_resourcepacks {
-        total_removed += cleanup_directory(
-            &instance_dir.join("resourcepacks"),
-            expected_filenames,
-            "zip",
-            "resourcepack"
-        );
+        total_removed += cleanup_directory_by_path(instance_dir, "resourcepacks", expected_files, "zip", false);
+    }
+
+    if cleanup_configs {
+        total_removed += cleanup_directory_by_path(instance_dir, "config", expected_files, "*", true);
+        total_removed += cleanup_directory_by_path(instance_dir, "scripts", expected_files, "*", true);
     }
     
     if total_removed > 0 {
-        println!("🧹 Cleaned up {} old file(s) total", total_removed);
+        println!("🧹 Anti-cheat cleaned up {} unauthorized file(s) total", total_removed);
     }
     
     Ok(())
 }
 
-/// Helper function to clean up a specific directory
-fn cleanup_directory(
-    dir: &PathBuf,
-    expected_filenames: &std::collections::HashSet<String>,
-    extension: &str,
-    file_type: &str
+fn cleanup_directory_by_path(
+    instance_dir: &PathBuf,
+    dir_name: &str,
+    expected_files: &HashSet<String>,
+    ext_filter: &str,
+    recursive: bool,
 ) -> usize {
-    if !dir.exists() {
+    let root_path = instance_dir.join(dir_name);
+    if !root_path.exists() {
         return 0;
     }
-    
-    let entries = match fs::read_dir(dir) {
-        Ok(entries) => entries,
-        Err(e) => {
-            eprintln!("⚠️ Failed to read {} directory: {}", file_type, e);
-            return 0;
-        }
-    };
-    
-    let mut removed_count = 0;
-    
-    for entry in entries.flatten() {
-        let path = entry.path();
-        
-        // Only process files with the specified extension
-        if let Some(ext) = path.extension() {
-            if ext != extension {
-                continue;
+
+    fn walk_cleanup(
+        current_path: PathBuf, 
+        base_dir: &PathBuf, 
+        prefix: &str,
+        expected_files: &HashSet<String>,
+        ext_filter: &str,
+        recursive: bool,
+    ) -> usize {
+        let mut removed = 0;
+        if let Ok(entries) = fs::read_dir(current_path) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() && recursive {
+                    removed += walk_cleanup(path, base_dir, prefix, expected_files, ext_filter, recursive);
+                } else if path.is_file() {
+                    // Check extension if filter is not "*"
+                    if ext_filter != "*" {
+                        if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+                            if ext != ext_filter {
+                                continue;
+                            }
+                        } else {
+                            continue;
+                        }
+                    }
+
+                    if let Ok(relative) = path.strip_prefix(base_dir) {
+                        let rel_path = format!("{}/{}", prefix, relative.to_string_lossy());
+                        if !expected_files.contains(&rel_path) {
+                            if fs::remove_file(&path).is_ok() {
+                                println!("🗑️ Removed unauthorized file: {}", rel_path);
+                                removed += 1;
+                            }
+                        }
+                    }
+                }
             }
-        } else {
-            continue;
         }
-        
-        // Get filename
-        let filename = match path.file_name().and_then(|n| n.to_str()) {
-            Some(name) => name.to_string(),
-            None => continue,
-        };
-        
-        // If this file is NOT in the expected list, delete it
-        if !expected_filenames.contains(&filename) {
-            if let Err(e) = fs::remove_file(&path) {
-                eprintln!("⚠️ Failed to remove old {} {}: {}", file_type, filename, e);
-            } else {
-                println!("🗑️ Removed old {}: {}", file_type, filename);
-                removed_count += 1;
-            }
-        }
+        removed
     }
-    
-    removed_count
+
+    walk_cleanup(root_path.clone(), instance_dir, dir_name, expected_files, ext_filter, recursive)
 }
+
+
 
 /// Legacy migration cleanup: Remove ALL files from disk that are NOT in the new manifest
 /// This is aggressive - it will remove user-added mods too, but is only used once for migration

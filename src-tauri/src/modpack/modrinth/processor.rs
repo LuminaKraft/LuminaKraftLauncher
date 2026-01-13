@@ -2,7 +2,7 @@ use anyhow::{Result, anyhow};
 use std::path::PathBuf;
 use std::fs;
 use std::collections::HashSet;
-use super::manifest::{read_manifest, get_modloader_info, process_overrides, get_override_filenames, get_minecraft_version};
+use super::manifest::{read_manifest, get_modloader_info, process_overrides, get_override_relative_paths, get_minecraft_version};
 use super::downloader::download_files_with_failed_tracking;
 use crate::modpack::extraction::extract_zip;
 
@@ -11,6 +11,7 @@ use crate::modpack::extraction::extract_zip;
 /// category: "official" | "partner" | "community" | None (imported)
 /// allow_custom_mods: Whether to preserve user-added mods (default true)
 /// allow_custom_resourcepacks: Whether to preserve user-added resourcepacks (default true)
+/// allow_custom_configs: Whether to preserve user-added configs (default true)
 /// old_installed_files: Files from previous version's integrity.file_hashes (for update comparison)
 /// is_legacy_instance: If true, perform aggressive disk cleanup
 pub async fn process_modrinth_modpack_with_failed_tracking<F>(
@@ -20,9 +21,10 @@ pub async fn process_modrinth_modpack_with_failed_tracking<F>(
     category: Option<&str>,
     allow_custom_mods: bool,
     allow_custom_resourcepacks: bool,
+    allow_custom_configs: bool,
     old_installed_files: Option<HashSet<String>>,
     is_legacy_instance: bool,
-) -> Result<(String, String, String, Option<u32>, Vec<serde_json::Value>)>
+) -> Result<(String, String, String, Option<u32>, Vec<serde_json::Value>, HashSet<String>)>
 where
     F: Fn(String, f32, String) + Send + Sync + 'static + Clone,
 {
@@ -80,11 +82,11 @@ where
         "modpack_info".to_string()
     );
     
-    // Get override filenames BEFORE downloading files
-    let override_filenames = get_override_filenames(&temp_dir);
+    // Get override relative paths BEFORE downloading files
+    let override_paths = get_override_relative_paths(&temp_dir);
     
-    if !override_filenames.is_empty() {
-        println!("📦 [Modrinth] Found {} files in overrides", override_filenames.len());
+    if !override_paths.is_empty() {
+        println!("📦 [Modrinth] Found {} files in overrides", override_paths.len());
     }
     
     // Download files from Modrinth CDN
@@ -94,13 +96,13 @@ where
         "preparing_downloads".to_string()
     );
     
-    let (failed_files, expected_filenames) = download_files_with_failed_tracking(
+    let (failed_files, _expected_filenames) = download_files_with_failed_tracking(
         &manifest,
         instance_dir,
         emit_progress.clone(),
         20.0,
         90.0,
-        &override_filenames,
+        &override_paths,
     ).await?;
     
     // ===== UPDATE FLOW CLEANUP =====
@@ -113,12 +115,8 @@ where
     }
     
     // Add files from overrides
-    for filename in &override_filenames {
-        if filename.ends_with(".jar") {
-            all_new_expected.insert(format!("mods/{}", filename));
-        } else if filename.ends_with(".zip") {
-            all_new_expected.insert(format!("resourcepacks/{}", filename));
-        }
+    for path in &override_paths {
+        all_new_expected.insert(path.clone());
     }
     
     // Perform cleanup based on instance type
@@ -152,12 +150,13 @@ where
         .map(|c| c == "official" || c == "partner")
         .unwrap_or(false);
     
+    let should_cleanup_configs = is_managed && !allow_custom_configs;
     let should_cleanup_mods = is_managed && !allow_custom_mods;
     let should_cleanup_resourcepacks = is_managed && !allow_custom_resourcepacks;
     
-    if should_cleanup_mods || should_cleanup_resourcepacks {
-        println!("🛡️ [Modrinth] Anti-cheat cleanup: mods={}, resourcepacks={}", should_cleanup_mods, should_cleanup_resourcepacks);
-        cleanup_removed_files_selective(&expected_filenames, instance_dir, should_cleanup_mods, should_cleanup_resourcepacks)?;
+    if should_cleanup_mods || should_cleanup_resourcepacks || should_cleanup_configs {
+        println!("🛡️ [Modrinth] Anti-cheat cleanup: mods={}, resourcepacks={}, configs={}", should_cleanup_mods, should_cleanup_resourcepacks, should_cleanup_configs);
+        cleanup_unauthorized_files(instance_dir, &all_new_expected, should_cleanup_mods, should_cleanup_resourcepacks, should_cleanup_configs)?;
     }
     
     // Process overrides AFTER cleanup
@@ -190,91 +189,96 @@ where
         "modrinth_completed".to_string()
     );
     
-    Ok((modloader, modloader_version, minecraft_version, recommended_ram, failed_files))
+    Ok((modloader, modloader_version, minecraft_version, recommended_ram, failed_files, all_new_expected))
 }
 
 /// Clean up files not in the new manifest (for managed modpacks)
-fn cleanup_removed_files_selective(
-    expected_filenames: &HashSet<String>,
+fn cleanup_unauthorized_files(
     instance_dir: &PathBuf,
+    expected_files: &HashSet<String>,
     cleanup_mods: bool,
-    cleanup_resourcepacks: bool
+    cleanup_resourcepacks: bool,
+    cleanup_configs: bool,
 ) -> Result<()> {
     let mut total_removed = 0;
     
     if cleanup_mods {
-        total_removed += cleanup_directory(
-            &instance_dir.join("mods"),
-            expected_filenames,
-            "jar",
-            "mod"
-        );
+        total_removed += cleanup_directory_by_path(instance_dir, "mods", expected_files, "jar", false);
     }
     
     if cleanup_resourcepacks {
-        total_removed += cleanup_directory(
-            &instance_dir.join("resourcepacks"),
-            expected_filenames,
-            "zip",
-            "resourcepack"
-        );
+        total_removed += cleanup_directory_by_path(instance_dir, "resourcepacks", expected_files, "zip", false);
+    }
+
+    if cleanup_configs {
+        total_removed += cleanup_directory_by_path(instance_dir, "config", expected_files, "*", true);
+        total_removed += cleanup_directory_by_path(instance_dir, "scripts", expected_files, "*", true);
     }
     
     if total_removed > 0 {
-        println!("🧹 [Modrinth] Cleaned up {} old file(s) total", total_removed);
+        println!("🧹 [Modrinth] Anti-cheat cleaned up {} unauthorized file(s) total", total_removed);
     }
     
     Ok(())
 }
 
-fn cleanup_directory(
-    dir: &PathBuf,
-    expected_filenames: &HashSet<String>,
-    extension: &str,
-    file_type: &str
+fn cleanup_directory_by_path(
+    instance_dir: &PathBuf,
+    dir_name: &str,
+    expected_files: &HashSet<String>,
+    ext_filter: &str,
+    recursive: bool,
 ) -> usize {
-    if !dir.exists() {
+    let root_path = instance_dir.join(dir_name);
+    if !root_path.exists() {
         return 0;
     }
-    
-    let entries = match fs::read_dir(dir) {
-        Ok(entries) => entries,
-        Err(e) => {
-            eprintln!("⚠️ [Modrinth] Failed to read {} directory: {}", file_type, e);
-            return 0;
-        }
-    };
-    
-    let mut removed_count = 0;
-    
-    for entry in entries.flatten() {
-        let path = entry.path();
-        
-        if let Some(ext) = path.extension() {
-            if ext != extension {
-                continue;
+
+    fn walk_cleanup(
+        current_path: PathBuf, 
+        base_dir: &PathBuf, 
+        prefix: &str,
+        expected_files: &HashSet<String>,
+        ext_filter: &str,
+        recursive: bool,
+    ) -> usize {
+        let mut removed = 0;
+        if let Ok(entries) = fs::read_dir(current_path) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() && recursive {
+                    removed += walk_cleanup(path, base_dir, prefix, expected_files, ext_filter, recursive);
+                } else if path.is_file() {
+                    // Check extension if filter is not "*"
+                    if ext_filter != "*" {
+                        if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+                            if ext != ext_filter {
+                                continue;
+                            }
+                        } else {
+                            continue;
+                        }
+                    }
+
+                    if let Ok(relative) = path.strip_prefix(base_dir) {
+                        let rel_path = format!("{}/{}", prefix, relative.to_string_lossy());
+                        if !expected_files.contains(&rel_path) {
+                            if fs::remove_file(&path).is_ok() {
+                                println!("🗑️ [Modrinth] Removed unauthorized file: {}", rel_path);
+                                removed += 1;
+                            }
+                        }
+                    }
+                }
             }
-        } else {
-            continue;
         }
-        
-        let filename = match path.file_name().and_then(|n| n.to_str()) {
-            Some(name) => name.to_string(),
-            None => continue,
-        };
-        
-        if !expected_filenames.contains(&filename) {
-            if let Err(e) = fs::remove_file(&path) {
-                eprintln!("⚠️ [Modrinth] Failed to remove old {} {}: {}", file_type, filename, e);
-            } else {
-                println!("🗑️ [Modrinth] Removed old {}: {}", file_type, filename);
-                removed_count += 1;
-            }
-        }
+        removed
     }
-    
-    removed_count
+
+    walk_cleanup(root_path.clone(), instance_dir, dir_name, expected_files, ext_filter, recursive)
 }
+
+
 
 fn cleanup_disk_vs_manifest(instance_dir: &PathBuf, new_expected_files: &HashSet<String>) -> usize {
     let mut removed = 0;

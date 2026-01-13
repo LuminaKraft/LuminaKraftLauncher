@@ -2,6 +2,7 @@ use crate::{Modpack, InstanceMetadata, UserSettings, filesystem, minecraft, meta
 use tauri::AppHandle;
 use crate::modpack::{extract_zip, curseforge, modrinth};
 use crate::utils::{cleanup_temp_file, download_file};
+use std::collections::HashSet;
 use anyhow::{Result, anyhow};
 use dirs::data_dir;
 
@@ -55,6 +56,7 @@ pub async fn install_modpack(modpack: Modpack) -> Result<()> {
         category: None,  // No category for basic installs
         allow_custom_mods: Some(true),  // Allow custom mods by default for basic installs
         allow_custom_resourcepacks: Some(true),  // Allow custom resourcepacks by default for basic installs
+        allow_custom_configs: Some(true),  // Allow custom configs by default for basic installs
     };
     
     filesystem::save_instance_metadata(&metadata).await?;
@@ -138,7 +140,7 @@ where
                     .unwrap_or(true); // No integrity = legacy
                 
                 // Get old installed files from integrity data
-                let old_files: std::collections::HashSet<String> = existing_metadata.integrity
+                let old_files: HashSet<String> = existing_metadata.integrity
                     .as_ref()
                     .map(|i| i.file_hashes.keys().cloned().collect())
                     .unwrap_or_default();
@@ -221,6 +223,7 @@ where
     let mut recommended_ram_from_manifest: Option<u32> = None;
     
     // Process modpack (download, extract, install) and get failed mods + zip hash
+    let mut managed_files_set = HashSet::new();
     let (failed_mods, zip_hash) = if !modpack.url_modpack_zip.is_empty() {
         // Download and extract modpack
         let temp_zip_path = app_data_dir.join("temp").join(format!("{}.zip", modpack.id));
@@ -324,6 +327,8 @@ where
             }
         }
         
+        
+
         // Calculate ZIP hash for integrity data (if official/partner)
         let calculated_zip_hash = if modpack.category.as_ref().map(|c| c == "official" || c == "partner").unwrap_or(false) {
              match crate::modpack::integrity::hash_file(&temp_zip_path) {
@@ -355,7 +360,7 @@ where
             // Process as Modrinth modpack (.mrpack)
             emit_progress("progress.processingModrinth".to_string(), 70.0, "processing_modrinth".to_string());
             
-            let (_mr_modloader, _mr_loader_version, _mr_mc_version, recommended_ram, failed_mods) = modrinth::process_modrinth_modpack_with_failed_tracking(
+            let (_mr_modloader, _mr_loader_version, _mr_mc_version, recommended_ram, failed_mods, managed_files) = modrinth::process_modrinth_modpack_with_failed_tracking(
                 &temp_zip_path,
                 &instance_dirs.instance_dir,
                 {
@@ -368,9 +373,12 @@ where
                 modpack.category.as_deref(),
                 modpack.allow_custom_mods.unwrap_or(true),
                 modpack.allow_custom_resourcepacks.unwrap_or(true),
+                modpack.allow_custom_configs.unwrap_or(true),
                 old_installed_files.clone(),
                 do_aggressive_cleanup,
             ).await?;
+
+            managed_files_set = managed_files;
 
             recommended_ram_from_manifest = recommended_ram;
             failed_mods
@@ -385,7 +393,7 @@ where
                 Some(format!("Bearer {}", anon_key))
             };
 
-            let (_cf_modloader, _cf_version, recommended_ram, failed_mods) = curseforge::process_curseforge_modpack_with_failed_tracking(
+            let (_cf_modloader, _cf_version, recommended_ram, failed_mods, managed_files) = curseforge::process_curseforge_modpack_with_failed_tracking(
                 &temp_zip_path,
                 &instance_dirs.instance_dir,
                 {
@@ -400,9 +408,12 @@ where
                 modpack.category.as_deref(),
                 modpack.allow_custom_mods.unwrap_or(true),
                 modpack.allow_custom_resourcepacks.unwrap_or(true),
+                modpack.allow_custom_configs.unwrap_or(true),
                 old_installed_files.clone(),
                 do_aggressive_cleanup,
             ).await?;
+
+            managed_files_set = managed_files;
 
             recommended_ram_from_manifest = recommended_ram;
             failed_mods
@@ -430,7 +441,7 @@ where
         .unwrap_or(false)
     {
         emit_progress("progress.calculatingIntegrity".to_string(), 97.0, "calculating_integrity".to_string());
-        match crate::modpack::integrity::create_integrity_data(&instance_dirs.instance_dir, zip_hash) {
+        match crate::modpack::integrity::create_integrity_data_from_list(&instance_dirs.instance_dir, &managed_files_set, zip_hash) {
             Ok(data) => {
                 println!("🔐 Integrity data calculated: {} files tracked", data.file_hashes.len());
                 Some(data)
@@ -458,8 +469,12 @@ where
         custom_ram: None,
         integrity: integrity_data,
         category: modpack.category.clone(),
-        allow_custom_mods: Some(modpack.allow_custom_mods.unwrap_or(true)),
-        allow_custom_resourcepacks: Some(modpack.allow_custom_resourcepacks.unwrap_or(true)),
+        // Whether custom mods are allowed (only relevant for official/partner)
+        allow_custom_mods: modpack.allow_custom_mods,
+        // Whether custom resource packs are allowed (only relevant for official/partner)
+        allow_custom_resourcepacks: modpack.allow_custom_resourcepacks,
+        // Whether custom configurations are allowed (only relevant for official/partner)
+        allow_custom_configs: modpack.allow_custom_configs,
     };
     
     filesystem::save_instance_metadata(&metadata).await?;
@@ -575,9 +590,19 @@ pub async fn launch_modpack_action(
              modpack.allow_custom_resourcepacks = metadata.allow_custom_resourcepacks;
         }
 
+        if let Some(new_allow_configs) = modpack.allow_custom_configs {
+            if metadata.allow_custom_configs != Some(new_allow_configs) {
+                metadata.allow_custom_configs = Some(new_allow_configs);
+                changed = true;
+            }
+        } else {
+             // Offline/Missing: Backfill from metadata
+             modpack.allow_custom_configs = metadata.allow_custom_configs;
+        }
+
         if changed {
-             println!("🔄 Syncing security flags to instance.json: mods={:?}, rp={:?}", 
-                 metadata.allow_custom_mods, metadata.allow_custom_resourcepacks);
+             println!("🔄 Syncing security flags to instance.json: mods={:?}, rp={:?}, configs={:?}", 
+                 metadata.allow_custom_mods, metadata.allow_custom_resourcepacks, metadata.allow_custom_configs);
              if let Err(e) = filesystem::save_instance_metadata(&metadata).await {
                  println!("⚠️ Failed to save updated metadata: {}", e);
              }

@@ -777,6 +777,24 @@
       "confirmDescription": "Reinstalar restablecerá todo el contenido instalado o modificado a lo que proporciona el modpack, eliminando cualquier mod o contenido que hayas añadido encima de la instalación original. Esto puede arreglar comportamiento inesperado si se han hecho cambios a la instancia, pero si tus mundos ahora dependen de contenido adicional instalado, puede romper mundos existentes.",
       "confirm": "Reinstalar modpack",
       "reinstalling": "Reinstalando..."
+    },
+    "stability": {
+      "title": "Estabilidad y Protección del Modpack",
+      "protectionMode": "Modo de Protección",
+      "protected": "Protegido",
+      "protectedDesc": "Protege los archivos originales (mods, paquetes de recursos y config). Esencial para la integridad del juego y el anti-cheat.",
+      "open": "Abierto",
+      "openDesc": "Personalización ilimitada. Puedes añadir o modificar cualquier archivo sin avisos, pero la estabilidad podría verse afectada.",
+      "advancedMode": "Modo Avanzado",
+      "foldersTable": {
+        "folder": "Carpeta",
+        "status": "Protección",
+        "mods": "Mods y Archivos Base",
+        "resourcepacks": "Resource Packs (Anti-Cheat)",
+        "configs": "Configuraciones y Scripts",
+        "shaders": "Shaders y Estética",
+        "unprotected": "Sin Protección"
+      }
     }
   },
   "publishModpack": {
@@ -807,10 +825,10 @@
       "parsing": "Analizando manifest.json...",
       "parseSuccess": "Manifest analizado exitosamente",
       "dragDrop": "Suelta tu ZIP del modpack aquí",
-      "dragDropAlt": "Arrastra y suelta tu archivo ZIP del modpack aquí, o haz clic para seleccionar",
+      "dragDropAlt": "Arrastra y suelta tu archivo ZIP o MrPack del modpack aquí, o haz clic para seleccionar",
       "uploading": "Subiendo...",
       "remove": "Eliminar archivo",
-      "formatInfo": "Soporta formato CurseForge"
+      "formatInfo": "Soporta formatos CurseForge (.zip) y Modrinth (.mrpack)"
     },
     "category": {
       "title": "Categoría",
@@ -828,7 +846,12 @@
       "allowModsDesc": "Los usuarios pueden añadir mods al modpack",
       "allowResourcepacks": "Permitir Paquetes de Recursos",
       "allowResourcepacksDesc": "Los usuarios pueden añadir paquetes de recursos al modpack",
-      "antiCheatNote": "Si tu modpack tiene servidor con anti-cheat, considera desactivar estas opciones para evitar conflictos."
+      "allowConfigs": "Permitir Configuración Personalizada",
+      "allowConfigsDesc": "Los usuarios pueden modificar configuraciones y añadir scripts",
+      "antiCheatNote": "Si tu modpack tiene servidor con anti-cheat, considera desactivar estas opciones para evitar conflictos.",
+      "allowed": "Permitido",
+      "restricted": "Restringido",
+      "advancedOptions": "Opciones Avanzadas"
     },
     "basicInfo": {
       "title": "Información Básica",
@@ -994,8 +1017,8 @@
       "versionRequired": "La versión es requerida",
       "minecraftVersionRequired": "La versión de Minecraft es requerida",
       "modloaderVersionRequired": "La versión del modloader es requerida",
-      "zipFileRequired": "El archivo ZIP es requerido para modpacks activos",
-      "zipFileOptionalMessage": "Por favor sube un archivo ZIP del modpack (opcional para modpacks de próxima llegada)",
+      "zipFileRequired": "El archivo del modpack es requerido para modpacks activos",
+      "zipFileOptionalMessage": "Por favor sube un archivo del modpack (ZIP/MrPack) (opcional para modpacks de próxima llegada)",
       "logoRequired": "El logo es requerido para todos los modpacks",
       "bannerRequired": "El banner es requerido para todos los modpacks",
       "categoryRequired": "Por favor selecciona una categoría para el modpack",
@@ -1082,9 +1105,9 @@
       "uploadNew": "Subir Nueva Versión",
       "uploadNewVersion": "Subir Nueva Versión",
       "downloadZip": "Descargar ZIP",
-      "modpackZipFile": "Archivo ZIP del Modpack",
-      "clickToUpload": "Haz clic para subir ZIP",
-      "clickToUploadZip": "Haz clic para subir ZIP",
+      "modpackZipFile": "Archivo del Modpack (ZIP o MrPack)",
+      "clickToUpload": "Haz clic para subir archivo",
+      "clickToUploadZip": "Haz clic para subir ZIP o MrPack",
       "validating": "Validando...",
       "newVersionNumber": "Número de Nueva Versión",
       "example": "p.ej. 1.1.0",
@@ -1148,17 +1171,17 @@
     "installingMods": "Instalando mods subidos..."
   },
   "validation": {
-    "invalidFile": "Por favor sube un archivo .jar o .zip",
-    "noValidFiles": "No se encontraron archivos .jar o .zip válidos",
+    "invalidFile": "Por favor sube un archivo .jar, .zip o .mrpack",
+    "noValidFiles": "No se encontraron archivos válidos (.jar, .zip, .mrpack)",
     "filesNotMatched": "{{count}} archivo(s) no pudieron ser emparejados",
     "displayNameEmpty": "El nombre de usuario no puede estar vacío",
     "usernameEmpty": "El nombre de usuario no puede estar vacío",
     "duplicateModpackName": "Ya existe un modpack con este nombre. Por favor elige un nombre diferente.",
     "modpackNameTaken": "Este nombre de modpack ya está en uso.",
     "manifestNotFound": "No se encontró manifest.json en el archivo ZIP",
-    "selectZipFile": "Por favor selecciona un archivo ZIP",
-    "validZipRequired": "Por favor sube un archivo ZIP válido",
-    "versionAndZipRequired": "La versión y el archivo ZIP son obligatorios",
+    "selectZipFile": "Por favor selecciona un archivo ZIP o MrPack",
+    "validZipRequired": "Por favor sube un archivo ZIP o MrPack válido",
+    "versionAndZipRequired": "La versión y el archivo del modpack son obligatorios",
     "versionMustBeHigher": "La versión {{version}} debe ser superior a la última versión {{latest}}",
     "preparingForInstallation": "Preparando el modpack para la instalación. Esto puede tomar un momento..."
   },

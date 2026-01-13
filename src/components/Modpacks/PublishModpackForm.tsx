@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n';
-import { Plus, X, Upload, FileArchive, AlertCircle, RefreshCw, Check, ChevronRight, ChevronLeft, Info, Image as ImageIcon, FileText, Package, Layers } from 'lucide-react';
+import { Plus, X, Upload, FileArchive, RefreshCw, Check, ChevronRight, ChevronLeft, Info, Image as ImageIcon, FileText, Package, Layers, ChevronDown, ChevronUp, UserCog, AlertCircle } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { save } from '@tauri-apps/plugin-dialog';
 import { listen } from '@tauri-apps/api/event';
@@ -40,6 +40,7 @@ interface FormData {
   isComingSoon?: boolean;
   allowCustomMods?: boolean;
   allowCustomResourcepacks?: boolean;
+  allowCustomConfigs?: boolean;
 }
 
 interface PublishModpackFormProps {
@@ -79,7 +80,8 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
       features: [],
       isComingSoon: false,
       allowCustomMods: true,
-      allowCustomResourcepacks: true
+      allowCustomResourcepacks: true,
+      allowCustomConfigs: true
     };
   };
 
@@ -117,6 +119,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
   const [currentStep, setCurrentStep] = useState(getSavedStep);
   const [nameError, setNameError] = useState<string | null>(null);
   const [isCheckingName, setIsCheckingName] = useState(false);
+  const [showAdvancedProtection, setShowAdvancedProtection] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Save form data to localStorage whenever it changes
@@ -292,11 +295,31 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
   }, []);
 
   useEffect(() => {
-    // Set default category based on user role
+    // Set default category and protection based on user role
     if (userRole === 'admin' && !formData.category) {
-      setFormData(prev => ({ ...prev, category: 'official' }));
+      setFormData(prev => ({
+        ...prev,
+        category: 'official',
+        allowCustomMods: false,
+        allowCustomResourcepacks: false,
+        allowCustomConfigs: false
+      }));
     } else if (userRole === 'partner' && !formData.category) {
-      setFormData(prev => ({ ...prev, category: 'partner' }));
+      setFormData(prev => ({
+        ...prev,
+        category: 'partner',
+        allowCustomMods: false,
+        allowCustomResourcepacks: false,
+        allowCustomConfigs: false
+      }));
+    } else if (userRole === 'user' && !formData.category) {
+      setFormData(prev => ({
+        ...prev,
+        category: 'community',
+        allowCustomMods: true,
+        allowCustomResourcepacks: true,
+        allowCustomConfigs: true
+      }));
     }
   }, [userRole]);
 
@@ -388,7 +411,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
   };
 
   const handleZipFile = async (file: File) => {
-    if (!file.name.endsWith('.zip')) {
+    if (!file.name.endsWith('.zip') && !file.name.endsWith('.mrpack')) {
       toast.error(t('publishModpack.validation.zipRequired'));
       return;
     }
@@ -420,13 +443,15 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
         uploadedFilesData.push([file.name, bytes]);
       }
 
-      const outputFileName = zipFile.name.replace('.zip', '_updated.zip');
+      const outputFileName = zipFile.name.endsWith('.mrpack')
+        ? zipFile.name.replace('.mrpack', '_updated.mrpack')
+        : zipFile.name.replace('.zip', '_updated.zip');
 
       const outputZipPath = await save({
         defaultPath: outputFileName,
         filters: [{
-          name: 'Modpack ZIP',
-          extensions: ['zip']
+          name: 'Modpack File',
+          extensions: ['zip', 'mrpack']
         }]
       });
 
@@ -623,7 +648,8 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
         primaryColor: formData.primaryColor,
         isComingSoon: formData.isComingSoon,
         allowCustomMods: formData.allowCustomMods,
-        allowCustomResourcepacks: formData.allowCustomResourcepacks
+        allowCustomResourcepacks: formData.allowCustomResourcepacks,
+        allowCustomConfigs: formData.allowCustomConfigs
       });
 
       if (!success || !modpackId) {
@@ -1037,9 +1063,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                           <FileArchive className="w-6 h-6 text-green-600 dark:text-green-400" />
                         </div>
                         <div className="text-left min-w-0">
-                          <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                            {zipFile.name}
-                          </p>
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white truncate max-w-full px-2">{zipFile.name}</p>
                           <div className="flex items-center gap-1.5">
                             <p className="text-xs text-gray-500 dark:text-gray-400">
                               {(getUpdatedZipSize() / 1024 / 1024).toFixed(2)} MB
@@ -1097,7 +1121,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                   <div
                     className="bg-blue-600 h-2.5 rounded-full transition-all duration-200"
                     style={{ width: `${uploadProgress}%` }}
-                  />
+                  ></div>
                 </div>
               </div>
             )}
@@ -1163,71 +1187,135 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                 </p>
               </div>
 
-              {/* User Modifications Section - Minimalist */}
-              <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg p-5 border border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-gray-900 dark:text-white">
-                    {t('publishModpack.userModifications.title')}
-                  </h3>
-                  {(formData.allowCustomMods !== false || formData.allowCustomResourcepacks !== false) && (
-                    <div className="group relative flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-medium rounded-md border border-amber-200 dark:border-amber-800 cursor-help">
-                      <AlertCircle className="w-3.5 h-3.5" />
-                      <span>Anti-Cheat</span>
-                      <div className="absolute bottom-full right-0 mb-2 w-64 p-3 bg-gray-900/95 backdrop-blur-sm text-white text-xs rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 border border-gray-700">
-                        {t('publishModpack.userModifications.antiCheatNote')}
+              {/* User Modifications Section - Enhanced */}
+              <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
+                <div className="p-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="flex items-center gap-2 font-semibold text-gray-900 dark:text-white">
+                        <UserCog className="w-5 h-5 text-blue-500 dark:text-blue-400" />
+                        {t('publishModpack.userModifications.title')}
+                      </h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 ml-7">
+                        {t('publishModpack.userModifications.description')}
+                      </p>
+                    </div>
+
+                    {/* Main Toggle */}
+                    <div className="flex items-center gap-3">
+                      <span className={`text-sm font-medium ${(formData.allowCustomMods !== false || formData.allowCustomResourcepacks !== false || formData.allowCustomConfigs !== false)
+                        ? 'text-green-600 dark:text-green-400'
+                        : 'text-amber-600 dark:text-amber-400'
+                        }`}>
+                        {(formData.allowCustomMods !== false || formData.allowCustomResourcepacks !== false || formData.allowCustomConfigs !== false)
+                          ? t('publishModpack.userModifications.allowed')
+                          : t('publishModpack.userModifications.restricted')
+                        }
+                      </span>
+
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="sr-only peer"
+                          checked={formData.allowCustomMods !== false || formData.allowCustomResourcepacks !== false || formData.allowCustomConfigs !== false}
+                          onChange={(e) => {
+                            const allowed = e.target.checked;
+                            setFormData(prev => ({
+                              ...prev,
+                              allowCustomMods: allowed,
+                              allowCustomResourcepacks: allowed,
+                              allowCustomConfigs: allowed
+                            }));
+                            if (allowed) {
+                              setShowAdvancedProtection(true);
+                            }
+                          }}
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Advanced Options Toggle */}
+                <div className="border-t border-gray-200 dark:border-gray-700">
+                  <button
+                    type="button"
+                    onClick={() => setShowAdvancedProtection(!showAdvancedProtection)}
+                    className="w-full px-5 py-3 flex items-center justify-between text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                  >
+                    <span className="font-medium">{t('publishModpack.userModifications.advancedOptions')}</span>
+                    {showAdvancedProtection ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </button>
+
+                  {showAdvancedProtection && (
+                    <div className="p-5 bg-gray-50 dark:bg-gray-800/50 space-y-4 animate-fade-in border-t border-gray-100 dark:border-gray-700">
+                      <div className="space-y-4">
+                        {/* Allow Custom Mods */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-lg transition-colors ${formData.allowCustomMods !== false ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400' : 'bg-gray-200 dark:bg-gray-700 text-gray-400'}`}>
+                              <Package className="w-4 h-4" />
+                            </div>
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                              {t('publishModpack.userModifications.allowMods')}
+                            </span>
+                          </div>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              className="sr-only peer"
+                              checked={formData.allowCustomMods !== false}
+                              onChange={(e) => updateFormData('allowCustomMods', e.target.checked)}
+                            />
+                            <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                          </label>
+                        </div>
+
+                        {/* Allow Custom Resourcepacks */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-lg transition-colors ${formData.allowCustomResourcepacks !== false ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400' : 'bg-gray-200 dark:bg-gray-700 text-gray-400'}`}>
+                              <Layers className="w-4 h-4" />
+                            </div>
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                              {t('publishModpack.userModifications.allowResourcepacks')}
+                            </span>
+                          </div>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              className="sr-only peer"
+                              checked={formData.allowCustomResourcepacks !== false}
+                              onChange={(e) => updateFormData('allowCustomResourcepacks', e.target.checked)}
+                            />
+                            <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                          </label>
+                        </div>
+
+                        {/* Allow Custom Configs */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-lg transition-colors ${formData.allowCustomConfigs !== false ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400' : 'bg-gray-200 dark:bg-gray-700 text-gray-400'}`}>
+                              <FileText className="w-4 h-4" />
+                            </div>
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                              {t('publishModpack.userModifications.allowConfigs')}
+                            </span>
+                          </div>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              className="sr-only peer"
+                              checked={formData.allowCustomConfigs !== false}
+                              onChange={(e) => updateFormData('allowCustomConfigs', e.target.checked)}
+                            />
+                            <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                          </label>
+                        </div>
                       </div>
                     </div>
                   )}
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Allow Custom Mods Toggle */}
-                  <label className={`relative flex items-center p-3 rounded-xl border-2 cursor-pointer transition-all ${formData.allowCustomMods !== false
-                    ? 'border-blue-500/20 bg-blue-50/50 dark:bg-blue-900/10'
-                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                    }`}>
-                    <div className={`p-2 rounded-lg mr-3 transition-colors ${formData.allowCustomMods !== false ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'}`}>
-                      <Package className="w-5 h-5" />
-                    </div>
-                    <div className="flex-1">
-                      <span className="block text-sm font-semibold text-gray-900 dark:text-white">
-                        {t('publishModpack.userModifications.allowMods')}
-                      </span>
-                    </div>
-                    <div className="relative ml-2">
-                      <input
-                        type="checkbox"
-                        checked={formData.allowCustomMods !== false}
-                        onChange={(e) => updateFormData('allowCustomMods', e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                    </div>
-                  </label>
-
-                  {/* Allow Custom Resourcepacks Toggle */}
-                  <label className={`relative flex items-center p-3 rounded-xl border-2 cursor-pointer transition-all ${formData.allowCustomResourcepacks !== false
-                    ? 'border-blue-500/20 bg-blue-50/50 dark:bg-blue-900/10'
-                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                    }`}>
-                    <div className={`p-2 rounded-lg mr-3 transition-colors ${formData.allowCustomResourcepacks !== false ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'}`}>
-                      <Layers className="w-5 h-5" />
-                    </div>
-                    <div className="flex-1">
-                      <span className="block text-sm font-semibold text-gray-900 dark:text-white">
-                        {t('publishModpack.userModifications.allowResourcepacks')}
-                      </span>
-                    </div>
-                    <div className="relative ml-2">
-                      <input
-                        type="checkbox"
-                        checked={formData.allowCustomResourcepacks !== false}
-                        onChange={(e) => updateFormData('allowCustomResourcepacks', e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                    </div>
-                  </label>
                 </div>
               </div>
             </div>
@@ -1265,14 +1353,16 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                       </div>
                     )}
                   </div>
-                  {nameError && (
-                    <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-                      <AlertCircle className="w-4 h-4" />
-                      {nameError}
-                    </p>
-                  )}
-                </div>
-              </div>
+                  {
+                    nameError && (
+                      <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                        <AlertCircle className="w-4 h-4" />
+                        {nameError}
+                      </p>
+                    )
+                  }
+                </div >
+              </div >
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
                 <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
                   {t('publishModpack.basicInfo.title')}
@@ -1380,8 +1470,9 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
           )}
 
         {/* Step 3: Details (Descriptions & Features) */}
-        {((userRole !== 'admin' && userRole !== 'partner' && currentStep === 3) ||
-          ((userRole === 'admin' || userRole === 'partner') && currentStep === 4)) && (
+        {
+          ((userRole !== 'admin' && userRole !== 'partner' && currentStep === 3) ||
+            ((userRole === 'admin' || userRole === 'partner') && currentStep === 4)) && (
             <div className="space-y-6 animate-fade-in">
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
                 <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
@@ -1493,8 +1584,9 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
           )}
 
         {/* Step 4: Media */}
-        {((userRole !== 'admin' && userRole !== 'partner' && currentStep === 4) ||
-          ((userRole === 'admin' || userRole === 'partner') && currentStep === 5)) && (
+        {
+          ((userRole !== 'admin' && userRole !== 'partner' && currentStep === 4) ||
+            ((userRole === 'admin' || userRole === 'partner') && currentStep === 5)) && (
             <div className="space-y-6 animate-fade-in">
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
                 <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">
@@ -1656,8 +1748,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                 </div>
               </div>
             </div>
-          )
-        }
+          )}
 
         {/* Step 5: Review */}
         {
@@ -1725,8 +1816,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                 </div>
               </div>
             </div>
-          )
-        }
+          )}
 
         <div className="flex justify-between pt-6 border-t border-gray-200 dark:border-gray-700 mt-8">
           <button
@@ -1772,7 +1862,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
             </button>
           )}
         </div>
-      </form >
+      </form>
 
       {/* Validation Dialog */}
       {
@@ -1824,41 +1914,43 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
       />
 
       {/* Downloading ZIP Modal - Blocking */}
-      {isDownloadingZip && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="relative w-full max-w-md bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl p-8 text-center">
-            <div className="flex flex-col items-center gap-4">
-              <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-600 border-t-transparent"></div>
-              <h2 className="text-xl font-semibold text-white">
-                {t('publishModpack.dialogs.downloadingTitle')}
-              </h2>
-              <p className="text-gray-400 text-sm">
-                {t('publishModpack.dialogs.downloadingMessage')}
-              </p>
+      {
+        isDownloadingZip && createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div className="relative w-full max-w-md bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl p-8 text-center">
+              <div className="flex flex-col items-center gap-4">
+                <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-600 border-t-transparent"></div>
+                <h2 className="text-xl font-semibold text-white">
+                  {t('publishModpack.dialogs.downloadingTitle')}
+                </h2>
+                <p className="text-gray-400 text-sm">
+                  {t('publishModpack.dialogs.downloadingMessage')}
+                </p>
 
-              {/* Progress Bar */}
-              <div className="w-full mt-4">
-                <div className="flex justify-between mb-2">
-                  <span className="text-xs font-medium text-gray-300">{downloadProgress}%</span>
+                {/* Progress Bar */}
+                <div className="w-full mt-4">
+                  <div className="flex justify-between mb-2">
+                    <span className="text-xs font-medium text-gray-300">{downloadProgress}%</span>
+                  </div>
+                  <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${downloadProgress}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
-                  <div
-                    className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${downloadProgress}%` }}
-                  />
-                </div>
+
+                <p className="text-xs text-gray-500 mt-3">
+                  {t('publishModpack.dialogs.downloadingNote')}
+                </p>
               </div>
-
-              <p className="text-xs text-gray-500 mt-3">
-                {t('publishModpack.dialogs.downloadingNote')}
-              </p>
             </div>
-          </div>
-        </div>,
-        document.body
-      )}
+          </div>,
+          document.body
+        )
+      }
 
-    </div >
+    </div>
   );
 }
 
