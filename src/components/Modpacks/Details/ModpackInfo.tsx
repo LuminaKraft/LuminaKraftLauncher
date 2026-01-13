@@ -32,10 +32,10 @@ const ModpackInfo: React.FC<ModpackInfoProps> = ({ modpack }) => {
     <div className="space-y-6">
       {/* Installation Card */}
       <div
-        className={`bg-dark-800 rounded-xl p-6 border border-dark-700 transition-all duration-200 ${getAnimationClass('', 'hover:border-lumina-400/30')
+        className={`bg-dark-800 rounded-xl p-6 border border-dark-700 transition-all duration-75 ${getAnimationClass('', 'hover:border-lumina-400/30')
           }`}
         style={{
-          animation: 'fadeInUp 0.4s ease-out 0.4s backwards',
+          animation: 'fadeInUp 0.15s ease-out 0.05s backwards',
           ...getAnimationStyle({})
         }}
       >

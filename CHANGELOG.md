@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Dramatically accelerated all animations and transitions (50ms-150ms) across the entire application.
   - Reduced navigation delays and page transition durations for an instantaneous feel.
   - Snappy hover effects and interactive elements.
+  - Accelerated entry animations for Installation Info, Requirements, and Features blocks (from 0.4s to 0.15s).
+- **Navigation Efficiency**:
+  - Implemented immediate rendering for Modpack Details when navigating from different sections (Homepage, Sidebar).
+  - Eliminated redundant "Loading" screens during cross-section selection.
+  - Synchronized page transitions with internal component logic to prevent animation flickering.
 - **macOS Experience Optimization**:
   - Disabled trackpad pinch-to-zoom gestures.
   - Restricted content dragging to prevent "rubber-band" effect on windows.

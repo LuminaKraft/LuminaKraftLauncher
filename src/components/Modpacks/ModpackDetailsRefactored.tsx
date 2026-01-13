@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Download, Clock, Users, Terminal, Info, Image, History } from 'lucide-react';
+import { ArrowLeft, Download, Clock, Users, Terminal, Info, Image, History, Loader2 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import LogsSection from './Details/Sections/LogsSection';
 import ScreenshotsSection from './Details/Sections/ScreenshotsSection';
@@ -28,9 +28,10 @@ interface ModpackDetailsProps {
   isReadOnly?: boolean; // Read-only mode: hide management actions
   onModpackUpdated?: (updates: { name?: string; logo?: string; backgroundImage?: string }) => void; // Called when modpack is updated
   onNavigate?: (section: string, modpackId?: string) => void;
+  isLoadingDetails?: boolean;
 }
 
-const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack, isReadOnly = false, onModpackUpdated, onNavigate }) => {
+const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, state, onBack, isReadOnly = false, onModpackUpdated, onNavigate, isLoadingDetails = false }) => {
   const { t } = useTranslation();
   const { modpackStates } = useLauncher();
   const { getAnimationClass, getAnimationStyle } = useAnimation();
@@ -334,7 +335,12 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
                       animation: `fadeInUp 0.15s ease-out 0.05s backwards`
                     })}
                   >
-                    {displayName}
+                    <div className="flex items-center space-x-3">
+                      <span>{displayName}</span>
+                      {isLoadingDetails && (
+                        <Loader2 className="w-5 h-5 text-lumina-400 animate-spin" />
+                      )}
+                    </div>
                   </h1>
                   <p
                     className={`text-lg text-dark-300 leading-relaxed ${getAnimationClass('transition-all duration-75')

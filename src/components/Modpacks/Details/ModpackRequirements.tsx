@@ -19,11 +19,10 @@ const ModpackRequirements: React.FC<ModpackRequirementsProps> = ({ modpack }) =>
 
   return (
     <div
-      className={`bg-dark-800 rounded-xl p-6 border border-dark-700 transition-all duration-200 ${
-        getAnimationClass('', 'hover:border-lumina-400/30')
-      }`}
+      className={`bg-dark-800 rounded-xl p-6 border border-dark-700 transition-all duration-75 ${getAnimationClass('', 'hover:border-lumina-400/30')
+        }`}
       style={{
-        animation: 'fadeInUp 0.4s ease-out 0.6s backwards',
+        animation: 'fadeInUp 0.15s ease-out 0.1s backwards',
         ...getAnimationStyle({})
       }}
     >

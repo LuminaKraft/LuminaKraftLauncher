@@ -682,7 +682,7 @@ export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: My
   };
 
   // Loading state
-  if (loading) {
+  if (loading && !selectedModpackId) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lumina-500"></div>
@@ -763,11 +763,16 @@ export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: My
             onBack={handleBackToList}
             isReadOnly={false}
             onModpackUpdated={(updates) => handleModpackUpdated(selectedModpackId!, updates)}
-            onNavigate={(section) => {
-              if (section === 'my-modpacks') {
+            onNavigate={(section, modpackId) => {
+              if (section === 'my-modpacks' && !modpackId) {
                 handleBackToList();
+                return;
+              }
+              if (_onNavigate) {
+                _onNavigate(section, modpackId);
               }
             }}
+            isLoadingDetails={loading}
           />
         </div>
       );

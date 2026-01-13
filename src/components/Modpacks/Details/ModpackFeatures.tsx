@@ -27,10 +27,10 @@ const ModpackFeatures: React.FC<ModpackFeaturesProps> = ({ features }) => {
 
   return (
     <div
-      className={`relative overflow-hidden bg-gradient-to-br from-dark-800/80 to-dark-900/90 backdrop-blur-xl rounded-2xl p-6 border border-dark-700/50 shadow-xl transition-all duration-300 ${getAnimationClass('', 'hover:border-lumina-500/30 hover:shadow-lumina-500/5')
+      className={`relative overflow-hidden bg-gradient-to-br from-dark-800/80 to-dark-900/90 backdrop-blur-xl rounded-2xl p-6 border border-dark-700/50 shadow-xl transition-all duration-75 ${getAnimationClass('', 'hover:border-lumina-500/30 hover:shadow-lumina-500/5')
         }`}
       style={{
-        animation: 'fadeInUp 0.4s ease-out 0.1s backwards',
+        animation: 'fadeInUp 0.15s ease-out 0.1s backwards',
         ...getAnimationStyle({})
       }}
     >
@@ -59,8 +59,8 @@ const ModpackFeatures: React.FC<ModpackFeaturesProps> = ({ features }) => {
             <div
               key={featureId}
               className={`group relative bg-dark-800/50 backdrop-blur-sm rounded-xl border transition-all duration-300 ${isExpanded
-                  ? 'border-lumina-500/30 shadow-lg shadow-lumina-500/5'
-                  : 'border-dark-700/30 hover:border-dark-600/50'
+                ? 'border-lumina-500/30 shadow-lg shadow-lumina-500/5'
+                : 'border-dark-700/30 hover:border-dark-600/50'
                 }`}
             >
               <div
@@ -69,8 +69,8 @@ const ModpackFeatures: React.FC<ModpackFeaturesProps> = ({ features }) => {
               >
                 {/* Number badge */}
                 <div className={`flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg font-bold text-sm transition-all duration-300 ${isExpanded
-                    ? 'bg-lumina-500/20 text-lumina-400 border border-lumina-500/30'
-                    : 'bg-dark-700/50 text-dark-400 border border-dark-600/30 group-hover:text-lumina-400 group-hover:border-lumina-500/20'
+                  ? 'bg-lumina-500/20 text-lumina-400 border border-lumina-500/30'
+                  : 'bg-dark-700/50 text-dark-400 border border-dark-600/30 group-hover:text-lumina-400 group-hover:border-lumina-500/20'
                   }`}>
                   {index + 1}
                 </div>
@@ -85,8 +85,8 @@ const ModpackFeatures: React.FC<ModpackFeaturesProps> = ({ features }) => {
                 {hasDescription && (
                   <ChevronDown
                     className={`w-5 h-5 transition-all duration-300 ${isExpanded
-                        ? 'rotate-180 text-lumina-400'
-                        : 'text-dark-500 group-hover:text-lumina-400'
+                      ? 'rotate-180 text-lumina-400'
+                      : 'text-dark-500 group-hover:text-lumina-400'
                       } ${getAnimationClass('', 'group-hover:scale-110')}`}
                   />
                 )}

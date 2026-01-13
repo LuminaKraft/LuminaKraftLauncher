@@ -37,12 +37,17 @@ const ModpacksPage: React.FC<ModpacksPageProps> = ({ initialModpackId, onNavigat
   // Handle initial modpack selection from navigation
   React.useEffect(() => {
     if (initialModpackId && modpacksData) {
+      // If we are already showing this modpack, don't re-trigger selection
+      if (selectedModpack?.id === initialModpackId) return;
+
       const modpack = modpacksData.modpacks.find(m => m.id === initialModpackId);
       if (modpack) {
-        handleModpackSelect(modpack);
+        // Skip internal animation when loading initial modpack from navigation
+        // because App.tsx already handles the page transition
+        handleModpackSelect(modpack, true);
       }
     }
-  }, [initialModpackId, modpacksData]);
+  }, [initialModpackId, modpacksData, selectedModpack?.id]);
 
   // Check if any modpack is currently installing/updating
   const hasActiveInstallation = Object.values(modpackStates).some(state =>
@@ -53,12 +58,9 @@ const ModpacksPage: React.FC<ModpacksPageProps> = ({ initialModpackId, onNavigat
     modpack.name.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
 
-  const handleModpackSelect = (modpack: Modpack) => {
-    setIsTransitioning(true);
-    setDetailsLoading(true);
-    withDelay(async () => {
-      setSelectedModpack(modpack);
-      setShowingDetails(true);
+  const handleModpackSelect = (modpack: Modpack, skipAnimation = false) => {
+    const loadDetails = async () => {
+      setDetailsLoading(true);
       try {
         const launcherService = LauncherService.getInstance();
         const details = await launcherService.fetchModpackDetails(modpack.id);
@@ -68,6 +70,20 @@ const ModpacksPage: React.FC<ModpacksPageProps> = ({ initialModpackId, onNavigat
       } finally {
         setDetailsLoading(false);
       }
+    };
+
+    if (skipAnimation) {
+      setSelectedModpack(modpack);
+      setShowingDetails(true);
+      loadDetails();
+      return;
+    }
+
+    setIsTransitioning(true);
+    withDelay(async () => {
+      setSelectedModpack(modpack);
+      setShowingDetails(true);
+      await loadDetails();
       withDelay(() => {
         setIsTransitioning(false);
       }, 50);
@@ -135,19 +151,14 @@ const ModpacksPage: React.FC<ModpacksPageProps> = ({ initialModpackId, onNavigat
         }`}
         style={getAnimationStyle({})}
       >
-        {detailsLoading ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-white text-lg">{t('modpacks.loadingDetails')}</div>
-          </div>
-        ) : (
-          <ModpackDetailsRefactored
-            modpack={selectedModpackDetails || selectedModpack}
-            state={modpackState}
-            onBack={handleBackToList}
-            isReadOnly={true}
-            onNavigate={onNavigate}
-          />
-        )}
+        <ModpackDetailsRefactored
+          modpack={selectedModpackDetails || selectedModpack}
+          state={modpackState}
+          onBack={handleBackToList}
+          isReadOnly={true}
+          onNavigate={onNavigate}
+          isLoadingDetails={detailsLoading}
+        />
       </div>
     );
   }

@@ -203,7 +203,7 @@ function AppContent() {
         withDelay(() => {
           setIsTransitioning(false);
         }, 50);
-      }, 150);
+      }, 100);
       return;
     }
 
@@ -235,7 +235,7 @@ function AppContent() {
       withDelay(() => {
         setIsTransitioning(false);
       }, 50);
-    }, 150);
+    }, 100);
   };
 
   const handleModpackNavigation = (section: string, modpackId?: string) => {
@@ -266,7 +266,7 @@ function AppContent() {
       withDelay(() => {
         setIsTransitioning(false);
       }, 50);
-    }, 150);
+    }, 100);
   };
 
   const renderContent = () => {
