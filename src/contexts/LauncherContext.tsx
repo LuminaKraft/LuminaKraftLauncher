@@ -57,6 +57,7 @@ interface LauncherContextType {
   stopInstance: (_id: string) => Promise<boolean>;
   changeLanguage: (_language: string) => Promise<void>;
   removeModpack: (_id: string) => Promise<void>;
+  installModpackVersion: (_id: string, _versionData: any) => Promise<boolean>;
   showUsernameDialog: boolean;
   setShowUsernameDialog: (_value: boolean) => void;
   isOnline: boolean;
@@ -726,6 +727,63 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const installModpackVersion = async (id: string, versionData: any): Promise<boolean> => {
+    try {
+      // Create a temporary modpack ID for checking rate limits of the correct modpack
+      const rateLimitCheck = await launcherService.checkDownloadRateLimit(id, state.userSettings.clientToken);
+      if (!rateLimitCheck.allowed) {
+        setRateLimitDialog({
+          isOpen: true,
+          errorCode: rateLimitCheck.errorCode || 'LIMIT_EXCEEDED',
+          limit: rateLimitCheck.limit,
+          resetAt: rateLimitCheck.resetAt
+        });
+        return false;
+      }
+
+      dispatch({
+        type: 'SET_MODPACK_STATE',
+        payload: {
+          id: id,
+          state: createModpackState('installing')
+        }
+      });
+
+      await launcherService.installModpackVersion(id, versionData, (progress) => {
+        dispatch({
+          type: 'UPDATE_MODPACK_PROGRESS',
+          payload: {
+            id,
+            progress
+          }
+        });
+      });
+
+      // Update state to installed
+      const status = await launcherService.getModpackStatus(id);
+      dispatch({
+        type: 'SET_MODPACK_STATE',
+        payload: {
+          id,
+          state: createModpackState(status)
+        }
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error installing modpack version:', error);
+      dispatch({
+        type: 'SET_MODPACK_STATE',
+        payload: {
+          id,
+          state: createModpackState('error', {
+            error: error instanceof Error ? error.message : 'Error installing version'
+          })
+        }
+      });
+      return false;
+    }
+  };
 
   const performModpackAction = async (
     action: 'install' | 'update' | 'launch' | 'repair' | 'reinstall' | 'stop',
@@ -1567,6 +1625,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     stopInstance: (id: string) => performModpackAction('stop', id), // Added stopInstance
     changeLanguage,
     removeModpack,
+    installModpackVersion,
     showUsernameDialog,
     setShowUsernameDialog,
     isOnline: state.isOnline,

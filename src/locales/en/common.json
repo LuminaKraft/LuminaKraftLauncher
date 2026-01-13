@@ -185,6 +185,16 @@
       "official": "Official",
       "partner": "Partners",
       "community": "Community"
+    },
+    "versions": {
+      "title": "Versions",
+      "loadFailed": "Failed to load versions",
+      "noVersions": "No versions found",
+      "noHistoryAvailable": "No version history available for this modpack",
+      "current": "Current",
+      "confirmChange": "Are you sure you want to switch to version {{version}}? This may affect your worlds.",
+      "install": "Install",
+      "installed": "Installed"
     }
   },
   "progress": {

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Download, Clock, Users, Terminal, Info, Image } from 'lucide-react';
+import { ArrowLeft, Download, Clock, Users, Terminal, Info, Image, History } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import LogsSection from './Details/Sections/LogsSection';
 import ScreenshotsSection from './Details/Sections/ScreenshotsSection';
+import VersionsSection from './Details/Sections/VersionsSection';
 import { listen } from '@tauri-apps/api/event';
 import type { Modpack, ModpackState, ProgressInfo } from '../../types/launcher';
 import { useLauncher } from '../../contexts/LauncherContext';
@@ -39,7 +40,7 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
 
   // Logs state
   const [logs, setLogs] = React.useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState<'content' | 'logs' | 'screenshots'>('content');
+  const [activeTab, setActiveTab] = useState<'content' | 'logs' | 'screenshots' | 'versions'>('content');
 
   // Stats state
   const [stats, setStats] = useState({
@@ -434,11 +435,32 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
                     )}
                   </button>
                 )}
+                {/* Versions Tab - Only show in Explore mode (read-only) */}
+                {isReadOnly && (
+                  <button
+                    onClick={() => setActiveTab('versions')}
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-md font-medium transition-all duration-200 ${activeTab === 'versions'
+                      ? 'bg-lumina-600 text-white shadow-lg'
+                      : 'text-dark-300 hover:text-white hover:bg-dark-700'
+                      }`}
+                  >
+                    <History className="w-4 h-4" />
+                    <span>{t('modpacks.versions.title')}</span>
+                  </button>
+                )}
               </div>
 
               {/* Tab Content */}
               <div className="min-h-[400px]">
-                {activeTab === 'content' ? renderContentTab() : activeTab === 'logs' ? <LogsSection logs={logs} modpackId={modpack.id} /> : <ScreenshotsSection images={modpack.images} modpackName={displayName} />}
+                {activeTab === 'content' && renderContentTab()}
+                {activeTab === 'logs' && <LogsSection logs={logs} modpackId={modpack.id} />}
+                {activeTab === 'screenshots' && <ScreenshotsSection images={modpack.images} modpackName={displayName} />}
+                {activeTab === 'versions' && (
+                  <VersionsSection
+                    modpackId={modpack.id}
+                    currentVersion={state.installed ? (instanceMetadata?.version || modpack.version) : undefined}
+                  />
+                )}
               </div>
             </div>
 

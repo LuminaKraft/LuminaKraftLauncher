@@ -1485,11 +1485,98 @@ class LauncherService {
         changelog: version.changelog_i18n?.[lang] || version.changelog_i18n?.['en'] || '',
         fileUrl: version.file_url,
         fileSize: version.file_size,
+        fileSha256: version.file_sha256,
+        minecraftVersion: version.minecraft_version,
+        modloaderVersion: version.modloader_version,
         createdAt: version.created_at,
       })) || [];
     } catch (error) {
       console.error('Error getting version history:', error);
       return [];
+    }
+  }
+
+  /**
+   * Install a specific version of a modpack
+   */
+  async installModpackVersion(modpackId: string, versionData: any, _onProgress?: (_progress: ProgressInfo) => void): Promise<void> {
+    const modpack = await this.ensureModpackHasRequiredFields(modpackId);
+
+    // Create a modified modpack object with the specific version data
+    const versionModpack = {
+      ...modpack,
+      version: versionData.version,
+      urlModpackZip: versionData.fileUrl,
+      minecraftVersion: versionData.minecraftVersion || modpack.minecraftVersion,
+      modloaderVersion: versionData.modloaderVersion || modpack.modloaderVersion,
+      fileSha256: versionData.fileSha256
+    };
+
+    if (!versionModpack.urlModpackZip) {
+      throw new Error('Esta versión no tiene un archivo disponible para descarga.');
+    }
+
+    // Use the same installation logic as standard install
+    try {
+      // Set up progress listener if callback provided
+      let unlistenProgress: (() => void) | null = null;
+      let lastPercentage = 0;
+
+      if (isTauriContext()) {
+        unlistenProgress = await listen(
+          `modpack_progress_${modpackId}`,
+          (_event: any) => {
+            const data = _event.payload;
+            if (data) {
+              let currentFile = '';
+              if (data.detailMessage) {
+                currentFile = data.detailMessage;
+              } else if (data.message && !data.message.startsWith('downloading_modpack:')) {
+                currentFile = data.message;
+              }
+
+              if (data.percentage >= 0) {
+                lastPercentage = data.percentage;
+              }
+
+              _onProgress?.({
+                percentage: lastPercentage,
+                currentFile: currentFile,
+                downloadSpeed: data.downloadSpeed || '',
+                eta: data.eta || '',
+                step: data.step || '',
+                generalMessage: data.generalMessage || '',
+                detailMessage: data.detailMessage || ''
+              });
+            }
+          }
+        );
+      }
+
+      try {
+        const transformedModpack = this.transformModpackForBackend(versionModpack);
+        const transformedSettings = await this.transformUserSettingsForBackend(this.userSettings);
+
+        // We use forceCleanInstall=true to ensure clean switch between versions
+        await safeInvoke('install_modpack_with_failed_tracking', {
+          modpack: transformedModpack,
+          settings: transformedSettings,
+          forceCleanInstall: false // Don't force clean, let backend decide or just overwrite. User might want to keep some files.
+          // Actually, if downgrading/upgrading, usually we want to keep user data but replace mods.
+          // The backend 'install_modpack_with_failed_tracking' logic handles overrides.
+        });
+
+      } finally {
+        if (unlistenProgress) {
+          unlistenProgress();
+        }
+      }
+    } catch (error) {
+      if (!isTauriContext()) {
+        throw new Error('Esta función requiere ejecutar la aplicación con Tauri.');
+      }
+      console.error('Error installing modpack version:', error);
+      throw new Error('Error al instalar la versión del modpack');
     }
   }
 

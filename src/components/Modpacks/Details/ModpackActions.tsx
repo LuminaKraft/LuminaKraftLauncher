@@ -184,12 +184,13 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({
           action: () => launchModpack(modpack.id)
         };
       case 'outdated':
+        // Optional update: Primary action is still PLAY
         return {
-          icon: RefreshCw,
-          label: t('modpacks.update'),
-          bgColor: 'bg-orange-600 hover:bg-orange-700',
+          icon: Play,
+          label: t('modpacks.play'),
+          bgColor: 'bg-green-600 hover:bg-green-700',
           textColor: 'text-white',
-          action: () => updateModpack(modpack.id)
+          action: () => launchModpack(modpack.id)
         };
       case 'installing':
       case 'updating':
@@ -368,6 +369,17 @@ const ModpackActions: React.FC<ModpackActionsProps> = ({
           <Icon className={`w-6 h-6 ${statusInfo.spinning ? 'animate-spin' : ''}`} />
           <span>{statusInfo.label}</span>
         </button>
+
+        {/* Optional Update Button */}
+        {!isReadOnly && state.status === 'outdated' && (
+          <button
+            onClick={() => updateModpack(modpack.id)}
+            className={`w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-xl font-medium text-base transition-all duration-200 bg-orange-600/10 hover:bg-orange-600/20 text-orange-400 border border-orange-600/30 hover:border-orange-600/50`}
+          >
+            <RefreshCw className="w-4 h-4" />
+            <span>{t('modpacks.updateAvailable')}</span>
+          </button>
+        )}
 
         {/* Progress Display */}
         {['installing', 'updating', 'repairing', 'reinstalling', 'launching'].includes(state.status) && state.progress && (
