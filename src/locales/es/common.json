@@ -751,7 +751,6 @@
     "recommendedByAuthor": "Recomendado por el Autor",
     "default": "(Por Defecto)",
     "recommendedDescription": "Usar la asignación de memoria recomendada por el autor del modpack",
-    "globalFallback": "Usar asignación de memoria global (sin recomendación específica del autor)",
     "globalSettings": "Configuración Global",
     "globalDescription": "Usar tu asignación de memoria global desde ajustes",
     "customAllocation": "Asignación de RAM Personalizada",

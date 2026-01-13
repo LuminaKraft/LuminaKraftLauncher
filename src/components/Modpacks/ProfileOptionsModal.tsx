@@ -38,9 +38,11 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
   const appDataDirRef = useRef<string | null>(null);
 
   const [displayName, setDisplayName] = useState(modpackName);
-  const [ramMode, setRamMode] = useState<'recommended' | 'custom' | 'global'>(
-    (metadata?.ramAllocation as 'recommended' | 'custom' | 'global') || 'recommended'
-  );
+  const [ramMode, setRamMode] = useState<'recommended' | 'custom' | 'global'>(() => {
+    const rawMode = metadata?.ramAllocation as 'recommended' | 'custom' | 'global';
+    if (rawMode === 'recommended' && !metadata?.recommendedRam) return 'global';
+    return rawMode || (metadata?.recommendedRam ? 'recommended' : 'global');
+  });
   const [customRamValue, setCustomRamValue] = useState<number>(
     metadata?.customRam || userSettings.allocatedRam || 4096
   );
@@ -121,7 +123,8 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
 
   useEffect(() => {
     if (metadata) {
-      setRamMode((metadata.ramAllocation as 'recommended' | 'custom' | 'global') || 'recommended');
+      const initialMode = (metadata.ramAllocation as 'recommended' | 'custom' | 'global') || (metadata.recommendedRam ? 'recommended' : 'global');
+      setRamMode(initialMode === 'recommended' && !metadata.recommendedRam ? 'global' : initialMode);
       setCustomRamValue(metadata.customRam || userSettings.allocatedRam || 4096);
     }
   }, [metadata, userSettings.allocatedRam]);
@@ -428,10 +431,12 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
           </div>
 
           <div className="space-y-3">
-            {/* Recommended by Author Option */}
+            {/* Recommended by Author Option - Only shown if author provided a recommendation */}
             {(() => {
+              if (!metadata?.recommendedRam) return null;
+
               // Calculate safety using real system memory
-              const recommendedMB = metadata?.recommendedRam || 4096;
+              const recommendedMB = metadata.recommendedRam;
               const safeLimitMB = systemRamMB - 1536; // Buffer 1.5GB
               const isUnsafe = recommendedMB > safeLimitMB;
 
@@ -466,9 +471,7 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
                           {t('profileOptions.unsafeRamWarning', 'Excede memoria segura. Se usará Global.')}
                         </span>
                       ) : (
-                        metadata?.recommendedRam
-                          ? t('profileOptions.recommendedDescription')
-                          : t('profileOptions.globalFallback')
+                        t('profileOptions.recommendedDescription')
                       )}
                     </div>
                   </div>

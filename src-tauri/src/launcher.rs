@@ -454,7 +454,7 @@ where
         modloader_version: modpack.modloader_version.clone(),
         minecraft_version: modpack.minecraft_version.clone(),
         recommended_ram: recommended_ram_from_manifest,
-        ram_allocation: Some("recommended".to_string()), // Default to recommended RAM
+        ram_allocation: Some(if recommended_ram_from_manifest.is_some() { "recommended".to_string() } else { "global".to_string() }),
         custom_ram: None,
         integrity: integrity_data,
         category: modpack.category.clone(),

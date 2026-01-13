@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Supports `overrides/` and `client-overrides/` folders for additional files
   - Extracts modloader info from Modrinth dependencies (Forge, Fabric, NeoForge, Quilt)
   - No API authentication required (Modrinth API is public)
+- **Refined RAM Allocation Options**
+  - Hidden "Recommended by Author" option when modpack provides no recommendation
+  - Defaulted new installations to "Global" RAM if no author recommendation exists
+  - UI now gracefully handles instances with missing recommendations by switching to global settings
   
 ### 🔧 **Technical Improvements**
 - New Rust modules: `src/modpack/modrinth/` with types, manifest parser, downloader, and processor
