@@ -357,8 +357,28 @@ export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: My
                 dataMap.set(id, modpack);
               }
             } catch (supabaseError) {
-              // Supabase also failed - log but don't block
+              // Supabase also failed - check if it's a local community modpack
               console.log(`Could not fetch details for ${id} from cache or Supabase`);
+
+              const localInstance = parsedInstances.find(i => i.id === id);
+              if (localInstance) {
+                console.log(`ℹ️ Using local instance info for ${id}`);
+                const modpack: Modpack = {
+                  id: localInstance.id,
+                  name: localInstance.name,
+                  version: localInstance.version,
+                  minecraftVersion: localInstance.minecraftVersion,
+                  modloader: localInstance.modloader,
+                  modloaderVersion: localInstance.modloaderVersion,
+                  category: 'community',
+                  logo: '',
+                  backgroundImage: '',
+                  description: '', // Descripciones no disponibles localmente si no están en cache
+                  shortDescription: '',
+                  urlModpackZip: ''
+                };
+                dataMap.set(id, modpack);
+              }
             }
           } catch (error) {
             console.error(`Error loading metadata for ${id}:`, error);
@@ -438,11 +458,11 @@ export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: My
         multiple: false,
         filters: [
           {
-            name: 'ZIP Archive',
-            extensions: ['zip']
+            name: 'Modpack Files',
+            extensions: ['zip', 'mrpack']
           }
         ],
-        title: 'Select Modpack ZIP File'
+        title: 'Select Modpack File'
       });
 
       if (!filePath) return; // User cancelled
@@ -461,7 +481,7 @@ export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: My
    * Handle file selection from path
    */
   const handleFileSelected = async (filePath: string) => {
-    if (!filePath.endsWith('.zip')) {
+    if (!filePath.endsWith('.zip') && !filePath.endsWith('.mrpack')) {
       toast.error(t('validation.selectZipFile'));
       return;
     }

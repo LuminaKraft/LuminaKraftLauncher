@@ -1409,32 +1409,69 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
 
       // Extract manifest to create a temporary modpack object
       const zip = await JSZip.loadAsync(zipBuffer);
-      const manifestFile = zip.file('manifest.json');
 
-      if (!manifestFile) {
-        throw new Error('No manifest.json found in ZIP file');
+      // Try Modrinth format first (modrinth.index.json)
+      const modrinthManifestFile = zip.file('modrinth.index.json');
+      // Then try CurseForge format (manifest.json)
+      const curseforgeManifestFile = zip.file('manifest.json');
+
+      let manifest: any;
+      let isModrinth = false;
+
+      if (modrinthManifestFile) {
+        const manifestText = await modrinthManifestFile.async('text');
+        manifest = JSON.parse(manifestText);
+        isModrinth = true;
+      } else if (curseforgeManifestFile) {
+        const manifestText = await curseforgeManifestFile.async('text');
+        manifest = JSON.parse(manifestText);
+      } else {
+        throw new Error('No manifest found in ZIP file (expected manifest.json or modrinth.index.json)');
       }
-
-      const manifestText = await manifestFile.async('text');
-      const manifest = JSON.parse(manifestText);
 
       // Create a safe ID for event names (alphanumeric, -, /, :, _ only)
       const fileName = filePath.split('/').pop() || 'modpack';
-      const safeName = (manifest.name || fileName.replace('.zip', ''))
+      const safeName = (manifest.name || fileName.replace(/\.(zip|mrpack)$/, ''))
         .replace(/[^a-zA-Z0-9\-/:_]/g, '_')
         .replace(/_{2,}/g, '_')
         .toLowerCase();
+
+      // Parse modloader info based on manifest type
+      let modloaderInfo = { loader: 'forge', version: '' };
+      let minecraftVersion = '';
+
+      if (isModrinth) {
+        // Modrinth stores modloader in dependencies map
+        const deps = manifest.dependencies || {};
+        minecraftVersion = deps['minecraft'] || '';
+
+        if (deps['forge']) {
+          modloaderInfo = { loader: 'forge', version: deps['forge'] };
+        } else if (deps['neoforge']) {
+          modloaderInfo = { loader: 'neoforge', version: deps['neoforge'] };
+        } else if (deps['fabric-loader']) {
+          modloaderInfo = { loader: 'fabric', version: deps['fabric-loader'] };
+        } else if (deps['quilt-loader']) {
+          modloaderInfo = { loader: 'quilt', version: deps['quilt-loader'] };
+        }
+      } else {
+        // CurseForge format
+        minecraftVersion = manifest.minecraft?.version || '';
+        const modLoaderEntry = manifest.minecraft?.modLoaders?.[0]?.id || '';
+        const parts = modLoaderEntry.split('-');
+        modloaderInfo = { loader: parts[0] || 'forge', version: parts.slice(1).join('-') || '' };
+      }
 
       // Save modpack data to localStorage for MyModpacksPage to use
       // This allows showing the real modpack name instead of "Importing modpack..."
       try {
         const modpackData = {
           id: safeName,
-          name: manifest.name || fileName.replace('.zip', ''),
-          version: manifest.version || '',
-          minecraftVersion: manifest.minecraft?.version || '',
-          modloader: manifest.minecraft?.modLoaders?.[0]?.id?.split('-')[0] || 'forge',
-          modloaderVersion: manifest.minecraft?.modLoaders?.[0]?.id?.split('-')[1] || '',
+          name: manifest.name || fileName.replace(/\.(zip|mrpack)$/, ''),
+          version: manifest.version || manifest.versionId || '',
+          minecraftVersion,
+          modloader: modloaderInfo.loader,
+          modloaderVersion: modloaderInfo.version,
           category: 'community'
         };
         localStorage.setItem(`installing_modpack_${safeName}`, JSON.stringify(modpackData));
@@ -1454,7 +1491,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
               downloadSpeed: '',
               eta: '',
               step: 'initializing',
-              generalMessage: `Importing ${manifest.name || fileName.replace('.zip', '')}...`,
+              generalMessage: `Importing ${manifest.name || fileName.replace(/\.(zip|mrpack)$/, '')}...`,
               detailMessage: ''
             }
           })

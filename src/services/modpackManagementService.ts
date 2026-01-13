@@ -1,5 +1,6 @@
 import { supabase, supabaseUrl } from './supabaseClient';
 import type { MicrosoftAccount, CurseForgeManifest, ParsedModpackData } from '../types/launcher';
+import type { ModrinthManifest } from '../types/modrinth';
 import JSZip from 'jszip';
 import LauncherService from './launcherService';
 
@@ -158,10 +159,16 @@ export class ModpackManagementService {
   }
 
   /**
-   * Parse manifest.json from a CurseForge modpack ZIP
+   * Parse manifest from a modpack ZIP (supports both CurseForge and Modrinth formats)
    * Extracts metadata like version, modloader, etc.
+   * Returns the parsed data along with the detected source type
    */
-  async parseManifestFromZip(zipFile: File): Promise<{ success: boolean; data?: ParsedModpackData; error?: string }> {
+  async parseManifestFromZip(zipFile: File): Promise<{
+    success: boolean;
+    data?: ParsedModpackData;
+    source?: 'curseforge' | 'modrinth';
+    error?: string
+  }> {
     try {
       console.log('Parsing manifest from ZIP:', zipFile.name);
 
@@ -169,31 +176,52 @@ export class ModpackManagementService {
       const zip = new JSZip();
       const zipData = await zip.loadAsync(zipFile);
 
-      // Look for manifest.json
-      const manifestFile = zipData.file('manifest.json');
-      if (!manifestFile) {
-        return { success: false, error: 'No manifest.json found in ZIP' };
+      // Check for Modrinth format first (modrinth.index.json)
+      const modrinthManifestFile = zipData.file('modrinth.index.json');
+      if (modrinthManifestFile) {
+        return await this.parseModrinthManifest(modrinthManifestFile);
       }
 
-      // Parse manifest
+      // Check for CurseForge format (manifest.json)
+      const curseforgeManifestFile = zipData.file('manifest.json');
+      if (curseforgeManifestFile) {
+        return await this.parseCurseForgeManifest(curseforgeManifestFile);
+      }
+
+      return { success: false, error: 'No manifest found in ZIP (expected manifest.json or modrinth.index.json)' };
+    } catch (error) {
+      console.error('❌ Error parsing manifest from ZIP:', error);
+      return { success: false, error: 'Failed to parse manifest from ZIP' };
+    }
+  }
+
+  /**
+   * Parse CurseForge manifest.json
+   */
+  private async parseCurseForgeManifest(manifestFile: JSZip.JSZipObject): Promise<{
+    success: boolean;
+    data?: ParsedModpackData;
+    source?: 'curseforge' | 'modrinth';
+    error?: string;
+  }> {
+    try {
       const manifestText = await manifestFile.async('text');
       const manifest: CurseForgeManifest = JSON.parse(manifestText);
 
       // Extract modloader info from ID (e.g., "forge-47.4.2")
       const primaryModLoader = manifest.minecraft.modLoaders.find(ml => ml.primary);
       if (!primaryModLoader) {
-        return { success: false, error: 'No primary modloader found in manifest' };
+        return { success: false, error: 'No primary modloader found in CurseForge manifest' };
       }
 
       const modloaderParts = primaryModLoader.id.split('-');
       if (modloaderParts.length < 2) {
-        return { success: false, error: 'Invalid modloader format in manifest' };
+        return { success: false, error: 'Invalid modloader format in CurseForge manifest' };
       }
 
       const modloader = modloaderParts[0].toLowerCase() as 'forge' | 'fabric' | 'neoforge' | 'quilt';
-      const modloaderVersion = modloaderParts.slice(1).join('-'); // Handle versions like "1.20.1-47.4.2"
+      const modloaderVersion = modloaderParts.slice(1).join('-');
 
-      // Build parsed data
       const parsedData: ParsedModpackData = {
         name: manifest.name,
         version: manifest.version || '1.0.0',
@@ -205,11 +233,76 @@ export class ModpackManagementService {
         files: manifest.files
       };
 
-      console.log('✅ Manifest parsed successfully:', parsedData);
-      return { success: true, data: parsedData };
+      console.log('✅ CurseForge manifest parsed successfully:', parsedData);
+      return { success: true, data: parsedData, source: 'curseforge' };
     } catch (error) {
-      console.error('❌ Error parsing manifest from ZIP:', error);
-      return { success: false, error: 'Failed to parse manifest from ZIP' };
+      console.error('❌ Error parsing CurseForge manifest:', error);
+      return { success: false, error: 'Failed to parse CurseForge manifest' };
+    }
+  }
+
+  /**
+   * Parse Modrinth modrinth.index.json
+   */
+  private async parseModrinthManifest(manifestFile: JSZip.JSZipObject): Promise<{
+    success: boolean;
+    data?: ParsedModpackData;
+    source?: 'curseforge' | 'modrinth';
+    error?: string;
+  }> {
+    try {
+      const manifestText = await manifestFile.async('text');
+      const manifest: ModrinthManifest = JSON.parse(manifestText);
+
+      // Validate it's a Minecraft modpack
+      if (manifest.game !== 'minecraft') {
+        return { success: false, error: `Modpack is not for Minecraft (game: ${manifest.game})` };
+      }
+
+      // Extract Minecraft version from dependencies
+      const minecraftVersion = manifest.dependencies['minecraft'];
+      if (!minecraftVersion) {
+        return { success: false, error: 'No Minecraft version found in Modrinth manifest' };
+      }
+
+      // Extract modloader from dependencies
+      let modloader: 'forge' | 'fabric' | 'neoforge' | 'quilt' = 'forge';
+      let modloaderVersion = '';
+
+      if (manifest.dependencies['forge']) {
+        modloader = 'forge';
+        modloaderVersion = manifest.dependencies['forge'];
+      } else if (manifest.dependencies['neoforge']) {
+        modloader = 'neoforge';
+        modloaderVersion = manifest.dependencies['neoforge'];
+      } else if (manifest.dependencies['fabric-loader']) {
+        modloader = 'fabric';
+        modloaderVersion = manifest.dependencies['fabric-loader'];
+      } else if (manifest.dependencies['quilt-loader']) {
+        modloader = 'quilt';
+        modloaderVersion = manifest.dependencies['quilt-loader'];
+      }
+
+      if (!modloaderVersion) {
+        return { success: false, error: 'No modloader found in Modrinth manifest dependencies' };
+      }
+
+      const parsedData: ParsedModpackData = {
+        name: manifest.name,
+        version: manifest.versionId || '1.0.0',
+        author: '', // Modrinth manifest doesn't include author
+        minecraftVersion,
+        modloader,
+        modloaderVersion,
+        recommendedRam: undefined, // Modrinth format doesn't have this
+        files: [] // Modrinth uses a different file format, not needed for validation
+      };
+
+      console.log('✅ Modrinth manifest parsed successfully:', parsedData);
+      return { success: true, data: parsedData, source: 'modrinth' };
+    } catch (error) {
+      console.error('❌ Error parsing Modrinth manifest:', error);
+      return { success: false, error: 'Failed to parse Modrinth manifest' };
     }
   }
 

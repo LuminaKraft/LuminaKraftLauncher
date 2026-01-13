@@ -805,13 +805,14 @@ class LauncherService {
   async launchModpack(modpackId: string): Promise<void> {
 
     try {
-      // Retrieve modpack info from cache if available
-      const modpack = this.modpacksData?.modpacks.find(m => m.id === modpackId);
+      // Retrieve modpack info (ensuring we have modloaderVersion etc.)
+      // This will automatically handle local community modpacks if not in server list.
+      const modpack = await this.ensureModpackHasRequiredFields(modpackId);
 
       // RAM Safety Check
       if (isTauriContext()) {
         try {
-          // Get current instance metadata
+          // Get current instance metadata for memory allocation settings
           const metadata = await this.getInstanceMetadata(modpackId);
 
           // Only check if user is using "recommended" allocation (or default which might imply recommended behavior)
@@ -1481,34 +1482,78 @@ class LauncherService {
 
       // Extract and parse manifest from ZIP using JSZip
       const zip = await JSZip.loadAsync(zipBuffer);
-      const manifestFile = zip.file('manifest.json');
 
-      if (!manifestFile) {
-        throw new Error('No manifest.json found in ZIP file');
+      // Try Modrinth format first (modrinth.index.json)
+      const modrinthManifestFile = zip.file('modrinth.index.json');
+      // Then try CurseForge format (manifest.json)
+      const curseforgeManifestFile = zip.file('manifest.json');
+
+      let manifest: any;
+      let isModrinth = false;
+
+      if (modrinthManifestFile) {
+        const manifestText = await modrinthManifestFile.async('text');
+        manifest = JSON.parse(manifestText);
+        isModrinth = true;
+      } else if (curseforgeManifestFile) {
+        const manifestText = await curseforgeManifestFile.async('text');
+        manifest = JSON.parse(manifestText);
+      } else {
+        throw new Error('No manifest found in ZIP file (expected manifest.json or modrinth.index.json)');
       }
-
-      const manifestText = await manifestFile.async('text');
-      const manifest = JSON.parse(manifestText);
 
       // Extract file name from path
       const fileName = filePath.split('/').pop() || 'modpack.zip';
 
       // Create a safe ID for event names and folder names
       // Keep original case and replace only invalid filesystem characters with underscores
-      const safeName = (manifest.name || fileName.replace('.zip', ''))
+      const safeName = (manifest.name || fileName.replace(/\.(zip|mrpack)$/, ''))
         .replace(/[^a-zA-Z0-9\-_]/g, '_')
         .replace(/_{2,}/g, '_');
 
       // Create a temporary modpack object from manifest
-      const modpackName = manifest.name || fileName.replace('.zip', '');
+      const modpackName = manifest.name || fileName.replace(/\.(zip|mrpack)$/, '');
+
+      // Parse modloader info based on manifest type
+      let minecraftVersion = '1.20.1';
+      let modloader = 'forge';
+      let modloaderVersion = '47.0.0';
+
+      if (isModrinth) {
+        // Modrinth stores modloader in dependencies map
+        const deps = manifest.dependencies || {};
+        minecraftVersion = deps['minecraft'] || '1.20.1';
+
+        if (deps['forge']) {
+          modloader = 'forge';
+          modloaderVersion = deps['forge'];
+        } else if (deps['neoforge']) {
+          modloader = 'neoforge';
+          modloaderVersion = deps['neoforge'];
+        } else if (deps['fabric-loader']) {
+          modloader = 'fabric';
+          modloaderVersion = deps['fabric-loader'];
+        } else if (deps['quilt-loader']) {
+          modloader = 'quilt';
+          modloaderVersion = deps['quilt-loader'];
+        }
+      } else {
+        // CurseForge format
+        minecraftVersion = manifest.minecraft?.version || '1.20.1';
+        const modLoaderEntry = manifest.minecraft?.modLoaders?.[0]?.id || 'forge-47.0.0';
+        const parts = modLoaderEntry.split('-');
+        modloader = parts[0] || 'forge';
+        modloaderVersion = parts.slice(1).join('-') || '47.0.0';
+      }
+
       const tempModpack = {
         id: safeName,
         name: modpackName,
-        description: manifest.description || '',
-        version: manifest.version || '1.0.0',
-        minecraftVersion: manifest.minecraft?.version || manifest.minecraftVersion || '1.20.1',
-        modloader: manifest.minecraft?.modLoaders?.[0]?.id?.split('-')[0] || 'forge',
-        modloaderVersion: manifest.minecraft?.modLoaders?.[0]?.id?.split('-')[1] || '47.0.0',
+        description: manifest.description || manifest.summary || '',
+        version: manifest.version || manifest.versionId || '1.0.0',
+        minecraftVersion,
+        modloader,
+        modloaderVersion,
         logo: '',
         urlModpackZip: '', // Will be set by backend from temp file
       };

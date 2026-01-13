@@ -5,6 +5,24 @@ All notable changes to the LuminaKraft Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### ✨ **Features**
+- **Modrinth Modpack Support**
+  - Added full support for importing Modrinth modpacks (`.mrpack` files)
+  - Auto-detects modpack format by checking for `modrinth.index.json` vs CurseForge `manifest.json`
+  - Downloads mods directly from Modrinth CDN URLs with SHA1 hash verification
+  - Supports `overrides/` and `client-overrides/` folders for additional files
+  - Extracts modloader info from Modrinth dependencies (Forge, Fabric, NeoForge, Quilt)
+  - No API authentication required (Modrinth API is public)
+  
+### 🔧 **Technical Improvements**
+- New Rust modules: `src/modpack/modrinth/` with types, manifest parser, downloader, and processor
+- Updated `launcher.rs` to route between CurseForge and Modrinth processing based on detected format
+- New TypeScript types (`src/types/modrinth.ts`) and service (`src/services/modrinthService.ts`)
+- Updated `modpackManagementService.ts` to parse both manifest formats and return source type
+- Added English and Spanish translations for Modrinth-related progress messages
+
 ## [0.1.5] - 2025-12-17
 
 ### ✨ **Features**

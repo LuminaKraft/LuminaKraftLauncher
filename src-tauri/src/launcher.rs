@@ -1,6 +1,6 @@
 use crate::{Modpack, InstanceMetadata, UserSettings, filesystem, minecraft, meta::{MetaDirectories, InstanceDirectories}};
 use tauri::AppHandle;
-use crate::modpack::{extract_zip, curseforge};
+use crate::modpack::{extract_zip, curseforge, modrinth};
 use crate::utils::{cleanup_temp_file, download_file};
 use anyhow::{Result, anyhow};
 use dirs::data_dir;
@@ -340,13 +340,42 @@ where
             None
         };
 
-        // Check if it's a CurseForge modpack
+        // Check if it's a CurseForge modpack (manifest.json) or Modrinth modpack (modrinth.index.json)
+        let is_modrinth_modpack = match lyceris::util::extract::read_file_from_jar(&temp_zip_path, "modrinth.index.json") {
+            Ok(_) => true,
+            Err(_) => false,
+        };
+        
         let is_curseforge_modpack = match lyceris::util::extract::read_file_from_jar(&temp_zip_path, "manifest.json") {
             Ok(_) => true,
             Err(_) => false,
         };
 
-        let result_failed_mods = if is_curseforge_modpack {
+        let result_failed_mods = if is_modrinth_modpack {
+            // Process as Modrinth modpack (.mrpack)
+            emit_progress("progress.processingModrinth".to_string(), 70.0, "processing_modrinth".to_string());
+            
+            let (_mr_modloader, _mr_loader_version, _mr_mc_version, recommended_ram, failed_mods) = modrinth::process_modrinth_modpack_with_failed_tracking(
+                &temp_zip_path,
+                &instance_dirs.instance_dir,
+                {
+                    let emit_progress = emit_progress.clone();
+                    move |message: String, percentage: f32, step: String| {
+                        let final_percentage = 70.0 + (percentage * 0.30);
+                        emit_progress(message, final_percentage, step);
+                    }
+                },
+                modpack.category.as_deref(),
+                modpack.allow_custom_mods.unwrap_or(true),
+                modpack.allow_custom_resourcepacks.unwrap_or(true),
+                old_installed_files.clone(),
+                do_aggressive_cleanup,
+            ).await?;
+
+            recommended_ram_from_manifest = recommended_ram;
+            failed_mods
+        } else if is_curseforge_modpack {
+            // Process as CurseForge modpack
             emit_progress("progress.processingCurseforge".to_string(), 70.0, "processing_curseforge".to_string());
             
             let anon_key = settings.supabase_anon_key.as_deref().unwrap_or("").trim_matches('"');
@@ -378,7 +407,7 @@ where
             recommended_ram_from_manifest = recommended_ram;
             failed_mods
         } else {
-            // Regular ZIP modpack
+            // Regular ZIP modpack (no manifest)
             emit_progress("progress.extractingModpack".to_string(), 85.0, "extracting_modpack".to_string());
             extract_zip(&temp_zip_path, &instance_dirs.instance_dir)?;
             Vec::new()

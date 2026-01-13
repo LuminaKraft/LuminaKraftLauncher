@@ -50,20 +50,48 @@ self.onmessage = async (event: MessageEvent<ValidationRequest>) => {
     // Load and parse ZIP
     const zip = await JSZip.loadAsync(file);
 
-    // Extract manifest.json
-    const manifestFile = zip.file('manifest.json');
-    if (!manifestFile) {
+    // Try to find manifest (CurseForge or Modrinth)
+    const curseforgeManifestFile = zip.file('manifest.json');
+    const modrinthManifestFile = zip.file('modrinth.index.json');
+
+    // Modrinth modpacks have direct download URLs in the manifest, no validation needed
+    if (modrinthManifestFile) {
+      const manifestText = await modrinthManifestFile.async('text');
+      const manifest = JSON.parse(manifestText);
+
+      // Return success - Modrinth modpacks don't need CurseForge-style validation
+      self.postMessage({
+        success: true,
+        manifest: {
+          name: manifest.name,
+          version: manifest.versionId || '1.0.0',
+          minecraft: {
+            version: manifest.dependencies?.minecraft || '1.20.1',
+            modLoaders: []
+          },
+          files: [] // Modrinth files have direct URLs, no projectID/fileID
+        },
+        modsWithoutUrl: [],
+        modsInOverrides: [],
+        fileIds: [],
+        isModrinth: true
+      } as ValidationResult);
+      return;
+    }
+
+    // CurseForge format
+    if (!curseforgeManifestFile) {
       self.postMessage({
         success: false,
         modsWithoutUrl: [],
         modsInOverrides: [],
         fileIds: [],
-        error: 'No manifest.json found in ZIP file'
+        error: 'No manifest found in ZIP file (expected manifest.json or modrinth.index.json)'
       } as ValidationResult);
       return;
     }
 
-    const manifestText = await manifestFile.async('text');
+    const manifestText = await curseforgeManifestFile.async('text');
     const manifest: ModpackManifest = JSON.parse(manifestText);
 
     // If only getting file IDs, return early

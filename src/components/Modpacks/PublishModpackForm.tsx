@@ -1016,7 +1016,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".zip"
+                  accept=".zip,.mrpack"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) handleZipFile(file);

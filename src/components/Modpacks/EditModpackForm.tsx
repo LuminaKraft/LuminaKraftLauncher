@@ -1197,7 +1197,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                     >
                       <input
                         type="file"
-                        accept=".zip"
+                        accept=".zip,.mrpack"
                         onChange={(e) => e.target.files?.[0] && handleZipFile(e.target.files[0])}
                         className="hidden"
                         id="zip-upload"
