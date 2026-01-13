@@ -798,6 +798,8 @@ async fn check_curseforge_modpack(modpack_url: String) -> Result<bool, String> {
     
     let app_data_dir = data_dir()
         .ok_or_else(|| "Failed to get app data directory".to_string())?;
+
+
     
     let temp_dir = app_data_dir
         .join("LKLauncher")
@@ -824,6 +826,23 @@ async fn check_curseforge_modpack(modpack_url: String) -> Result<bool, String> {
             Ok(is_curseforge)
         },
         Err(e) => Err(format!("Failed to download modpack: {}", e)),
+    }
+}
+
+#[tauri::command]
+async fn read_instance_log(modpack_id: String) -> Result<String, String> {
+    let instance_dir = filesystem::get_instance_dir(&modpack_id)
+        .map_err(|e| format!("Failed to get instance directory: {}", e))?;
+
+    let log_path = instance_dir.join("logs").join("latest.log");
+
+    if !log_path.exists() {
+        return Err("Log file not found".to_string());
+    }
+
+    match std::fs::read_to_string(log_path) {
+        Ok(content) => Ok(content),
+        Err(e) => Err(format!("Failed to read log file: {}", e)),
     }
 }
 
@@ -1500,6 +1519,7 @@ fn main() {
             create_modpack_with_overrides,
             install_modpack_from_local_zip,
             save_modpack_image,
+            read_instance_log,
             oauth::start_oauth_server,
             oauth::stop_oauth_server,
         ])

@@ -438,7 +438,7 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
 
               {/* Tab Content */}
               <div className="min-h-[400px]">
-                {activeTab === 'content' ? renderContentTab() : activeTab === 'logs' ? <LogsSection logs={logs} /> : <ScreenshotsSection images={modpack.images} modpackName={displayName} />}
+                {activeTab === 'content' ? renderContentTab() : activeTab === 'logs' ? <LogsSection logs={logs} modpackId={modpack.id} /> : <ScreenshotsSection images={modpack.images} modpackName={displayName} />}
               </div>
             </div>
 

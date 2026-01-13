@@ -2,17 +2,19 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Terminal, Copy, Check, Download, Search, X, Filter } from 'lucide-react';
 import { useAnimation } from '../../../../contexts/AnimationContext';
+import { invoke } from '@tauri-apps/api/core';
 import toast from 'react-hot-toast';
 import { save } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
 
 interface LogsSectionProps {
   logs: string[];
+  modpackId: string;
 }
 
 type LogLevel = 'error' | 'warn' | 'info' | 'debug';
 
-const LogsSection: React.FC<LogsSectionProps> = ({ logs }) => {
+const LogsSection: React.FC<LogsSectionProps> = ({ logs, modpackId }) => {
   const { t } = useTranslation();
   const { getAnimationClass, getAnimationStyle } = useAnimation();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -30,13 +32,18 @@ const LogsSection: React.FC<LogsSectionProps> = ({ logs }) => {
   // Determine log level from line content
   const getLogLevel = (line: string): LogLevel => {
     const lower = line.toLowerCase();
-    if (lower.includes('/error') || lower.includes('exception:') || lower.includes('error:')) {
-      return 'error';
-    } else if (lower.includes('/warn') || lower.includes('warn:')) {
-      return 'warn';
-    } else if (lower.includes('/debug') || lower.includes('debug:')) {
-      return 'debug';
-    }
+
+    // Strict checks for log levels in brackets (standard format)
+    if (lower.includes('/error') || lower.includes('] [error]')) return 'error';
+    if (lower.includes('/warn') || lower.includes('] [warn]')) return 'warn';
+    if (lower.includes('/debug') || lower.includes('] [debug]')) return 'debug';
+
+    // Heuristics for non-standard formats (lower priority)
+    // We check warn first in heuristics to catch "warn: ... exception" cases
+    if (lower.includes('warn:')) return 'warn';
+    if (lower.includes('error:') || lower.includes('exception:')) return 'error';
+    if (lower.includes('debug:')) return 'debug';
+
     return 'info';
   };
 
@@ -87,7 +94,15 @@ const LogsSection: React.FC<LogsSectionProps> = ({ logs }) => {
   // Download logs as file using Tauri dialog
   const handleDownload = async () => {
     try {
-      const content = logs.join('\n');
+      let content = '';
+      try {
+        // Try to get full logs from disk
+        content = await invoke('read_instance_log', { modpackId });
+      } catch (e) {
+        console.warn('Failed to read log from disk, falling back to memory logs:', e);
+        content = logs.join('\n');
+      }
+
       const defaultName = `minecraft-logs-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.log`;
 
       const filePath = await save({
@@ -157,9 +172,6 @@ const LogsSection: React.FC<LogsSectionProps> = ({ logs }) => {
                 <Terminal className="w-5 h-5" />
                 <span>{t('modpacks.executionLogs')}</span>
               </h3>
-              <span className="text-xs bg-dark-700 px-2 py-1 rounded-full text-dark-300">
-                {filteredLogs.length}/{logs.length} {t('modpacks.lines')}
-              </span>
             </div>
 
             {/* Action buttons */}
@@ -232,47 +244,47 @@ const LogsSection: React.FC<LogsSectionProps> = ({ logs }) => {
             </div>
           )}
 
-          {/* Log output */}
-          <div
-            ref={containerRef}
-            onScroll={handleScroll}
-            className="bg-[#0d1117] font-mono text-sm p-4 rounded-lg h-[500px] overflow-y-auto overflow-x-auto scrollbar-thin scrollbar-thumb-dark-600 scrollbar-track-transparent border border-dark-700"
-          >
-            {filteredLogs.length === 0 ? (
-              <div className="text-dark-400 text-center py-8">
-                {t('modpacks.noMatchingLogs')}
-              </div>
-            ) : (
-              filteredLogs.map((line, idx) => {
-                const colorClass = getColorClass(line);
-                return (
-                  <div key={idx} className={`whitespace-pre-wrap break-words leading-relaxed hover:bg-dark-800/50 ${colorClass}`}>
-                    <span className="text-dark-500 select-none mr-3 inline-block w-8 text-right">
-                      {String(idx + 1).padStart(3, '0')}
-                    </span>
-                    <span className="select-text">{line}</span>
-                  </div>
-                );
-              })
+          <div className="relative group">
+            <div
+              ref={containerRef}
+              onScroll={handleScroll}
+              className="bg-[#0d1117] font-mono text-sm p-4 rounded-lg h-[500px] overflow-y-auto overflow-x-auto scrollbar-thin scrollbar-thumb-dark-600 scrollbar-track-transparent border border-dark-700"
+            >
+              {filteredLogs.length === 0 ? (
+                <div className="text-dark-400 text-center py-8">
+                  {t('modpacks.noMatchingLogs')}
+                </div>
+              ) : (
+                filteredLogs.map((line, idx) => {
+                  const colorClass = getColorClass(line);
+                  return (
+                    <div key={idx} className={`whitespace-pre-wrap break-words leading-relaxed hover:bg-dark-800/50 ${colorClass}`}>
+                      <span className="select-text">{line}</span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Auto-scroll indicator - Compact and inside container */}
+            {!autoScroll && (
+              <button
+                type="button"
+                onClick={() => {
+                  setAutoScroll(true);
+                  if (containerRef.current) {
+                    containerRef.current.scrollTop = containerRef.current.scrollHeight;
+                  }
+                }}
+                className="absolute bottom-4 right-4 p-2 bg-lumina-600 hover:bg-lumina-500 text-white rounded-full shadow-lg transition-all hover:scale-110 flex items-center justify-center z-10 opacity-80 hover:opacity-100"
+                title={t('modpacks.scrollToBottom')}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 5v14M19 12l-7 7-7-7" />
+                </svg>
+              </button>
             )}
           </div>
-
-          {/* Auto-scroll indicator */}
-          {!autoScroll && (
-            <button
-              type="button"
-              onClick={() => {
-                setAutoScroll(true);
-                if (containerRef.current) {
-                  containerRef.current.scrollTop = containerRef.current.scrollHeight;
-                }
-              }}
-              className="fixed bottom-6 right-6 px-4 py-2 bg-lumina-600 hover:bg-lumina-500 text-white text-sm rounded-full shadow-lg transition-colors flex items-center space-x-2"
-            >
-              <span>↓</span>
-              <span>{t('modpacks.scrollToBottom')}</span>
-            </button>
-          )}
         </>
       )}
     </div>
