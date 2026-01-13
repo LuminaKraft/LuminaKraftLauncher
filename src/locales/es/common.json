@@ -803,8 +803,10 @@
         "resourcepacks": "Resource Packs (Anti-Cheat)",
         "configs": "Configuraciones y Scripts",
         "shaders": "Shaders y Estética",
-        "unprotected": "Sin Protección"
-      }
+        "unprotected": "Sin Protección",
+        "advancedFootnote": "Shaders, capturas de pantalla y mods estéticos nunca están restringidos."
+      },
+      "managedByCreator": "Estos ajustes son gestionados por el creador del modpack para asegurar la estabilidad."
     }
   },
   "publishModpack": {

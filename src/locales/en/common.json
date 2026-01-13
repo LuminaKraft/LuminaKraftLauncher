@@ -807,8 +807,10 @@
         "resourcepacks": "Resource Packs (Anti-Cheat)",
         "configs": "Configurations & Scripts",
         "shaders": "Shaders & Aesthetics",
-        "unprotected": "Not Protected"
-      }
+        "unprotected": "Not Protected",
+        "advancedFootnote": "Shaders, screenshots and aesthetic mods are never restricted."
+      },
+      "managedByCreator": "These settings are managed by the modpack creator to ensure stability."
     }
   },
   "publishModpack": {

@@ -454,17 +454,11 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
             </div>
 
             <div className="grid grid-cols-2 gap-3 mb-4">
-              {/* Protected (Recommended) */}
-              <button
-                type="button"
-                onClick={() => {
-                  setAllowCustomMods(false);
-                  setAllowCustomResourcepacks(false);
-                  setAllowCustomConfigs(false);
-                }}
-                className={`flex flex-col items-start p-4 rounded-lg border transition-all text-left group ${isProtected
-                    ? 'border-lumina-500 bg-lumina-500/10'
-                    : 'border-dark-600 hover:border-lumina-500/50 bg-dark-700/50'
+              {/* Protected (Recommended) - Now Read-Only */}
+              <div
+                className={`flex flex-col items-start p-4 rounded-lg border transition-all text-left ${isProtected
+                  ? 'border-lumina-500 bg-lumina-500/10'
+                  : 'border-dark-600 bg-dark-700/50 opacity-50'
                   }`}
               >
                 <div className="flex items-center gap-2 mb-2">
@@ -476,19 +470,13 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
                 <p className="text-xs text-dark-400 leading-relaxed">
                   {t('profileOptions.stability.protectedDesc')}
                 </p>
-              </button>
+              </div>
 
-              {/* Open */}
-              <button
-                type="button"
-                onClick={() => {
-                  setAllowCustomMods(true);
-                  setAllowCustomResourcepacks(true);
-                  setAllowCustomConfigs(true);
-                }}
-                className={`flex flex-col items-start p-4 rounded-lg border transition-all text-left group ${isFullyOpen
-                    ? 'border-emerald-500 bg-emerald-500/10'
-                    : 'border-dark-600 hover:border-emerald-500/50 bg-dark-700/50'
+              {/* Open - Now Read-Only */}
+              <div
+                className={`flex flex-col items-start p-4 rounded-lg border transition-all text-left ${isFullyOpen
+                  ? 'border-emerald-500 bg-emerald-500/10'
+                  : 'border-dark-600 bg-dark-700/50 opacity-50'
                   }`}
               >
                 <div className="flex items-center gap-2 mb-2">
@@ -500,7 +488,7 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
                 <p className="text-xs text-dark-400 leading-relaxed">
                   {t('profileOptions.stability.openDesc')}
                 </p>
-              </button>
+              </div>
             </div>
 
             {/* Advanced Toggle */}
@@ -531,40 +519,34 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
                       <tr>
                         <td className="py-2.5 text-white">/mods</td>
                         <td className="py-2.5 text-right">
-                          <button
-                            type="button"
-                            onClick={() => setAllowCustomMods(!allowCustomMods)}
+                          <div
                             className={`text-xs px-2 py-1 rounded transition-colors ${!allowCustomMods ? 'bg-lumina-500/20 text-lumina-400' : 'bg-dark-700 text-dark-400'
                               }`}
                           >
                             {!allowCustomMods ? t('profileOptions.stability.protected') : t('profileOptions.stability.foldersTable.unprotected')}
-                          </button>
+                          </div>
                         </td>
                       </tr>
                       <tr>
                         <td className="py-2.5 text-white">/resourcepacks</td>
                         <td className="py-2.5 text-right">
-                          <button
-                            type="button"
-                            onClick={() => setAllowCustomResourcepacks(!allowCustomResourcepacks)}
+                          <div
                             className={`text-xs px-2 py-1 rounded transition-colors ${!allowCustomResourcepacks ? 'bg-lumina-500/20 text-lumina-400' : 'bg-dark-700 text-dark-400'
                               }`}
                           >
                             {!allowCustomResourcepacks ? t('profileOptions.stability.protected') : t('profileOptions.stability.foldersTable.unprotected')}
-                          </button>
+                          </div>
                         </td>
                       </tr>
                       <tr>
                         <td className="py-2.5 text-white">/config & /scripts</td>
                         <td className="py-2.5 text-right">
-                          <button
-                            type="button"
-                            onClick={() => setAllowCustomConfigs(!allowCustomConfigs)}
+                          <div
                             className={`text-xs px-2 py-1 rounded transition-colors ${!allowCustomConfigs ? 'bg-lumina-500/20 text-lumina-400' : 'bg-dark-700 text-dark-400'
                               }`}
                           >
                             {!allowCustomConfigs ? t('profileOptions.stability.protected') : t('profileOptions.stability.foldersTable.unprotected')}
-                          </button>
+                          </div>
                         </td>
                       </tr>
                       <tr>
@@ -576,8 +558,12 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
                     </tbody>
                   </table>
                   <p className="text-[10px] text-dark-500 mt-2 italic">
-                    * Shaders, screenshots and aesthetic mods are never restricted.
+                    * {t('profileOptions.stability.foldersTable.advancedFootnote', 'Shaders, screenshots and aesthetic mods are never restricted.')}
                   </p>
+                  <div className="mt-3 p-2 bg-blue-500/10 border border-blue-500/20 rounded text-[10px] text-blue-400 flex items-center gap-2">
+                    <Shield className="w-3 h-3" />
+                    <span>{t('profileOptions.stability.managedByCreator', 'These settings are managed by the modpack creator to ensure stability.')}</span>
+                  </div>
                 </div>
               )}
             </div>

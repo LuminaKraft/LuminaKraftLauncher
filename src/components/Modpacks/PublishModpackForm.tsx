@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n';
-import { Plus, X, Upload, FileArchive, RefreshCw, Check, ChevronRight, ChevronLeft, Info, Image as ImageIcon, FileText, Package, Layers, ChevronDown, ChevronUp, UserCog, AlertCircle, Globe } from 'lucide-react';
+import { Plus, X, Upload, FileArchive, RefreshCw, Check, ChevronRight, ChevronLeft, Info, Image as ImageIcon, FileText, Package, Layers, ChevronDown, ChevronUp, Settings, AlertCircle, Globe, Shield, ShieldOff } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { save } from '@tauri-apps/plugin-dialog';
 import { listen } from '@tauri-apps/api/event';
@@ -364,6 +364,11 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
     const timeoutId = setTimeout(validateName, 500);
     return () => clearTimeout(timeoutId);
   }, [formData.name.en, t]);
+
+  // Derived state for Shield UI (Stability & Protection)
+  const isProtected = !formData.allowCustomMods && !formData.allowCustomResourcepacks && !formData.allowCustomConfigs;
+  const isFullyOpen = formData.allowCustomMods && formData.allowCustomResourcepacks && formData.allowCustomConfigs;
+  const isCustomMode = !isProtected && !isFullyOpen;
 
   const updateFormData = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -1237,135 +1242,154 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
 
 
 
-              {/* User Modifications Section - Enhanced */}
-              <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
-                <div className="p-5">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="flex items-center gap-2 font-semibold text-gray-900 dark:text-white">
-                        <UserCog className="w-5 h-5 text-blue-500 dark:text-blue-400" />
-                        {t('publishModpack.userModifications.title')}
-                      </h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 ml-7">
-                        {t('publishModpack.userModifications.description')}
-                      </p>
-                    </div>
-
-                    {/* Main Toggle */}
-                    <div className="flex items-center gap-3">
-                      <span className={`text-sm font-medium ${(formData.allowCustomMods !== false || formData.allowCustomResourcepacks !== false || formData.allowCustomConfigs !== false)
-                        ? 'text-green-600 dark:text-green-400'
-                        : 'text-amber-600 dark:text-amber-400'
-                        }`}>
-                        {(formData.allowCustomMods !== false || formData.allowCustomResourcepacks !== false || formData.allowCustomConfigs !== false)
-                          ? t('publishModpack.userModifications.allowed')
-                          : t('publishModpack.userModifications.restricted')
-                        }
-                      </span>
-
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          className="sr-only peer"
-                          checked={formData.allowCustomMods !== false || formData.allowCustomResourcepacks !== false || formData.allowCustomConfigs !== false}
-                          onChange={(e) => {
-                            const allowed = e.target.checked;
-                            setFormData(prev => ({
-                              ...prev,
-                              allowCustomMods: allowed,
-                              allowCustomResourcepacks: allowed,
-                              allowCustomConfigs: allowed
-                            }));
-                            if (allowed) {
-                              setShowAdvancedProtection(true);
-                            } else {
-                              setShowAdvancedProtection(false);
-                            }
-                          }}
-                        />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                      </label>
-                    </div>
-                  </div>
+              {/* Stability & Protection Section (Shield UI) */}
+              <div className="mt-8">
+                <div className="flex items-center space-x-3 mb-4">
+                  <Shield className="w-5 h-5 text-blue-500" />
+                  <h3 className="text-gray-900 dark:text-white text-lg font-semibold">{t('profileOptions.stability.title')}</h3>
                 </div>
 
-                {/* Advanced Options Toggle */}
-                <div className="border-t border-gray-200 dark:border-gray-700">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  {/* Protected (Recommended) */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData(prev => ({
+                        ...prev,
+                        allowCustomMods: false,
+                        allowCustomResourcepacks: false,
+                        allowCustomConfigs: false
+                      }));
+                    }}
+                    className={`flex flex-col items-start p-5 rounded-xl border transition-all text-left group ${isProtected
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-800 bg-white dark:bg-gray-800/50'
+                      }`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <Shield className={`w-5 h-5 ${isProtected ? 'text-blue-500' : 'text-gray-400'}`} />
+                      <span className={`font-bold ${isProtected ? 'text-gray-900 dark:text-white' : 'text-gray-500'}`}>
+                        {t('profileOptions.stability.protected')}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                      {t('profileOptions.stability.protectedDesc')}
+                    </p>
+                  </button>
+
+                  {/* Open */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData(prev => ({
+                        ...prev,
+                        allowCustomMods: true,
+                        allowCustomResourcepacks: true,
+                        allowCustomConfigs: true
+                      }));
+                    }}
+                    className={`flex flex-col items-start p-5 rounded-xl border transition-all text-left group ${isFullyOpen
+                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-emerald-400 dark:hover:border-emerald-800 bg-white dark:bg-gray-800/50'
+                      }`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <ShieldOff className={`w-5 h-5 ${isFullyOpen ? 'text-emerald-500' : 'text-gray-400'}`} />
+                      <span className={`font-bold ${isFullyOpen ? 'text-gray-900 dark:text-white' : 'text-gray-500'}`}>
+                        {t('profileOptions.stability.open')}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                      {t('profileOptions.stability.openDesc')}
+                    </p>
+                  </button>
+                </div>
+
+                {/* Advanced Mode Toggle */}
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
                   <button
                     type="button"
                     onClick={() => setShowAdvancedProtection(!showAdvancedProtection)}
-                    className="w-full px-5 py-3 flex items-center justify-between text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                    className="flex items-center justify-between w-full text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-sm font-medium"
                   >
-                    <span className="font-medium">{t('publishModpack.userModifications.advancedOptions')}</span>
+                    <span className="flex items-center gap-2">
+                      <Settings className="w-4 h-4" />
+                      {t('profileOptions.stability.advancedMode')}
+                      {isCustomMode && (
+                        <span className="text-blue-600 dark:text-blue-400 text-[10px] uppercase font-bold px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 rounded ml-2">
+                          Custom
+                        </span>
+                      )}
+                    </span>
                     {showAdvancedProtection ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </button>
 
                   {showAdvancedProtection && (
-                    <div className="p-5 bg-gray-50 dark:bg-gray-800/50 space-y-4 animate-fade-in border-t border-gray-100 dark:border-gray-700">
-                      <div className="space-y-4">
-                        {/* Allow Custom Mods */}
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-lg transition-colors ${formData.allowCustomMods !== false ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400' : 'bg-gray-200 dark:bg-gray-700 text-gray-400'}`}>
-                              <Package className="w-4 h-4" />
-                            </div>
-                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              {t('publishModpack.userModifications.allowMods')}
-                            </span>
-                          </div>
-                          <label className="relative inline-flex items-center cursor-pointer">
-                            <input
-                              type="checkbox"
-                              className="sr-only peer"
-                              checked={formData.allowCustomMods !== false}
-                              onChange={(e) => updateFormData('allowCustomMods', e.target.checked)}
-                            />
-                            <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                          </label>
-                        </div>
-
-                        {/* Allow Custom Resourcepacks */}
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-lg transition-colors ${formData.allowCustomResourcepacks !== false ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400' : 'bg-gray-200 dark:bg-gray-700 text-gray-400'}`}>
-                              <Layers className="w-4 h-4" />
-                            </div>
-                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              {t('publishModpack.userModifications.allowResourcepacks')}
-                            </span>
-                          </div>
-                          <label className="relative inline-flex items-center cursor-pointer">
-                            <input
-                              type="checkbox"
-                              className="sr-only peer"
-                              checked={formData.allowCustomResourcepacks !== false}
-                              onChange={(e) => updateFormData('allowCustomResourcepacks', e.target.checked)}
-                            />
-                            <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                          </label>
-                        </div>
-
-                        {/* Allow Custom Configs */}
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-lg transition-colors ${formData.allowCustomConfigs !== false ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400' : 'bg-gray-200 dark:bg-gray-700 text-gray-400'}`}>
-                              <FileText className="w-4 h-4" />
-                            </div>
-                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              {t('publishModpack.userModifications.allowConfigs')}
-                            </span>
-                          </div>
-                          <label className="relative inline-flex items-center cursor-pointer">
-                            <input
-                              type="checkbox"
-                              className="sr-only peer"
-                              checked={formData.allowCustomConfigs !== false}
-                              onChange={(e) => updateFormData('allowCustomConfigs', e.target.checked)}
-                            />
-                            <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                          </label>
-                        </div>
-                      </div>
+                    <div className="mt-4 space-y-3 bg-gray-50 dark:bg-gray-900/40 p-4 rounded-xl border border-gray-200 dark:border-gray-700/50 animate-fade-in text-gray-900 dark:text-white">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+                            <th className="text-left font-medium pb-2">{t('profileOptions.stability.foldersTable.folder')}</th>
+                            <th className="text-right font-medium pb-2">{t('profileOptions.stability.foldersTable.status')}</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
+                          <tr>
+                            <td className="py-2.5 font-medium">/mods</td>
+                            <td className="py-2.5 text-right">
+                              <button
+                                type="button"
+                                onClick={() => updateFormData('allowCustomMods', !formData.allowCustomMods)}
+                                className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-colors ${!formData.allowCustomMods
+                                  ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400'
+                                  : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                                  }`}
+                              >
+                                {!formData.allowCustomMods ? t('profileOptions.stability.protected') : t('profileOptions.stability.foldersTable.unprotected')}
+                              </button>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="py-2.5 font-medium">/resourcepacks</td>
+                            <td className="py-2.5 text-right">
+                              <button
+                                type="button"
+                                onClick={() => updateFormData('allowCustomResourcepacks', !formData.allowCustomResourcepacks)}
+                                className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-colors ${!formData.allowCustomResourcepacks
+                                  ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400'
+                                  : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                                  }`}
+                              >
+                                {!formData.allowCustomResourcepacks ? t('profileOptions.stability.protected') : t('profileOptions.stability.foldersTable.unprotected')}
+                              </button>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="py-2.5 font-medium">/config & /scripts</td>
+                            <td className="py-2.5 text-right">
+                              <button
+                                type="button"
+                                onClick={() => updateFormData('allowCustomConfigs', !formData.allowCustomConfigs)}
+                                className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-colors ${!formData.allowCustomConfigs
+                                  ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400'
+                                  : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                                  }`}
+                              >
+                                {!formData.allowCustomConfigs ? t('profileOptions.stability.protected') : t('profileOptions.stability.foldersTable.unprotected')}
+                              </button>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="py-2.5 font-medium">/shaderpacks & others</td>
+                            <td className="py-2.5 text-right text-emerald-600 dark:text-emerald-500/60 italic text-[11px]">
+                              {t('profileOptions.stability.foldersTable.unprotected')}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-2 italic">
+                        * {t('profileOptions.stability.foldersTable.advancedFootnote', 'Shaders, screenshots and aesthetic mods are never restricted.')}
+                      </p>
                     </div>
                   )}
                 </div>

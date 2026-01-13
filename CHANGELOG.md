@@ -8,11 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### ✨ **Features**
+- **Stability & Protection Integration**:
+  - Implemented professional "Shield" UI for modpack stability management in Publish and Edit forms.
+  - Added `allowCustomConfigs` field to modpack settings for granular configuration control.
+  - Stability settings are now read-only in the Profile Options modal for end-users, managed by creators.
+  - Added informational messages and footnotes explaining stability management and folder protection.
 - **Log Viewer Improvements**:
   - Removed line numbers and line count from logs UI for cleaner view
   - Improved log level coloring: Prioritizes explicit tags (e.g. `[main/WARN]`) over content monitoring
   - "Scroll to bottom" button is now a compact icon inside the logs container
   - "Download Logs" now downloads the full `latest.log` file from disk instead of just the visible buffer
+
+### 🔧 **Technical Improvements**
+- **Structural Integrity**:
+  - Resolved critical JSX nesting violations in `EditModpackForm.tsx` that caused build failures.
+  - Verified JSX tag and syntax balance with automated diagnostic scripts.
+
+### 🌍 **Internationalization**
+- Added comprehensive English and Spanish translations for stability-related UI elements, messages, and footnotes.
 
 - **Modrinth Modpack Support**
   - Added full support for importing Modrinth modpacks (`.mrpack` files)
