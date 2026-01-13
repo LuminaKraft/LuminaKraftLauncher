@@ -192,6 +192,7 @@
       "noVersions": "No versions found",
       "noHistoryAvailable": "No version history available for this modpack",
       "current": "Current",
+      "changeVersionTitle": "Change Version",
       "confirmChange": "Are you sure you want to switch to version {{version}}? This may affect your worlds.",
       "install": "Install",
       "installed": "Installed"

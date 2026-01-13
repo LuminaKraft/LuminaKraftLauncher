@@ -1557,13 +1557,10 @@ class LauncherService {
         const transformedModpack = this.transformModpackForBackend(versionModpack);
         const transformedSettings = await this.transformUserSettingsForBackend(this.userSettings);
 
-        // We use forceCleanInstall=true to ensure clean switch between versions
-        await safeInvoke('install_modpack_with_failed_tracking', {
+        // Use the same command as the normal install button for consistent Lyceris progress
+        await safeInvoke('install_modpack_with_minecraft', {
           modpack: transformedModpack,
-          settings: transformedSettings,
-          forceCleanInstall: false // Don't force clean, let backend decide or just overwrite. User might want to keep some files.
-          // Actually, if downgrading/upgrading, usually we want to keep user data but replace mods.
-          // The backend 'install_modpack_with_failed_tracking' logic handles overrides.
+          settings: transformedSettings
         });
 
       } finally {

@@ -53,6 +53,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added English and Spanish translations for Modrinth-related progress messages
 
 ### 🎨 **UI/UX Improvements**
+- **Version Installation UI**:
+  - Replaced native browser confirm dialog with styled modal for version changes
+  - Added visual progress bar during version-specific installations
+  - Version install now uses the same backend flow as the main install button for consistent Lyceris progress
+  - Redesigned version cards with full-width changelog display
+  - Icon-only download buttons for cleaner version list appearance
+- **Modpack Features Section**:
+  - Applied glassmorphism and gradient borders for premium aesthetic
+  - Added numbered badges for visual feature indexing
+  - Enhanced hover effects and smooth transitions
+  - Added glow effect background and refined typography
 - **User Modifications UI Refactor**:
   - Implemented master toggle for "User Modifications" in Publish/Edit forms
   - Added granular "Advanced Options" for Mods, Resource Packs, and Configs

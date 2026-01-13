@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Sparkles } from 'lucide-react';
 import type { Feature } from '../../../types/launcher';
 import { useAnimation } from '../../../contexts/AnimationContext';
 
@@ -18,24 +18,37 @@ const ModpackFeatures: React.FC<ModpackFeaturesProps> = ({ features }) => {
   }
 
   const toggleFeature = (featureId: string) => {
-    setExpandedFeatures(prev => 
-      prev.includes(featureId) 
+    setExpandedFeatures(prev =>
+      prev.includes(featureId)
         ? prev.filter(id => id !== featureId)
         : [...prev, featureId]
     );
   };
 
   return (
-    <div 
-      className={`bg-dark-800 rounded-xl p-6 border border-dark-700 transition-all duration-200 ${
-        getAnimationClass('', 'hover:border-lumina-400/30')
-      }`}
+    <div
+      className={`relative overflow-hidden bg-gradient-to-br from-dark-800/80 to-dark-900/90 backdrop-blur-xl rounded-2xl p-6 border border-dark-700/50 shadow-xl transition-all duration-300 ${getAnimationClass('', 'hover:border-lumina-500/30 hover:shadow-lumina-500/5')
+        }`}
       style={{
         animation: 'fadeInUp 0.4s ease-out 0.1s backwards',
         ...getAnimationStyle({})
       }}
     >
-      <h2 className="text-xl font-bold text-white mb-4">{t('modpacks.features')}</h2>
+      {/* Background glow effect */}
+      <div className="absolute -top-24 -right-24 w-48 h-48 bg-lumina-500/10 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-6">
+        <div className="p-2.5 bg-gradient-to-br from-lumina-500/20 to-lumina-600/10 rounded-xl border border-lumina-500/20">
+          <Sparkles className="w-5 h-5 text-lumina-400" />
+        </div>
+        <h2 className="text-xl font-bold text-white tracking-tight">{t('modpacks.features')}</h2>
+        <span className="ml-auto px-2.5 py-1 bg-dark-700/50 text-dark-300 text-xs font-medium rounded-full border border-dark-600/30">
+          {features.length}
+        </span>
+      </div>
+
+      {/* Features list */}
       <div className="space-y-3">
         {features.map((feature, index) => {
           const featureId = `feature-${index}`;
@@ -43,33 +56,55 @@ const ModpackFeatures: React.FC<ModpackFeaturesProps> = ({ features }) => {
           const hasDescription = feature.description && feature.description.trim().length > 0;
 
           return (
-            <div key={featureId} className="bg-dark-900 rounded-lg p-4">
-              <div 
-                className={`flex items-center justify-between cursor-pointer group ${
-                  hasDescription ? 'hover:text-lumina-400' : ''
+            <div
+              key={featureId}
+              className={`group relative bg-dark-800/50 backdrop-blur-sm rounded-xl border transition-all duration-300 ${isExpanded
+                  ? 'border-lumina-500/30 shadow-lg shadow-lumina-500/5'
+                  : 'border-dark-700/30 hover:border-dark-600/50'
                 }`}
+            >
+              <div
+                className={`flex items-center gap-4 p-4 ${hasDescription ? 'cursor-pointer' : ''}`}
                 onClick={() => hasDescription && toggleFeature(featureId)}
               >
-                <h3 className="font-semibold text-white group-hover:text-lumina-400 transition-colors duration-200">
+                {/* Number badge */}
+                <div className={`flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg font-bold text-sm transition-all duration-300 ${isExpanded
+                    ? 'bg-lumina-500/20 text-lumina-400 border border-lumina-500/30'
+                    : 'bg-dark-700/50 text-dark-400 border border-dark-600/30 group-hover:text-lumina-400 group-hover:border-lumina-500/20'
+                  }`}>
+                  {index + 1}
+                </div>
+
+                {/* Title */}
+                <h3 className={`flex-1 font-semibold transition-colors duration-200 ${isExpanded ? 'text-lumina-400' : 'text-white group-hover:text-lumina-400'
+                  }`}>
                   {feature.title}
                 </h3>
+
+                {/* Expand indicator */}
                 {hasDescription && (
-                  <ChevronDown 
-                    className={`w-4 h-4 text-dark-400 group-hover:text-lumina-400 transition-all duration-200 ${
-                      isExpanded ? 'rotate-180' : ''
-                    } ${getAnimationClass('', 'group-hover:scale-110')}`}
+                  <ChevronDown
+                    className={`w-5 h-5 transition-all duration-300 ${isExpanded
+                        ? 'rotate-180 text-lumina-400'
+                        : 'text-dark-500 group-hover:text-lumina-400'
+                      } ${getAnimationClass('', 'group-hover:scale-110')}`}
                   />
                 )}
               </div>
-              
+
+              {/* Description (expandable) */}
               {hasDescription && (
-                <div 
-                  className={`mt-3 text-dark-300 leading-relaxed transition-all duration-200 overflow-hidden ${
-                    isExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-                  }`}
-                  style={getAnimationStyle({})}
+                <div
+                  className={`overflow-hidden transition-all duration-300 ease-out ${isExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                    }`}
                 >
-                  <p className="whitespace-pre-line">{feature.description}</p>
+                  <div className="px-4 pb-4 pt-0">
+                    <div className="pl-12 border-l-2 border-lumina-500/20">
+                      <p className="text-dark-300 leading-relaxed whitespace-pre-line text-sm">
+                        {feature.description}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -80,4 +115,4 @@ const ModpackFeatures: React.FC<ModpackFeaturesProps> = ({ features }) => {
   );
 };
 
-export default ModpackFeatures; 
+export default ModpackFeatures;

@@ -187,6 +187,7 @@
       "noVersions": "No se encontraron versiones",
       "noHistoryAvailable": "No hay historial de versiones disponible para este modpack",
       "current": "Actual",
+      "changeVersionTitle": "Cambiar Versión",
       "confirmChange": "¿Estás seguro de que quieres cambiar a la versión {{version}}? Esto podría afectar tus mundos guardados.",
       "install": "Instalar",
       "installed": "Instalado"
