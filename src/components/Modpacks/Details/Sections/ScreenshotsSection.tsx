@@ -14,9 +14,9 @@ const ScreenshotsSection: React.FC<ScreenshotsSectionProps> = ({ images = [], mo
   if (!images || images.length === 0) {
     return (
       <div
-        className={`text-center py-12 text-dark-400 ${getAnimationClass('transition-all duration-200')}`}
+        className={`text-center py-12 text-dark-400 ${getAnimationClass('transition-all duration-75')}`}
         style={getAnimationStyle({
-          animation: `fadeInUp 0.3s ease-out 0.1s backwards`
+          animation: `fadeInUp 0.15s ease-out 0.05s backwards`
         })}
       >
         {t('modpacks.screenshots.noScreenshots')}
@@ -27,7 +27,7 @@ const ScreenshotsSection: React.FC<ScreenshotsSectionProps> = ({ images = [], mo
   return (
     <div
       style={getAnimationStyle({
-        animation: `fadeInUp 0.3s ease-out 0.1s backwards`
+        animation: `fadeInUp 0.15s ease-out 0.05s backwards`
       })}
     >
       <ModpackScreenshotGallery images={images} modpackName={modpackName} variant="large" />

@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Reduced navigation delays and page transition durations for an instantaneous feel.
   - Snappy hover effects and interactive elements.
   - Accelerated entry animations for Installation Info, Requirements, and Features blocks (from 0.4s to 0.15s).
+  - Faster screenshot gallery: Opening, closing, and switching images now respond in 75ms with minimal delays.
 - **Navigation Efficiency**:
   - Implemented immediate rendering for Modpack Details when navigating from different sections (Homepage, Sidebar).
   - Eliminated redundant "Loading" screens during cross-section selection.

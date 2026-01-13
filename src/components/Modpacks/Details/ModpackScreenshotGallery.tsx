@@ -71,7 +71,7 @@ const ModpackScreenshotGallery: React.FC<ScreenshotGalleryProps> = ({ images, mo
       setImageModalOpen(false);
       setSelectedImageIndex(null);
       setIsChangingImage(false);
-    }, 200);
+    }, 75);
   };
 
   const navigateImage = (direction: 'prev' | 'next') => {
@@ -83,8 +83,8 @@ const ModpackScreenshotGallery: React.FC<ScreenshotGalleryProps> = ({ images, mo
           ? images.length - 1
           : selectedImageIndex - 1
         : selectedImageIndex === images.length - 1
-        ? 0
-        : selectedImageIndex + 1;
+          ? 0
+          : selectedImageIndex + 1;
 
     // Simple zoom out/zoom in animation
     setIsChangingImage(true);
@@ -92,7 +92,7 @@ const ModpackScreenshotGallery: React.FC<ScreenshotGalleryProps> = ({ images, mo
     withDelay(() => {
       setSelectedImageIndex(newIndex);
       setIsChangingImage(false);
-    }, 150);
+    }, 50);
   };
 
   useEffect(() => {
@@ -121,9 +121,9 @@ const ModpackScreenshotGallery: React.FC<ScreenshotGalleryProps> = ({ images, mo
     <>
       {/* PC-Friendly Screenshots Carousel */}
       <div
-        className={`bg-dark-800 rounded-xl p-6 border border-dark-700 mb-8 transition-all duration-200 ${getAnimationClass('', 'hover:border-lumina-400/30')}`}
+        className={`bg-dark-800 rounded-xl p-6 border border-dark-700 mb-8 transition-all duration-75 ${getAnimationClass('', 'hover:border-lumina-400/30')}`}
         style={{
-          animation: 'fadeInUp 0.4s ease-out 0.15s backwards',
+          animation: 'fadeInUp 0.15s ease-out 0.05s backwards',
           ...getAnimationStyle({}),
         }}
       >
@@ -154,11 +154,10 @@ const ModpackScreenshotGallery: React.FC<ScreenshotGalleryProps> = ({ images, mo
                   <button
                     key={i}
                     onClick={() => goToCarouselPage(i)}
-                    className={`w-3 h-3 rounded-full transition-all duration-200 ${
-                      i === currentCarouselIndex
+                    className={`w-3 h-3 rounded-full transition-all duration-200 ${i === currentCarouselIndex
                         ? 'bg-lumina-400 scale-125'
                         : 'bg-dark-600 hover:bg-dark-500 hover:scale-110'
-                    } ${getAnimationClass('', '')}`}
+                      } ${getAnimationClass('', '')}`}
                     style={getAnimationStyle({})}
                     title={`Página ${i + 1}`}
                   />
@@ -241,7 +240,7 @@ const ModpackScreenshotGallery: React.FC<ScreenshotGalleryProps> = ({ images, mo
       {/* Image Modal - Properly Centered */}
       {imageModalOpen && selectedImageIndex !== null && (
         <div
-          className={`fixed inset-0 z-[9999] flex items-center justify-center p-6 ${getAnimationClass('backdrop-blur-md transition-all duration-200 ease-out', '')} ${imageModalAnimating ? 'bg-black/40 opacity-100' : 'bg-black/0 opacity-0'}`}
+          className={`fixed inset-0 z-[9999] flex items-center justify-center p-6 ${getAnimationClass('backdrop-blur-md transition-all duration-75 ease-out', '')} ${imageModalAnimating ? 'bg-black/40 opacity-100' : 'bg-black/0 opacity-0'}`}
           style={{
             position: 'fixed',
             top: 0,
@@ -258,7 +257,7 @@ const ModpackScreenshotGallery: React.FC<ScreenshotGalleryProps> = ({ images, mo
           {/* Close button */}
           <button
             onClick={closeImageModal}
-            className={`absolute top-4 right-4 md:top-6 md:right-6 z-[10000] w-10 h-10 bg-white/15 backdrop-blur-sm text-white/90 rounded-full flex items-center justify-center border border-white/30 ${getAnimationClass('hover:bg-white/25 hover:text-white transition-all duration-200', '')} ${imageModalAnimating ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-90 -translate-y-2'}`}
+            className={`absolute top-4 right-4 md:top-6 md:right-6 z-[10000] w-10 h-10 bg-white/15 backdrop-blur-sm text-white/90 rounded-full flex items-center justify-center border border-white/30 ${getAnimationClass('hover:bg-white/25 hover:text-white transition-all duration-75', '')} ${imageModalAnimating ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-90 -translate-y-2'}`}
             style={getAnimationStyle({})}
           >
             <X className="w-5 h-5" />
@@ -272,7 +271,7 @@ const ModpackScreenshotGallery: React.FC<ScreenshotGalleryProps> = ({ images, mo
                   e.stopPropagation();
                   navigateImage('prev');
                 }}
-                className={`absolute left-4 md:left-6 top-1/2 -translate-y-1/2 z-[10000] w-12 h-12 bg-white/15 backdrop-blur-sm text-white/80 rounded-full flex items-center justify-center border border-white/30 ${getAnimationClass('hover:bg-white/25 hover:text-white transition-all duration-200', '')} ${imageModalAnimating ? 'opacity-100 scale-100' : 'opacity-0 scale-90'}`}
+                className={`absolute left-4 md:left-6 top-1/2 -translate-y-1/2 z-[10000] w-12 h-12 bg-white/15 backdrop-blur-sm text-white/80 rounded-full flex items-center justify-center border border-white/30 ${getAnimationClass('hover:bg-white/25 hover:text-white transition-all duration-75', '')} ${imageModalAnimating ? 'opacity-100 scale-100' : 'opacity-0 scale-90'}`}
                 style={getAnimationStyle({})}
               >
                 <ChevronLeft className="w-6 h-6" />
@@ -282,7 +281,7 @@ const ModpackScreenshotGallery: React.FC<ScreenshotGalleryProps> = ({ images, mo
                   e.stopPropagation();
                   navigateImage('next');
                 }}
-                className={`absolute right-4 md:right-6 top-1/2 -translate-y-1/2 z-[10000] w-12 h-12 bg-white/15 backdrop-blur-sm text-white/80 rounded-full flex items-center justify-center border border-white/30 ${getAnimationClass('hover:bg-white/25 hover:text-white transition-all duration-200', '')} ${imageModalAnimating ? 'opacity-100 scale-100' : 'opacity-0 scale-90'}`}
+                className={`absolute right-4 md:right-6 top-1/2 -translate-y-1/2 z-[10000] w-12 h-12 bg-white/15 backdrop-blur-sm text-white/80 rounded-full flex items-center justify-center border border-white/30 ${getAnimationClass('hover:bg-white/25 hover:text-white transition-all duration-75', '')} ${imageModalAnimating ? 'opacity-100 scale-100' : 'opacity-0 scale-90'}`}
                 style={getAnimationStyle({})}
               >
                 <ChevronRight className="w-6 h-6" />
@@ -292,7 +291,7 @@ const ModpackScreenshotGallery: React.FC<ScreenshotGalleryProps> = ({ images, mo
 
           {/* Centered image container - smaller size */}
           <div
-            className={`relative max-w-[75vw] max-h-[75vh] flex items-center justify-center ${getAnimationClass('transition-all duration-200 ease-out', '')} ${imageModalAnimating ? (isChangingImage ? 'scale-95 opacity-50' : 'scale-100 opacity-100') : 'scale-90 opacity-0'}`}
+            className={`relative max-w-[75vw] max-h-[75vh] flex items-center justify-center ${getAnimationClass('transition-all duration-75 ease-out', '')} ${imageModalAnimating ? (isChangingImage ? 'scale-95 opacity-50' : 'scale-100 opacity-100') : 'scale-90 opacity-0'}`}
             style={getAnimationStyle({})}
             onClick={(e) => e.stopPropagation()}
           >
@@ -313,7 +312,7 @@ const ModpackScreenshotGallery: React.FC<ScreenshotGalleryProps> = ({ images, mo
           {/* Image counter */}
           {images.length > 1 && (
             <div
-              className={`absolute bottom-6 left-1/2 -translate-x-1/2 z-[10000] px-4 py-2 bg-black/40 backdrop-blur-sm text-white text-sm rounded-full border border-white/20 ${getAnimationClass('transition-all duration-200', '')} ${imageModalAnimating ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
+              className={`absolute bottom-6 left-1/2 -translate-x-1/2 z-[10000] px-4 py-2 bg-black/40 backdrop-blur-sm text-white text-sm rounded-full border border-white/20 ${getAnimationClass('transition-all duration-75', '')} ${imageModalAnimating ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
             >
               {selectedImageIndex + 1} / {images.length}
             </div>
