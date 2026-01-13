@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n';
-import { Plus, X, Upload, FileArchive, RefreshCw, Check, ChevronRight, ChevronLeft, Info, Image as ImageIcon, FileText, Package, Layers, ChevronDown, ChevronUp, UserCog, AlertCircle } from 'lucide-react';
+import { Plus, X, Upload, FileArchive, RefreshCw, Check, ChevronRight, ChevronLeft, Info, Image as ImageIcon, FileText, Package, Layers, ChevronDown, ChevronUp, UserCog, AlertCircle, Globe } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { save } from '@tauri-apps/plugin-dialog';
 import { listen } from '@tauri-apps/api/event';
@@ -1136,7 +1136,17 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {userRole === 'admin' && (
                   <div
-                    onClick={() => updateFormData('category', 'official')}
+                    onClick={() => {
+                      updateFormData('category', 'official');
+                      // Auto-disable user modifications for official modpacks
+                      setFormData(prev => ({
+                        ...prev,
+                        category: 'official',
+                        allowCustomMods: false,
+                        allowCustomResourcepacks: false,
+                        allowCustomConfigs: false
+                      }));
+                    }}
                     className={`p-6 rounded-lg border-2 cursor-pointer transition-all ${formData.category === 'official'
                       ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                       : 'border-gray-200 dark:border-gray-700 hover:border-blue-300'
@@ -1156,7 +1166,17 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
 
                 {userRole === 'partner' && (
                   <div
-                    onClick={() => updateFormData('category', 'partner')}
+                    onClick={() => {
+                      updateFormData('category', 'partner');
+                      // Auto-disable user modifications for partner modpacks
+                      setFormData(prev => ({
+                        ...prev,
+                        category: 'partner',
+                        allowCustomMods: false,
+                        allowCustomResourcepacks: false,
+                        allowCustomConfigs: false
+                      }));
+                    }}
                     className={`p-6 rounded-lg border-2 cursor-pointer transition-all ${formData.category === 'partner'
                       ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
                       : 'border-gray-200 dark:border-gray-700 hover:border-purple-300'
@@ -1178,14 +1198,44 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                     </p>
                   </div>
                 )}
+
+                {(userRole === 'admin' || userRole === 'partner') && (
+                  <div
+                    onClick={() => {
+                      updateFormData('category', 'community');
+                      // Auto-enable user modifications for community modpacks
+                      setFormData(prev => ({
+                        ...prev,
+                        category: 'community',
+                        allowCustomMods: true,
+                        allowCustomResourcepacks: true,
+                        allowCustomConfigs: true
+                      }));
+                    }}
+                    className={`p-6 rounded-lg border-2 cursor-pointer transition-all ${formData.category === 'community'
+                      ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-green-300'
+                      }`}
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg text-green-600 dark:text-green-400">
+                        <Globe className="w-6 h-6" />
+                      </div>
+                      <h3 className="font-semibold text-gray-900 dark:text-white">{t('publishModpack.category.community')}</h3>
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {t('publishModpack.category.communityDesc')}
+                      {discordAccount?.username && (
+                        <span className="block mt-1 font-medium text-green-600 dark:text-green-400">
+                          {t('publishModpack.category.communityInfo', { name: discordAccount.globalName || discordAccount.username })}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                )}
               </div>
 
-              {/* Community publishing disabled notice */}
-              <div className="mt-6 bg-gray-50 dark:bg-gray-700/30 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
-                  {t('publishModpack.category.note')}
-                </p>
-              </div>
+
 
               {/* User Modifications Section - Enhanced */}
               <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
@@ -1228,6 +1278,8 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                             }));
                             if (allowed) {
                               setShowAdvancedProtection(true);
+                            } else {
+                              setShowAdvancedProtection(false);
                             }
                           }}
                         />

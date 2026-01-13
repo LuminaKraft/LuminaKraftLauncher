@@ -841,6 +841,9 @@
       "partner": "Partner Modpack",
       "partnerDesc": "Exclusive modpacks from verified partners.",
       "partnerInfo": "Partner: {{name}}",
+      "community": "Community Modpack",
+      "communityDesc": "Modpacks created by the community for everyone.",
+      "communityInfo": "Creator: {{name}}",
       "note": "Community modpack publishing is temporarily disabled. Only admins and verified partners can publish modpacks at this time."
     },
     "userModifications": {

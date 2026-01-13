@@ -20,6 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Defaulted new installations to "Global" RAM if no author recommendation exists
   - UI now gracefully handles instances with missing recommendations by switching to global settings
   
+- **Community Modpack Publishing**:
+  - Implemented role-based access: Only Partners and Admins can publish "Community" modpacks.
+  - "Community" modpacks now display the creator's name on the card (e.g., "Creator: [Name]").
+  - Auto-toggles "User Modifications": ENABLES for Community modpacks, DISABLES for Official/Partner.
+  - Added visual badge for Community authors in modpack lists.
+  
 ### 🔧 **Technical Improvements**
 - New Rust modules: `src/modpack/modrinth/` with types, manifest parser, downloader, and processor
 - Updated `launcher.rs` to route between CurseForge and Modrinth processing based on detected format

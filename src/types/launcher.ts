@@ -33,6 +33,7 @@ export interface Modpack {
   allowCustomMods?: boolean; // Allow users to add custom mods (default true)
   allowCustomResourcepacks?: boolean; // Allow users to add custom resourcepacks (default true)
   fileSha256?: string; // SHA256 hash of the modpack ZIP file
+  authorName?: string; // Display name of the author (for community modpacks)
 }
 
 export interface Collaborator {

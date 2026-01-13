@@ -302,6 +302,32 @@ class LauncherService {
         console.log(`✨ Stats fetch complete. Stored ${statsMap.size} results`);
       }
 
+      // Fetch author display names for community modpacks
+      const communityAuthorIds = data?.filter((m: any) => m.category === 'community' && m.author_id)
+        .map((m: any) => m.author_id) || [];
+      const uniqueAuthorIds = [...new Set(communityAuthorIds)];
+      const authorNameMap = new Map<string, string>();
+
+      if (uniqueAuthorIds.length > 0) {
+        try {
+          const { data: authors } = await supabase
+            .from('users')
+            .select('id, display_name, discord_global_name, discord_username')
+            .in('id', uniqueAuthorIds);
+
+          if (authors) {
+            authors.forEach((a: any) => {
+              // Priority: display_name > discord_global_name > discord_username
+              const displayName = a.display_name || a.discord_global_name || a.discord_username || 'Unknown';
+              authorNameMap.set(a.id, displayName);
+            });
+            console.log(`✅ Fetched ${authors.length} author names for community modpacks`);
+          }
+        } catch (error) {
+          console.error('Error fetching author names:', error);
+        }
+      }
+
       // Helper function to check if modpack is new
       // Priority: 1) Check DB is_new flag (admin override), 2) Calculate based on published_at date (7 days)
       // Note: Coming soon modpacks are never marked as "New" - they get their own badge
@@ -345,6 +371,7 @@ class LauncherService {
         tiktokEmbed: modpack.tiktok_embed,
         partnerId: modpack.partner_id || modpackPartnerMap.get(modpack.id),
         partnerName: (modpack.partner_id || modpackPartnerMap.get(modpack.id)) ? partnersMap.get(modpack.partner_id || modpackPartnerMap.get(modpack.id)) : undefined,
+        authorName: modpack.category === 'community' && modpack.author_id ? authorNameMap.get(modpack.author_id) : undefined,
         publishedAt: modpack.published_at,
         downloads: statsMap.get(modpack.id)?.total_downloads || 0,
         allowCustomMods: modpack.allow_custom_mods,
