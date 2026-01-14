@@ -869,6 +869,13 @@ class LauncherService {
         // Verify integrity (passing authoritative flags from DB/Server)
         // This prevents users from bypassing restrictions by editing instance.json locally
         // If modpack data is missing (offline/error), we pass null and relies on local metadata (less secure but functional)
+        console.log('🔒 Integrity check flags:', {
+          allowCustomMods: modpack?.allowCustomMods,
+          allowCustomResourcepacks: modpack?.allowCustomResourcepacks,
+          allowCustomConfigs: modpack?.allowCustomConfigs,
+          category: modpack?.category,
+          fileSha256: modpack?.fileSha256
+        });
 
         const integrityResult = await safeInvoke<{
           isValid: boolean;
@@ -878,7 +885,8 @@ class LauncherService {
           modpackId: modpackId,
           expectedZipSha256: modpack?.fileSha256 || null,
           overrideAllowCustomMods: modpack?.allowCustomMods ?? null,
-          overrideAllowCustomResourcepacks: modpack?.allowCustomResourcepacks ?? null
+          overrideAllowCustomResourcepacks: modpack?.allowCustomResourcepacks ?? null,
+          overrideAllowCustomConfigs: modpack?.allowCustomConfigs ?? null
         });
 
         if (!integrityResult.isValid) {

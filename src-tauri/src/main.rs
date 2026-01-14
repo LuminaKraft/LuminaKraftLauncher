@@ -580,16 +580,30 @@ async fn verify_instance_integrity(
         .map_err(|e| format!("Failed to load instance metadata: {}", e))?
         .ok_or_else(|| format!("Instance {} not found", modpack_id))?;
         
-    // If it's a community or imported modpack, we skip detailed integrity checks
-    // EXCEPT if we want to enforce signatures later. For now, we trust community modpacks
-    // as they are "open" by definition.
-    if metadata.category.as_deref() != Some("official") && metadata.category.as_deref() != Some("partner") {
-         return Ok(serde_json::json!({
+    // Determine if protection is enabled by checking override flags first, then metadata
+    // If any protection flag is explicitly set to false, we should verify integrity
+    let has_protection = override_allow_custom_mods == Some(false) 
+        || override_allow_custom_resourcepacks == Some(false)
+        || override_allow_custom_configs == Some(false)
+        || metadata.allow_custom_mods == Some(false)
+        || metadata.allow_custom_resourcepacks == Some(false)
+        || metadata.allow_custom_configs == Some(false);
+    
+    // If it's a community/imported modpack AND has no protection enabled, skip verification
+    // But if protection is enabled, verify regardless of category
+    let is_managed_category = metadata.category.as_deref() == Some("official") 
+        || metadata.category.as_deref() == Some("partner");
+        
+    if !is_managed_category && !has_protection {
+        println!("🔓 Skipping integrity check for unprotected community modpack");
+        return Ok(serde_json::json!({
             "isValid": true,
             "issues": [],
-            "reason": "Community or imported modpack - no verification required"
+            "reason": "Community modpack with no protection - no verification required"
         }));
     }
+    
+    println!("🔒 Protection is enabled or managed modpack - proceeding with integrity verification");
     
     let instance_dir = filesystem::get_instance_dir(&modpack_id)
         .map_err(|e| format!("Failed to get instance directory: {}", e))?;
