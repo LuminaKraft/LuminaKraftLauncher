@@ -5,131 +5,29 @@ All notable changes to the LuminaKraft Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.6] - 2026-01-14
 
-### ✨ **Features**
-- **Ultra-Responsive UI**:
-  - Dramatically accelerated all animations and transitions (50ms-150ms) across the entire application.
-  - Reduced navigation delays and page transition durations for an instantaneous feel.
-  - Snappy hover effects and interactive elements.
-  - Accelerated entry animations for Installation Info, Requirements, and Features blocks (from 0.4s to 0.15s).
-  - Faster screenshot gallery: Opening, closing, and switching images now respond in 75ms with minimal delays.
-  - **Instant Startup Experience**:
-    - Eliminated global loading screens for immediate application shell access.
-    - Parallelized local instance detection and remote API fetching for near-instant "Jump back in" visibility.
-    - Non-blocking homepage updates with subtle background loading indicators.
-- **Navigation Efficiency**:
-  - Implemented immediate rendering for Modpack Details when navigating from different sections (Homepage, Sidebar).
-  - Eliminated redundant "Loading" screens during cross-section selection.
-  - Synchronized page transitions with internal component logic to prevent animation flickering.
-- **macOS Experience Optimization**:
-  - Disabled trackpad pinch-to-zoom gestures.
-  - Restricted content dragging to prevent "rubber-band" effect on windows.
-  - Applied `position: fixed` scrolling body to mimic native app behavior.
-- **Stability & Protection Integration**:
-  - Implemented professional "Shield" UI for modpack stability management in Publish and Edit forms.
-  - Added `allowCustomConfigs` field to modpack settings for granular configuration control.
-  - Stability settings are now read-only in the Profile Options modal for end-users, managed by creators.
-  - Added informational messages and footnotes explaining stability management and folder protection.
-- **Log Viewer Improvements**:
-  - Removed line numbers and line count from logs UI for cleaner view
-  - Improved log level coloring: Prioritizes explicit tags (e.g. `[main/WARN]`) over content monitoring
-  - "Scroll to bottom" button is now a compact icon inside the logs container
-  - "Download Logs" now downloads the full `latest.log` file from disk instead of just the visible buffer
-
-### 🐛 **Bug Fixes**
-- **Drag & Drop Fixes**:
-  - Resolved issue where `.mrpack` files were rejected when dragged into Publish and Edit forms.
-  - Implemented case-insensitive extension validation (e.g., accepts `.mrpack` and `.MRPACK`).
-  - Improved drop zone reliability across different components.
-
-### 🔧 **Technical Improvements**
-- **Structural Integrity**:
-  - Resolved critical JSX nesting violations in `EditModpackForm.tsx` that caused build failures.
-  - Verified JSX tag and syntax balance with automated diagnostic scripts.
-
-### 🌍 **Internationalization**
-- Added comprehensive English and Spanish translations for stability-related UI elements, messages, and footnotes.
-
-### ✨ **Features**
-- **Configurable Resource Management**:
-  - Added new "Resource Management" section in Settings.
-  - User-configurable "Maximum concurrent downloads" (capped at 10 for resource balance) and "Maximum concurrent writes" (up to 50).
-  - Backend now respects these limits across all download engines (Vanilla, CurseForge, and Modrinth).
-
-### 🎨 **UI/UX Improvements**
-- **Simplified Progress UI**:
-  - Removed ETA, individual file details, and bullet points from `ModpackCard` and `ModpackActions` for a cleaner, overall-focused look.
-  - Added premium styling to progress bars, including an inner shadow and glow effect.
-  - Stable progress messaging: Technical updates (e.g., "File in overrides") no longer replace the main "Downloading mods (X/Y)" status.
-- **Auto-refresh Version Info**: 
-  - Version history and "Current Version" badge now update immediately after installation/update finishes without requiring a launcher restart (fixed state synchronization between status and installed flags).
-
-### 🐛 **Bug Fixes**
-- **Override Files Detection**:
-  - Fixed mods in overrides being incorrectly marked as "failed to download" (added `mods/` and `resourcepacks/` path matching).
-- **State Synchronization**:
-  - Fixed issue where the modpack details page would show stale installation information until a manual refresh.
+### ✨ **Features & UX**
+- **Ultra-Responsive UI**: Dramatically faster animations, transitions, and instant startup experience.
+- **Modpack Ecosystem**: Full support for Modrinth (`.mrpack`) and role-based Community modpack publishing.
+- **Granular Control**: New stability management, "Shield" UI for folder protection, and advanced permission flags.
+- **Improved Log Viewer**: Cleaner UI with compact controls and support for full raw log downloads.
 
 ### ⚡ **Performance**
-- **Enhanced Parallel Downloads**: 
-  - Refined the parallel download system to use a shared `DownloadConfig` and respect user-defined concurrency limits.
-  - Optimized semaphore usage for better resource utilization during high-speed downloads.
-- **Multithreaded Installation Pipeline**:
-  - Parallelized ZIP extraction, override file copying, and integrity hashing using all available CPU cores.
-  - Optimized file hashing with streaming buffers to eliminate memory overhead for large files.
-  - Dramatically reduced time for "Processing modpack", "Verifying download", and "Calculating integrity" steps.
+- **Multithreaded Pipeline**: Parallelized ZIP extraction (index-based), override copying, and integrity hashing using all CPU cores.
+- **Optimized E/S**: Streaming hashing buffers and non-blocking IO for verifying downloads without memory overhead.
+- **Resource Management**: User-configurable limits for concurrent downloads and disk writes in Settings.
 
-- **Modrinth Modpack Support**
-  - Added full support for importing Modrinth modpacks (`.mrpack` files)
-  - Auto-detects modpack format by checking for `modrinth.index.json` vs CurseForge `manifest.json`
-  - Downloads mods directly from Modrinth CDN URLs with SHA1 hash verification
-  - Supports `overrides/` and `client-overrides/` folders for additional files
-  - Extracts modloader info from Modrinth dependencies (Forge, Fabric, NeoForge, Quilt)
-  - No API authentication required (Modrinth API is public)
-- **Refined RAM Allocation Options**
-  - Hidden "Recommended by Author" option when modpack provides no recommendation
-  - Defaulted new installations to "Global" RAM if no author recommendation exists
-  - UI now gracefully handles instances with missing recommendations by switching to global settings
-  
-- **Community Modpack Publishing**:
-  - Implemented role-based access: Only Partners and Admins can publish "Community" modpacks.
-  - "Community" modpacks now display the creator's name on the card (e.g., "Creator: [Name]").
-  - Auto-toggles "User Modifications": ENABLES for Community modpacks, DISABLES for Official/Partner.
-  - Added visual badge for Community authors in modpack lists.
-  
-### 🔧 **Technical Improvements**
-- New Rust modules: `src/modpack/modrinth/` with types, manifest parser, downloader, and processor
-- Updated `launcher.rs` to route between CurseForge and Modrinth processing based on detected format
-- New TypeScript types (`src/types/modrinth.ts`) and service (`src/services/modrinthService.ts`)
-- Updated `modpackManagementService.ts` to parse both manifest formats and return source type
-- Added English and Spanish translations for Modrinth-related progress messages
+### 🎨 **UI/UX Refinement**
+- **Simplified Progress**: Streamlined installation UI with premium progress bars and stable messaging.
+- **Real-time Sync**: Definitive fix for version refresh; metadata and "Installed" badges update immediately.
+- **macOS Polish**: Disabled elastic scrolling and pinch-to-zoom for a native app feel.
 
-### 🎨 **UI/UX Improvements**
-- **Version Installation UI**:
-  - Replaced native browser confirm dialog with styled modal for version changes
-  - Added visual progress bar during version-specific installations
-  - Version install now uses the same backend flow as the main install button for consistent Lyceris progress
-  - Redesigned version cards with full-width changelog display
-  - Icon-only download buttons for cleaner version list appearance
-- **Modpack Features Section**:
-  - Applied glassmorphism and gradient borders for premium aesthetic
-  - Added numbered badges for visual feature indexing
-  - Enhanced hover effects and smooth transitions
-  - Added glow effect background and refined typography
-- **User Modifications UI Refactor**:
-  - Implemented master toggle for "User Modifications" in Publish/Edit forms
-  - Added granular "Advanced Options" for Mods, Resource Packs, and Configs
-  - Unified UI between Publish and Edit forms with consistent styling
-  - Enhanced visual feedback with icons and clearer status indicators
+### 🐛 **Bug Fixes**
+- **Extraction Stability**: Fixed critical `UnexpectedEof` panics during parallel extraction by isolating file handles.
+- **Logic Fixes**: Resolved CurseForge override detection bugs and case-insensitive `.mrpack` validation.
+- **Structural Integrity**: Fixed JSX nesting violations and ensured Case-Insensitive extension matching.
 
-### 🔧 **Technical Improvements**
-- **Modrinth Support**:
-  - Enhanced `mrpack` manifest parsing and downloading logic in Rust backend
-  - Improved handling of Modrinth dependencies and overrides
-- **Database**:
-  - Added `allow_custom_configs` flag to modpack structure
-  - Updated modpack management service to handle new permission flags
 
 ## [0.1.5] - 2025-12-17
 
