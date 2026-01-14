@@ -549,20 +549,26 @@ async fn get_java_file_manifest(
     manifest: &JavaManifest,
     java_version: &str,
 ) -> Result<JavaFileManifest> {
+    // Build OS key based on what Mojang's Java manifest uses
+    // Keys: "linux", "linux-i386", "mac-os", "mac-os-arm64", "windows-x64", "windows-x86", "windows-arm64"
+    let full_os_key = match (OS, ARCH) {
+        ("macos", "aarch64") => "mac-os-arm64".to_string(),
+        ("macos", _) => "mac-os".to_string(),
+        ("linux", "x86") => "linux-i386".to_string(),
+        ("linux", _) => "linux".to_string(),
+        ("windows", "x86_64") => "windows-x64".to_string(),
+        ("windows", "x86") => "windows-x86".to_string(),
+        ("windows", "aarch64") => "windows-arm64".to_string(),
+        _ => return Err(anyhow!("Unsupported OS/Arch combination: {} / {}", OS, ARCH)),
+    };
+    
+    // For fallback, try the base OS key (without architecture suffix)
     let os_key = match OS {
         "macos" => "mac-os",
         "linux" => "linux",
-        "windows" => "windows",
-        _ => return Err(anyhow!("Unsupported OS: {}", OS)),
+        "windows" => "windows-x64", // Default Windows fallback to x64
+        _ => &full_os_key,
     };
-
-    let arch_suffix = match ARCH {
-        "x86_64" => "",
-        "aarch64" => "-arm64",
-        _ => "",
-    };
-
-    let full_os_key = format!("{}{}", os_key, arch_suffix);
     
     let java_entries = manifest.get(&full_os_key)
         .or_else(|| manifest.get(os_key))

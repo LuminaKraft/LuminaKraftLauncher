@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.7-beta.1] - 2026-01-14
 
+### 🐛 **Bug Fixes**
+- **Fixed Windows modpack installation failing with "No Java runtime for OS: windows"**
+  - The parallel download system used incorrect OS keys for Mojang's Java manifest
+  - Windows requires architecture-specific keys (`windows-x64`, `windows-x86`, `windows-arm64`)
+  - Now correctly maps OS and architecture to the proper manifest keys
+
 ### ⚡ **Performance**
 - **Service-Level Caching**: Added TTL-based caching to `authService` and `modpackManagementService`
   - `getDiscordAccount()` cached for 5 minutes
