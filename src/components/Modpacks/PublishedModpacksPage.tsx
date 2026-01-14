@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import { Plus, Edit, Trash2, Eye, EyeOff, Download, Cloud, Lock, Loader2, RefreshCw } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, EyeOff, Download, Cloud, Lock, RefreshCw } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import ModpackManagementService from '../../services/modpackManagementService';
 import AuthService from '../../services/authService';
 import { ConfirmDialog } from '../Common/ConfirmDialog';
 import { LoadingModal } from '../Common/LoadingModal';
+import { SkeletonGrid } from '../Common/SkeletonCard';
 import { supabase } from '../../services/supabaseClient';
 
 interface Modpack {
@@ -94,7 +95,25 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
     try {
       setLoading(true);
 
-      // Get current user ID and partner ID
+      // Fetch independent data sources in parallel for faster loading
+      // canManageModpacks() and getDiscordAccount() are both cached at service level
+      const [permissionResult, discordResult] = await Promise.all([
+        service.canManageModpacks(),
+        authService.getDiscordAccount()
+      ]);
+
+      // Set permission state
+      const { canManage: hasPermission, role, partnerName } = permissionResult;
+      setCanManage(hasPermission);
+      setUserRole(role);
+      setPartnerName(partnerName || null);
+
+      // Set Discord state
+      setHasDiscord(!!discordResult);
+      setIsDiscordMember(discordResult?.isMember || false);
+
+      // Fetch user ID and partner ID (needed for delete permissions)
+      // This could be parallelized too, but we need auth first to get the ID
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (authUser) {
         setUserId(authUser.id);
@@ -111,19 +130,8 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
         }
       }
 
-      // Check permissions
-      const { canManage: hasPermission, role, partnerName } = await service.canManageModpacks();
-      setCanManage(hasPermission);
-      setUserRole(role);
-      setPartnerName(partnerName || null);
-
-      // Check if user has Discord linked
-      const discordAccount = await authService.getDiscordAccount();
-      setHasDiscord(!!discordAccount);
-      setIsDiscordMember(discordAccount?.isMember || false);
-
+      // Load user's modpacks only if authenticated (cached at service level)
       if (hasPermission) {
-        // Load user's modpacks only if authenticated
         const userModpacks = await service.getUserModpacks();
         setModpacks(userModpacks);
       }
@@ -274,8 +282,19 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-12 h-12 text-lumina-500 animate-spin" />
+      <div className="max-w-7xl mx-auto p-6">
+        {/* Header skeleton */}
+        <div className="mb-6">
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2" />
+              <div className="h-4 w-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+            </div>
+            <div className="h-12 w-40 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+          </div>
+        </div>
+        {/* Content skeleton grid */}
+        <SkeletonGrid count={6} />
       </div>
     );
   }

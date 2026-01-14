@@ -4,6 +4,18 @@ import type { ModrinthManifest } from '../types/modrinth';
 import JSZip from 'jszip';
 import LauncherService from './launcherService';
 
+// Cache TTL constants for modpack management data
+const MODPACK_MGMT_CACHE_TTL = {
+  CAN_MANAGE: 5 * 60 * 1000, // 5 minutes - permissions rarely change
+  USER_MODPACKS: 2 * 60 * 1000, // 2 minutes - modpacks list may change more often
+} as const;
+
+interface MgmtCacheEntry<T> {
+  data: T;
+  timestamp: number;
+  expiresAt: number;
+}
+
 /**
  * Service for managing modpack creation and updates
  * Used by partners and community members
@@ -12,12 +24,54 @@ export class ModpackManagementService {
   private static instance: ModpackManagementService;
   // Kept for infrastructure/future use even though currently unused
   private _microsoftAccount: MicrosoftAccount | null = null;
+  // In-memory cache for permission and modpack data
+  private cache: Map<string, MgmtCacheEntry<unknown>> = new Map();
 
   public static getInstance(): ModpackManagementService {
     if (!ModpackManagementService.instance) {
       ModpackManagementService.instance = new ModpackManagementService();
     }
     return ModpackManagementService.instance;
+  }
+
+  // ============================================================================
+  // CACHE METHODS
+  // ============================================================================
+
+  /**
+   * Get cached data if valid (not expired)
+   */
+  private getCache<T>(key: string): T | null {
+    const entry = this.cache.get(key) as MgmtCacheEntry<T> | undefined;
+    if (!entry) return null;
+
+    // Check if expired
+    if (entry.expiresAt < Date.now()) {
+      this.cache.delete(key);
+      return null;
+    }
+
+    return entry.data;
+  }
+
+  /**
+   * Set cache entry with TTL
+   */
+  private setCache<T>(key: string, data: T, ttl: number): void {
+    const now = Date.now();
+    this.cache.set(key, {
+      data,
+      timestamp: now,
+      expiresAt: now + ttl
+    });
+  }
+
+  /**
+   * Clear all modpack management caches (call after mutations)
+   */
+  public clearCache(): void {
+    this.cache.clear();
+    console.log('🗑️ Modpack management cache cleared');
   }
 
   /**
@@ -39,18 +93,29 @@ export class ModpackManagementService {
   /**
    * Check if the current user can create/edit modpacks
    * Requires Discord authentication only
+   * Cached for 5 minutes to reduce redundant network calls
    */
   async canManageModpacks(): Promise<{
     canManage: boolean;
     role: 'admin' | 'partner' | 'user' | null;
     partnerName?: string;
   }> {
+    const cacheKey = 'can_manage_modpacks';
+
+    // Check cache first
+    const cached = this.getCache<{ canManage: boolean; role: 'admin' | 'partner' | 'user' | null; partnerName?: string }>(cacheKey);
+    if (cached !== null) {
+      return cached;
+    }
+
     try {
       // Check if user has active Supabase session
       const { data: { user } } = await supabase.auth.getUser();
 
       if (!user || user.is_anonymous) {
-        return { canManage: false, role: null };
+        const result: { canManage: boolean; role: 'admin' | 'partner' | 'user' | null; partnerName?: string } = { canManage: false, role: null };
+        this.setCache(cacheKey, result, MODPACK_MGMT_CACHE_TTL.CAN_MANAGE);
+        return result;
       }
 
       // Look up user profile and check Discord is linked
@@ -61,12 +126,16 @@ export class ModpackManagementService {
         .single() as { data: any };
 
       if (!profile) {
-        return { canManage: false, role: null };
+        const result: { canManage: boolean; role: 'admin' | 'partner' | 'user' | null; partnerName?: string } = { canManage: false, role: null };
+        this.setCache(cacheKey, result, MODPACK_MGMT_CACHE_TTL.CAN_MANAGE);
+        return result;
       }
 
       // Must have Discord linked
       if (!profile.discord_id) {
-        return { canManage: false, role: null };
+        const result: { canManage: boolean; role: 'admin' | 'partner' | 'user' | null; partnerName?: string } = { canManage: false, role: null };
+        this.setCache(cacheKey, result, MODPACK_MGMT_CACHE_TTL.CAN_MANAGE);
+        return result;
       }
 
       const role = profile.role as 'admin' | 'partner' | 'user';
@@ -87,7 +156,9 @@ export class ModpackManagementService {
         }
       }
 
-      return { canManage, role, partnerName };
+      const result = { canManage, role, partnerName };
+      this.setCache(cacheKey, result, MODPACK_MGMT_CACHE_TTL.CAN_MANAGE);
+      return result;
     } catch (error) {
       console.error('Error checking user permissions:', error);
       return { canManage: false, role: null };
@@ -813,8 +884,17 @@ export class ModpackManagementService {
 
   /**
    * Get user's modpacks
+   * Cached for 2 minutes to reduce redundant fetches during navigation
    */
   async getUserModpacks(): Promise<any[]> {
+    const cacheKey = 'user_modpacks';
+
+    // Check cache first
+    const cached = this.getCache<any[]>(cacheKey);
+    if (cached !== null) {
+      return cached;
+    }
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
 
@@ -842,7 +922,9 @@ export class ModpackManagementService {
           return [];
         }
 
-        return data || [];
+        const result = data || [];
+        this.setCache(cacheKey, result, MODPACK_MGMT_CACHE_TTL.USER_MODPACKS);
+        return result;
       }
 
       let query = supabase.from('modpacks').select('*');
@@ -868,7 +950,9 @@ export class ModpackManagementService {
         return [];
       }
 
-      return data || [];
+      const result = data || [];
+      this.setCache(cacheKey, result, MODPACK_MGMT_CACHE_TTL.USER_MODPACKS);
+      return result;
     } catch (error) {
       console.error('Error getting user modpacks:', error);
       return [];

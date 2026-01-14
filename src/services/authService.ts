@@ -3,7 +3,21 @@ import type { MicrosoftAccount, DiscordAccount } from '../types/launcher';
 import { supabase, updateUser, type Tables } from './supabaseClient';
 import { listen } from '@tauri-apps/api/event';
 
+// Cache TTL constants for auth-related data
+const AUTH_CACHE_TTL = {
+  DISCORD_ACCOUNT: 5 * 60 * 1000, // 5 minutes - Discord profile rarely changes
+  DISCORD_ROLES: 30 * 60 * 1000, // 30 minutes - roles change infrequently
+} as const;
+
+interface AuthCacheEntry<T> {
+  data: T;
+  timestamp: number;
+  expiresAt: number;
+}
+
 class AuthService {
+  // In-memory cache for auth data
+  private cache: Map<string, AuthCacheEntry<unknown>> = new Map();
   private static instance: AuthService;
   private isSyncingDiscord: boolean = false; // Lock to prevent concurrent Discord data syncs
   private isSyncingRoles: boolean = false; // Lock to prevent concurrent Discord role syncs
@@ -13,6 +27,46 @@ class AuthService {
       AuthService.instance = new AuthService();
     }
     return AuthService.instance;
+  }
+
+  // ============================================================================
+  // CACHE METHODS
+  // ============================================================================
+
+  /**
+   * Get cached data if valid (not expired)
+   */
+  private getCache<T>(key: string): T | null {
+    const entry = this.cache.get(key) as AuthCacheEntry<T> | undefined;
+    if (!entry) return null;
+
+    // Check if expired
+    if (entry.expiresAt < Date.now()) {
+      this.cache.delete(key);
+      return null;
+    }
+
+    return entry.data;
+  }
+
+  /**
+   * Set cache entry with TTL
+   */
+  private setCache<T>(key: string, data: T, ttl: number): void {
+    const now = Date.now();
+    this.cache.set(key, {
+      data,
+      timestamp: now,
+      expiresAt: now + ttl
+    });
+  }
+
+  /**
+   * Clear all auth-related caches (call after auth state changes)
+   */
+  public clearPermissionCache(): void {
+    this.cache.clear();
+    console.log('🗑️ Auth permission cache cleared');
   }
 
   /**
@@ -60,6 +114,9 @@ class AuthService {
 
       // Clean up Discord provider tokens from localStorage
       localStorage.removeItem('discord_provider_refresh_token');
+
+      // Clear cached permission data
+      this.clearPermissionCache();
 
       console.log('✅ Signed out from LuminaKraft Account');
     } catch (error) {
@@ -939,8 +996,17 @@ class AuthService {
 
   /**
    * Get Discord account info from database
+   * Cached for 5 minutes to reduce redundant network calls during navigation
    */
   async getDiscordAccount(): Promise<DiscordAccount | null> {
+    const cacheKey = 'discord_account';
+
+    // Check cache first
+    const cached = this.getCache<DiscordAccount | null>(cacheKey);
+    if (cached !== null) {
+      return cached;
+    }
+
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
 
@@ -968,10 +1034,12 @@ class AuthService {
 
       // Discord is linked only if discord_linked_at is NOT NULL
       if (!profile || !profile.discord_id || !profile.discord_linked_at) {
+        // Cache null result too to avoid repeated checks
+        this.setCache(cacheKey, null, AUTH_CACHE_TTL.DISCORD_ACCOUNT);
         return null;
       }
 
-      return {
+      const result: DiscordAccount = {
         id: profile.discord_id,
         username: profile.discord_username || '',
         globalName: profile.discord_global_name,
@@ -983,6 +1051,10 @@ class AuthService {
         roles: Array.isArray(profile.discord_roles) ? profile.discord_roles as string[] : [],
         lastSync: profile.last_discord_sync
       };
+
+      // Cache the result
+      this.setCache(cacheKey, result, AUTH_CACHE_TTL.DISCORD_ACCOUNT);
+      return result;
     } catch (error) {
       console.error('Error getting Discord account:', error);
       return null;

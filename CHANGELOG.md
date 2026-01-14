@@ -5,6 +5,20 @@ All notable changes to the LuminaKraft Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### ⚡ **Performance**
+- **Service-Level Caching**: Added TTL-based caching to `authService` and `modpackManagementService`
+  - `getDiscordAccount()` cached for 5 minutes
+  - `canManageModpacks()` cached for 5 minutes
+  - `getUserModpacks()` cached for 2 minutes
+  - Cache automatically invalidated on sign out and profile updates
+- **Parallel Data Fetching**: Refactored `PublishedModpacksPage` to use `Promise.all` for simultaneous fetching of permissions and Discord data
+- **Skeleton Loading**: Added `SkeletonCard` and `SkeletonGrid` components for instant visual feedback while data loads
+- **Context-Level Permission Caching**: Added `userPermissions` state to `LauncherContext` for app-wide permission access
+  - New `refreshPermissions()` method for on-demand permission refresh
+  - Permissions loaded on app init and after profile updates
+
 ## [0.1.6] - 2026-01-14
 
 ### ✨ **Features & UX**

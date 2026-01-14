@@ -24,6 +24,17 @@ interface LauncherState {
   isLoading: boolean;
   error: string | null;
   isOnline: boolean;
+  userPermissions: UserPermissions | null;
+}
+
+// User permissions cached at app level for fast access across all pages
+interface UserPermissions {
+  canManage: boolean;
+  role: 'admin' | 'partner' | 'user' | null;
+  partnerName?: string;
+  hasDiscord: boolean;
+  isDiscordMember: boolean;
+  lastFetched: number;
 }
 import LauncherService from '../services/launcherService';
 import { FailedModsDialog } from '../components/FailedModsDialog';
@@ -61,6 +72,8 @@ interface LauncherContextType {
   showUsernameDialog: boolean;
   setShowUsernameDialog: (_value: boolean) => void;
   isOnline: boolean;
+  userPermissions: UserPermissions | null;
+  refreshPermissions: () => Promise<void>;
 }
 
 type LauncherAction =
@@ -71,7 +84,8 @@ type LauncherAction =
   | { type: 'SET_USER_SETTINGS'; payload: UserSettings }
   | { type: 'SET_MODPACK_STATE'; payload: { id: string; state: ModpackState } }
   | { type: 'UPDATE_MODPACK_PROGRESS'; payload: { id: string; progress: ProgressInfo } }
-  | { type: 'SET_ONLINE'; payload: boolean };
+  | { type: 'SET_ONLINE'; payload: boolean }
+  | { type: 'SET_USER_PERMISSIONS'; payload: UserPermissions | null };
 
 // Load settings synchronously from launcherService to ensure onboardingCompleted 
 // and other persisted settings are available immediately on app start
@@ -86,6 +100,7 @@ const initialState: LauncherState = {
   isLoading: false,
   error: null,
   isOnline: navigator.onLine,
+  userPermissions: null,
 };
 
 function launcherReducer(state: LauncherState, action: LauncherAction): LauncherState {
@@ -199,6 +214,8 @@ function launcherReducer(state: LauncherState, action: LauncherAction): Launcher
           },
         },
       };
+    case 'SET_USER_PERMISSIONS':
+      return { ...state, userPermissions: action.payload };
     default:
       return state;
   }
@@ -359,18 +376,51 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Refresh user permissions (canManage, role, Discord status)
+  // Called on app load and after auth changes
+  const refreshPermissions = async () => {
+    try {
+      const authService = AuthService.getInstance();
+      const modpackMgmt = ModpackManagementService.getInstance();
+
+      // Fetch permissions and Discord status in parallel
+      const [permissionResult, discordResult] = await Promise.all([
+        modpackMgmt.canManageModpacks(),
+        authService.getDiscordAccount()
+      ]);
+
+      const permissions: UserPermissions = {
+        canManage: permissionResult.canManage,
+        role: permissionResult.role,
+        partnerName: permissionResult.partnerName,
+        hasDiscord: !!discordResult,
+        isDiscordMember: discordResult?.isMember || false,
+        lastFetched: Date.now()
+      };
+
+      dispatch({ type: 'SET_USER_PERMISSIONS', payload: permissions });
+      console.log('✅ User permissions refreshed:', permissions.role);
+    } catch (error) {
+      console.error('Error refreshing permissions:', error);
+      // Set null permissions on error (will show as not authenticated)
+      dispatch({ type: 'SET_USER_PERMISSIONS', payload: null });
+    }
+  };
+
   // Listen for profile updates (e.g. after Discord sync)
   useEffect(() => {
     const handleProfileUpdate = () => {
-      console.log('🔄 Profile updated event received, refreshing settings...');
+      console.log('🔄 Profile updated event received, refreshing settings and permissions...');
       setIsAuthenticating(false);
       refreshUserProfile();
+      refreshPermissions(); // Also refresh permissions when profile updates
     };
 
     window.addEventListener('luminakraft:profile-updated', handleProfileUpdate);
 
     // Also refresh on mount if we might have a session
     refreshUserProfile();
+    refreshPermissions(); // Load initial permissions
 
     return () => {
       window.removeEventListener('luminakraft:profile-updated', handleProfileUpdate);
@@ -1718,6 +1768,8 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     showUsernameDialog,
     setShowUsernameDialog,
     isOnline: state.isOnline,
+    userPermissions: state.userPermissions,
+    refreshPermissions,
   };
 
   // Update ref with refreshData so the cache-clear listener can call it
