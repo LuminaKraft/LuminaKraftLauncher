@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - The parallel download system used incorrect OS keys for Mojang's Java manifest
   - Windows requires architecture-specific keys (`windows-x64`, `windows-x86`, `windows-arm64`)
   - Now correctly maps OS and architecture to the proper manifest keys
+- **Fixed mods from overrides not being recognized on Windows**
+  - Path separators were not normalized (`mods\file.jar` vs `mods/file.jar`)
+  - Override files are now tracked with forward slashes on all platforms
 
 ### ⚡ **Performance**
 - **Service-Level Caching**: Added TTL-based caching to `authService` and `modpackManagementService`

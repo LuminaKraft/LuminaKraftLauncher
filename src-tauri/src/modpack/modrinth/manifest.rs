@@ -136,6 +136,7 @@ fn copy_dir_recursively(src: &Path, dst: &Path) -> Result<()> {
 }
 
 /// Get relative paths from overrides/ and client-overrides/ recursively
+/// NOTE: Always uses forward slashes for cross-platform consistency
 pub fn get_override_relative_paths(temp_dir: &PathBuf) -> std::collections::HashSet<String> {
     use walkdir::WalkDir;
     let mut paths = std::collections::HashSet::new();
@@ -152,7 +153,10 @@ pub fn get_override_relative_paths(temp_dir: &PathBuf) -> std::collections::Hash
             let path = entry.path();
             if path.is_file() {
                 if let Ok(relative) = path.strip_prefix(&overrides_dir) {
-                    paths.insert(relative.to_string_lossy().into_owned());
+                    // Normalize to forward slashes for cross-platform consistency
+                    // On Windows, to_string_lossy() returns backslashes, but checks use forward slashes
+                    let normalized_path = relative.to_string_lossy().replace('\\', "/");
+                    paths.insert(normalized_path);
                 }
             }
         }
