@@ -286,7 +286,16 @@
     "verifyingModpackStatus": "Verifying modpack status",
     "active": "Active",
     "inactive": "Inactive",
-    "new": "New"
+    "new": "New",
+    "fetchingVersionManifest": "Fetching version manifest...",
+    "fetchingVersionMeta": "Fetching version metadata...",
+    "fetchingAssetIndex": "Fetching asset index...",
+    "fetchingJavaManifest": "Fetching Java manifest...",
+    "buildingDownloadLists": "Preparing download lists...",
+    "downloadingFiles": "Downloading files...",
+    "allFilesReady": "All files ready",
+    "downloadComplete": "Download complete",
+    "installingModLoader": "Installing mod loader..."
   },
   "settings": {
     "title": "Settings",

@@ -365,9 +365,15 @@ const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect
       'preparing_mod_downloads': 'preparingModDownloads',
       'downloading_modpack_file': 'downloadingModpackFile',
       'downloading_mod_file': 'downloadingModFile',
+      'downloading_mod': 'downloadingMods', // New from parallel system
       'mod_already_exists': 'modAlreadyExists',
+      'file_already_exists': 'modAlreadyExists', // New from parallel system
       'mod_downloaded_verified': 'modDownloadedVerified',
       'mod_unavailable': 'modUnavailable',
+      'file_unavailable': 'modUnavailable', // New from parallel system
+      'file_in_overrides': 'modAlreadyExists', // New from parallel system
+      'mod_in_overrides': 'modAlreadyExists', // CurseForge mods in overrides
+      'file_download_error': 'modDownloadError', // New from parallel system
       'extracting_modpack': 'extractingModpack',
       'downloading': 'downloading',
       'downloading_update': 'downloadingUpdate',
@@ -391,7 +397,12 @@ const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect
       'saving_instance_config': 'savingInstanceConfig',
       'finalizing_installation': 'finalizingInstallation',
       'installation_completed': 'installationCompleted',
-      'completed': 'completed'
+      'installing_loader': 'installingModLoader', // New from parallel system
+      'complete': 'completed',
+      'completed': 'completed',
+      'fetching': 'initializing', // New from parallel system
+      'preparing': 'preparing', // New from parallel system
+      'downloading_modrinth_files': 'downloadingModrinthFiles' // New from parallel system
     };
 
     const translationKey = stepToTranslationKey[step];
@@ -593,9 +604,15 @@ const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect
                       }
 
                       // Set bullet color based on message type without changing text
-                      if (message.startsWith("mod_exists:") || message.startsWith("mod_completed:")) {
+                      // Green: file already exists or completed successfully, or in overrides
+                      if (message.startsWith("mod_exists:") || message.startsWith("mod_completed:") ||
+                        message.startsWith("file_exists:") || message.startsWith("file_in_overrides:") ||
+                        message.startsWith("resourcepack_exists:") || message.startsWith("mod_in_overrides:")) {
                         bulletClass = "w-2 h-2 bg-green-500 rounded-full";
-                      } else if (message.startsWith("mod_error:") || message.startsWith("mod_unavailable:")) {
+                        // Red: file failed or unavailable
+                      } else if (message.startsWith("mod_error:") || message.startsWith("mod_unavailable:") ||
+                        message.startsWith("file_unavailable:") || message.startsWith("file_download_error:") ||
+                        message.startsWith("mod_download_error:")) {
                         bulletClass = "w-2 h-2 bg-red-500 rounded-full";
                       }
 

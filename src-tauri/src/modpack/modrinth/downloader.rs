@@ -17,10 +17,15 @@ pub async fn download_files_with_failed_tracking<F>(
     override_filenames: &std::collections::HashSet<String>,
 ) -> Result<(Vec<serde_json::Value>, std::collections::HashSet<String>)>
 where
-    F: Fn(String, f32, String) + Send + Sync + 'static,
+    F: Fn(String, f32, String) + Send + Sync + 'static + Clone,
 {
+    use futures::{stream, StreamExt};
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use tokio::sync::{Mutex, Semaphore};
+
     // Filter files that are for client (not server-only)
-    let client_files: Vec<&ModrinthFile> = manifest.files.iter()
+    let client_files: Vec<ModrinthFile> = manifest.files.iter()
         .filter(|f| {
             // Include file if:
             // 1. No env specified (default to include)
@@ -36,13 +41,19 @@ where
                 }
             }
         })
+        .cloned()
         .collect();
     
-    let mut failed_files = Vec::new();
-    let mut expected_filenames = std::collections::HashSet::new();
+    let failed_files = Arc::new(Mutex::new(Vec::new()));
+    let expected_filenames = Arc::new(Mutex::new(std::collections::HashSet::new()));
     
     let total_files = client_files.len();
     let progress_range = end_percentage - start_percentage;
+    let completed_count = Arc::new(AtomicUsize::new(0));
+    
+    // Define concurrency limit
+    const MAX_CONCURRENT_DOWNLOADS: usize = 10;
+    let download_semaphore = Arc::new(Semaphore::new(MAX_CONCURRENT_DOWNLOADS));
     
     emit_progress(
         format!("progress.downloadingModrinthFiles|{}", total_files),
@@ -50,121 +61,142 @@ where
         "downloading_modrinth_files".to_string()
     );
     
-    for (index, file) in client_files.iter().enumerate() {
-        let mod_progress = start_percentage + (index as f32 / total_files as f32) * progress_range;
+    println!("📥 [Modrinth] Downloading {} files in parallel (max {} concurrent)...", total_files, MAX_CONCURRENT_DOWNLOADS);
+    
+    // Prepare download tasks
+    let download_tasks: Vec<_> = client_files.into_iter().map(|file| {
+        let emit = emit_progress.clone();
+        let instance_dir = instance_dir.clone();
+        let failed_files = failed_files.clone();
+        let expected_filenames = expected_filenames.clone();
+        let override_filenames = override_filenames.clone();
+        let completed_count = completed_count.clone();
+        let download_semaphore = download_semaphore.clone();
         
-        // Extract filename from path (e.g., "mods/sodium.jar" -> "sodium.jar")
-        let filename = file.path.split('/').last().unwrap_or(&file.path).to_string();
-        expected_filenames.insert(filename.clone());
-        
-        // Determine destination path
-        let dest_path = instance_dir.join(&file.path);
-        
-        // Create parent directory if needed
-        if let Some(parent) = dest_path.parent() {
-            if !parent.exists() {
-                fs::create_dir_all(parent)?;
+        async move {
+            // Acquire semaphore permit
+            let _permit = download_semaphore.acquire().await.ok()?;
+            
+            // Extract filename from path
+            let filename = file.path.split('/').last().unwrap_or(&file.path).to_string();
+            
+            // Add to expected filenames
+            {
+                let mut expected = expected_filenames.lock().await;
+                expected.insert(filename.clone());
             }
-        }
-        
-        emit_progress(
-            format!("downloading_modpack:{}:{}", index + 1, total_files),
-            mod_progress,
-            "downloading_modpack_file".to_string()
-        );
-        
-        // Check if file already exists with correct hash
-        if verify_file_hash(&dest_path, &file.hashes.sha1) {
-            emit_progress(
-                format!("file_exists:{}", filename),
-                mod_progress,
-                "file_already_exists".to_string()
-            );
-            continue;
-        }
-        
-        // Check if file is in overrides - will be extracted later
-        if override_filenames.contains(&file.path) {
-            emit_progress(
-                format!("file_in_overrides:{}", filename),
-                mod_progress,
-                "file_in_overrides".to_string()
-            );
-            println!("✓ [Modrinth] File {} will be extracted from overrides", file.path);
-            continue;
-        }
-        
-        // Get download URL (Modrinth provides direct CDN URLs)
-        let download_url = match file.downloads.first() {
-            Some(url) => url,
-            None => {
-                // No download URL available - try to get project info for the dialog
-                println!("⚠️ [Modrinth] No download URL for: {}", file.path);
-                let failed_info = create_failed_file_info(file, &filename, None).await;
-                failed_files.push(failed_info);
-                continue;
-            }
-        };
-        
-        emit_progress(
-            format!("mod_name:{}", filename),
-            mod_progress,
-            "downloading_mod_file".to_string()
-        );
-        
-        // Download with infinite retry for network errors
-        loop {
-            match download_file(download_url, &dest_path).await {
-                Ok(()) => {
-                    // Verify hash
-                    if verify_file_hash(&dest_path, &file.hashes.sha1) {
-                        emit_progress(
-                            format!("file_downloaded:{}:{}", index + 1, total_files),
-                            mod_progress,
-                            "file_downloaded".to_string()
-                        );
-                        break;
-                    } else {
-                        // Hash mismatch - retry
-                        println!("⚠️ [Modrinth] Hash mismatch for {}, retrying...", filename);
-                        let _ = fs::remove_file(&dest_path);
-                        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
-                        continue;
-                    }
-                },
-                Err(e) => {
-                    let error_msg = e.to_string();
-                    println!("DEBUG: [Modrinth] Download error: {:?}", e);
-                    
-                    // Check for network errors - infinite retry
-                    if error_msg.contains("Error de red") 
-                        || error_msg.contains("TIMEDOUT") 
-                        || error_msg.contains("unreachable") 
-                        || error_msg.to_lowercase().contains("offline")
-                        || error_msg.contains("dns")
-                        || error_msg.contains("connection closed")
-                    {
-                        emit_progress(
-                            "progress.waitingForNetwork".to_string(),
-                            mod_progress,
-                            "waiting_for_network".to_string()
-                        );
-                        println!("⚠️ [Modrinth] Network error for {}, waiting...", filename);
-                        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-                        continue;
-                    }
-                    
-                    // Fatal error - enrich with project info if possible
-                    println!("❌ [Modrinth] Failed to download {}: {}", filename, e);
-                    let failed_info = create_failed_file_info(file, &filename, Some(&error_msg)).await;
-                    failed_files.push(failed_info);
-                    break;
+            
+            // Determine destination path
+            let dest_path = instance_dir.join(&file.path);
+            
+            // Create parent directory if needed
+            if let Some(parent) = dest_path.parent() {
+                if !parent.exists() {
+                    let _ = fs::create_dir_all(parent);
                 }
             }
+            
+            // Check if file already exists with correct hash
+            if verify_file_hash(&dest_path, &file.hashes.sha1) {
+                let completed = completed_count.fetch_add(1, Ordering::Relaxed) + 1;
+                let mod_progress = start_percentage + (completed as f32 / total_files as f32) * progress_range;
+                emit(format!("file_exists:{}", filename), mod_progress, "file_already_exists".to_string());
+                return Some(());
+            }
+            
+            // Check if file is in overrides
+            if override_filenames.contains(&file.path) {
+                let completed = completed_count.fetch_add(1, Ordering::Relaxed) + 1;
+                let mod_progress = start_percentage + (completed as f32 / total_files as f32) * progress_range;
+                emit(format!("file_in_overrides:{}", filename), mod_progress, "file_in_overrides".to_string());
+                return Some(());
+            }
+            
+            // Get download URL
+            let download_url = match file.downloads.first() {
+                Some(url) => url.clone(),
+                None => {
+                    println!("⚠️ [Modrinth] No download URL for: {}", file.path);
+                    let failed_info = create_failed_file_info(&file, &filename, None).await;
+                    let mut failed = failed_files.lock().await;
+                    failed.push(failed_info);
+                    
+                    let completed = completed_count.fetch_add(1, Ordering::Relaxed) + 1;
+                    let mod_progress = start_percentage + (completed as f32 / total_files as f32) * progress_range;
+                    emit(format!("file_unavailable:{}", filename), mod_progress, "file_unavailable".to_string());
+                    return Some(());
+                }
+            };
+            
+            // Download with retry loop
+            loop {
+                match download_file(&download_url, &dest_path).await {
+                    Ok(()) => {
+                        if verify_file_hash(&dest_path, &file.hashes.sha1) {
+                            let completed = completed_count.fetch_add(1, Ordering::Relaxed) + 1;
+                            let mod_progress = start_percentage + (completed as f32 / total_files as f32) * progress_range;
+                            emit(
+                                format!("progress.downloadingModsProgress|{}|{}", completed, total_files),
+                                mod_progress,
+                                "downloading_mod".to_string()
+                            );
+                            break;
+                        } else {
+                            println!("⚠️ [Modrinth] Hash mismatch for {}, retrying...", filename);
+                            let _ = fs::remove_file(&dest_path);
+                            tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+                            continue;
+                        }
+                    },
+                    Err(e) => {
+                        let error_msg = e.to_string();
+                        
+                        if error_msg.contains("Error de red") || error_msg.contains("TIMEDOUT") || 
+                           error_msg.contains("unreachable") || error_msg.to_lowercase().contains("offline") ||
+                           error_msg.contains("dns") || error_msg.contains("connection closed") {
+                            println!("⚠️ [Modrinth] Network error for {}, retrying...", filename);
+                            tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+                            continue;
+                        }
+                        
+                        // Fatal error
+                        println!("❌ [Modrinth] Failed to download {}: {}", filename, e);
+                        let failed_info = create_failed_file_info(&file, &filename, Some(&error_msg)).await;
+                        let mut failed = failed_files.lock().await;
+                        failed.push(failed_info);
+                        
+                        let completed = completed_count.fetch_add(1, Ordering::Relaxed) + 1;
+                        let mod_progress = start_percentage + (completed as f32 / total_files as f32) * progress_range;
+                        emit(format!("file_download_error:{}:{}", filename, e), mod_progress, "file_download_error".to_string());
+                        break;
+                    }
+                }
+            }
+            
+            Some(())
         }
-    }
+    }).collect();
     
-    Ok((failed_files, expected_filenames))
+    // Execute all downloads in parallel
+    let _: Vec<_> = stream::iter(download_tasks)
+        .buffer_unordered(MAX_CONCURRENT_DOWNLOADS * 2)
+        .collect()
+        .await;
+    
+    // Extract results
+    let failed_result = match Arc::try_unwrap(failed_files) {
+        Ok(mutex) => mutex.into_inner(),
+        Err(arc) => arc.lock().await.clone(),
+    };
+    
+    let expected_result = match Arc::try_unwrap(expected_filenames) {
+        Ok(mutex) => mutex.into_inner(),
+        Err(arc) => arc.lock().await.clone(),
+    };
+    
+    println!("✅ [Modrinth] Downloads complete! {} failed", failed_result.len());
+    
+    Ok((failed_result, expected_result))
 }
 
 /// Create a failed file info JSON with enriched data from Modrinth API

@@ -1449,6 +1449,38 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
             total
           });
         }
+        if (key === 'progress.downloading') {
+          // Format: "progress.downloading|Category|current/total"
+          const category = parts[1];
+          const currentTotal = parts[2] || '';
+          const [current, total] = currentTotal.includes('/') ? currentTotal.split('/') : ['', ''];
+
+          // Map category names to translation keys
+          const categoryKey = category === 'Assets' ? 'progress.downloadingAssets' :
+            category === 'Libraries' ? 'progress.downloadingLibraries' :
+              category === 'Java Runtime' ? 'progress.downloadingJava' :
+                category === 'Client' ? 'progress.downloadingMinecraft' :
+                  'progress.downloadingFiles';
+
+          if (current && total) {
+            return `${t(categoryKey)} (${current}/${total})`;
+          }
+          return t(categoryKey);
+        }
+        if (key === 'progress.downloadingModsProgress') {
+          // Format: "progress.downloadingModsProgress|current|total"
+          const current = parts[1];
+          const total = parts[2];
+          return t('progress.downloadingModsProgress', {
+            current,
+            total
+          });
+        }
+        if (key === 'progress.downloadingModrinthFiles') {
+          // Format: "progress.downloadingModrinthFiles|total"
+          const total = parts[1];
+          return t('progress.downloadingModrinthFiles') + (total ? ` (${total})` : '');
+        }
       }
 
       // Simple translation key

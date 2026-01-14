@@ -39,7 +39,7 @@ pub struct CurseForgeFile {
     pub required: bool,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct ModFileInfo {
     pub id: i64,
     #[serde(rename = "downloadUrl", default)]
@@ -64,7 +64,7 @@ pub struct ModFileInfo {
     pub display_name: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct FileHash {
     #[serde(default)]
     pub value: Option<String>,

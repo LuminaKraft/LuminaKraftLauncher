@@ -17,7 +17,7 @@ pub struct ModrinthManifest {
 }
 
 /// A file entry in the Modrinth modpack manifest
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ModrinthFile {
     pub path: String,           // e.g., "mods/sodium-fabric-0.5.8+mc1.20.4.jar"
@@ -29,14 +29,14 @@ pub struct ModrinthFile {
 }
 
 /// Hash values for file verification
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ModrinthHashes {
     pub sha1: String,
     pub sha512: String,
 }
 
 /// Environment specification (client/server side requirements)
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ModrinthEnv {
     #[serde(default)]
     pub client: Option<String>, // "required", "optional", "unsupported"

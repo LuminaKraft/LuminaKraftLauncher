@@ -222,8 +222,13 @@ pub async fn download_mods_with_failed_tracking<F>(
     pre_fetched_infos: Option<Vec<ModFileInfo>>,
 ) -> Result<Vec<serde_json::Value>>
 where
-    F: Fn(String, f32, String) + Send + Sync + 'static,
+    F: Fn(String, f32, String) + Send + Sync + 'static + Clone,
 {
+    use futures::{stream, StreamExt};
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use tokio::sync::{Mutex, Semaphore};
+
     let mods_dir = instance_dir.join("mods");
     if !mods_dir.exists() {
         fs::create_dir_all(&mods_dir)?;
@@ -275,7 +280,7 @@ where
         }
     };
     
-    let mut failed_mods = Vec::new();
+    let failed_mods = Arc::new(Mutex::new(Vec::new()));
     let mut file_id_to_project: std::collections::HashMap<i64, i64> = std::collections::HashMap::new();
     
     for manifest_file in &manifest.files {
@@ -284,161 +289,155 @@ where
     
     let total_mods = all_file_infos.len();
     let progress_range = end_percentage - start_percentage;
+    let completed_count = Arc::new(AtomicUsize::new(0));
     
-    for (index, file_info) in all_file_infos.iter().enumerate() {
-        // Calculate proportional progress from start_percentage to end_percentage
-        let mod_progress = start_percentage + (index as f32 / total_mods as f32) * progress_range;
+    // Define concurrency limit for parallel downloads
+    const MAX_CONCURRENT_DOWNLOADS: usize = 10;
+    let download_semaphore = Arc::new(Semaphore::new(MAX_CONCURRENT_DOWNLOADS));
+    
+    println!("📥 Downloading {} mods in parallel (max {} concurrent)...", total_mods, MAX_CONCURRENT_DOWNLOADS);
+    
+    // Prepare download tasks
+    let download_tasks: Vec<_> = all_file_infos.iter().map(|file_info| {
+        let emit = emit_progress.clone();
+        let mods_dir = mods_dir.clone();
+        let instance_dir = instance_dir.clone();
+        let failed_mods = failed_mods.clone();
+        let completed_count = completed_count.clone();
+        let override_filenames = override_filenames.clone();
+        let file_id_to_project = file_id_to_project.clone();
+        let download_semaphore = download_semaphore.clone();
+        let file_info = file_info.clone();
         
-        emit_progress(
-            format!("downloading_modpack:{}:{}", index + 1, total_mods),
-            mod_progress,
-            "downloading_modpack_file".to_string()
-        );
-        
-        let download_url = match &file_info.download_url {
-            Some(url) if !url.is_empty() => url,
-            _ => {
-                let file_name = file_info.file_name.as_deref().unwrap_or("unknown_file");
-                let mod_path = mods_dir.join(file_name);
-
-                // Also check resourcepacks folder for files that might be resourcepacks instead of mods
-                let resourcepacks_dir = instance_dir.join("resourcepacks");
-                let resourcepack_path = resourcepacks_dir.join(file_name);
-
-                // Check if file exists in mods/ folder
-                if verify_file_hash(&mod_path, &file_info.hashes) {
-                    emit_progress(
-                        format!("mod_exists:{}", file_name),
-                        mod_progress,
-                        "mod_already_exists".to_string()
-                    );
-                    continue;
-                }
-
-                // Check if file exists in resourcepacks/ folder
-                if verify_file_hash(&resourcepack_path, &file_info.hashes) {
-                    emit_progress(
-                        format!("resourcepack_exists:{}", file_name),
-                        mod_progress,
-                        "mod_already_exists".to_string()
-                    );
-                    continue;
-                }
-
-                // Check if file is in overrides - these will be extracted later, so don't mark as failed
-                if override_filenames.contains(file_name) {
-                    emit_progress(
-                        format!("mod_in_overrides:{}", file_name),
-                        mod_progress,
-                        "mod_in_overrides".to_string()
-                    );
-                    println!("✓ File {} will be extracted from overrides", file_name);
-                    continue;
-                }
-
-                // File doesn't exist in either location and not in overrides - mark as failed
-                let project_id = file_id_to_project.get(&file_info.id).copied().unwrap_or(file_info.mod_id.unwrap_or(-1));
-                let failed_mod = serde_json::json!({
-                    "projectId": project_id,
-                    "fileId": file_info.id,
-                    "fileName": file_name
-                });
-                failed_mods.push(failed_mod);
-
-                emit_progress(
-                    format!("mod_unavailable:{}", file_name),
-                    mod_progress,
-                    "mod_unavailable".to_string()
-                );
-                continue;
-            }
-        };
-
-        let file_name = match &file_info.file_name {
-            Some(name) if !name.is_empty() => name,
-            _ => continue,
-        };
-        
-        let mod_path = mods_dir.join(file_name);
-        
-        // Check if file already exists with correct hash
-        if verify_file_hash(&mod_path, &file_info.hashes) {
-            emit_progress(
-                format!("mod_exists:{}", file_name),
-                mod_progress,
-                "mod_already_exists".to_string()
-            );
-            continue;
-        }
-        
-        emit_progress(
-            format!("mod_name:{}", file_name),
-            mod_progress,
-            "downloading_mod_file".to_string()
-        );
-        
-        // Download the file
-        // Infinite retry loop for network errors
-        loop {
-            match download_file(download_url, &mod_path).await {
-                Ok(()) => {
-                    // Check if file is valid
+        async move {
+            // Acquire semaphore permit
+            let _permit = download_semaphore.acquire().await.ok()?;
+            
+            let file_name = file_info.file_name.as_deref().unwrap_or("unknown_file");
+            let mod_path = mods_dir.join(file_name);
+            
+            // Handle files without download URL
+            let download_url = match &file_info.download_url {
+                Some(url) if !url.is_empty() => url.clone(),
+                _ => {
+                    // Check if file exists in mods/ folder
                     if verify_file_hash(&mod_path, &file_info.hashes) {
-                        emit_progress(
-                            format!("mod_downloaded:{}:{}", index + 1, total_mods),
-                            mod_progress,
-                            "mod_downloaded".to_string()
-                        );
-                        break; // Success
-                    } else {
-                        // Hash mismatch - download completed but corrupt
-                        // If we want to retry corrupt downloads indefinitely, we can continue here
-                        // But verifying hash usually implies file content issue, not network
-                        println!("⚠️ Hash mismatch for {}, retrying...", file_name);
-                        // We continue the loop to retry download (download_file overwrites)
-                        // But we should probably limit corruption retries? 
-                        // For now let's treat corruption as a retryable error
-                        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
-                        continue;
+                        let completed = completed_count.fetch_add(1, Ordering::Relaxed) + 1;
+                        let mod_progress = start_percentage + (completed as f32 / total_mods as f32) * progress_range;
+                        emit(format!("mod_exists:{}", file_name), mod_progress, "mod_already_exists".to_string());
+                        return Some(());
                     }
-                },
-                Err(e) => {
-                    let error_msg = e.to_string();
-                    println!("DEBUG: Download error caught: {:?}", e); // Debug log for offline detection
-                    
-                    // Check if it's a network error (from utils/downloader.rs or generic)
-                    if error_msg.contains("Error de red") || error_msg.contains("TIMEDOUT") || error_msg.contains("unreachable") || error_msg.to_lowercase().contains("offline") {
-                         emit_progress(
-                             "progress.waitingForNetwork".to_string(),
-                             mod_progress,
-                             "waiting_for_network".to_string()
-                         );
-                         println!("⚠️ Network error for {}, waiting for connection...", file_name);
-                         tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-                         continue; // Infinite retry
+
+                    // Check resourcepacks folder
+                    let resourcepack_path = instance_dir.join("resourcepacks").join(file_name);
+                    if verify_file_hash(&resourcepack_path, &file_info.hashes) {
+                        let completed = completed_count.fetch_add(1, Ordering::Relaxed) + 1;
+                        let mod_progress = start_percentage + (completed as f32 / total_mods as f32) * progress_range;
+                        emit(format!("resourcepack_exists:{}", file_name), mod_progress, "mod_already_exists".to_string());
+                        return Some(());
                     }
-                    
-                    // Fatal error (e.g. 404, permissions)
-                    println!("❌ Failed to download {}: {}", file_name, e);
-                    failed_mods.push(serde_json::json!({
+
+                    // Check if file is in overrides (override_filenames contains paths like "mods/file.jar")
+                    let mods_path = format!("mods/{}", file_name);
+                    let resourcepacks_path = format!("resourcepacks/{}", file_name);
+                    if override_filenames.contains(&mods_path) || override_filenames.contains(&resourcepacks_path) || override_filenames.contains(file_name) {
+                        let completed = completed_count.fetch_add(1, Ordering::Relaxed) + 1;
+                        let mod_progress = start_percentage + (completed as f32 / total_mods as f32) * progress_range;
+                        emit(format!("mod_in_overrides:{}", file_name), mod_progress, "mod_in_overrides".to_string());
+                        println!("✓ File {} will be extracted from overrides", file_name);
+                        return Some(());
+                    }
+
+                    // Mark as failed
+                    let project_id = file_id_to_project.get(&file_info.id).copied().unwrap_or(file_info.mod_id.unwrap_or(-1));
+                    let mut failed = failed_mods.lock().await;
+                    failed.push(serde_json::json!({
+                        "projectId": project_id,
                         "fileId": file_info.id,
-                        "fileName": file_name,
-                        "url": download_url,
-                        "error": error_msg
+                        "fileName": file_name
                     }));
                     
-                    emit_progress(
-                        format!("mod_download_error:{}:{}", file_name, e),
-                        mod_progress,
-                        "mod_download_error".to_string()
-                    );
-                    break; // Give up on this file
+                    let completed = completed_count.fetch_add(1, Ordering::Relaxed) + 1;
+                    let mod_progress = start_percentage + (completed as f32 / total_mods as f32) * progress_range;
+                    emit(format!("mod_unavailable:{}", file_name), mod_progress, "mod_unavailable".to_string());
+                    return Some(());
+                }
+            };
+            
+            // Check if file already exists with correct hash
+            if verify_file_hash(&mod_path, &file_info.hashes) {
+                let completed = completed_count.fetch_add(1, Ordering::Relaxed) + 1;
+                let mod_progress = start_percentage + (completed as f32 / total_mods as f32) * progress_range;
+                emit(format!("mod_exists:{}", file_name), mod_progress, "mod_already_exists".to_string());
+                return Some(());
+            }
+            
+            // Download with retry loop
+            loop {
+                match download_file(&download_url, &mod_path).await {
+                    Ok(()) => {
+                        if verify_file_hash(&mod_path, &file_info.hashes) {
+                            let completed = completed_count.fetch_add(1, Ordering::Relaxed) + 1;
+                            let mod_progress = start_percentage + (completed as f32 / total_mods as f32) * progress_range;
+                            emit(
+                                format!("progress.downloadingModsProgress|{}|{}", completed, total_mods),
+                                mod_progress,
+                                "downloading_mod".to_string()
+                            );
+                            break;
+                        } else {
+                            println!("⚠️ Hash mismatch for {}, retrying...", file_name);
+                            tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+                            continue;
+                        }
+                    },
+                    Err(e) => {
+                        let error_msg = e.to_string();
+                        
+                        if error_msg.contains("Error de red") || error_msg.contains("TIMEDOUT") || 
+                           error_msg.contains("unreachable") || error_msg.to_lowercase().contains("offline") {
+                            println!("⚠️ Network error for {}, retrying...", file_name);
+                            tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+                            continue;
+                        }
+                        
+                        // Fatal error
+                        println!("❌ Failed to download {}: {}", file_name, e);
+                        let mut failed = failed_mods.lock().await;
+                        failed.push(serde_json::json!({
+                            "fileId": file_info.id,
+                            "fileName": file_name,
+                            "url": download_url,
+                            "error": error_msg
+                        }));
+                        
+                        let completed = completed_count.fetch_add(1, Ordering::Relaxed) + 1;
+                        let mod_progress = start_percentage + (completed as f32 / total_mods as f32) * progress_range;
+                        emit(format!("mod_download_error:{}:{}", file_name, e), mod_progress, "mod_download_error".to_string());
+                        break;
+                    }
                 }
             }
+            
+            Some(())
         }
-    }
+    }).collect();
     
-    Ok(failed_mods)
+    // Execute all downloads in parallel with buffer
+    let _: Vec<_> = stream::iter(download_tasks)
+        .buffer_unordered(MAX_CONCURRENT_DOWNLOADS * 2) // Allow buffering for smoother execution
+        .collect()
+        .await;
+    
+    // Extract the failed mods from Arc<Mutex>
+    let result = match Arc::try_unwrap(failed_mods) {
+        Ok(mutex) => mutex.into_inner(),
+        Err(arc) => arc.lock().await.clone(),
+    };
+    
+    println!("✅ Mod downloads complete! {} failed", result.len());
+    
+    Ok(result)
 }
 
 /// Download mods with progress tracking and return expected filenames for cleanup

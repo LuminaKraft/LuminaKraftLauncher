@@ -13,6 +13,7 @@ mod minecraft;
 mod modpack;
 mod utils;
 mod oauth;
+mod parallel_download;
 
 use crate::launcher::launch_modpack_action;
 

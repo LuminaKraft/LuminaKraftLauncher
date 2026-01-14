@@ -293,51 +293,71 @@ async fn get_auth_method_with_validation(settings: &UserSettings) -> Result<(Aut
     }
 }
 
-/// Install Minecraft and mod loader using Lyceris with progress callback
+/// Install Minecraft and mod loader using parallel downloads (Modrinth-style)
+/// This bypasses Lyceris' slow sequential downloads and uses tokio::join! for parallel categories
 pub async fn install_minecraft_with_lyceris_progress<F>(
     modpack: &Modpack,
     settings: &UserSettings,
-    instance_dir: PathBuf,
+    _instance_dir: PathBuf,
     emit_progress: F,
 ) -> Result<()> 
 where
     F: Fn(String, f32, String) + Send + Sync + 'static + Clone,
 {
-    let emitter = create_emitter_with_progress(emit_progress.clone());
-    
-    let (auth_method, _refreshed_account) = get_auth_method_with_validation(settings).await?;
+    use crate::parallel_download::{install_minecraft_parallel, DownloadConfig};
     
     // Get shared meta directories (includes global Java runtime dir)
     let meta_dirs = crate::meta::MetaDirectories::init().await?;
-
-    let config_builder = ConfigBuilder::new(
-        instance_dir,
-        modpack.minecraft_version.clone(),
-        auth_method,
-    )
-    .runtime_dir(meta_dirs.java_dir.clone());
     
-    // Build config with or without mod loader (we need the Config instance before calling install)
-
-    // --- Prepare Config instance (with or without loader) ---
+    // Use parallel download system for vanilla Minecraft first
+    let config = DownloadConfig::default();
+    
+    println!("🚀 Installing Minecraft {} with parallel downloads (Modrinth-style)...", modpack.minecraft_version);
+    
+    let version_meta = install_minecraft_parallel(
+        &modpack.minecraft_version,
+        &meta_dirs.meta_dir,
+        &meta_dirs.java_dir,
+        emit_progress.clone(),
+        config,
+    ).await?;
+    
+    // Save version JSON to versions folder
+    let versions_dir = meta_dirs.meta_dir.join("versions").join(&modpack.minecraft_version);
+    tokio::fs::create_dir_all(&versions_dir).await?;
+    let version_json_path = versions_dir.join(format!("{}.json", modpack.minecraft_version));
+    let version_json = serde_json::to_string_pretty(&version_meta)?;
+    tokio::fs::write(&version_json_path, version_json).await?;
+    
+    // Now install mod loader if specified (using Lyceris for loader-specific logic)
     if !modpack.modloader.is_empty() && !modpack.modloader_version.is_empty() {
+        println!("🔧 Installing {} {}...", modpack.modloader, modpack.modloader_version);
+        emit_progress("progress.installingModLoader".to_string(), 95.0, "installing_loader".to_string());
+        
+        let (auth_method, _) = get_auth_method_with_validation(settings).await?;
         let loader = get_loader_by_name(&modpack.modloader, &modpack.modloader_version)?;
-
-        let config = config_builder.loader(loader).build();
-
-        // Install / verify Minecraft first (creates version json)
-        install(&config, Some(&emitter)).await?;
-        return Ok(());
-    } else {
+        
+        let config_builder = ConfigBuilder::new(
+            meta_dirs.meta_dir.clone(),
+            modpack.minecraft_version.clone(),
+            auth_method,
+        )
+        .runtime_dir(meta_dirs.java_dir.clone())
+        .loader(loader);
+        
         let config = config_builder.build();
-    
-        // Install/verify Minecraft installation first
+        
+        // Install mod loader (this is usually fast as vanilla is already installed)
+        let emitter = create_emitter_with_progress(emit_progress.clone());
         install(&config, Some(&emitter)).await?;
-
-        return Ok(());
+        
+        println!("✅ Mod loader installation complete!");
     }
- 
-    // unreachable
+    
+    emit_progress("progress.minecraftReady".to_string(), 100.0, "complete".to_string());
+    println!("✅ Minecraft {} installation complete!", modpack.minecraft_version);
+    
+    Ok(())
 }
 
 /// Create a Lyceris emitter with progress callback for progress tracking
