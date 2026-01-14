@@ -24,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🎨 **UI/UX**
 - Removed distracting inline loading indicator from Homepage hero section
+- Enhanced card hover effects with subtle lift animation and shadow
+- Added `focus-ring` utility class for improved accessibility
 
 ## [0.1.6] - 2026-01-14
 
