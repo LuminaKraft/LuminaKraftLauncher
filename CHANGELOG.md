@@ -75,6 +75,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Enhanced Parallel Downloads**: 
   - Refined the parallel download system to use a shared `DownloadConfig` and respect user-defined concurrency limits.
   - Optimized semaphore usage for better resource utilization during high-speed downloads.
+- **Multithreaded Installation Pipeline**:
+  - Parallelized ZIP extraction, override file copying, and integrity hashing using all available CPU cores.
+  - Optimized file hashing with streaming buffers to eliminate memory overhead for large files.
+  - Dramatically reduced time for "Processing modpack", "Verifying download", and "Calculating integrity" steps.
 
 - **Modrinth Modpack Support**
   - Added full support for importing Modrinth modpacks (`.mrpack` files)
