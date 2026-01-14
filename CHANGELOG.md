@@ -63,7 +63,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added premium styling to progress bars, including an inner shadow and glow effect.
   - Stable progress messaging: Technical updates (e.g., "File in overrides") no longer replace the main "Downloading mods (X/Y)" status.
 - **Auto-refresh Version Info**: 
-  - Version history and "Current Version" badge now update immediately after installation/update finishes without requiring a launcher restart.
+  - Version history and "Current Version" badge now update immediately after installation/update finishes without requiring a launcher restart (fixed state synchronization between status and installed flags).
 
 ### 🐛 **Bug Fixes**
 - **Override Files Detection**:

@@ -916,10 +916,10 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
                 type: 'SET_MODPACK_STATE',
                 payload: {
                   id: modpackId,
-                  state: {
-                    ...(state.modpackStates[modpackId] || createModpackState('not_installed')),
-                    status: newStatus
-                  },
+                  state: createModpackState(newStatus, {
+                    translations: state.modpackStates[modpackId]?.translations,
+                    features: state.modpackStates[modpackId]?.features,
+                  }),
                 },
               });
             } catch (error: any) {
@@ -975,10 +975,10 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
               type: 'SET_MODPACK_STATE',
               payload: {
                 id: modpackId,
-                state: {
-                  ...(state.modpackStates[modpackId] || createModpackState('installed')),
-                  status: finalStatus
-                },
+                state: createModpackState(finalStatus, {
+                  translations: state.modpackStates[modpackId]?.translations,
+                  features: state.modpackStates[modpackId]?.features,
+                }),
               },
             });
           }
@@ -1058,10 +1058,10 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
                 type: 'SET_MODPACK_STATE',
                 payload: {
                   id: modpackId,
-                  state: {
-                    ...state.modpackStates[modpackId],
-                    status: 'installed',
-                  },
+                  state: createModpackState('installed', {
+                    translations: state.modpackStates[modpackId]?.translations,
+                    features: state.modpackStates[modpackId]?.features,
+                  }),
                 },
               });
 
@@ -1080,13 +1080,13 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
             console.error(`Failed to launch modpack ${modpackId}:`, err);
 
             dispatch({
-              type: 'SET_MODPACK_STATE', // Changed from SET_MODPACK_STATUS to SET_MODPACK_STATE
+              type: 'SET_MODPACK_STATE',
               payload: {
                 id: modpackId,
-                state: {
-                  ...(state.modpackStates[modpackId] || createModpackState('installed')), // Ensure existing state is preserved
-                  status: 'installed' // Reset status to installed or ready
-                }
+                state: createModpackState('installed', {
+                  translations: state.modpackStates[modpackId]?.translations,
+                  features: state.modpackStates[modpackId]?.features,
+                }),
               },
             });
 
@@ -1126,10 +1126,10 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
               type: 'SET_MODPACK_STATE',
               payload: {
                 id: modpackId,
-                state: {
-                  ...(state.modpackStates[modpackId] || createModpackState('installed')),
-                  status: finalStatus
-                },
+                state: createModpackState(finalStatus, {
+                  translations: state.modpackStates[modpackId]?.translations,
+                  features: state.modpackStates[modpackId]?.features,
+                }),
               },
             });
           }
@@ -1151,10 +1151,10 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
               type: 'SET_MODPACK_STATE',
               payload: {
                 id: modpackId,
-                state: {
-                  ...(state.modpackStates[modpackId] || createModpackState('installed')),
-                  status: finalStatus
-                },
+                state: createModpackState(finalStatus, {
+                  translations: state.modpackStates[modpackId]?.translations,
+                  features: state.modpackStates[modpackId]?.features,
+                }),
               },
             });
           }
