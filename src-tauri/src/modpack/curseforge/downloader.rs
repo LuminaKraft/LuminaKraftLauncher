@@ -220,6 +220,7 @@ pub async fn download_mods_with_failed_tracking<F>(
     anon_key: &str,
     override_filenames: &std::collections::HashSet<String>,
     pre_fetched_infos: Option<Vec<ModFileInfo>>,
+    max_concurrent_downloads: Option<usize>,
 ) -> Result<Vec<serde_json::Value>>
 where
     F: Fn(String, f32, String) + Send + Sync + 'static + Clone,
@@ -292,10 +293,10 @@ where
     let completed_count = Arc::new(AtomicUsize::new(0));
     
     // Define concurrency limit for parallel downloads
-    const MAX_CONCURRENT_DOWNLOADS: usize = 10;
-    let download_semaphore = Arc::new(Semaphore::new(MAX_CONCURRENT_DOWNLOADS));
+    let max_concurrent = max_concurrent_downloads.unwrap_or(10);
+    let download_semaphore = Arc::new(Semaphore::new(max_concurrent));
     
-    println!("📥 Downloading {} mods in parallel (max {} concurrent)...", total_mods, MAX_CONCURRENT_DOWNLOADS);
+    println!("📥 Downloading {} mods in parallel (max {} concurrent)...", total_mods, max_concurrent);
     
     // Prepare download tasks
     let download_tasks: Vec<_> = all_file_infos.iter().map(|file_info| {
@@ -324,7 +325,7 @@ where
                     if verify_file_hash(&mod_path, &file_info.hashes) {
                         let completed = completed_count.fetch_add(1, Ordering::Relaxed) + 1;
                         let mod_progress = start_percentage + (completed as f32 / total_mods as f32) * progress_range;
-                        emit(format!("mod_exists:{}", file_name), mod_progress, "mod_already_exists".to_string());
+                        emit(format!("progress.downloadingModsProgress|{}|{}", completed, total_mods), mod_progress, "mod_already_exists".to_string());
                         return Some(());
                     }
 
@@ -333,7 +334,7 @@ where
                     if verify_file_hash(&resourcepack_path, &file_info.hashes) {
                         let completed = completed_count.fetch_add(1, Ordering::Relaxed) + 1;
                         let mod_progress = start_percentage + (completed as f32 / total_mods as f32) * progress_range;
-                        emit(format!("resourcepack_exists:{}", file_name), mod_progress, "mod_already_exists".to_string());
+                        emit(format!("progress.downloadingModsProgress|{}|{}", completed, total_mods), mod_progress, "mod_already_exists".to_string());
                         return Some(());
                     }
 
@@ -343,7 +344,7 @@ where
                     if override_filenames.contains(&mods_path) || override_filenames.contains(&resourcepacks_path) || override_filenames.contains(file_name) {
                         let completed = completed_count.fetch_add(1, Ordering::Relaxed) + 1;
                         let mod_progress = start_percentage + (completed as f32 / total_mods as f32) * progress_range;
-                        emit(format!("mod_in_overrides:{}", file_name), mod_progress, "mod_in_overrides".to_string());
+                        emit(format!("progress.downloadingModsProgress|{}|{}", completed, total_mods), mod_progress, "mod_in_overrides".to_string());
                         println!("✓ File {} will be extracted from overrides", file_name);
                         return Some(());
                     }
@@ -359,7 +360,7 @@ where
                     
                     let completed = completed_count.fetch_add(1, Ordering::Relaxed) + 1;
                     let mod_progress = start_percentage + (completed as f32 / total_mods as f32) * progress_range;
-                    emit(format!("mod_unavailable:{}", file_name), mod_progress, "mod_unavailable".to_string());
+                    emit(format!("progress.downloadingModsProgress|{}|{}", completed, total_mods), mod_progress, "mod_unavailable".to_string());
                     return Some(());
                 }
             };
@@ -368,7 +369,7 @@ where
             if verify_file_hash(&mod_path, &file_info.hashes) {
                 let completed = completed_count.fetch_add(1, Ordering::Relaxed) + 1;
                 let mod_progress = start_percentage + (completed as f32 / total_mods as f32) * progress_range;
-                emit(format!("mod_exists:{}", file_name), mod_progress, "mod_already_exists".to_string());
+                emit(format!("progress.downloadingModsProgress|{}|{}", completed, total_mods), mod_progress, "mod_already_exists".to_string());
                 return Some(());
             }
             
@@ -413,7 +414,7 @@ where
                         
                         let completed = completed_count.fetch_add(1, Ordering::Relaxed) + 1;
                         let mod_progress = start_percentage + (completed as f32 / total_mods as f32) * progress_range;
-                        emit(format!("mod_download_error:{}:{}", file_name, e), mod_progress, "mod_download_error".to_string());
+                        emit(format!("progress.downloadingModsProgress|{}|{}", completed, total_mods), mod_progress, "mod_download_error".to_string());
                         break;
                     }
                 }
@@ -425,7 +426,7 @@ where
     
     // Execute all downloads in parallel with buffer
     let _: Vec<_> = stream::iter(download_tasks)
-        .buffer_unordered(MAX_CONCURRENT_DOWNLOADS * 2) // Allow buffering for smoother execution
+        .buffer_unordered(max_concurrent * 2) // Allow buffering for smoother execution
         .collect()
         .await;
     
@@ -452,6 +453,7 @@ pub async fn download_mods_with_filenames<F>(
     auth_token: Option<&str>,
     anon_key: &str,
     override_filenames: &std::collections::HashSet<String>,
+    max_concurrent_downloads: Option<usize>,
 ) -> Result<(Vec<serde_json::Value>, std::collections::HashSet<String>)>
 where
     F: Fn(String, f32, String) + Send + Sync + 'static + Clone,
@@ -513,7 +515,8 @@ where
         auth_token, 
         anon_key, 
         override_filenames,
-        Some(all_file_infos)
+        Some(all_file_infos),
+        max_concurrent_downloads
     ).await?;
     
     Ok((failed_mods, expected_filenames))

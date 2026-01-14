@@ -310,7 +310,13 @@ where
     let meta_dirs = crate::meta::MetaDirectories::init().await?;
     
     // Use parallel download system for vanilla Minecraft first
-    let config = DownloadConfig::default();
+    let mut config = DownloadConfig::default();
+    if let Some(max_downloads) = settings.max_concurrent_downloads {
+        config.max_concurrent_downloads = max_downloads as usize;
+    }
+    if let Some(max_writes) = settings.max_concurrent_writes {
+        config.max_concurrent_writes = max_writes as usize;
+    }
     
     println!("🚀 Installing Minecraft {} with parallel downloads (Modrinth-style)...", modpack.minecraft_version);
     

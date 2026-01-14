@@ -126,6 +126,10 @@ pub struct UserSettings {
     pub enable_animations: bool,
     #[serde(rename = "supabaseAnonKey")]
     pub supabase_anon_key: Option<String>,
+    #[serde(rename = "maxConcurrentDownloads")]
+    pub max_concurrent_downloads: Option<u32>,
+    #[serde(rename = "maxConcurrentWrites")]
+    pub max_concurrent_writes: Option<u32>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

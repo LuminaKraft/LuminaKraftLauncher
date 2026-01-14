@@ -494,6 +494,82 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onNavigationBlocked }) => {
             </div>
           </div>
 
+          {/* Resource Management */}
+          <div className="card">
+            <div className="flex items-center space-x-3 mb-6">
+              <Zap className="w-6 h-6 text-lumina-500" />
+              <h2 className="text-white text-xl font-semibold">{t('settings.resourceManagement')}</h2>
+            </div>
+
+            <div className="space-y-8">
+              {/* Concurrent Downloads */}
+              <div>
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex-1 pr-4">
+                    <label className="block text-dark-300 text-sm font-medium">
+                      {t('settings.maxConcurrentDownloads')}
+                    </label>
+                    <p className="text-dark-400 text-xs mt-1">
+                      {t('settings.maxConcurrentDownloadsDesc')}
+                    </p>
+                  </div>
+                  <div className="bg-dark-700 px-3 py-1 rounded text-white font-mono text-sm min-w-[3rem] text-center">
+                    {formData.maxConcurrentDownloads || 10}
+                  </div>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="10"
+                  step="1"
+                  value={formData.maxConcurrentDownloads || 10}
+                  onChange={(e) => handleInputChange('maxConcurrentDownloads', parseInt(e.target.value, 10))}
+                  className="w-full h-2 bg-dark-600 rounded-lg appearance-none cursor-pointer slider"
+                  style={{
+                    background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${(((formData.maxConcurrentDownloads || 10) - 1) / 9) * 100}%, #374151 ${(((formData.maxConcurrentDownloads || 10) - 1) / 9) * 100}%, #374151 100%)`
+                  }}
+                />
+                <div className="flex justify-between text-xs text-dark-400 mt-1">
+                  <span>1</span>
+                  <span>10</span>
+                </div>
+              </div>
+
+              {/* Concurrent Writes */}
+              <div>
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex-1 pr-4">
+                    <label className="block text-dark-300 text-sm font-medium">
+                      {t('settings.maxConcurrentWrites')}
+                    </label>
+                    <p className="text-dark-400 text-xs mt-1">
+                      {t('settings.maxConcurrentWritesDesc')}
+                    </p>
+                  </div>
+                  <div className="bg-dark-700 px-3 py-1 rounded text-white font-mono text-sm min-w-[3rem] text-center">
+                    {formData.maxConcurrentWrites || 10}
+                  </div>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="50"
+                  step="1"
+                  value={formData.maxConcurrentWrites || 10}
+                  onChange={(e) => handleInputChange('maxConcurrentWrites', parseInt(e.target.value, 10))}
+                  className="w-full h-2 bg-dark-600 rounded-lg appearance-none cursor-pointer slider"
+                  style={{
+                    background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${(((formData.maxConcurrentWrites || 10) - 1) / 49) * 100}%, #374151 ${(((formData.maxConcurrentWrites || 10) - 1) / 49) * 100}%, #374151 100%)`
+                  }}
+                />
+                <div className="flex justify-between text-xs text-dark-400 mt-1">
+                  <span>1</span>
+                  <span>50</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Animation Settings */}
           <div className="card">
             <div className="flex items-center space-x-3 mb-6">

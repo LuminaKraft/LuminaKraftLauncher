@@ -51,22 +51,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🌍 **Internationalization**
 - Added comprehensive English and Spanish translations for stability-related UI elements, messages, and footnotes.
 
-### ⚡ **Performance**
-- **Parallel Download System**:
-  - New Modrinth-style parallel download system for Minecraft vanilla resources (assets, libraries, Java, client).
-  - Downloads now run with ~40 concurrent connections (10 per category × 4 categories) vs. previous ~10 total.
-  - Parallelized CurseForge mod downloads (from sequential to 10 concurrent).
-  - Parallelized Modrinth mod downloads (from sequential to 10 concurrent).
-  - Estimated ~4x faster Minecraft installation, ~10x faster mod downloads.
+### ✨ **Features**
+- **Configurable Resource Management**:
+  - Added new "Resource Management" section in Settings.
+  - User-configurable "Maximum concurrent downloads" (capped at 10 for resource balance) and "Maximum concurrent writes" (up to 50).
+  - Backend now respects these limits across all download engines (Vanilla, CurseForge, and Modrinth).
+
+### 🎨 **UI/UX Improvements**
+- **Simplified Progress UI**:
+  - Removed ETA, individual file details, and bullet points from `ModpackCard` and `ModpackActions` for a cleaner, overall-focused look.
+  - Added premium styling to progress bars, including an inner shadow and glow effect.
+  - Stable progress messaging: Technical updates (e.g., "File in overrides") no longer replace the main "Downloading mods (X/Y)" status.
+- **Auto-refresh Version Info**: 
+  - Version history and "Current Version" badge now update immediately after installation/update finishes without requiring a launcher restart.
 
 ### 🐛 **Bug Fixes**
 - **Override Files Detection**:
-  - Fixed mods in overrides being incorrectly marked as "failed to download".
-  - Now correctly matches override paths (`mods/file.jar`) instead of just filenames.
-- **Progress Display**:
-  - Added translation handlers for new parallel download message formats.
-  - Added step mappings for new download states (`downloading_mod`, `file_in_overrides`, etc.).
-  - Fixed bullet indicator colors for files in overrides (now shows green instead of red).
+  - Fixed mods in overrides being incorrectly marked as "failed to download" (added `mods/` and `resourcepacks/` path matching).
+- **State Synchronization**:
+  - Fixed issue where the modpack details page would show stale installation information until a manual refresh.
+
+### ⚡ **Performance**
+- **Enhanced Parallel Downloads**: 
+  - Refined the parallel download system to use a shared `DownloadConfig` and respect user-defined concurrency limits.
+  - Optimized semaphore usage for better resource utilization during high-speed downloads.
 
 - **Modrinth Modpack Support**
   - Added full support for importing Modrinth modpacks (`.mrpack` files)

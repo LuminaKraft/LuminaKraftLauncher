@@ -24,6 +24,7 @@ pub async fn process_modrinth_modpack_with_failed_tracking<F>(
     allow_custom_configs: bool,
     old_installed_files: Option<HashSet<String>>,
     is_legacy_instance: bool,
+    max_concurrent_downloads: Option<usize>,
 ) -> Result<(String, String, String, Option<u32>, Vec<serde_json::Value>, HashSet<String>)>
 where
     F: Fn(String, f32, String) + Send + Sync + 'static + Clone,
@@ -103,6 +104,7 @@ where
         20.0,
         90.0,
         &override_paths,
+        max_concurrent_downloads,
     ).await?;
     
     // ===== UPDATE FLOW CLEANUP =====

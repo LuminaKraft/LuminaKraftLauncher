@@ -24,6 +24,7 @@ pub async fn process_curseforge_modpack_with_failed_tracking<F>(
     allow_custom_configs: bool,
     old_installed_files: Option<HashSet<String>>,
     is_legacy_instance: bool,
+    max_concurrent_downloads: Option<usize>,
 ) -> Result<(String, String, Option<u32>, Vec<serde_json::Value>, HashSet<String>)>
 where
     F: Fn(String, f32, String) + Send + Sync + 'static + Clone,
@@ -93,7 +94,7 @@ where
         "preparing_mod_downloads".to_string()
     );
     
-    let (failed_mods, expected_filenames) = download_mods_with_filenames(&manifest, instance_dir, emit_progress.clone(), 20.0, 90.0, auth_token, anon_key, &override_paths).await?;
+    let (failed_mods, expected_filenames) = download_mods_with_filenames(&manifest, instance_dir, emit_progress.clone(), 20.0, 90.0, auth_token, anon_key, &override_paths, max_concurrent_downloads).await?;
     
     // ===== UPDATE FLOW CLEANUP =====
     // This section ensures that mods/resourcepacks removed in new versions are deleted.

@@ -59,7 +59,7 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
   // Load instance metadata when component mounts or modpack changes
   useEffect(() => {
     const loadMetadata = async () => {
-      if (state.installed) {
+      if (liveState.installed) {
         try {
           const metadataJson = await invoke<string | null>('get_instance_metadata', {
             modpackId: modpack.id
@@ -75,7 +75,7 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
     };
 
     loadMetadata();
-  }, [state.installed, modpack.id]);
+  }, [liveState.installed, liveState.status, modpack.id]);
 
   // Load stats from database
   useEffect(() => {
@@ -464,7 +464,7 @@ const ModpackDetailsRefactored: React.FC<ModpackDetailsProps> = ({ modpack, stat
                 {activeTab === 'versions' && (
                   <VersionsSection
                     modpackId={modpack.id}
-                    currentVersion={state.installed ? (instanceMetadata?.version || modpack.version) : undefined}
+                    currentVersion={liveState.installed ? (instanceMetadata?.version || modpack.version) : undefined}
                   />
                 )}
               </div>

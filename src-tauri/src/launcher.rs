@@ -376,6 +376,7 @@ where
                 modpack.allow_custom_configs.unwrap_or(true),
                 old_installed_files.clone(),
                 do_aggressive_cleanup,
+                settings.max_concurrent_downloads.map(|v| v as usize),
             ).await?;
 
             managed_files_set = managed_files;
@@ -411,6 +412,7 @@ where
                 modpack.allow_custom_configs.unwrap_or(true),
                 old_installed_files.clone(),
                 do_aggressive_cleanup,
+                settings.max_concurrent_downloads.map(|v| v as usize),
             ).await?;
 
             managed_files_set = managed_files;

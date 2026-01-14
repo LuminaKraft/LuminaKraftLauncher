@@ -15,6 +15,7 @@ pub async fn download_files_with_failed_tracking<F>(
     start_percentage: f32,
     end_percentage: f32,
     override_filenames: &std::collections::HashSet<String>,
+    max_concurrent_downloads: Option<usize>,
 ) -> Result<(Vec<serde_json::Value>, std::collections::HashSet<String>)>
 where
     F: Fn(String, f32, String) + Send + Sync + 'static + Clone,
@@ -52,8 +53,8 @@ where
     let completed_count = Arc::new(AtomicUsize::new(0));
     
     // Define concurrency limit
-    const MAX_CONCURRENT_DOWNLOADS: usize = 10;
-    let download_semaphore = Arc::new(Semaphore::new(MAX_CONCURRENT_DOWNLOADS));
+    let max_concurrent = max_concurrent_downloads.unwrap_or(10);
+    let download_semaphore = Arc::new(Semaphore::new(max_concurrent));
     
     emit_progress(
         format!("progress.downloadingModrinthFiles|{}", total_files),
@@ -61,7 +62,7 @@ where
         "downloading_modrinth_files".to_string()
     );
     
-    println!("📥 [Modrinth] Downloading {} files in parallel (max {} concurrent)...", total_files, MAX_CONCURRENT_DOWNLOADS);
+    println!("📥 [Modrinth] Downloading {} files in parallel (max {} concurrent)...", total_files, max_concurrent);
     
     // Prepare download tasks
     let download_tasks: Vec<_> = client_files.into_iter().map(|file| {
@@ -100,7 +101,7 @@ where
             if verify_file_hash(&dest_path, &file.hashes.sha1) {
                 let completed = completed_count.fetch_add(1, Ordering::Relaxed) + 1;
                 let mod_progress = start_percentage + (completed as f32 / total_files as f32) * progress_range;
-                emit(format!("file_exists:{}", filename), mod_progress, "file_already_exists".to_string());
+                emit(format!("progress.downloadingModsProgress|{}|{}", completed, total_files), mod_progress, "file_already_exists".to_string());
                 return Some(());
             }
             
@@ -108,7 +109,7 @@ where
             if override_filenames.contains(&file.path) {
                 let completed = completed_count.fetch_add(1, Ordering::Relaxed) + 1;
                 let mod_progress = start_percentage + (completed as f32 / total_files as f32) * progress_range;
-                emit(format!("file_in_overrides:{}", filename), mod_progress, "file_in_overrides".to_string());
+                emit(format!("progress.downloadingModsProgress|{}|{}", completed, total_files), mod_progress, "file_in_overrides".to_string());
                 return Some(());
             }
             
@@ -123,7 +124,7 @@ where
                     
                     let completed = completed_count.fetch_add(1, Ordering::Relaxed) + 1;
                     let mod_progress = start_percentage + (completed as f32 / total_files as f32) * progress_range;
-                    emit(format!("file_unavailable:{}", filename), mod_progress, "file_unavailable".to_string());
+                    emit(format!("progress.downloadingModsProgress|{}|{}", completed, total_files), mod_progress, "file_unavailable".to_string());
                     return Some(());
                 }
             };
@@ -167,7 +168,7 @@ where
                         
                         let completed = completed_count.fetch_add(1, Ordering::Relaxed) + 1;
                         let mod_progress = start_percentage + (completed as f32 / total_files as f32) * progress_range;
-                        emit(format!("file_download_error:{}:{}", filename, e), mod_progress, "file_download_error".to_string());
+                        emit(format!("progress.downloadingModsProgress|{}|{}", completed, total_files), mod_progress, "file_download_error".to_string());
                         break;
                     }
                 }
@@ -179,7 +180,7 @@ where
     
     // Execute all downloads in parallel
     let _: Vec<_> = stream::iter(download_tasks)
-        .buffer_unordered(MAX_CONCURRENT_DOWNLOADS * 2)
+        .buffer_unordered(max_concurrent * 2)
         .collect()
         .await;
     
