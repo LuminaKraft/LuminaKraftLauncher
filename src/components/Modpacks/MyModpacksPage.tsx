@@ -295,7 +295,7 @@ export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: My
                   const serverData = await launcherService.fetchModpackDetails(id);
                   if (serverData) {
                     // Merge: cache has priority for user-editable fields (name, logo, backgroundImage)
-                    // Server fills all other gaps
+                    // Server fills all other gaps, especially protection flags
                     const enrichedModpack = {
                       ...serverData,
                       ...modpack,
@@ -304,6 +304,11 @@ export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: My
                       shortDescription: modpack.shortDescription || serverData.shortDescription || '',
                       description: modpack.description || serverData.description || '',
                       urlModpackZip: modpack.urlModpackZip || serverData.urlModpackZip || '',
+                      // Protection flags always from server (modpack creator controls these)
+                      allowCustomMods: serverData.allowCustomMods,
+                      allowCustomResourcepacks: serverData.allowCustomResourcepacks,
+                      allowCustomConfigs: serverData.allowCustomConfigs,
+                      category: serverData.category,
                     };
 
                     // Update cache file with complete data
@@ -705,7 +710,11 @@ export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: My
         logo: cachedData?.logo || '',
         backgroundImage: cachedData?.backgroundImage || '',
         urlModpackZip: cachedData?.urlModpackZip || '', // From cache for update functionality
-        category: 'community',
+        category: cachedData?.category || 'community',
+        // Protection flags from server data (cached)
+        allowCustomMods: cachedData?.allowCustomMods,
+        allowCustomResourcepacks: cachedData?.allowCustomResourcepacks,
+        allowCustomConfigs: cachedData?.allowCustomConfigs,
         isActive: true,
         isNew: false,
         isComingSoon: false

@@ -366,6 +366,7 @@ class LauncherService {
         downloads: statsMap.get(modpack.id)?.total_downloads || 0,
         allowCustomMods: modpack.allow_custom_mods,
         allowCustomResourcepacks: modpack.allow_custom_resourcepacks,
+        allowCustomConfigs: modpack.allow_custom_configs,
         fileSha256: modpack.file_sha256, // SHA256 of the ZIP file
         recommendedRam: modpack.recommended_ram,
       })) || [];
@@ -502,6 +503,7 @@ class LauncherService {
         fileSha256: latestVersion?.file_sha256 || null, // SHA256 for integrity verification
         allowCustomMods: modpackData.allow_custom_mods ?? true,
         allowCustomResourcepacks: modpackData.allow_custom_resourcepacks ?? true,
+        allowCustomConfigs: modpackData.allow_custom_configs ?? true,
         recommendedRam: modpackData.recommended_ram,
         // Features
         features: featuresResult.data?.map((feature: any) => ({

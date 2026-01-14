@@ -16,8 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Path separators were not normalized (`mods\file.jar` vs `mods/file.jar`)
   - Override files are now tracked with forward slashes on all platforms
 - **Fixed modpack protection status not showing correctly in Profile Options**
+  - `allowCustomConfigs` field was missing from modpack data fetching
   - Protection flags from database were not being passed to the UI
-  - Now correctly merges remote protection settings with local instance metadata
+  - Fixed merge logic to preserve server protection flags when enriching cache
+  - Now correctly displays "Protected" badge for modpacks with protection enabled
 
 ### ⚡ **Performance**
 - **Service-Level Caching**: Added TTL-based caching to `authService` and `modpackManagementService`
