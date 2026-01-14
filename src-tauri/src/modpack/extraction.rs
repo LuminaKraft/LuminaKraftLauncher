@@ -19,11 +19,6 @@ pub fn extract_zip(zip_path: &PathBuf, extract_to: &PathBuf) -> Result<()> {
         return Err(anyhow!("Failed to create extraction directory {}: {}", extract_to.display(), e));
     }
     
-    // Verify directory was created successfully
-    if !extract_to.exists() {
-        return Err(anyhow!("Extraction directory was not created: {}", extract_to.display()));
-    }
-    
     // Test write permissions
     let temp_test_file = extract_to.join("._temp_write_test");
     if let Err(e) = std::fs::write(&temp_test_file, b"write_test") {
@@ -39,44 +34,53 @@ pub fn extract_zip(zip_path: &PathBuf, extract_to: &PathBuf) -> Result<()> {
     let mut archive = ZipArchive::new(std::fs::File::open(zip_path)?)
         .map_err(|e| anyhow!("Failed to read ZIP archive: {}", e))?;
     
-    let file_names: Vec<String> = (0..archive.len())
+    // Collect file info (index and name) to avoid repeated string searches (O(1) lookup vs O(n))
+    let file_info: Vec<(usize, String)> = (0..archive.len())
         .filter_map(|i| {
-            let file = archive.by_index(i).ok()?;
-            file.enclosed_name().map(|n| n.to_string_lossy().into_owned())
-        })
-        .collect();
-
-    // Use a shared file handle for multi-threaded reading (requires cloning the file)
-    let file_handle = std::fs::File::open(zip_path)?;
-    
-    file_names.into_par_iter().for_each(|name| {
-        let cloned_file = file_handle.try_clone().expect("Failed to clone file handle");
-        let mut archive = ZipArchive::new(cloned_file).expect("Failed to open ZipArchive");
-        
-        // Extract strictly within this scope to avoid lifetime issues
-        {
-            let file_result = archive.by_name(&name);
-            match file_result {
-                Ok(mut file) => {
-                    let output_path = extract_to.join(name);
-                    
-                    if file.is_dir() {
-                        let _ = std::fs::create_dir_all(&output_path);
-                    } else {
-                        if let Some(parent) = output_path.parent() {
-                            let _ = std::fs::create_dir_all(parent);
-                        }
-                        
-                        if let Ok(mut output_file) = std::fs::File::create(&output_path) {
-                            let _ = std::io::copy(&mut file, &mut output_file);
-                        }
-                    }
-                },
-                Err(_) => {
-                    eprintln!("⚠️ Warning: Failed to find file {} in ZIP during parallel extraction", name);
+            if let Ok(file) = archive.by_index(i) {
+                if let Some(name) = file.enclosed_name() {
+                    return Some((i, name.to_string_lossy().into_owned()));
                 }
             }
-        };
+            None
+        })
+        .collect();
+    
+    if file_info.is_empty() {
+        return Err(anyhow!("No valid files found in ZIP archive"));
+    }
+
+    file_info.into_par_iter().for_each(|(index, name)| {
+        // Open the file independently in each thread to avoid shared cursor issues
+        if let Ok(file_handle) = std::fs::File::open(zip_path) {
+            if let Ok(mut archive) = ZipArchive::new(file_handle) {
+                // Extract using index for maximum performance
+                match archive.by_index(index) {
+                    Ok(mut file) => {
+                        let output_path = extract_to.join(&name);
+                        
+                        if file.is_dir() {
+                            let _ = std::fs::create_dir_all(&output_path);
+                        } else {
+                            if let Some(parent) = output_path.parent() {
+                                let _ = std::fs::create_dir_all(parent);
+                            }
+                            
+                            if let Ok(mut output_file) = std::fs::File::create(&output_path) {
+                                let _ = std::io::copy(&mut file, &mut output_file);
+                            }
+                        }
+                    },
+                    Err(e) => {
+                        eprintln!("⚠️ Warning: Failed to extract file at index {} ({}) from ZIP: {}", index, name, e);
+                    }
+                }
+            } else {
+                eprintln!("⚠️ Warning: Failed to open ZIP archive in thread for file {}", name);
+            }
+        } else {
+            eprintln!("⚠️ Warning: Failed to open ZIP file in thread for file {}", name);
+        }
     });
     
     // Verify extraction worked
@@ -93,4 +97,4 @@ pub fn extract_zip(zip_path: &PathBuf, extract_to: &PathBuf) -> Result<()> {
     }
     
     Ok(())
-} 
+}

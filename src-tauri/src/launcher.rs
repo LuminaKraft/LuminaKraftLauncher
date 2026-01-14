@@ -222,7 +222,8 @@ where
     // Variable to store recommended RAM from manifest
     let mut recommended_ram_from_manifest: Option<u32> = None;
     
-    // Process modpack (download, extract, install) and get failed mods + zip hash
+    // Variables to store modpack processing results
+    let mut zip_hash_calculated: Option<String> = None;
     let mut managed_files_set = HashSet::new();
     let (failed_mods, zip_hash) = if !modpack.url_modpack_zip.is_empty() {
         // Download and extract modpack
@@ -270,7 +271,13 @@ where
                         if let Some(expected_sha256) = &modpack.file_sha256 {
                             emit_progress("progress.verifyingDownload".to_string(), 78.0, "verifying_download".to_string());
                             
-                            match crate::modpack::integrity::hash_file(&temp_zip_path) {
+                            // Use spawn_blocking for CPU-intensive hashing
+                            let zip_path = temp_zip_path.clone();
+                            let hash_result = tokio::task::spawn_blocking(move || {
+                                crate::modpack::integrity::hash_file(&zip_path)
+                            }).await?;
+
+                            match hash_result {
                                 Ok(actual_sha256) => {
                                     if actual_sha256 != *expected_sha256 {
                                         // Clean up the corrupted file
@@ -291,6 +298,9 @@ where
                                         continue; // Retry
                                     }
                                     println!("✅ ZIP SHA256 verified: {}...", &actual_sha256[..16.min(actual_sha256.len())]);
+                                    
+                                    // Store the hash to avoid re-calculating it later
+                                    zip_hash_calculated = Some(actual_sha256);
                                 }
                                 Err(e) => {
                                     eprintln!("⚠️ Could not verify ZIP SHA256: {}", e);
@@ -329,16 +339,26 @@ where
         
         
 
-        // Calculate ZIP hash for integrity data (if official/partner)
+        // Calculate ZIP hash for integrity data if not already done
         let calculated_zip_hash = if modpack.category.as_ref().map(|c| c == "official" || c == "partner").unwrap_or(false) {
-             match crate::modpack::integrity::hash_file(&temp_zip_path) {
-                Ok(hash) => {
-                    println!("🔐 Calculated ZIP hash: {}...", &hash[0..8.min(hash.len())]);
-                    Some(hash)
-                },
-                Err(e) => {
-                    eprintln!("⚠️ Warning: Failed to calculate ZIP hash: {}", e);
-                    None
+            if let Some(hash) = zip_hash_calculated {
+                println!("🔐 Using already verified ZIP hash: {}...", &hash[0..8.min(hash.len())]);
+                Some(hash)
+            } else {
+                let zip_path = temp_zip_path.clone();
+                let hash_result = tokio::task::spawn_blocking(move || {
+                    crate::modpack::integrity::hash_file(&zip_path)
+                }).await?;
+
+                match hash_result {
+                    Ok(hash) => {
+                        println!("🔐 Calculated ZIP hash: {}...", &hash[0..8.min(hash.len())]);
+                        Some(hash)
+                    },
+                    Err(e) => {
+                        eprintln!("⚠️ Warning: Failed to calculate ZIP hash: {}", e);
+                        None
+                    }
                 }
             }
         } else {
