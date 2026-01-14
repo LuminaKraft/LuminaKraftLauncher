@@ -458,10 +458,17 @@ where
     emit_progress("progress.savingInstanceConfig".to_string(), 96.0, "saving_instance_config".to_string());
 
     // Calculate integrity data (using the zip hash we calculated earlier)
-    let integrity_data = if modpack.category.as_ref()
+    // Save integrity for:
+    // 1. Official/partner modpacks (always tracked)
+    // 2. Any modpack with protection enabled (any flag is false)
+    let is_managed_category = modpack.category.as_ref()
         .map(|c| c == "official" || c == "partner")
-        .unwrap_or(false)
-    {
+        .unwrap_or(false);
+    let has_protection = modpack.allow_custom_mods == Some(false)
+        || modpack.allow_custom_resourcepacks == Some(false)
+        || modpack.allow_custom_configs == Some(false);
+    
+    let integrity_data = if is_managed_category || has_protection {
         emit_progress("progress.calculatingIntegrity".to_string(), 97.0, "calculating_integrity".to_string());
         match crate::modpack::integrity::create_integrity_data_from_list(&instance_dirs.instance_dir, &managed_files_set, zip_hash) {
             Ok(data) => {
