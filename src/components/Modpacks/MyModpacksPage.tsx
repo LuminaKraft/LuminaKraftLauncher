@@ -288,9 +288,18 @@ export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: My
               );
               const isCacheIncomplete = missingFields.length > 0;
 
-              if (isCacheIncomplete) {
+              // Check if this is a server modpack (has urlModpackZip) - these need protection flags from server
+              const isServerModpack = !!modpack.urlModpackZip;
+
+              // For server modpacks, ALWAYS fetch protection flags from server
+              // For local modpacks with incomplete cache, also try to fetch
+              if (isServerModpack || isCacheIncomplete) {
                 // Try to enrich from server
-                console.log(`🔄 Cache incomplete for ${id} (missing: ${missingFields.join(', ')}), fetching from server...`);
+                if (isCacheIncomplete) {
+                  console.log(`🔄 Cache incomplete for ${id} (missing: ${missingFields.join(', ')}), fetching from server...`);
+                } else {
+                  console.log(`🔒 Fetching protection flags from server for ${id}...`);
+                }
                 try {
                   const serverData = await launcherService.fetchModpackDetails(id);
                   if (serverData) {
@@ -304,30 +313,33 @@ export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: My
                       shortDescription: modpack.shortDescription || serverData.shortDescription || '',
                       description: modpack.description || serverData.description || '',
                       urlModpackZip: modpack.urlModpackZip || serverData.urlModpackZip || '',
-                      // Protection flags always from server (modpack creator controls these)
+                      // Protection flags ALWAYS from server (modpack creator controls these)
                       allowCustomMods: serverData.allowCustomMods,
                       allowCustomResourcepacks: serverData.allowCustomResourcepacks,
                       allowCustomConfigs: serverData.allowCustomConfigs,
                       category: serverData.category,
                     };
 
-                    // Update cache file with complete data
-                    await invoke('save_modpack_metadata_json', {
-                      modpackId: id,
-                      modpackJson: JSON.stringify({
-                        name: enrichedModpack.name || '',
-                        logo: modpack.logo || serverData.logo || '', // Keep original (may be local path)
-                        backgroundImage: modpack.backgroundImage || serverData.backgroundImage || '', // Keep original
-                        shortDescription: enrichedModpack.shortDescription,
-                        description: enrichedModpack.description,
-                        urlModpackZip: enrichedModpack.urlModpackZip
-                      })
-                    });
-                    console.log(`✅ Cache updated for ${id}`);
+                    // Only update cache file if UI fields were missing
+                    if (isCacheIncomplete) {
+                      await invoke('save_modpack_metadata_json', {
+                        modpackId: id,
+                        modpackJson: JSON.stringify({
+                          name: enrichedModpack.name || '',
+                          logo: modpack.logo || serverData.logo || '', // Keep original (may be local path)
+                          backgroundImage: modpack.backgroundImage || serverData.backgroundImage || '', // Keep original
+                          shortDescription: enrichedModpack.shortDescription,
+                          description: enrichedModpack.description,
+                          urlModpackZip: enrichedModpack.urlModpackZip
+                        })
+                      });
+                      console.log(`✅ Cache updated for ${id}`);
+                    }
+                    console.log(`🔒 Protection flags loaded: mods=${enrichedModpack.allowCustomMods}, rp=${enrichedModpack.allowCustomResourcepacks}, cfg=${enrichedModpack.allowCustomConfigs}`);
                     modpack = enrichedModpack;
                   }
                 } catch (enrichError) {
-                  console.log(`Could not enrich cache for ${id}:`, enrichError);
+                  console.log(`Could not enrich/fetch protection flags for ${id}:`, enrichError);
                 }
               }
 

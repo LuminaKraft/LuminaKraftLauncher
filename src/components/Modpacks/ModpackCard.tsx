@@ -311,6 +311,16 @@ const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect
   const displayName = modpack.name;
   const displayDescription = modpack.shortDescription || modpack.description || '';
 
+  // DEBUG: Log modpack protection flags
+  console.log('🛡️ ModpackCard protection flags:', {
+    modpackId: modpack.id,
+    name: modpack.name,
+    category: modpack.category,
+    allowCustomMods: modpack.allowCustomMods,
+    allowCustomResourcepacks: modpack.allowCustomResourcepacks,
+    allowCustomConfigs: modpack.allowCustomConfigs,
+  });
+
   const reloadInstanceMetadata = async () => {
     try {
       const metadataJson = await invoke<string | null>('get_instance_metadata', {

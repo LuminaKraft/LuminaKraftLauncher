@@ -73,6 +73,16 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
   const [allowCustomConfigs, setAllowCustomConfigs] = useState(metadata?.allow_custom_configs ?? true);
   const [showAdvancedProtection, setShowAdvancedProtection] = useState(false);
 
+  // DEBUG: Log metadata received
+  console.log('🔒 ProfileOptionsModal metadata:', {
+    received: metadata,
+    allow_custom_mods: metadata?.allow_custom_mods,
+    allow_custom_resourcepacks: metadata?.allow_custom_resourcepacks,
+    allow_custom_configs: metadata?.allow_custom_configs,
+    category: metadata?.category,
+    computed: { allowCustomMods, allowCustomResourcepacks, allowCustomConfigs }
+  });
+
   // Derived state for protection mode
   const isProtected = !allowCustomMods && !allowCustomResourcepacks && !allowCustomConfigs;
   const isFullyOpen = allowCustomMods && allowCustomResourcepacks && allowCustomConfigs;
