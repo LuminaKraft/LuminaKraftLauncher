@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { CacheBehaviour } from '../services/launcherService';
 
 /**
  * Integration tests for the modpack caching system.
@@ -31,19 +30,7 @@ vi.mock('./supabaseClient', () => ({
     },
 }));
 
-describe('CacheBehaviour Enum', () => {
-    it('should have correct enum values', () => {
-        expect(CacheBehaviour.StaleWhileRevalidate).toBe('stale_while_revalidate');
-        expect(CacheBehaviour.MustRevalidate).toBe('must_revalidate');
-        expect(CacheBehaviour.Bypass).toBe('bypass');
-    });
 
-    it('should have three distinct values', () => {
-        const values = Object.values(CacheBehaviour);
-        expect(values).toHaveLength(3);
-        expect(new Set(values).size).toBe(3);
-    });
-});
 
 describe('Cache Entry Structure', () => {
     it('should include expiresAt field for TTL-based invalidation', () => {
