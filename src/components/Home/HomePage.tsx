@@ -18,7 +18,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
   const [featuredModpacks, setFeaturedModpacks] = useState<Modpack[]>([]);
   const [discoverModpacks, setDiscoverModpacks] = useState<Modpack[]>([]);
   const [localModpacksMap, setLocalModpacksMap] = useState<Map<string, Modpack>>(new Map());
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
 
   const displayName = useMemo(() => {
     // 1. Try Discord Global Name (LuminaKraft Profile)
@@ -193,12 +193,6 @@ export function HomePage({ onNavigate }: HomePageProps) {
         <h1 className="text-3xl font-bold text-white mb-1">
           {t('home.hero.title')} <span className="text-blue-400">{displayName}</span>
         </h1>
-        {loading && (
-          <div className="flex items-center gap-2 mt-2 text-dark-400 text-sm">
-            <div className="w-4 h-4 border-2 border-dark-400 border-t-transparent rounded-full animate-spin"></div>
-            <span>{t('home.updatingData')}</span>
-          </div>
-        )}
       </div>
 
       {/* Jump back in Section */}

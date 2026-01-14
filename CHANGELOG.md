@@ -16,11 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Parallel Data Fetching**: Refactored `PublishedModpacksPage` to use `Promise.all` for simultaneous fetching of permissions and Discord data
 - **Skeleton Loading**: Instant visual feedback while data loads
   - Added `SkeletonCard`, `SkeletonGrid`, `SkeletonHeader`, and `SkeletonSection` components
-  - Replaced full-screen spinners with skeleton UI on `PublishedModpacksPage`, `MyModpacksPage`, and `ModpacksPage`
+  - Replaced spinners with skeleton UI on `PublishedModpacksPage`, `ModpacksPage`, and `AccountPage`
   - Removed blocking overlay modal in Explore page
 - **Context-Level Permission Caching**: Added `userPermissions` state to `LauncherContext` for app-wide permission access
   - New `refreshPermissions()` method for on-demand permission refresh
   - Permissions loaded on app init and after profile updates
+
+### 🎨 **UI/UX**
+- Removed distracting inline loading indicator from Homepage hero section
 
 ## [0.1.6] - 2026-01-14
 

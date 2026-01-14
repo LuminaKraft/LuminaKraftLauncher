@@ -354,9 +354,34 @@ const AccountPage: React.FC = () => {
 
   if (isLoadingLuminaKraft) {
     return (
-      <div className="p-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-lumina-500"></div>
+      <div className="p-6 max-w-4xl mx-auto">
+        {/* Title skeleton */}
+        <div className="h-9 w-32 bg-dark-700 rounded mb-6 animate-pulse" />
+
+        {/* Account card skeleton */}
+        <div className="bg-dark-900 rounded-lg p-6 border border-dark-700 animate-pulse">
+          {/* Header skeleton */}
+          <div className="flex items-center space-x-3 mb-6">
+            <div className="w-6 h-6 bg-dark-700 rounded" />
+            <div className="h-6 w-40 bg-dark-700 rounded" />
+          </div>
+
+          {/* Profile section skeleton */}
+          <div className="flex items-center space-x-4 mb-6">
+            <div className="w-16 h-16 bg-dark-700 rounded-full" />
+            <div className="flex-1">
+              <div className="h-5 w-32 bg-dark-700 rounded mb-2" />
+              <div className="h-4 w-48 bg-dark-700 rounded" />
+            </div>
+          </div>
+
+          {/* Linked accounts skeleton */}
+          <div className="h-4 w-28 bg-dark-700 rounded mb-3" />
+          <div className="space-y-2">
+            <div className="h-14 bg-dark-700/50 rounded-lg" />
+            <div className="h-14 bg-dark-700/50 rounded-lg" />
+            <div className="h-14 bg-dark-700/50 rounded-lg" />
+          </div>
         </div>
       </div>
     );
