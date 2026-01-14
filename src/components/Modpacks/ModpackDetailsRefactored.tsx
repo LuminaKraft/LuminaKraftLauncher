@@ -26,8 +26,8 @@ interface ModpackDetailsProps {
   onBack: () => void;
   features?: any[] | null;
   isReadOnly?: boolean; // Read-only mode: hide management actions
-  onModpackUpdated?: (updates: { name?: string; logo?: string; backgroundImage?: string }) => void; // Called when modpack is updated
-  onNavigate?: (section: string, modpackId?: string) => void;
+  onModpackUpdated?: (_updates: { name?: string; logo?: string; backgroundImage?: string }) => void; // Called when modpack is updated
+  onNavigate?: (_section: string, _modpackId?: string) => void;
   isLoadingDetails?: boolean;
 }
 

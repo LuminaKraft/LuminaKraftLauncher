@@ -1165,7 +1165,7 @@ export class ModpackManagementService {
         try {
           const logoPath = modpack.logo_url.split('/').slice(3).join('/');
           if (logoPath) filePaths.push(logoPath);
-        } catch (e) {
+        } catch {
           console.warn('Failed to parse logo_url:', modpack.logo_url);
         }
       }
@@ -1174,7 +1174,7 @@ export class ModpackManagementService {
         try {
           const bannerPath = modpack.banner_url.split('/').slice(3).join('/');
           if (bannerPath) filePaths.push(bannerPath);
-        } catch (e) {
+        } catch {
           console.warn('Failed to parse banner_url:', modpack.banner_url);
         }
       }

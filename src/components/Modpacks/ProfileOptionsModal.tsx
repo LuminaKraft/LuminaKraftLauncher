@@ -13,7 +13,7 @@ interface ProfileOptionsModalProps {
   onClose: () => void;
   isLocalModpack?: boolean; // True if imported locally, not from server
   onSaveComplete?: () => void; // Called after successful save to refresh parent data
-  onModpackUpdated?: (updates: { name?: string; logo?: string; backgroundImage?: string }) => void; // Called to update parent state
+  onModpackUpdated?: (_updates: { name?: string; logo?: string; backgroundImage?: string }) => void; // Called to update parent state
   metadata?: {
     recommendedRam?: number;
     ramAllocation?: string;

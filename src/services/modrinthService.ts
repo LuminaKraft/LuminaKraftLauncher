@@ -29,7 +29,7 @@ export class ModrinthService {
     /**
      * Make a request to the Modrinth API
      */
-    private async fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T | null> {
+    private async fetchApi<T>(endpoint: string, options?: any): Promise<T | null> {
         try {
             const response = await fetch(`${MODRINTH_API_BASE}${endpoint}`, {
                 ...options,

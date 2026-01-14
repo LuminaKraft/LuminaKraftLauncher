@@ -86,7 +86,7 @@ const LogsSection: React.FC<LogsSectionProps> = ({ logs, modpackId }) => {
       setCopied(true);
       toast.success(t('modpacks.logsCopied'));
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
+    } catch {
       toast.error(t('modpacks.logsCopyFailed'));
     }
   };

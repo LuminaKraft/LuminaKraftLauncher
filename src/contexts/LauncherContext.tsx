@@ -957,7 +957,6 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
             }
           })();
           return true; // Return immediately - install continues in background
-          break;
         case 'update':
           try {
             const updateFailedModsResult = await launcherService.updateModpack(modpackId, onProgress);
@@ -1010,7 +1009,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
           let unlistenStart: (() => void) | null = null;
           let unlistenExit: (() => void) | null = null;
           let startTime: number | null = null;
-          let activeStatusInterval: NodeJS.Timeout | null = null;
+          let activeStatusInterval: ReturnType<typeof setInterval> | null = null;
 
           try {
             unlistenStart = await listen(startEvent, () => {
@@ -1682,7 +1681,7 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
       // Clean up localStorage used for import name display
       try {
         localStorage.removeItem(`installing_modpack_${safeName}`);
-      } catch (e) {
+      } catch (_e) {
         // Ignore cleanup errors
       }
 

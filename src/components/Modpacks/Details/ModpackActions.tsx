@@ -43,8 +43,8 @@ interface ModpackActionsProps {
   };
   isReadOnly?: boolean; // Read-only mode: show Install/Installed only
   showProfileOptions?: boolean;
-  setShowProfileOptions?: (show: boolean) => void;
-  onNavigate?: (section: string, modpackId?: string) => void;
+  setShowProfileOptions?: (_show: boolean) => void;
+  onNavigate?: (_section: string, _modpackId?: string) => void;
 }
 
 const ModpackActions: React.FC<ModpackActionsProps> = ({

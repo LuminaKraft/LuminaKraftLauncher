@@ -260,7 +260,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
     setIsUpdating(true);
     try {
       await authService.syncDiscordRoles();
-      const { success, error: _error } = await service.updateModpack(modpackId, {
+      const { success } = await service.updateModpack(modpackId, {
         name: formData.name,
         shortDescription: formData.shortDescription,
         description: formData.description,
@@ -274,7 +274,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
 
       if (success) toast.success(t('toast.generalSettingsSaved'));
       else toast.error(t('errors.failedSaveChanges'));
-    } catch (error) {
+    } catch {
       toast.error(t('errors.failedSaveChanges'));
     } finally {
       setIsUpdating(false);
@@ -324,7 +324,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
       await service.deleteModpackImage(imageId);
       setImages(prev => prev.filter(img => img.id !== imageId));
       toast.success(t('toast.screenshotDeleted'));
-    } catch (error) {
+    } catch {
       toast.error(t('errors.failedDeleteScreenshot'));
     } finally {
       setIsUpdating(false);
@@ -646,7 +646,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
     try {
       await service.updateModpack(modpackId, { isActive: newStatus });
       setFormData(prev => prev ? ({ ...prev, isActive: newStatus }) : null);
-    } catch (error) {
+    } catch {
       toast.error('Failed to update visibility');
     } finally {
       setIsUpdating(false);
@@ -660,7 +660,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
     try {
       await service.updateModpack(modpackId, { isComingSoon: newStatus });
       setFormData(prev => prev ? ({ ...prev, isComingSoon: newStatus }) : null);
-    } catch (error) {
+    } catch {
       toast.error('Failed to update Coming Soon status');
     } finally {
       setIsUpdating(false);
@@ -678,7 +678,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
       } else {
         throw new Error(result.error);
       }
-    } catch (error) {
+    } catch {
       toast.error('Failed to delete modpack', { id: toastId });
       setIsUpdating(false);
     }

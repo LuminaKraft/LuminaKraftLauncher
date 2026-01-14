@@ -29,7 +29,7 @@ interface LocalInstance {
 
 interface MyModpacksPageProps {
   initialModpackId?: string;
-  onNavigate?: (section: string, modpackId?: string) => void;
+  onNavigate?: (_section: string, _modpackId?: string) => void;
 }
 
 export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: MyModpacksPageProps) {
@@ -356,7 +356,7 @@ export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: My
                 }
                 dataMap.set(id, modpack);
               }
-            } catch (supabaseError) {
+            } catch {
               // Supabase also failed - check if it's a local community modpack
               console.log(`Could not fetch details for ${id} from cache or Supabase`);
 

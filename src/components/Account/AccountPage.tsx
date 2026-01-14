@@ -78,7 +78,7 @@ const AccountPage: React.FC = () => {
                   .single();
                 const { data } = await timeout(profilePromise as any, 3000, { data: null } as any);
                 return data;
-              } catch (e) { return null; }
+              } catch { return null; }
             })()
           ]);
 

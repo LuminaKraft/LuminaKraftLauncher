@@ -11,7 +11,7 @@ interface ValidationData {
 }
 
 interface UseModpackValidationProps {
-    onManifestParsed?: (data: ParsedModpackData) => void;
+    onManifestParsed?: (_data: ParsedModpackData) => void;
 }
 
 export function useModpackValidation({ onManifestParsed }: UseModpackValidationProps = {}) {

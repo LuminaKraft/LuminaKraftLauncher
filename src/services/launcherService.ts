@@ -13,17 +13,7 @@ import type {
   ProgressInfo
 } from '../types/launcher';
 
-/**
- * Cache behaviour patterns inspired by Modrinth's approach:
- * - StaleWhileRevalidate: Return cached data immediately, revalidate in background
- * - MustRevalidate: Force revalidation if cache is expired
- * - Bypass: Skip cache entirely, always fetch fresh
- */
-export enum CacheBehaviour {
-  StaleWhileRevalidate = 'stale_while_revalidate',
-  MustRevalidate = 'must_revalidate',
-  Bypass = 'bypass'
-}
+
 
 import { readFile } from '@tauri-apps/plugin-fs';
 import { IntegrityError } from './IntegrityError';

@@ -20,7 +20,7 @@ interface ModpackCardProps {
   hideServerBadges?: boolean; // Hide category and status badges for local modpacks
   isReadOnly?: boolean; // Read-only mode: only show Install/Installed buttons (for Home/Explore)
   onNavigateToMyModpacks?: () => void; // Callback to navigate to My Modpacks after install
-  onModpackUpdated?: (updates: { name?: string; logo?: string; backgroundImage?: string }) => void; // Called when modpack is updated
+  onModpackUpdated?: (_updates: { name?: string; logo?: string; backgroundImage?: string }) => void; // Called when modpack is updated
 }
 
 const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect, index = 0, hideServerBadges = false, isReadOnly = false, onNavigateToMyModpacks, onModpackUpdated }) => {

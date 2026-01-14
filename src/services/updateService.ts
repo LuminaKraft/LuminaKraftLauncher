@@ -158,7 +158,7 @@ class UpdateService {
         this.storeUpdateInfo(updateInfo);
         return updateInfo;
       }
-    } catch (error) {
+    } catch {
       // This is expected if GitHub API rate limits or no stable releases exist
       console.warn('⚠️ GitHub API unavailable or rate limited, falling back to Tauri updater');
       // Fallback to Tauri updater

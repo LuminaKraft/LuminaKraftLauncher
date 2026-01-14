@@ -12,7 +12,7 @@ interface MinecraftAccountDropdownProps {
   onClose: () => void;
   anchorRef: React.RefObject<HTMLDivElement>;
   userSettings: UserSettings;
-  onUpdateSettings: (settings: UserSettings) => void;
+  onUpdateSettings: (_settings: UserSettings) => void;
   onNavigateToAccount?: () => void;
 }
 
@@ -148,7 +148,7 @@ const MinecraftAccountDropdown: React.FC<MinecraftAccountDropdownProps> = ({
   const isMicrosoft = userSettings.authMethod === 'microsoft' && userSettings.microsoftAccount;
 
   return (
-    <div 
+    <div
       className="minecraft-account-dropdown w-72 bg-dark-800 border border-dark-600 rounded-lg shadow-xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-100"
       style={style}
     >
@@ -186,14 +186,14 @@ const MinecraftAccountDropdown: React.FC<MinecraftAccountDropdownProps> = ({
             <div>
               <label className="block text-xs text-gray-400 mb-1">{t('settings.username')}</label>
               <div className="flex space-x-2">
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={offlineUsername}
                   onChange={(e) => setOfflineUsername(e.target.value)}
                   className="flex-1 bg-dark-900 border border-dark-600 rounded px-2 py-1 text-sm text-white focus:ring-1 focus:ring-lumina-500 outline-none"
                   placeholder={t('settings.usernamePlaceholder')}
                 />
-                <button 
+                <button
                   onClick={handleSaveOfflineUsername}
                   className="px-3 py-1 bg-dark-600 hover:bg-dark-500 text-white text-xs rounded transition-colors"
                 >
@@ -211,8 +211,8 @@ const MinecraftAccountDropdown: React.FC<MinecraftAccountDropdownProps> = ({
               </div>
             </div>
 
-            <button 
-              onClick={handleMicrosoftLogin} 
+            <button
+              onClick={handleMicrosoftLogin}
               disabled={isAuthenticating}
               className="w-full btn-primary flex items-center justify-center space-x-2 py-2"
             >
@@ -233,8 +233,8 @@ const MinecraftAccountDropdown: React.FC<MinecraftAccountDropdownProps> = ({
           </div>
         ) : (
           <div className="space-y-3">
-            <button 
-              onClick={handleSwitchToOffline} 
+            <button
+              onClick={handleSwitchToOffline}
               className="w-full btn-secondary flex items-center justify-center space-x-2 text-sm"
             >
               <LogOut className="w-4 h-4" />

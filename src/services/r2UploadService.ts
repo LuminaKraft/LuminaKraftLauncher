@@ -46,7 +46,7 @@ export class R2UploadService {
     file: File,
     modpackId: string,
     fileType: 'modpack' | 'logo' | 'banner' | 'screenshot' = 'modpack',
-    onProgress?: (progress: UploadProgress) => void,
+    onProgress?: (_progress: UploadProgress) => void,
     sortOrder?: number
   ): Promise<{ fileUrl: string; fileSize: number; fileSha256?: string }> {
     try {
