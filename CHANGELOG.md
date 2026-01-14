@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Fixed mods from overrides not being recognized on Windows**
   - Path separators were not normalized (`mods\file.jar` vs `mods/file.jar`)
   - Override files are now tracked with forward slashes on all platforms
+- **Fixed modpack protection status not showing correctly in Profile Options**
+  - Protection flags from database were not being passed to the UI
+  - Now correctly merges remote protection settings with local instance metadata
 
 ### ⚡ **Performance**
 - **Service-Level Caching**: Added TTL-based caching to `authService` and `modpackManagementService`

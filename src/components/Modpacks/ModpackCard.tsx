@@ -684,7 +684,14 @@ const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect
         isOpen={showProfileOptionsModal}
         onClose={() => setShowProfileOptionsModal(false)}
         isLocalModpack={!modpack.urlModpackZip}
-        metadata={instanceMetadata}
+        metadata={{
+          ...instanceMetadata,
+          // Merge protection flags from remote modpack data (takes precedence over local)
+          allow_custom_mods: modpack.allowCustomMods,
+          allow_custom_resourcepacks: modpack.allowCustomResourcepacks,
+          allow_custom_configs: modpack.allowCustomConfigs,
+          category: modpack.category,
+        }}
         onSaveComplete={reloadInstanceMetadata}
         onModpackUpdated={onModpackUpdated}
       />
