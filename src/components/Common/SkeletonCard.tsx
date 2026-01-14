@@ -81,4 +81,33 @@ export const SkeletonGrid: React.FC<SkeletonGridProps> = ({ count = 6, variant =
     );
 };
 
+/**
+ * Skeleton for page headers (title + subtitle + action button)
+ */
+export const SkeletonHeader: React.FC<{ showButton?: boolean }> = ({ showButton = true }) => {
+    return (
+        <div className="flex justify-between items-center mb-8 animate-pulse">
+            <div>
+                <div className="h-8 w-48 bg-gray-200 dark:bg-dark-700 rounded mb-2" />
+                <div className="h-4 w-64 bg-gray-200 dark:bg-dark-700 rounded" />
+            </div>
+            {showButton && (
+                <div className="h-12 w-40 bg-gray-200 dark:bg-dark-700 rounded-lg" />
+            )}
+        </div>
+    );
+};
+
+/**
+ * Skeleton for section titles with count badge
+ */
+export const SkeletonSection: React.FC = () => {
+    return (
+        <div className="flex items-center space-x-2 border-b border-dark-700 pb-2 mb-4 animate-pulse">
+            <div className="h-6 w-32 bg-gray-200 dark:bg-dark-700 rounded" />
+            <div className="h-5 w-8 bg-gray-200 dark:bg-dark-700 rounded-full" />
+        </div>
+    );
+};
+
 export default SkeletonCard;

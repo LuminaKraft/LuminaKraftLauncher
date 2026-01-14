@@ -226,7 +226,33 @@ const ModpacksPage: React.FC<ModpacksPageProps> = ({ initialModpackId, onNavigat
 
       {/* Content */}
       <div className="flex-1 overflow-auto">
-        {filteredModpacks.length === 0 ? (
+        {showLoadingOverlay ? (
+          /* Skeleton loading state - inline, not blocking */
+          <div className="p-6 space-y-8">
+            {[1, 2, 3].map((section) => (
+              <div key={section} className="space-y-4">
+                {/* Section header skeleton */}
+                <div className="flex items-center space-x-2 border-b border-dark-700 pb-2 animate-pulse">
+                  <div className="h-6 w-32 bg-dark-700 rounded" />
+                  <div className="h-5 w-8 bg-dark-700 rounded-full" />
+                </div>
+                {/* Grid skeleton */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {[1, 2, 3].map((card) => (
+                    <div key={card} className="bg-dark-800 rounded-lg shadow-md overflow-hidden animate-pulse">
+                      <div className="h-48 bg-dark-700" />
+                      <div className="p-4">
+                        <div className="h-5 bg-dark-700 rounded w-3/4 mb-2" />
+                        <div className="h-4 bg-dark-700 rounded w-1/2 mb-3" />
+                        <div className="h-10 bg-dark-700 rounded-lg" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filteredModpacks.length === 0 ? (
           <div className="h-full flex items-center justify-center">
             <div className="text-center">
               <div className="w-16 h-16 bg-dark-700 rounded-lg flex items-center justify-center mx-auto mb-4">
@@ -319,23 +345,6 @@ const ModpacksPage: React.FC<ModpacksPageProps> = ({ initialModpackId, onNavigat
           </div>
         )}
       </div>
-
-      {/* Loading Overlay */}
-      {showLoadingOverlay && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] pointer-events-auto">
-          <div className="bg-dark-800 rounded-lg p-6 max-w-md w-full mx-4 border border-dark-700">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lumina-500 mx-auto mb-4"></div>
-              <h3 className="text-white text-lg font-semibold mb-2">
-                {t('modpacks.loading')}
-              </h3>
-              <p className="text-dark-300 text-sm">
-                {t('modpacks.serverData')}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

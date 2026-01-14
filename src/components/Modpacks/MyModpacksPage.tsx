@@ -681,11 +681,35 @@ export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: My
     }
   };
 
-  // Loading state
+  // Loading state - show skeleton instead of spinner
   if (loading && !selectedModpackId) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lumina-500"></div>
+      <div className="max-w-7xl mx-auto p-6">
+        {/* Header skeleton */}
+        <div className="flex justify-between items-center mb-8 animate-pulse">
+          <div>
+            <div className="h-8 w-48 bg-dark-700 rounded mb-2" />
+            <div className="h-4 w-64 bg-dark-700 rounded" />
+          </div>
+          <div className="h-12 w-40 bg-dark-700 rounded-lg" />
+        </div>
+        {/* Content skeleton grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div key={index} className="bg-dark-800 rounded-lg shadow-md overflow-hidden animate-pulse">
+              <div className="h-48 bg-dark-700" />
+              <div className="p-4">
+                <div className="h-5 bg-dark-700 rounded w-3/4 mb-2" />
+                <div className="h-4 bg-dark-700 rounded w-1/2 mb-3" />
+                <div className="flex gap-2 mb-3">
+                  <div className="h-6 w-20 bg-dark-700 rounded-full" />
+                  <div className="h-6 w-16 bg-dark-700 rounded-full" />
+                </div>
+                <div className="h-10 bg-dark-700 rounded-lg" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
