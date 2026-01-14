@@ -105,8 +105,39 @@ where
     Ok(())
 }
 
+/// Copy a directory and its contents recursively (Parallelized)
+fn copy_dir_recursively(src: &Path, dst: &Path) -> Result<()> {
+    use rayon::prelude::*;
+    use walkdir::WalkDir;
+
+    if !src.is_dir() {
+        return Err(anyhow!("{} no es un directorio", src.display()));
+    }
+    
+    let entries: Vec<_> = WalkDir::new(src)
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .collect();
+
+    entries.into_par_iter().for_each(|entry| {
+        let src_path = entry.path();
+        if src_path.is_file() {
+            if let Ok(relative) = src_path.strip_prefix(src) {
+                let dst_path = dst.join(relative);
+                if let Some(parent) = dst_path.parent() {
+                    let _ = std::fs::create_dir_all(parent);
+                }
+                let _ = std::fs::copy(src_path, dst_path);
+            }
+        }
+    });
+    
+    Ok(())
+}
+
 /// Get relative paths from overrides/ and client-overrides/ recursively
 pub fn get_override_relative_paths(temp_dir: &PathBuf) -> std::collections::HashSet<String> {
+    use walkdir::WalkDir;
     let mut paths = std::collections::HashSet::new();
     
     // Check both overrides and client-overrides
@@ -117,23 +148,14 @@ pub fn get_override_relative_paths(temp_dir: &PathBuf) -> std::collections::Hash
             continue;
         }
         
-        // Walk recursively to collect all file paths relative to the override folder
-        fn walk(current_path: PathBuf, base_dir: &PathBuf, paths: &mut std::collections::HashSet<String>) {
-            if let Ok(entries) = fs::read_dir(current_path) {
-                for entry in entries.flatten() {
-                    let path = entry.path();
-                    if path.is_dir() {
-                        walk(path, base_dir, paths);
-                    } else if path.is_file() {
-                        if let Ok(relative) = path.strip_prefix(base_dir) {
-                            paths.insert(relative.to_string_lossy().into_owned());
-                        }
-                    }
+        for entry in WalkDir::new(&overrides_dir).into_iter().filter_map(|e| e.ok()) {
+            let path = entry.path();
+            if path.is_file() {
+                if let Ok(relative) = path.strip_prefix(&overrides_dir) {
+                    paths.insert(relative.to_string_lossy().into_owned());
                 }
             }
         }
-        
-        walk(overrides_dir.clone(), &overrides_dir, &mut paths);
     }
     
     if !paths.is_empty() {
@@ -141,29 +163,4 @@ pub fn get_override_relative_paths(temp_dir: &PathBuf) -> std::collections::Hash
     }
     
     paths
-}
-
-/// Copy a directory and its contents recursively
-fn copy_dir_recursively(src: &Path, dst: &Path) -> Result<()> {
-    if !src.is_dir() {
-        return Err(anyhow!("{} no es un directorio", src.display()));
-    }
-    
-    if !dst.exists() {
-        fs::create_dir_all(dst)?;
-    }
-    
-    for entry in fs::read_dir(src)? {
-        let entry = entry?;
-        let src_path = entry.path();
-        let dst_path = dst.join(entry.file_name());
-        
-        if src_path.is_dir() {
-            copy_dir_recursively(&src_path, &dst_path)?;
-        } else {
-            fs::copy(&src_path, &dst_path)?;
-        }
-    }
-    
-    Ok(())
 }

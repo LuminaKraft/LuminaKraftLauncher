@@ -34,41 +34,50 @@ pub fn extract_zip(zip_path: &PathBuf, extract_to: &PathBuf) -> Result<()> {
         let _ = std::fs::remove_file(&temp_test_file);
     }
     
-    // Extract ZIP file
-    let file = std::fs::File::open(zip_path)
-        .map_err(|e| anyhow!("Failed to open ZIP file {}: {}", zip_path.display(), e))?;
+    // Parallel extraction
+    use rayon::prelude::*;
+    let mut archive = ZipArchive::new(std::fs::File::open(zip_path)?)
+        .map_err(|e| anyhow!("Failed to read ZIP archive: {}", e))?;
     
-    let mut archive = ZipArchive::new(file)
-        .map_err(|e| anyhow!("Failed to read ZIP archive {}: {}", zip_path.display(), e))?;
+    let file_names: Vec<String> = (0..archive.len())
+        .filter_map(|i| {
+            let file = archive.by_index(i).ok()?;
+            file.enclosed_name().map(|n| n.to_string_lossy().into_owned())
+        })
+        .collect();
+
+    // Use a shared file handle for multi-threaded reading (requires cloning the file)
+    let file_handle = std::fs::File::open(zip_path)?;
     
-    // Extract each file
-    for i in 0..archive.len() {
-        let mut file = archive.by_index(i)
-            .map_err(|e| anyhow!("Failed to access file {} in ZIP: {}", i, e))?;
+    file_names.into_par_iter().for_each(|name| {
+        let cloned_file = file_handle.try_clone().expect("Failed to clone file handle");
+        let mut archive = ZipArchive::new(cloned_file).expect("Failed to open ZipArchive");
         
-        let file_path = match file.enclosed_name() {
-            Some(path) => path,
-            None => continue,
-        };
-        
-        let output_path = extract_to.join(file_path);
-        
-        if file.is_dir() {
-            std::fs::create_dir_all(&output_path)
-                .map_err(|e| anyhow!("Failed to create directory {}: {}", output_path.display(), e))?;
-        } else {
-            if let Some(parent) = output_path.parent() {
-                std::fs::create_dir_all(parent)
-                    .map_err(|e| anyhow!("Failed to create parent directory {}: {}", parent.display(), e))?;
+        // Extract strictly within this scope to avoid lifetime issues
+        {
+            let file_result = archive.by_name(&name);
+            match file_result {
+                Ok(mut file) => {
+                    let output_path = extract_to.join(name);
+                    
+                    if file.is_dir() {
+                        let _ = std::fs::create_dir_all(&output_path);
+                    } else {
+                        if let Some(parent) = output_path.parent() {
+                            let _ = std::fs::create_dir_all(parent);
+                        }
+                        
+                        if let Ok(mut output_file) = std::fs::File::create(&output_path) {
+                            let _ = std::io::copy(&mut file, &mut output_file);
+                        }
+                    }
+                },
+                Err(_) => {
+                    eprintln!("⚠️ Warning: Failed to find file {} in ZIP during parallel extraction", name);
+                }
             }
-            
-            let mut output_file = std::fs::File::create(&output_path)
-                .map_err(|e| anyhow!("Failed to create output file {}: {}", output_path.display(), e))?;
-            
-            std::io::copy(&mut file, &mut output_file)
-                .map_err(|e| anyhow!("Failed to extract file {}: {}", output_path.display(), e))?;
-        }
-    }
+        };
+    });
     
     // Verify extraction worked
     match std::fs::read_dir(extract_to) {

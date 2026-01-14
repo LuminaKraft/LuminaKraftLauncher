@@ -959,10 +959,28 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
           return true; // Return immediately - install continues in background
           break;
         case 'update':
-          const updateFailedModsResult = await launcherService.updateModpack(modpackId, onProgress);
-          if (updateFailedModsResult && updateFailedModsResult.length > 0) {
-            setFailedMods(updateFailedModsResult);
-            setShowFailedModsDialog(true);
+          try {
+            const updateFailedModsResult = await launcherService.updateModpack(modpackId, onProgress);
+            if (updateFailedModsResult && updateFailedModsResult.length > 0) {
+              setFailedMods(updateFailedModsResult);
+              setShowFailedModsDialog(true);
+            }
+          } catch (error: any) {
+            console.error('Update failed:', error);
+            toast.error(t('modpacks.updateFailed', { error: error.message || String(error) }));
+          } finally {
+            // Always update status after completion or failure
+            const finalStatus = await launcherService.getModpackStatus(modpackId);
+            dispatch({
+              type: 'SET_MODPACK_STATE',
+              payload: {
+                id: modpackId,
+                state: {
+                  ...(state.modpackStates[modpackId] || createModpackState('installed')),
+                  status: finalStatus
+                },
+              },
+            });
           }
           break;
         case 'launch': {
@@ -1093,18 +1111,52 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
         }
         case 'repair':
           // Light repair - only reinstalls Minecraft dependencies, doesn't touch mods
-          const repairFailedModsResult = await launcherService.repairModpack(modpackId, onProgress);
-          if (repairFailedModsResult && repairFailedModsResult.length > 0) {
-            setFailedMods(repairFailedModsResult);
-            setShowFailedModsDialog(true);
+          try {
+            const repairFailedModsResult = await launcherService.repairModpack(modpackId, onProgress);
+            if (repairFailedModsResult && repairFailedModsResult.length > 0) {
+              setFailedMods(repairFailedModsResult);
+              setShowFailedModsDialog(true);
+            }
+          } catch (error: any) {
+            console.error('Repair failed:', error);
+            toast.error(`Repair failed: ${error.message || String(error)}`);
+          } finally {
+            const finalStatus = await launcherService.getModpackStatus(modpackId);
+            dispatch({
+              type: 'SET_MODPACK_STATE',
+              payload: {
+                id: modpackId,
+                state: {
+                  ...(state.modpackStates[modpackId] || createModpackState('installed')),
+                  status: finalStatus
+                },
+              },
+            });
           }
           break;
         case 'reinstall':
           // Aggressive reinstall - resets instance to clean state (removes added mods)
-          const reinstallFailedModsResult = await launcherService.reinstallModpack(modpackId, onProgress);
-          if (reinstallFailedModsResult && reinstallFailedModsResult.length > 0) {
-            setFailedMods(reinstallFailedModsResult);
-            setShowFailedModsDialog(true);
+          try {
+            const reinstallFailedModsResult = await launcherService.reinstallModpack(modpackId, onProgress);
+            if (reinstallFailedModsResult && reinstallFailedModsResult.length > 0) {
+              setFailedMods(reinstallFailedModsResult);
+              setShowFailedModsDialog(true);
+            }
+          } catch (error: any) {
+            console.error('Reinstall failed:', error);
+            toast.error(`Reinstall failed: ${error.message || String(error)}`);
+          } finally {
+            const finalStatus = await launcherService.getModpackStatus(modpackId);
+            dispatch({
+              type: 'SET_MODPACK_STATE',
+              payload: {
+                id: modpackId,
+                state: {
+                  ...(state.modpackStates[modpackId] || createModpackState('installed')),
+                  status: finalStatus
+                },
+              },
+            });
           }
           break;
         case 'stop':

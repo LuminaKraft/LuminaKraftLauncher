@@ -62,101 +62,87 @@ impl IntegrityResult {
     }
 }
 
-/// Calculate SHA256 hash of a file
+/// Calculate SHA256 hash of a file using streaming to avoid memory overhead
 pub fn hash_file(path: &PathBuf) -> Result<String> {
-    let data = std::fs::read(path)
-        .map_err(|e| anyhow!("Failed to read file {}: {}", path.display(), e))?;
+    use std::io::{Read, BufReader};
+    
+    let file = std::fs::File::open(path)
+        .map_err(|e| anyhow!("Failed to open file {}: {}", path.display(), e))?;
+    let mut reader = BufReader::with_capacity(64 * 1024, file);
     
     let mut hasher = Sha256::new();
-    hasher.update(&data);
-    let result = hasher.finalize();
+    let mut buffer = [0u8; 64 * 1024];
+
+    loop {
+        let n = reader.read(&mut buffer)
+            .map_err(|e| anyhow!("Failed to read file {}: {}", path.display(), e))?;
+        if n == 0 { break; }
+        hasher.update(&buffer[..n]);
+    }
     
+    let result = hasher.finalize();
     Ok(hex::encode(result))
 }
 
-/// Calculate hashes for all managed directories in an instance
+/// Calculate hashes for all managed directories in an instance (Parallelized)
 pub fn calculate_instance_hashes(instance_dir: &PathBuf) -> Result<HashMap<String, String>> {
-    let mut hashes = HashMap::new();
-    
-    // 1. Hash mods (non-recursive, only .jar)
-    hash_directory_simple(instance_dir, "mods", "jar", &mut hashes)?;
-    
-    // 2. Hash resourcepacks (non-recursive, only .zip)
-    hash_directory_simple(instance_dir, "resourcepacks", "zip", &mut hashes)?;
-    
-    // 3. Hash config (recursive, all files)
-    hash_directory_recursive(instance_dir, "config", &mut hashes)?;
-    
-    // 4. Hash scripts (recursive, all files)
-    hash_directory_recursive(instance_dir, "scripts", &mut hashes)?;
-    
-    Ok(hashes)
-}
+    use rayon::prelude::*;
 
-/// Helper to hash a directory non-recursively for specific extension
-fn hash_directory_simple(
-    instance_dir: &PathBuf, 
-    dir_name: &str, 
-    ext_filter: &str,
-    hashes: &mut HashMap<String, String>
-) -> Result<()> {
-    let dir_path = instance_dir.join(dir_name);
-    if !dir_path.exists() {
-        return Ok(());
-    }
+    let mut dir_list = Vec::new();
     
-    for entry in std::fs::read_dir(&dir_path)? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.is_file() {
-            if let Some(ext) = path.extension() {
-                if ext == ext_filter {
+    // Collect all files to hash first
+    let mut collect_dir = |dir_name: &str, recursive: bool, ext_filter: Option<&str>| -> Result<()> {
+        let root = instance_dir.join(dir_name);
+        if !root.exists() { return Ok(()); }
+
+        if recursive {
+            let walker = walkdir::WalkDir::new(&root);
+            for entry in walker {
+                let entry = entry.map_err(|e| anyhow!("WalkDir error: {}", e))?;
+                let path = entry.path();
+                if path.is_file() {
+                    let relative = path.strip_prefix(&root)
+                        .map_err(|e| anyhow!("Prefix error: {}", e))?;
+                    let relative_str = format!("{}/{}", dir_name, relative.to_string_lossy());
+                    dir_list.push((path.to_path_buf(), relative_str));
+                }
+            }
+        } else {
+            for entry in std::fs::read_dir(&root)? {
+                let entry = entry?;
+                let path = entry.path();
+                if path.is_file() {
+                    if let Some(filter) = ext_filter {
+                        if path.extension().and_then(|e| e.to_str()) != Some(filter) {
+                            continue;
+                        }
+                    }
                     let filename = entry.file_name().to_string_lossy().into_owned();
                     let relative_path = format!("{}/{}", dir_name, filename);
-                    let hash = hash_file(&path)?;
-                    hashes.insert(relative_path, hash);
+                    dir_list.push((path.to_path_buf(), relative_path));
                 }
             }
         }
-    }
-    Ok(())
-}
-
-/// Helper to hash a directory recursively
-fn hash_directory_recursive(
-    instance_dir: &PathBuf,
-    dir_name: &str,
-    hashes: &mut HashMap<String, String>
-) -> Result<()> {
-    let root_path = instance_dir.join(dir_name);
-    if !root_path.exists() {
-        return Ok(());
-    }
-
-    fn walk(
-        current_path: PathBuf, 
-        base_dir: &PathBuf, 
-        prefix: &str,
-        hashes: &mut HashMap<String, String>
-    ) -> Result<()> {
-        for entry in std::fs::read_dir(current_path)? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.is_dir() {
-                walk(path, base_dir, prefix, hashes)?;
-            } else if path.is_file() {
-                let relative = path.strip_prefix(base_dir)
-                    .map_err(|e| anyhow!("Failed to get relative path: {}", e))?;
-                let relative_str = format!("{}/{}", prefix, relative.to_string_lossy());
-                let hash = hash_file(&path)?;
-                hashes.insert(relative_str, hash);
-            }
-        }
         Ok(())
-    }
+    };
 
-    walk(root_path.clone(), &root_path, dir_name, hashes)
+    collect_dir("mods", false, Some("jar"))?;
+    collect_dir("resourcepacks", false, Some("zip"))?;
+    collect_dir("config", true, None)?;
+    collect_dir("scripts", true, None)?;
+
+    // Hash in parallel
+    let results: Result<Vec<(String, String)>> = dir_list.into_par_iter()
+        .map(|(path, rel_path)| {
+            let hash = hash_file(&path)?;
+            Ok((rel_path, hash))
+        })
+        .collect();
+
+    Ok(results?.into_iter().collect())
 }
+
+
 
 /// Create HMAC signature for the file hashes
 pub fn sign_hashes(hashes: &HashMap<String, String>) -> Result<String> {
@@ -190,22 +176,31 @@ pub fn verify_signature(hashes: &HashMap<String, String>, signature: &str) -> bo
     }
 }
 
-/// Create integrity data for an instance by scanning only managed files
+/// Create integrity data for an instance by scanning only managed files (Parallelized)
 pub fn create_integrity_data_from_list(
     instance_dir: &PathBuf, 
     managed_files: &HashSet<String>,
     zip_sha256: Option<String>
 ) -> Result<IntegrityData> {
-    let mut file_hashes = HashMap::new();
+    use rayon::prelude::*;
+
+    let managed_list: Vec<String> = managed_files.iter().cloned().collect();
     
-    for rel_path in managed_files {
-        let full_path = instance_dir.join(rel_path);
-        if full_path.exists() && full_path.is_file() {
-            let hash = hash_file(&full_path)?;
-            file_hashes.insert(rel_path.clone(), hash);
-        }
-    }
-    
+    let file_hashes_vec: Result<Vec<(String, String)>> = managed_list.into_par_iter()
+        .filter_map(|rel_path| {
+            let full_path = instance_dir.join(&rel_path);
+            if full_path.exists() && full_path.is_file() {
+                match hash_file(&full_path) {
+                    Ok(hash) => Some(Ok((rel_path, hash))),
+                    Err(e) => Some(Err(e)),
+                }
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    let file_hashes: HashMap<String, String> = file_hashes_vec?.into_iter().collect();
     let signature = sign_hashes(&file_hashes)?;
     
     Ok(IntegrityData {
