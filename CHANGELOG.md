@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Snappy hover effects and interactive elements.
   - Accelerated entry animations for Installation Info, Requirements, and Features blocks (from 0.4s to 0.15s).
   - Faster screenshot gallery: Opening, closing, and switching images now respond in 75ms with minimal delays.
+  - **Instant Startup Experience**:
+    - Eliminated global loading screens for immediate application shell access.
+    - Parallelized local instance detection and remote API fetching for near-instant "Jump back in" visibility.
+    - Non-blocking homepage updates with subtle background loading indicators.
 - **Navigation Efficiency**:
   - Implemented immediate rendering for Modpack Details when navigating from different sections (Homepage, Sidebar).
   - Eliminated redundant "Loading" screens during cross-section selection.

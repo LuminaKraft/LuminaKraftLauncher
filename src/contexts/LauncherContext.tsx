@@ -377,6 +377,13 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // Load local modpack states immediately on mount
+  useEffect(() => {
+    loadModpackStates().catch(error => {
+      console.error('Error loading initial modpack states:', error);
+    });
+  }, []);
+
   // Load modpack states when data is loaded
   useEffect(() => {
     if (state.modpacksData) {
@@ -578,9 +585,32 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
   };
 
   const loadModpackStates = async () => {
+    // 1. Load local modpacks that are not in server data (or if server data not loaded yet)
+    try {
+      const localModpacksJson = await invoke<string>('get_local_modpacks');
+      const localModpacks: { id: string }[] = JSON.parse(localModpacksJson);
+      const serverModpackIds = new Set(state.modpacksData?.modpacks.map(m => m.id) || []);
+
+      for (const localModpack of localModpacks) {
+        // If server data is not yet loaded, we treat all local modpacks as "installed"
+        // If server data IS loaded, we only add if not already handled by server data loop
+        if (!state.modpacksData || !serverModpackIds.has(localModpack.id)) {
+          dispatch({
+            type: 'SET_MODPACK_STATE',
+            payload: {
+              id: localModpack.id,
+              state: createModpackState('installed'),
+            },
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error loading local modpacks state:', error);
+    }
+
     if (!state.modpacksData) return;
 
-    // Load states for server modpacks
+    // 2. Load/Update states for server modpacks
     for (const modpack of state.modpacksData.modpacks) {
       try {
         const status = await launcherService.getModpackStatus(modpack.id);
@@ -603,30 +633,6 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
           },
         });
       }
-    }
-
-    // Also load local modpacks that are not in server data
-    try {
-      const localModpacksJson = await invoke<string>('get_local_modpacks');
-      const localModpacks: {
-        id: string
-      }[] = JSON.parse(localModpacksJson);
-      const serverModpackIds = new Set(state.modpacksData.modpacks.map(m => m.id));
-
-      for (const localModpack of localModpacks) {
-        if (!serverModpackIds.has(localModpack.id)) {
-          // This is a local-only modpack
-          dispatch({
-            type: 'SET_MODPACK_STATE',
-            payload: {
-              id: localModpack.id,
-              state: createModpackState('installed'),
-            },
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Error loading local modpacks:', error);
     }
   };
 

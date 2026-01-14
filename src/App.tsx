@@ -14,7 +14,7 @@ import SettingsPage from './components/Settings/SettingsPage';
 import AboutPage from './components/About/AboutPage';
 import AccountPage from './components/Account/AccountPage';
 import UpdateDialog from './components/UpdateDialog';
-import { Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
 import LauncherService from './services/launcherService';
 import { updateService, UpdateInfo } from './services/updateService';
 import './App.css';
@@ -298,20 +298,8 @@ function AppContent() {
     }
   };
 
-  // Mostrar pantalla de carga inicial solo si no hay datos y está cargando
-  if (isLoading && !modpacksData) {
-    return (
-      <div className="flex h-screen bg-dark-900 text-white">
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <Loader2 className="w-12 h-12 text-lumina-500 animate-spin mx-auto mb-4" />
-            <h2 className="text-xl font-semibold mb-2">Cargando LuminaKraft Launcher</h2>
-            <p className="text-dark-400">Conectando con los servidores...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Los componentes individuales (HomePage, etc.) ahora manejan su propio estado de carga
+  // para permitir que la estructura de la app (Sidebar, etc.) aparezca instantáneamente.
 
   // Mostrar error crítico solo si no hay datos en absoluto
   if (error && !modpacksData && !isLoading) {

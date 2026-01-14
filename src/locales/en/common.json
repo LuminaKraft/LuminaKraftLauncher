@@ -51,6 +51,7 @@
       "title": "Welcome back!",
       "subtitle": "Jump back in"
     },
+    "updatingData": "Updating data...",
     "jumpBackIn": {
       "title": "Jump back in",
       "empty": "No recent instances",
