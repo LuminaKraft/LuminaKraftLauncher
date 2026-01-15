@@ -21,7 +21,6 @@ pub async fn process_curseforge_modpack_with_failed_tracking<F>(
     category: Option<&str>,
     allow_custom_mods: bool,
     allow_custom_resourcepacks: bool,
-    allow_custom_configs: bool,
     old_installed_files: Option<HashSet<String>>,
     is_legacy_instance: bool,
     max_concurrent_downloads: Option<usize>,
@@ -154,13 +153,12 @@ where
         .map(|c| c == "official" || c == "partner")
         .unwrap_or(false);
     
-    let should_cleanup_configs = is_managed && !allow_custom_configs;
     let should_cleanup_mods = is_managed && !allow_custom_mods;
     let should_cleanup_resourcepacks = is_managed && !allow_custom_resourcepacks;
     
-    if should_cleanup_mods || should_cleanup_resourcepacks || should_cleanup_configs {
-        println!("🛡️ Anti-cheat cleanup: mods={}, resourcepacks={}, configs={}", should_cleanup_mods, should_cleanup_resourcepacks, should_cleanup_configs);
-        cleanup_unauthorized_files(instance_dir, &all_new_expected, should_cleanup_mods, should_cleanup_resourcepacks, should_cleanup_configs)?;
+    if should_cleanup_mods || should_cleanup_resourcepacks {
+        println!("🛡️ Anti-cheat cleanup: mods={}, resourcepacks={}", should_cleanup_mods, should_cleanup_resourcepacks);
+        cleanup_unauthorized_files(instance_dir, &all_new_expected, should_cleanup_mods, should_cleanup_resourcepacks)?;
     }
     
     // Process overrides AFTER cleanup - files from overrides will not be deleted
@@ -201,7 +199,6 @@ fn cleanup_unauthorized_files(
     expected_files: &HashSet<String>,
     cleanup_mods: bool,
     cleanup_resourcepacks: bool,
-    cleanup_configs: bool,
 ) -> Result<()> {
     let mut total_removed = 0;
     
@@ -211,11 +208,6 @@ fn cleanup_unauthorized_files(
     
     if cleanup_resourcepacks {
         total_removed += cleanup_directory_by_path(instance_dir, "resourcepacks", expected_files, "zip", false);
-    }
-
-    if cleanup_configs {
-        total_removed += cleanup_directory_by_path(instance_dir, "config", expected_files, "*", true);
-        total_removed += cleanup_directory_by_path(instance_dir, "scripts", expected_files, "*", true);
     }
     
     if total_removed > 0 {

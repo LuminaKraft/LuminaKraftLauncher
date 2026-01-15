@@ -397,7 +397,6 @@ export class ModpackManagementService {
     isComingSoon?: boolean;
     allowCustomMods?: boolean;
     allowCustomResourcepacks?: boolean;
-    allowCustomConfigs?: boolean;
   }): Promise<{ success: boolean; modpackId?: string; error?: string }> {
     try {
       // Check permissions (Discord authentication is required, not Microsoft)
@@ -457,7 +456,6 @@ export class ModpackManagementService {
           is_coming_soon: modpackData.isComingSoon || false,
           allow_custom_mods: modpackData.allowCustomMods ?? true,
           allow_custom_resourcepacks: modpackData.allowCustomResourcepacks ?? true,
-          allow_custom_configs: modpackData.allowCustomConfigs ?? true,
         } as any)
         .select('id')
         .single();
@@ -628,7 +626,6 @@ export class ModpackManagementService {
       isComingSoon: boolean;
       allowCustomMods: boolean;
       allowCustomResourcepacks: boolean;
-      allowCustomConfigs: boolean;
       recommendedRam: number;
     }>
   ): Promise<{ success: boolean; error?: string }> {
@@ -654,7 +651,6 @@ export class ModpackManagementService {
       if (updates.isComingSoon !== undefined) updateData.is_coming_soon = updates.isComingSoon;
       if (updates.allowCustomMods !== undefined) updateData.allow_custom_mods = updates.allowCustomMods;
       if (updates.allowCustomResourcepacks !== undefined) updateData.allow_custom_resourcepacks = updates.allowCustomResourcepacks;
-      if (updates.allowCustomConfigs !== undefined) updateData.allow_custom_configs = updates.allowCustomConfigs;
       if (updates.recommendedRam !== undefined) updateData.recommended_ram = updates.recommendedRam;
       if (updates.isActive !== undefined) {
         updateData.is_active = updates.isActive;

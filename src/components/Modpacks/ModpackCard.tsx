@@ -689,7 +689,6 @@ const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect
           // Merge protection flags from remote modpack data (takes precedence over local)
           allow_custom_mods: modpack.allowCustomMods,
           allow_custom_resourcepacks: modpack.allowCustomResourcepacks,
-          allow_custom_configs: modpack.allowCustomConfigs,
           category: modpack.category,
         }}
         onSaveComplete={reloadInstanceMetadata}

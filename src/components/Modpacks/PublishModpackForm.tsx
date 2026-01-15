@@ -40,7 +40,6 @@ interface FormData {
   isComingSoon?: boolean;
   allowCustomMods?: boolean;
   allowCustomResourcepacks?: boolean;
-  allowCustomConfigs?: boolean;
 }
 
 interface PublishModpackFormProps {
@@ -81,7 +80,6 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
       isComingSoon: false,
       allowCustomMods: true,
       allowCustomResourcepacks: true,
-      allowCustomConfigs: true
     };
   };
 
@@ -302,7 +300,6 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
         category: 'official',
         allowCustomMods: false,
         allowCustomResourcepacks: false,
-        allowCustomConfigs: false
       }));
     } else if (userRole === 'partner' && !formData.category) {
       setFormData(prev => ({
@@ -310,7 +307,6 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
         category: 'partner',
         allowCustomMods: false,
         allowCustomResourcepacks: false,
-        allowCustomConfigs: false
       }));
     } else if (userRole === 'user' && !formData.category) {
       setFormData(prev => ({
@@ -318,7 +314,6 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
         category: 'community',
         allowCustomMods: true,
         allowCustomResourcepacks: true,
-        allowCustomConfigs: true
       }));
     }
   }, [userRole]);
@@ -366,8 +361,8 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
   }, [formData.name.en, t]);
 
   // Derived state for Shield UI (Stability & Protection)
-  const isProtected = !formData.allowCustomMods && !formData.allowCustomResourcepacks && !formData.allowCustomConfigs;
-  const isFullyOpen = formData.allowCustomMods && formData.allowCustomResourcepacks && formData.allowCustomConfigs;
+  const isProtected = !formData.allowCustomMods && !formData.allowCustomResourcepacks;
+  const isFullyOpen = formData.allowCustomMods && formData.allowCustomResourcepacks;
   const isCustomMode = !isProtected && !isFullyOpen;
 
   const updateFormData = (field: string, value: any) => {
@@ -660,7 +655,6 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
         isComingSoon: formData.isComingSoon,
         allowCustomMods: formData.allowCustomMods,
         allowCustomResourcepacks: formData.allowCustomResourcepacks,
-        allowCustomConfigs: formData.allowCustomConfigs
       });
 
       if (!success || !modpackId) {
@@ -1155,7 +1149,6 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                         category: 'official',
                         allowCustomMods: false,
                         allowCustomResourcepacks: false,
-                        allowCustomConfigs: false
                       }));
                     }}
                     className={`p-6 rounded-lg border-2 cursor-pointer transition-all ${formData.category === 'official'
@@ -1185,7 +1178,6 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                         category: 'partner',
                         allowCustomMods: false,
                         allowCustomResourcepacks: false,
-                        allowCustomConfigs: false
                       }));
                     }}
                     className={`p-6 rounded-lg border-2 cursor-pointer transition-all ${formData.category === 'partner'
@@ -1220,7 +1212,6 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                         category: 'community',
                         allowCustomMods: true,
                         allowCustomResourcepacks: true,
-                        allowCustomConfigs: true
                       }));
                     }}
                     className={`p-6 rounded-lg border-2 cursor-pointer transition-all ${formData.category === 'community'
@@ -1264,7 +1255,6 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                         ...prev,
                         allowCustomMods: false,
                         allowCustomResourcepacks: false,
-                        allowCustomConfigs: false
                       }));
                     }}
                     className={`flex flex-col items-start p-5 rounded-xl border transition-all text-left group ${isProtected
@@ -1291,7 +1281,6 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                         ...prev,
                         allowCustomMods: true,
                         allowCustomResourcepacks: true,
-                        allowCustomConfigs: true
                       }));
                     }}
                     className={`flex flex-col items-start p-5 rounded-xl border transition-all text-left group ${isFullyOpen
@@ -1370,21 +1359,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                               </button>
                             </td>
                           </tr>
-                          <tr>
-                            <td className="py-2.5 font-medium">/config & /scripts</td>
-                            <td className="py-2.5 text-right">
-                              <button
-                                type="button"
-                                onClick={() => updateFormData('allowCustomConfigs', !formData.allowCustomConfigs)}
-                                className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-colors ${!formData.allowCustomConfigs
-                                  ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400'
-                                  : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
-                                  }`}
-                              >
-                                {!formData.allowCustomConfigs ? t('profileOptions.stability.protected') : t('profileOptions.stability.foldersTable.unprotected')}
-                              </button>
-                            </td>
-                          </tr>
+
                           <tr>
                             <td className="py-2.5 font-medium">/shaderpacks & others</td>
                             <td className="py-2.5 text-right text-emerald-600 dark:text-emerald-500/60 italic text-[11px]">

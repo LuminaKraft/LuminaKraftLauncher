@@ -316,7 +316,6 @@ export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: My
                       // Protection flags ALWAYS from server (modpack creator controls these)
                       allowCustomMods: serverData.allowCustomMods,
                       allowCustomResourcepacks: serverData.allowCustomResourcepacks,
-                      allowCustomConfigs: serverData.allowCustomConfigs,
                       category: serverData.category,
                     };
 
@@ -335,7 +334,6 @@ export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: My
                       });
                       console.log(`✅ Cache updated for ${id}`);
                     }
-                    console.log(`🔒 Protection flags loaded: mods=${enrichedModpack.allowCustomMods}, rp=${enrichedModpack.allowCustomResourcepacks}, cfg=${enrichedModpack.allowCustomConfigs}`);
                     modpack = enrichedModpack;
                   }
                 } catch (enrichError) {
@@ -726,7 +724,6 @@ export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: My
         // Protection flags from server data (cached)
         allowCustomMods: cachedData?.allowCustomMods,
         allowCustomResourcepacks: cachedData?.allowCustomResourcepacks,
-        allowCustomConfigs: cachedData?.allowCustomConfigs,
         isActive: true,
         isNew: false,
         isComingSoon: false

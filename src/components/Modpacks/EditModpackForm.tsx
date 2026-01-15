@@ -45,7 +45,6 @@ interface FormData {
   isComingSoon: boolean;
   allowCustomMods: boolean;
   allowCustomResourcepacks: boolean;
-  allowCustomConfigs: boolean;
   logoUrl?: string;
   bannerUrl?: string;
   category?: string;
@@ -197,7 +196,6 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
         isComingSoon: modpackData.is_coming_soon || false,
         allowCustomMods: modpackData.allow_custom_mods ?? true,
         allowCustomResourcepacks: modpackData.allow_custom_resourcepacks ?? true,
-        allowCustomConfigs: modpackData.allow_custom_configs ?? true,
         logoUrl: modpackData.logo_url,
         bannerUrl: modpackData.banner_url,
         category: modpackData.category
@@ -236,8 +234,8 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
   };
 
   // Derived state for Shield UI (Stability & Protection)
-  const isProtected = formData ? !formData.allowCustomMods && !formData.allowCustomResourcepacks && !formData.allowCustomConfigs : false;
-  const isFullyOpen = formData ? formData.allowCustomMods && formData.allowCustomResourcepacks && formData.allowCustomConfigs : false;
+  const isProtected = formData ? !formData.allowCustomMods && !formData.allowCustomResourcepacks : false;
+  const isFullyOpen = formData ? formData.allowCustomMods && formData.allowCustomResourcepacks : false;
   const isCustomMode = formData ? !isProtected && !isFullyOpen : false;
 
   // --- General Tab Handlers ---
@@ -1368,12 +1366,10 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                             ...prev,
                             allowCustomMods: false,
                             allowCustomResourcepacks: false,
-                            allowCustomConfigs: false
                           }) : null);
                           await service.updateModpack(modpackId, {
                             allowCustomMods: false,
                             allowCustomResourcepacks: false,
-                            allowCustomConfigs: false
                           });
                         }}
                         className={`flex flex-col items-start p-5 rounded-xl border transition-all text-left group ${isProtected
@@ -1402,12 +1398,10 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                             ...prev,
                             allowCustomMods: true,
                             allowCustomResourcepacks: true,
-                            allowCustomConfigs: true
                           }) : null);
                           await service.updateModpack(modpackId, {
                             allowCustomMods: true,
                             allowCustomResourcepacks: true,
-                            allowCustomConfigs: true
                           });
                         }}
                         className={`flex flex-col items-start p-5 rounded-xl border transition-all text-left group ${isFullyOpen
@@ -1496,25 +1490,6 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                                 </td>
                               </tr>
                               <tr>
-                                <td className="py-2.5 font-medium">/config & /scripts</td>
-                                <td className="py-2.5 text-right">
-                                  <button
-                                    type="button"
-                                    onClick={async () => {
-                                      const allowed = !formData.allowCustomConfigs;
-                                      setFormData(prev => prev ? ({ ...prev, allowCustomConfigs: allowed }) : null);
-                                      await service.updateModpack(modpackId, { allowCustomConfigs: allowed });
-                                    }}
-                                    className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-colors ${!formData.allowCustomConfigs
-                                      ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400'
-                                      : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
-                                      }`}
-                                  >
-                                    {!formData.allowCustomConfigs ? t('profileOptions.stability.protected') : t('profileOptions.stability.foldersTable.unprotected')}
-                                  </button>
-                                </td>
-                              </tr>
-                              <tr>
                                 <td className="py-2.5 font-medium">/shaderpacks & others</td>
                                 <td className="py-2.5 text-right text-emerald-600 dark:text-emerald-500/60 italic text-[11px]">
                                   {t('profileOptions.stability.foldersTable.unprotected')}
@@ -1595,7 +1570,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
           )}
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 

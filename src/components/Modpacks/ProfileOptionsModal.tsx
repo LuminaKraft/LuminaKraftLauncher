@@ -20,7 +20,6 @@ interface ProfileOptionsModalProps {
     customRam?: number;
     allow_custom_mods?: boolean;
     allow_custom_resourcepacks?: boolean;
-    allow_custom_configs?: boolean;
     category?: string;
   };
 }
@@ -70,12 +69,11 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
   // Protection Mode State
   const [allowCustomMods, setAllowCustomMods] = useState(metadata?.allow_custom_mods ?? true);
   const [allowCustomResourcepacks, setAllowCustomResourcepacks] = useState(metadata?.allow_custom_resourcepacks ?? true);
-  const [allowCustomConfigs, setAllowCustomConfigs] = useState(metadata?.allow_custom_configs ?? true);
   const [showAdvancedProtection, setShowAdvancedProtection] = useState(false);
 
   // Derived state for protection mode
-  const isProtected = !allowCustomMods && !allowCustomResourcepacks && !allowCustomConfigs;
-  const isFullyOpen = allowCustomMods && allowCustomResourcepacks && allowCustomConfigs;
+  const isProtected = !allowCustomMods && !allowCustomResourcepacks;
+  const isFullyOpen = allowCustomMods && allowCustomResourcepacks;
   const isCustomMode = !isProtected && !isFullyOpen;
 
   // Load system memory and cached images when modal opens
@@ -144,7 +142,6 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
 
       setAllowCustomMods(metadata.allow_custom_mods ?? true);
       setAllowCustomResourcepacks(metadata.allow_custom_resourcepacks ?? true);
-      setAllowCustomConfigs(metadata.allow_custom_configs ?? true);
     }
   }, [metadata, userSettings.allocatedRam]);
 
@@ -289,7 +286,6 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
         customRam: ramMode === 'custom' ? customRamValue : null,
         allowCustomMods,
         allowCustomResourcepacks,
-        allowCustomConfigs
       });
 
       toast.success(t('settings.saved'));
@@ -535,17 +531,6 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
                               }`}
                           >
                             {!allowCustomResourcepacks ? t('profileOptions.stability.protected') : t('profileOptions.stability.foldersTable.unprotected')}
-                          </div>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td className="py-2.5 text-white">/config & /scripts</td>
-                        <td className="py-2.5 text-right">
-                          <div
-                            className={`text-xs px-2 py-1 rounded transition-colors ${!allowCustomConfigs ? 'bg-lumina-500/20 text-lumina-400' : 'bg-dark-700 text-dark-400'
-                              }`}
-                          >
-                            {!allowCustomConfigs ? t('profileOptions.stability.protected') : t('profileOptions.stability.foldersTable.unprotected')}
                           </div>
                         </td>
                       </tr>

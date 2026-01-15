@@ -128,8 +128,6 @@ pub fn calculate_instance_hashes(instance_dir: &PathBuf) -> Result<HashMap<Strin
 
     collect_dir("mods", false, Some("jar"))?;
     collect_dir("resourcepacks", false, Some("zip"))?;
-    collect_dir("config", true, None)?;
-    collect_dir("scripts", true, None)?;
 
     // Hash in parallel
     let results: Result<Vec<(String, String)>> = dir_list.into_par_iter()
@@ -228,13 +226,12 @@ pub fn create_integrity_data(
 }
 
 /// Verify integrity of an instance
-/// allow_custom_mods/resourcepacks/configs: If true, don't report extra files as unauthorized
+/// allow_custom_mods/resourcepacks: If true, don't report extra files as unauthorized
 pub fn verify_integrity(
     instance_dir: &PathBuf,
     integrity_data: &IntegrityData,
     allow_custom_mods: bool,
     allow_custom_resourcepacks: bool,
-    allow_custom_configs: bool,
 ) -> IntegrityResult {
     let mut issues = Vec::new();
     
@@ -273,20 +270,17 @@ pub fn verify_integrity(
     // Check for unauthorized files (only if custom files are not allowed)
     for path in current_hashes.keys() {
         if !integrity_data.file_hashes.contains_key(path) {
-            // Determine if this is a mod, resourcepack or config
+            // Determine if this is a mod or resourcepack
             let is_mod = path.starts_with("mods/");
             let is_resourcepack = path.starts_with("resourcepacks/");
-            let is_config = path.starts_with("config/") || path.starts_with("scripts/");
             
             // Only report as unauthorized if custom files are NOT allowed for this type
             let should_report = if is_mod {
                 !allow_custom_mods
             } else if is_resourcepack {
                 !allow_custom_resourcepacks
-            } else if is_config {
-                !allow_custom_configs
             } else {
-                true // Other files in tracked directories always reported
+                false // Don't report other file types (configs change naturally)
             };
             
             if should_report {

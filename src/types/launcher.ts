@@ -32,7 +32,6 @@ export interface Modpack {
   partnerName?: string; // Name of the partner if category is 'partner'
   allowCustomMods?: boolean; // Allow users to add custom mods (default true)
   allowCustomResourcepacks?: boolean; // Allow users to add custom resourcepacks (default true)
-  allowCustomConfigs?: boolean; // Allow users to add custom configs (default true)
   fileSha256?: string; // SHA256 hash of the modpack ZIP file
   authorName?: string; // Display name of the author (for community modpacks)
 }

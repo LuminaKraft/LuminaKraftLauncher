@@ -56,7 +56,6 @@ pub async fn install_modpack(modpack: Modpack) -> Result<()> {
         category: None,  // No category for basic installs
         allow_custom_mods: Some(true),  // Allow custom mods by default for basic installs
         allow_custom_resourcepacks: Some(true),  // Allow custom resourcepacks by default for basic installs
-        allow_custom_configs: Some(true),  // Allow custom configs by default for basic installs
     };
     
     filesystem::save_instance_metadata(&metadata).await?;
@@ -393,7 +392,6 @@ where
                 modpack.category.as_deref(),
                 modpack.allow_custom_mods.unwrap_or(true),
                 modpack.allow_custom_resourcepacks.unwrap_or(true),
-                modpack.allow_custom_configs.unwrap_or(true),
                 old_installed_files.clone(),
                 do_aggressive_cleanup,
                 settings.max_concurrent_downloads.map(|v| v as usize),
@@ -429,7 +427,6 @@ where
                 modpack.category.as_deref(),
                 modpack.allow_custom_mods.unwrap_or(true),
                 modpack.allow_custom_resourcepacks.unwrap_or(true),
-                modpack.allow_custom_configs.unwrap_or(true),
                 old_installed_files.clone(),
                 do_aggressive_cleanup,
                 settings.max_concurrent_downloads.map(|v| v as usize),
@@ -465,8 +462,7 @@ where
         .map(|c| c == "official" || c == "partner")
         .unwrap_or(false);
     let has_protection = modpack.allow_custom_mods == Some(false)
-        || modpack.allow_custom_resourcepacks == Some(false)
-        || modpack.allow_custom_configs == Some(false);
+        || modpack.allow_custom_resourcepacks == Some(false);
     
     let integrity_data = if is_managed_category || has_protection {
         emit_progress("progress.calculatingIntegrity".to_string(), 97.0, "calculating_integrity".to_string());
@@ -502,8 +498,6 @@ where
         allow_custom_mods: modpack.allow_custom_mods,
         // Whether custom resource packs are allowed (only relevant for official/partner)
         allow_custom_resourcepacks: modpack.allow_custom_resourcepacks,
-        // Whether custom configurations are allowed (only relevant for official/partner)
-        allow_custom_configs: modpack.allow_custom_configs,
     };
     
     filesystem::save_instance_metadata(&metadata).await?;
@@ -618,20 +612,9 @@ pub async fn launch_modpack_action(
              // Offline/Missing: Backfill from metadata
              modpack.allow_custom_resourcepacks = metadata.allow_custom_resourcepacks;
         }
-
-        if let Some(new_allow_configs) = modpack.allow_custom_configs {
-            if metadata.allow_custom_configs != Some(new_allow_configs) {
-                metadata.allow_custom_configs = Some(new_allow_configs);
-                changed = true;
-            }
-        } else {
-             // Offline/Missing: Backfill from metadata
-             modpack.allow_custom_configs = metadata.allow_custom_configs;
-        }
-
         if changed {
-             println!("🔄 Syncing security flags to instance.json: mods={:?}, rp={:?}, configs={:?}", 
-                 metadata.allow_custom_mods, metadata.allow_custom_resourcepacks, metadata.allow_custom_configs);
+             println!("🔄 Syncing security flags to instance.json: mods={:?}, rp={:?}", 
+                 metadata.allow_custom_mods, metadata.allow_custom_resourcepacks);
              if let Err(e) = filesystem::save_instance_metadata(&metadata).await {
                  println!("⚠️ Failed to save updated metadata: {}", e);
              }
