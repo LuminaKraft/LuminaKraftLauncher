@@ -46,7 +46,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🐛 **Bug Fixes**
 - Fixed minor UI alignment issues in the sidebar.
 
-
 ## [0.1.6] - 2026-01-14
 
 ### ✨ **Features & UX**
