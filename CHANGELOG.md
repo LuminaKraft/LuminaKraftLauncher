@@ -5,7 +5,7 @@ All notable changes to the LuminaKraft Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.7-beta.1] - 2026-01-14
+## [Unreleased]
 
 ### 🐛 **Bug Fixes**
 - **Fixed Windows modpack installation failing with "No Java runtime for OS: windows"**
@@ -15,11 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Fixed mods from overrides not being recognized on Windows**
   - Path separators were not normalized (`mods\file.jar` vs `mods/file.jar`)
   - Override files are now tracked with forward slashes on all platforms
-- **Fixed modpack protection status not showing correctly in Profile Options**
-  - `allowCustomConfigs` field was missing from modpack data fetching
-  - Protection flags from database were not being passed to the UI
-  - Fixed merge logic to preserve server protection flags when enriching cache
-  - Now correctly displays "Protected" badge for modpacks with protection enabled
+
+### 🗑️ **Removed**
+- **Complete removal of `allowCustomConfigs` feature**
+  - Configuration and script files are no longer tracked for integrity.
+  - Removed all UI toggles, protection badges, and database columns related to config protection.
 
 ### ⚡ **Performance**
 - **Service-Level Caching**: Added TTL-based caching to `authService` and `modpackManagementService`
@@ -40,6 +40,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed distracting inline loading indicator from Homepage hero section
 - Enhanced card hover effects with subtle lift animation and shadow
 - Added `focus-ring` utility class for improved accessibility
+
+## [0.1.7-beta.1] - 2026-01-14
+
+### 🐛 **Bug Fixes**
+- Fixed minor UI alignment issues in the sidebar.
+
 
 ## [0.1.6] - 2026-01-14
 
