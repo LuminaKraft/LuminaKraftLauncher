@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Configuration and script files are no longer tracked for integrity.
   - Removed all UI toggles, protection badges, and database columns related to config protection.
 
+## [0.1.7-beta.1] - 2026-01-14
+
 ### ⚡ **Performance**
 - **Service-Level Caching**: Added TTL-based caching to `authService` and `modpackManagementService`
   - `getDiscordAccount()` cached for 5 minutes
@@ -40,8 +42,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed distracting inline loading indicator from Homepage hero section
 - Enhanced card hover effects with subtle lift animation and shadow
 - Added `focus-ring` utility class for improved accessibility
-
-## [0.1.7-beta.1] - 2026-01-14
 
 ### 🐛 **Bug Fixes**
 - Fixed minor UI alignment issues in the sidebar.
