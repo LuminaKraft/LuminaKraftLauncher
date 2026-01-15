@@ -927,11 +927,11 @@ export class ModpackManagementService {
 
       // Filter based on role
       if (profile.role === 'admin') {
-        // Admins see only official modpacks
-        query = query.eq('category', 'official');
+        // Admins see all official modpacks AND any modpack they authored (like community ones)
+        query = query.or(`category.eq.official,author_id.eq.${user.id}`);
       } else if (profile.role === 'partner' && profile.partner_id) {
-        // Partners see only modpacks from their partner organization
-        query = query.eq('partner_id', profile.partner_id);
+        // Partners see modpacks from their partner organization AND any modpack they authored (like community ones)
+        query = query.or(`partner_id.eq.${profile.partner_id},author_id.eq.${user.id}`);
       } else {
         // Community users see only their own modpacks
         query = query.eq('author_id', user.id);

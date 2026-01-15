@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { X, HardDrive, AlertTriangle, Wrench, RefreshCcw, Shield, ShieldOff, ChevronDown, ChevronUp } from 'lucide-react';
+import { AlertTriangle, HardDrive, Shield, ShieldOff, X, ChevronDown, ChevronUp, Wrench, RefreshCcw } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { appDataDir } from '@tauri-apps/api/path';
 import toast from 'react-hot-toast';
@@ -325,8 +326,8 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
     reader.readAsDataURL(file);
   };
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-8 overflow-hidden pointer-events-auto">
+  return createPortal(
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-8 overflow-hidden pointer-events-auto" onClick={(e) => e.stopPropagation()}>
       <div className="bg-dark-800 rounded-lg p-6 max-w-2xl w-full border border-dark-600 max-h-[90vh] overflow-y-auto pointer-events-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -452,7 +453,7 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
             <div className="grid grid-cols-2 gap-3 mb-4">
               {/* Protected (Recommended) - Now Read-Only */}
               <div
-                className={`flex flex-col items-start p-4 rounded-lg border transition-all text-left ${isProtected
+                className={`flex flex-col items-start p-4 rounded-lg border transition-all text-left cursor-not-allowed ${isProtected
                   ? 'border-lumina-500 bg-lumina-500/10'
                   : 'border-dark-600 bg-dark-700/50 opacity-50'
                   }`}
@@ -470,7 +471,7 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
 
               {/* Open - Now Read-Only */}
               <div
-                className={`flex flex-col items-start p-4 rounded-lg border transition-all text-left ${isFullyOpen
+                className={`flex flex-col items-start p-4 rounded-lg border transition-all text-left cursor-not-allowed ${isFullyOpen
                   ? 'border-emerald-500 bg-emerald-500/10'
                   : 'border-dark-600 bg-dark-700/50 opacity-50'
                   }`}
@@ -534,17 +535,8 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
                           </div>
                         </td>
                       </tr>
-                      <tr>
-                        <td className="py-2.5 text-white">/shaderpacks & others</td>
-                        <td className="py-2.5 text-right text-emerald-500/60 italic text-[11px]">
-                          {t('profileOptions.stability.foldersTable.unprotected')}
-                        </td>
-                      </tr>
                     </tbody>
                   </table>
-                  <p className="text-[10px] text-dark-500 mt-2 italic">
-                    * {t('profileOptions.stability.foldersTable.advancedFootnote', 'Shaders, screenshots and aesthetic mods are never restricted.')}
-                  </p>
                   <div className="mt-3 p-2 bg-blue-500/10 border border-blue-500/20 rounded text-[10px] text-blue-400 flex items-center gap-2">
                     <Shield className="w-3 h-3" />
                     <span>{t('profileOptions.stability.managedByCreator', 'These settings are managed by the modpack creator to ensure stability.')}</span>
@@ -865,7 +857,8 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

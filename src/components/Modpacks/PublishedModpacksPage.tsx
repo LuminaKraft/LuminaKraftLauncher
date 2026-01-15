@@ -616,16 +616,8 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
               <div className="p-4">
                 <div className="mb-2">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${modpack.category === 'official'
-                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
-                      : modpack.category === 'partner'
-                        ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
-                        : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                      }`}>
-                      {modpack.category.charAt(0).toUpperCase() + modpack.category.slice(1)}
-                    </span>
                     {modpack.category === 'partner' && partnerName && (
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                      <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
                         by {partnerName}
                       </span>
                     )}

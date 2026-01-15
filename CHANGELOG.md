@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### 🐛 **Bug Fixes**
+- **Fixed community modpack visibility for Admins and Partners**
+  - Admins and Partners can now see any community modpacks they have authored in the management page
+  - Updated `getUserModpacks` query logic to use OR conditions for permissions and ownership
 - **Fixed Windows modpack installation failing with "No Java runtime for OS: windows"**
   - The parallel download system used incorrect OS keys for Mojang's Java manifest
   - Windows requires architecture-specific keys (`windows-x64`, `windows-x86`, `windows-arm64`)
@@ -15,6 +18,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Fixed mods from overrides not being recognized on Windows**
   - Path separators were not normalized (`mods\file.jar` vs `mods/file.jar`)
   - Override files are now tracked with forward slashes on all platforms
+
+### 🎨 **UI/UX**
+- **Improved ProfileOptionsModal rendering**
+  - Implemented React Portals to render the modal at the document root, fixing flickering and containment issues when opened from `ModpackCard`
+  - Applied `cursor-not-allowed` to read-only protection status boxes
+  - Removed redundant `/shaderpacks & others` row and its footnote
+- **Cleaned up PublishedModpacksPage UI**
+  - Removed redundant hardcoded English category labels to keep only translated badges
 
 ### 🗑️ **Removed**
 - **Complete removal of `allowCustomConfigs` feature**
