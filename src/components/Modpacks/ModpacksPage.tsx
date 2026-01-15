@@ -61,6 +61,11 @@ const ModpacksPage: React.FC<ModpacksPageProps> = ({ initialModpackId, onNavigat
   ) || [];
 
   const handleModpackSelect = (modpack: Modpack, skipAnimation = false) => {
+    // Notify parent to sync state (important for consistent "Back" behavior)
+    if (onNavigate) {
+      onNavigate('explore', modpack.id);
+    }
+
     const loadDetails = async () => {
       setDetailsLoading(true);
       try {
@@ -93,19 +98,20 @@ const ModpacksPage: React.FC<ModpacksPageProps> = ({ initialModpackId, onNavigat
   };
 
   const handleBackToList = () => {
-    if (onNavigate) {
-      // Notify parent to clear the selected modpack ID
-      onNavigate('explore');
-    } else {
-      // Fallback for standalone usage
-      setIsTransitioning(true);
-      setShowingDetails(false);
+    // 1. Clear local state with transition for instant feedback
+    setIsTransitioning(true);
+    setShowingDetails(false);
 
-      withDelay(() => {
-        setSelectedModpack(null);
-        setIsTransitioning(false);
-      }, 50);
-    }
+    withDelay(() => {
+      setSelectedModpack(null);
+      setIsTransitioning(false);
+
+      // 2. Notify parent so it can clear its own state (initialModpackId prop)
+      // This ensures that subsequent entries work correctly
+      if (onNavigate) {
+        onNavigate('explore');
+      }
+    }, 50);
   };
 
   const handleRefresh = async () => {

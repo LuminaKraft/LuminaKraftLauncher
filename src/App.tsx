@@ -247,10 +247,26 @@ function AppContent() {
       }
     }
 
+    const isSameSection = section === activeSection;
+    const newModpackId = modpackId || null;
+
+    // If it's the same section, just update the modpack ID without a full screen transition
+    // The child components (ModpacksPage, MyModpacksPage) handle their own internal transitions
+    if (isSameSection) {
+      setSelectedModpackId(newModpackId);
+
+      // Remember if navigating to a published-modpacks sub-section
+      if (section === 'publish-modpack' || section === 'edit-modpack' || section === 'published-modpacks') {
+        setLastPublishedSection(section);
+        if (section === 'edit-modpack') {
+          setLastSelectedModpackId(newModpackId);
+        }
+      }
+      return;
+    }
+
     setIsTransitioning(true);
     withDelay(() => {
-      // Clear or set the modpackId based on what was passed
-      const newModpackId = modpackId || null;
       setSelectedModpackId(newModpackId);
       setActiveSection(section);
 

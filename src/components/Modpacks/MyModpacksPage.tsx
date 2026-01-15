@@ -412,6 +412,11 @@ export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: My
    * Handle modpack selection for details view
    */
   const handleModpackSelect = (modpackId: string) => {
+    // Notify parent to sync state (important for consistent "Back" behavior)
+    if (_onNavigate) {
+      _onNavigate('my-modpacks', modpackId);
+    }
+
     setIsTransitioning(true);
     setTimeout(() => {
       setSelectedModpackId(modpackId);
@@ -425,15 +430,17 @@ export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: My
    * Handle back from details view
    */
   const handleBackToList = () => {
-    if (_onNavigate) {
-      _onNavigate('my-modpacks');
-    } else {
-      setIsTransitioning(true);
-      setTimeout(() => {
-        setSelectedModpackId(null);
-        setIsTransitioning(false);
-      }, 50);
-    }
+    // 1. Clear local state with transition for instant feedback
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setSelectedModpackId(null);
+      setIsTransitioning(false);
+
+      // 2. Notify parent so it can clear its own state
+      if (_onNavigate) {
+        _onNavigate('my-modpacks');
+      }
+    }, 50);
   };
 
   /**
