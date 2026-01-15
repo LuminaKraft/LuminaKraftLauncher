@@ -37,17 +37,19 @@ const ModpacksPage: React.FC<ModpacksPageProps> = ({ initialModpackId, onNavigat
   // Handle initial modpack selection from navigation
   React.useEffect(() => {
     if (initialModpackId && modpacksData) {
-      // If we are already showing this modpack, don't re-trigger selection
-      if (selectedModpack?.id === initialModpackId) return;
+      const isAlreadySelected = selectedModpack?.id === initialModpackId;
+      if (isAlreadySelected) return;
 
       const modpack = modpacksData.modpacks.find(m => m.id === initialModpackId);
       if (modpack) {
-        // Skip internal animation when loading initial modpack from navigation
-        // because App.tsx already handles the page transition
         handleModpackSelect(modpack, true);
       }
+    } else if (!initialModpackId && selectedModpack) {
+      // Clear local selection if the prop becomes null (from onNavigate)
+      setSelectedModpack(null);
+      setShowingDetails(false);
     }
-  }, [initialModpackId, modpacksData, selectedModpack?.id]);
+  }, [initialModpackId, modpacksData]);
 
   // Check if any modpack is currently installing/updating
   const hasActiveInstallation = Object.values(modpackStates).some(state =>
@@ -91,13 +93,19 @@ const ModpacksPage: React.FC<ModpacksPageProps> = ({ initialModpackId, onNavigat
   };
 
   const handleBackToList = () => {
-    setIsTransitioning(true);
-    setShowingDetails(false);
+    if (onNavigate) {
+      // Notify parent to clear the selected modpack ID
+      onNavigate('explore');
+    } else {
+      // Fallback for standalone usage
+      setIsTransitioning(true);
+      setShowingDetails(false);
 
-    withDelay(() => {
-      setSelectedModpack(null);
-      setIsTransitioning(false);
-    }, 50);
+      withDelay(() => {
+        setSelectedModpack(null);
+        setIsTransitioning(false);
+      }, 50);
+    }
   };
 
   const handleRefresh = async () => {

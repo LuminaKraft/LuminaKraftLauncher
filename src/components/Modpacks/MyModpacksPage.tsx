@@ -125,9 +125,7 @@ export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: My
 
   // Sync selectedModpackId with initialModpackId prop
   useEffect(() => {
-    if (initialModpackId) {
-      setSelectedModpackId(initialModpackId);
-    }
+    setSelectedModpackId(initialModpackId || null);
   }, [initialModpackId]);
 
   // Load instances on mount and clean up old temp files
@@ -427,11 +425,15 @@ export function MyModpacksPage({ initialModpackId, onNavigate: _onNavigate }: My
    * Handle back from details view
    */
   const handleBackToList = () => {
-    setIsTransitioning(true);
-    setTimeout(() => {
-      setSelectedModpackId(null);
-      setIsTransitioning(false);
-    }, 50);
+    if (_onNavigate) {
+      _onNavigate('my-modpacks');
+    } else {
+      setIsTransitioning(true);
+      setTimeout(() => {
+        setSelectedModpackId(null);
+        setIsTransitioning(false);
+      }, 50);
+    }
   };
 
   /**

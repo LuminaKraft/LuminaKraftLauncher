@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Fixed community modpack visibility for Admins and Partners**
   - Admins and Partners can now see any community modpacks they have authored in the management page
   - Updated `getUserModpacks` query logic to use OR conditions for permissions and ownership
+- **Fixed "Back to list" navigation loop in modpack details**
+  - Resolved issue where returning from details would fail when entering from the Home page
+  - Synchronized navigation state between child components and parent `App` context
 - **Fixed Windows modpack installation failing with "No Java runtime for OS: windows"**
   - The parallel download system used incorrect OS keys for Mojang's Java manifest
   - Windows requires architecture-specific keys (`windows-x64`, `windows-x86`, `windows-arm64`)
