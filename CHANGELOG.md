@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Fixed "Back to list" navigation loop in modpack details**
   - Resolved issue where returning from details would fail when entering from the Home page
   - Synchronized navigation state between child components and parent `App` context
+- **Refined integrity tracking to exclude config and scripts folders**
+  - Modified CurseForge and Modrinth processors to only track `.jar` files in `mods/` and `.zip` files in `resourcepacks/`
+  - This ensures that configuration changes do not trigger integrity warnings for official modpacks
 - **Fixed Windows modpack installation failing with "No Java runtime for OS: windows"**
   - The parallel download system used incorrect OS keys for Mojang's Java manifest
   - Windows requires architecture-specific keys (`windows-x64`, `windows-x86`, `windows-arm64`)

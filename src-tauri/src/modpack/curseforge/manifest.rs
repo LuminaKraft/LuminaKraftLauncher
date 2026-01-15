@@ -133,9 +133,16 @@ pub fn get_override_relative_paths(_manifest: &CurseForgeManifest, temp_dir: &Pa
         if path.is_file() {
             if let Ok(relative) = path.strip_prefix(&overrides_dir) {
                 // Normalize to forward slashes for cross-platform consistency
-                // On Windows, to_string_lossy() returns backslashes, but checks use forward slashes
                 let normalized_path = relative.to_string_lossy().replace('\\', "/");
-                paths.insert(normalized_path);
+                
+                // RESTRICTION: Only track mods/ and resourcepacks/ for integrity
+                // This avoids tracking config/, scripts/, etc. which are allowed to change
+                let is_managed_path = (normalized_path.starts_with("mods/") && normalized_path.ends_with(".jar"))
+                    || (normalized_path.starts_with("resourcepacks/") && normalized_path.ends_with(".zip"));
+                
+                if is_managed_path {
+                    paths.insert(normalized_path);
+                }
             }
         }
     }
