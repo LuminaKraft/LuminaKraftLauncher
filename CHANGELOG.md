@@ -5,6 +5,30 @@ All notable changes to the LuminaKraft Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.8] - 2026-04-27
+
+### 🚀 **Infrastructure & Assets**
+- **Migrated storage to a new category-based structure**
+  - Modpack assets are now organized by category (official, partner, community) for better scalability and organization.
+  - Introduced a `versions/` subfolder for modpack ZIPs to improve storage hierarchy.
+  - Implemented epoch-based cache busting for all assets to ensure users always receive the latest versions.
+- **Synchronized backend database with the new storage schema**
+  - Performed a full migration of file paths and URLs for modpacks, versions, and screenshots to align with the new R2 structure.
+
+### 🐛 **Bug Fixes**
+- **Fixed critical loop in reinstall/repair flow**
+  - Bumped integrity tracking to `v2` for all new installations.
+  - Resolved an issue where reinstalls were incorrectly flagged as "legacy", causing the launcher to delete and redownload all mods repeatedly.
+- **Fixed mod and resourcepack routing during installation**
+  - Corrected logic to automatically route `.zip` files from CurseForge to `resourcepacks/` instead of `mods/`.
+  - Fixed path normalization in the cleanup process to prevent accidental deletion of valid files during updates.
+- **Updated pre-signed URL generation**
+  - Aligned the upload path generation with the new `versions/` folder hierarchy.
+
+### 🔧 **Technical Improvements**
+- **Refined repository hygiene**
+  - Updated `.gitignore` to properly exclude temporary build artifacts and local development files.
+
 ## [0.1.7] - 2026-01-15
 
 ### 🐛 **Bug Fixes**
