@@ -205,7 +205,7 @@ pub fn create_integrity_data_from_list(
         file_hashes,
         signature,
         zip_sha256,
-        version: 1,
+        version: 2, // v2: Proper update flow - prevents legacy migration on next reinstall
     })
 }
 
