@@ -315,7 +315,17 @@ where
             let _permit = download_semaphore.acquire().await.ok()?;
             
             let file_name = file_info.file_name.as_deref().unwrap_or("unknown_file");
-            let mod_path = mods_dir.join(file_name);
+            let is_resourcepack = file_name.ends_with(".zip");
+            let target_dir = if is_resourcepack {
+                let rp_dir = instance_dir.join("resourcepacks");
+                if !rp_dir.exists() {
+                    let _ = fs::create_dir_all(&rp_dir);
+                }
+                rp_dir
+            } else {
+                mods_dir.clone()
+            };
+            let mod_path = target_dir.join(file_name);
             
             // Handle files without download URL
             let download_url = match &file_info.download_url {

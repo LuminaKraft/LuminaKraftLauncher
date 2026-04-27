@@ -111,7 +111,11 @@ where
     
     // Add mods from expected_filenames (from CurseForge API)
     for filename in &expected_filenames {
-        all_new_expected.insert(format!("mods/{}", filename));
+        if filename.ends_with(".zip") {
+            all_new_expected.insert(format!("resourcepacks/{}", filename));
+        } else {
+            all_new_expected.insert(format!("mods/{}", filename));
+        }
     }
     
     // Add files from overrides
@@ -256,7 +260,7 @@ fn cleanup_directory_by_path(
                     }
 
                     if let Ok(relative) = path.strip_prefix(base_dir) {
-                        let rel_path = format!("{}/{}", prefix, relative.to_string_lossy());
+                        let rel_path = relative.to_string_lossy().replace('\\', "/");
                         if !expected_files.contains(&rel_path) {
                             if fs::remove_file(&path).is_ok() {
                                 println!("🗑️ Removed unauthorized file: {}", rel_path);
