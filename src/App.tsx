@@ -17,9 +17,10 @@ import UpdateDialog from './components/UpdateDialog';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import LauncherService from './services/launcherService';
 import { updateService, UpdateInfo } from './services/updateService';
+import { isSupabaseConfigured } from './services/supabaseClient';
 import './App.css';
 import { Toaster } from 'react-hot-toast';
-import { useTranslation } from 'react-i18next';
+import { useTranslation, Trans } from 'react-i18next';
 import { UsernameRequiredDialog } from './components/UsernameRequiredDialog';
 import { LoadingModal } from './components/Common/LoadingModal';
 import { SetupWizard } from './components/Onboarding/SetupWizard';
@@ -460,6 +461,32 @@ function AppContent() {
 }
 
 function App() {
+  const { t } = useTranslation();
+
+  if (!isSupabaseConfigured) {
+    return (
+      <div className="flex h-screen bg-dark-900 text-white">
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="text-center max-w-md p-8 bg-dark-800 rounded-2xl border border-red-900/50 shadow-2xl">
+            <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-6" />
+            <h2 className="text-2xl font-bold mb-4 text-white">{t('errors.supabaseConfig.title')}</h2>
+            <p className="text-dark-300 mb-6 leading-relaxed">
+              <Trans i18nKey="errors.supabaseConfig.message">
+                Missing Supabase environment variables. Please create a <code className="text-red-400 bg-red-900/30 px-2 py-1 rounded mx-1 font-mono text-sm">.env.local</code> file based on <code className="text-gray-400 bg-gray-800 px-2 py-1 rounded mx-1 font-mono text-sm">.env.example</code>.
+              </Trans>
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-colors w-full"
+            >
+              {t('errors.supabaseConfig.retry')}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <LauncherProvider>
       <AnimationProvider>

@@ -1289,6 +1289,11 @@
       "invalidResponse": "Respuesta inválida de GitHub API",
       "noValidReleases": "No se encontraron releases válidas",
       "updateCheckFailed": "Error al verificar actualizaciones"
+    },
+    "supabaseConfig": {
+      "title": "Error de Configuración",
+      "message": "Faltan las variables de entorno de Supabase. Por favor crea un archivo <1>.env.local</1> basado en <3>.env.example</3>.",
+      "retry": "Reintentar"
     }
   },
   "knownErrors": {

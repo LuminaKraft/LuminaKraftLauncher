@@ -1291,6 +1291,11 @@
       "invalidResponse": "Invalid releases response from GitHub API",
       "noValidReleases": "No valid releases found",
       "updateCheckFailed": "Update check failed"
+    },
+    "supabaseConfig": {
+      "title": "Configuration Error",
+      "message": "Missing Supabase environment variables. Please create a <1>.env.local</1> file based on <3>.env.example</3>.",
+      "retry": "Retry"
     }
   },
   "knownErrors": {
