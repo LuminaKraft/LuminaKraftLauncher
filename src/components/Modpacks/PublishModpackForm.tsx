@@ -5,9 +5,11 @@ import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n';
 import { Plus, X, Upload, FileArchive, RefreshCw, Check, ChevronRight, ChevronLeft, Info, Image as ImageIcon, FileText, Package, Layers, ChevronDown, ChevronUp, Settings, AlertCircle, Globe, Shield, ShieldOff } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
-import { save, open as openDialog } from '@tauri-apps/plugin-dialog';
+import { save } from '@tauri-apps/plugin-dialog';
 import { listen } from '@tauri-apps/api/event';
 import JSZip from 'jszip';
+import PathAutocompleteInput from '../Common/PathAutocompleteInput';
+import { extractZipInstancePaths, COMMON_INSTANCE_PATHS } from '../../utils/modpackZipPaths';
 import { supabase } from '../../services/supabaseClient';
 import ModpackManagementService from '../../services/modpackManagementService';
 import R2UploadService from '../../services/r2UploadService';
@@ -106,6 +108,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
   const [formData, setFormData] = useState<FormData>(getSavedFormData);
 
   const [zipFile, setZipFile] = useState<File | null>(null);
+  const [zipPaths, setZipPaths] = useState<string[]>([]);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [screenshotFiles, setScreenshotFiles] = useState<File[]>([]);
@@ -421,6 +424,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
     setZipFile(file);
     resetValidation();
     await validateAndParseManifest(file);
+    extractZipInstancePaths(file).then(setZipPaths).catch(() => {});
   };
 
   const handleDownloadUpdatedZip = async () => {
@@ -1377,38 +1381,14 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                                     ))}
                                   </div>
                                 )}
-                                <div className="inline-flex rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600 text-xs font-medium">
-                                  <button
-                                    type="button"
-                                    title="Add folder"
-                                    onClick={async () => {
-                                      const selected = await openDialog({ directory: true, multiple: true, title: 'Select folders to protect' });
-                                      if (!selected) return;
-                                      const dirs = (Array.isArray(selected) ? selected : [selected]).map(p => p.replace(/\\/g, '/').split('/').pop() ?? p);
-                                      const merged = Array.from(new Set([...(formData.customProtectedPaths ?? []), ...dirs]));
-                                      updateFormData('customProtectedPaths', merged);
-                                    }}
-                                    className="flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 hover:text-blue-700 dark:hover:text-blue-300 transition-colors border-r border-gray-200 dark:border-gray-600"
-                                  >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                                    Folder
-                                  </button>
-                                  <button
-                                    type="button"
-                                    title="Add file"
-                                    onClick={async () => {
-                                      const selected = await openDialog({ directory: false, multiple: true, title: 'Select files to protect' });
-                                      if (!selected) return;
-                                      const files = (Array.isArray(selected) ? selected : [selected]).map(p => p.replace(/\\/g, '/').split('/').pop() ?? p);
-                                      const merged = Array.from(new Set([...(formData.customProtectedPaths ?? []), ...files]));
-                                      updateFormData('customProtectedPaths', merged);
-                                    }}
-                                    className="flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
-                                  >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
-                                    File
-                                  </button>
-                                </div>
+                                <PathAutocompleteInput
+                                  suggestions={[...new Set([...zipPaths, ...COMMON_INSTANCE_PATHS])]}
+                                  onAdd={(p) => {
+                                    const merged = Array.from(new Set([...(formData.customProtectedPaths ?? []), p]));
+                                    updateFormData('customProtectedPaths', merged);
+                                  }}
+                                  placeholder="e.g. config, options.txt"
+                                />
                               </div>
                             </td>
                           </tr>

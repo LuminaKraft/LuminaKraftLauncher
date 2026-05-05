@@ -851,6 +851,33 @@ async fn read_instance_log(modpack_id: String) -> Result<String, String> {
 }
 
 #[tauri::command]
+async fn get_instance_file_paths(modpack_id: String) -> Result<Vec<String>, String> {
+    let instance_dir = filesystem::get_instance_dir(&modpack_id)
+        .map_err(|_| "Instance not found".to_string())?;
+
+    let mut paths = std::collections::HashSet::new();
+
+    fn walk(dir: &std::path::Path, base: &std::path::Path, paths: &mut std::collections::HashSet<String>) {
+        if let Ok(entries) = std::fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.file_name().map(|n| n == "instance.json").unwrap_or(false) { continue; }
+                if let Ok(rel) = path.strip_prefix(base) {
+                    let rel_str = rel.to_string_lossy().replace('\\', "/");
+                    paths.insert(rel_str);
+                    if path.is_dir() { walk(&path, base, paths); }
+                }
+            }
+        }
+    }
+
+    walk(&instance_dir, &instance_dir, &mut paths);
+    let mut result: Vec<String> = paths.into_iter().collect();
+    result.sort();
+    Ok(result)
+}
+
+#[tauri::command]
 async fn open_url(app: tauri::AppHandle, url: String) -> Result<(), String> {
     use tauri_plugin_opener::OpenerExt;
     match app.opener().open_url(url, None::<&str>) {
@@ -1532,6 +1559,7 @@ fn main() {
             install_modpack_from_local_zip,
             save_modpack_image,
             read_instance_log,
+            get_instance_file_paths,
             oauth::start_oauth_server,
             oauth::stop_oauth_server,
         ])

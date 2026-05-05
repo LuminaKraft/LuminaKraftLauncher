@@ -221,7 +221,12 @@ fn cleanup_unauthorized_files(
         for custom_path in paths {
             // Sanitize: reject empty or path-traversal attempts
             let trimmed = custom_path.trim();
-            if trimmed.is_empty() || trimmed.contains("..") || trimmed.starts_with('/') || trimmed.starts_with('\\') {
+            if trimmed.is_empty()
+                || trimmed.contains("..")
+                || trimmed.starts_with('/')
+                || trimmed.starts_with('\\')
+                || (trimmed.len() >= 2 && trimmed.chars().nth(1) == Some(':'))
+            {
                 println!("⚠️ Skipping unsafe custom protected path: {}", trimmed);
                 continue;
             }

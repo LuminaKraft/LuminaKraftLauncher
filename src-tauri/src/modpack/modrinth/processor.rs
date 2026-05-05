@@ -214,7 +214,12 @@ fn cleanup_unauthorized_files(
     if let Some(paths) = custom_protected_paths {
         for custom_path in paths {
             let trimmed = custom_path.trim();
-            if trimmed.is_empty() || trimmed.contains("..") || trimmed.starts_with('/') || trimmed.starts_with('\\') {
+            if trimmed.is_empty()
+                || trimmed.contains("..")
+                || trimmed.starts_with('/')
+                || trimmed.starts_with('\\')
+                || (trimmed.len() >= 2 && trimmed.chars().nth(1) == Some(':'))
+            {
                 println!("⚠️ [Modrinth] Skipping unsafe custom protected path: {}", trimmed);
                 continue;
             }
