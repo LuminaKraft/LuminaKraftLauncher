@@ -27,6 +27,15 @@ export class ModpackManagementService {
   // In-memory cache for permission and modpack data
   private cache: Map<string, MgmtCacheEntry<unknown>> = new Map();
 
+  private constructor() {
+    // Globally listen to auth state changes to ensure caches don't persist across sessions
+    supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT' || event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+        this.clearCache();
+      }
+    });
+  }
+
   public static getInstance(): ModpackManagementService {
     if (!ModpackManagementService.instance) {
       ModpackManagementService.instance = new ModpackManagementService();

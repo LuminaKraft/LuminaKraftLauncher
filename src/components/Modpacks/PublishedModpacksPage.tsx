@@ -66,6 +66,8 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
     // Listen for profile updates (after Discord linking)
     const handleProfileUpdate = () => {
       setIsLinkingDiscord(false);
+      AuthService.getInstance().clearPermissionCache();
+      ModpackManagementService.getInstance().clearCache();
       loadData(); // Refresh page data
     };
 
@@ -75,10 +77,24 @@ export function PublishedModpacksPage({ onNavigate }: PublishedModpacksPageProps
     let cleanup: (() => void) | undefined;
     (async () => {
       const { data: { subscription } } = supabase.auth.onAuthStateChange(
-        async (event) => {
-          if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+        async (event, session) => {
+          if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'SIGNED_OUT') {
             setIsLinkingDiscord(false);
-            loadData();
+            AuthService.getInstance().clearPermissionCache();
+            ModpackManagementService.getInstance().clearCache();
+            
+            if (event === 'SIGNED_OUT' || !session) {
+              setCanManage(false);
+              setModpacks([]);
+              setUserRole(null);
+              setPartnerName(null);
+              setHasDiscord(false);
+              setIsDiscordMember(false);
+              setUserId(null);
+              setUserPartnerId(null);
+            } else {
+              loadData();
+            }
           }
         }
       );

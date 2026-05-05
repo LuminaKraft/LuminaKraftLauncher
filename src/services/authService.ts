@@ -22,6 +22,15 @@ class AuthService {
   private isSyncingDiscord: boolean = false; // Lock to prevent concurrent Discord data syncs
   private isSyncingRoles: boolean = false; // Lock to prevent concurrent Discord role syncs
 
+  private constructor() {
+    // Globally listen to auth state changes to ensure caches don't persist across sessions
+    supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT' || event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+        this.clearPermissionCache();
+      }
+    });
+  }
+
   public static getInstance(): AuthService {
     if (!AuthService.instance) {
       AuthService.instance = new AuthService();
