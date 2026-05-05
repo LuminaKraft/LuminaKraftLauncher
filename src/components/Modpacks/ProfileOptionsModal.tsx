@@ -21,6 +21,7 @@ interface ProfileOptionsModalProps {
     customRam?: number;
     allow_custom_mods?: boolean;
     allow_custom_resourcepacks?: boolean;
+    custom_protected_paths?: string[];
     category?: string;
   };
 }
@@ -535,6 +536,21 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
                           </div>
                         </td>
                       </tr>
+                      {metadata?.custom_protected_paths && metadata.custom_protected_paths.length > 0 && (
+                        <tr>
+                          <td className="py-2.5 text-white">
+                            <div className="flex flex-col">
+                              <span>Custom Paths</span>
+                              <span className="text-[10px] text-dark-400 font-normal mt-0.5">{metadata.custom_protected_paths.join(', ')}</span>
+                            </div>
+                          </td>
+                          <td className="py-2.5 text-right">
+                            <div className="text-xs px-2 py-1 rounded transition-colors bg-lumina-500/20 text-lumina-400">
+                              Protected
+                            </div>
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                   <div className="mt-3 p-2 bg-blue-500/10 border border-blue-500/20 rounded text-[10px] text-blue-400 flex items-center gap-2">

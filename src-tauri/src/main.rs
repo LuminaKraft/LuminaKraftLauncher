@@ -79,6 +79,9 @@ pub struct Modpack {
     /// If false, aggressive cleanup removes user-added resource packs
     #[serde(rename = "allowCustomResourcepacks")]
     pub allow_custom_resourcepacks: Option<bool>,
+    /// Custom relative paths to protect from modification
+    #[serde(rename = "customProtectedPaths")]
+    pub custom_protected_paths: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -158,6 +161,9 @@ pub struct InstanceMetadata {
     /// Whether custom resource packs are allowed (only relevant for official/partner)
     #[serde(rename = "allowCustomResourcepacks")]
     pub allow_custom_resourcepacks: Option<bool>,
+    /// Custom relative paths to protect from modification
+    #[serde(rename = "customProtectedPaths")]
+    pub custom_protected_paths: Option<Vec<String>>,
 }
 
 #[tauri::command]
@@ -509,6 +515,7 @@ async fn repair_minecraft(app: tauri::AppHandle, modpack_id: String, settings: U
         file_sha256: None,
         allow_custom_mods: None,
         allow_custom_resourcepacks: None,
+        custom_protected_paths: None,
     };
     
     let instance_dir = filesystem::get_instance_dir(&modpack_id)

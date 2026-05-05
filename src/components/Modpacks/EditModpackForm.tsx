@@ -45,6 +45,7 @@ interface FormData {
   isComingSoon: boolean;
   allowCustomMods: boolean;
   allowCustomResourcepacks: boolean;
+  customProtectedPaths: string[];
   logoUrl?: string;
   bannerUrl?: string;
   category?: string;
@@ -196,6 +197,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
         isComingSoon: modpackData.is_coming_soon || false,
         allowCustomMods: modpackData.allow_custom_mods ?? true,
         allowCustomResourcepacks: modpackData.allow_custom_resourcepacks ?? true,
+        customProtectedPaths: modpackData.custom_protected_paths || [],
         logoUrl: modpackData.logo_url,
         bannerUrl: modpackData.banner_url,
         category: modpackData.category
@@ -1487,6 +1489,28 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                                   >
                                     {!formData.allowCustomResourcepacks ? t('profileOptions.stability.protected') : t('profileOptions.stability.foldersTable.unprotected')}
                                   </button>
+                                </td>
+                              </tr>
+                              <tr>
+                                <td className="py-2.5 font-medium text-gray-700 dark:text-gray-300">
+                                  <div className="flex flex-col">
+                                    <span>Custom Paths</span>
+                                    <span className="text-[10px] text-gray-400 font-normal mt-0.5">Comma-separated relative paths (e.g., config, kubejs, scripts)</span>
+                                  </div>
+                                </td>
+                                <td className="py-2.5 text-right">
+                                  <input
+                                    type="text"
+                                    value={formData.customProtectedPaths?.join(', ') || ''}
+                                    onChange={async (e) => {
+                                      const value = e.target.value;
+                                      const paths = value.split(',').map(p => p.trim()).filter(p => p.length > 0);
+                                      setFormData(prev => prev ? ({ ...prev, customProtectedPaths: paths }) : null);
+                                      await service.updateModpack(modpackId, { customProtectedPaths: paths });
+                                    }}
+                                    placeholder="config, kubejs"
+                                    className="w-full text-xs px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                  />
                                 </td>
                               </tr>
                               <tr>

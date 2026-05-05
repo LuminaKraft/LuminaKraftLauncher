@@ -56,6 +56,7 @@ pub async fn install_modpack(modpack: Modpack) -> Result<()> {
         category: None,  // No category for basic installs
         allow_custom_mods: Some(true),  // Allow custom mods by default for basic installs
         allow_custom_resourcepacks: Some(true),  // Allow custom resourcepacks by default for basic installs
+        custom_protected_paths: None,
     };
     
     filesystem::save_instance_metadata(&metadata).await?;
@@ -392,6 +393,7 @@ where
                 modpack.category.as_deref(),
                 modpack.allow_custom_mods.unwrap_or(true),
                 modpack.allow_custom_resourcepacks.unwrap_or(true),
+                modpack.custom_protected_paths.clone(),
                 old_installed_files.clone(),
                 do_aggressive_cleanup,
                 settings.max_concurrent_downloads.map(|v| v as usize),
@@ -427,6 +429,7 @@ where
                 modpack.category.as_deref(),
                 modpack.allow_custom_mods.unwrap_or(true),
                 modpack.allow_custom_resourcepacks.unwrap_or(true),
+                modpack.custom_protected_paths.clone(),
                 old_installed_files.clone(),
                 do_aggressive_cleanup,
                 settings.max_concurrent_downloads.map(|v| v as usize),
@@ -498,6 +501,8 @@ where
         allow_custom_mods: modpack.allow_custom_mods,
         // Whether custom resource packs are allowed (only relevant for official/partner)
         allow_custom_resourcepacks: modpack.allow_custom_resourcepacks,
+        // Custom relative paths to protect from modification
+        custom_protected_paths: modpack.custom_protected_paths.clone(),
     };
     
     filesystem::save_instance_metadata(&metadata).await?;

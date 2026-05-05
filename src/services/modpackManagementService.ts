@@ -406,6 +406,7 @@ export class ModpackManagementService {
     isComingSoon?: boolean;
     allowCustomMods?: boolean;
     allowCustomResourcepacks?: boolean;
+    customProtectedPaths?: string[];
   }): Promise<{ success: boolean; modpackId?: string; error?: string }> {
     try {
       // Check permissions (Discord authentication is required, not Microsoft)
@@ -465,6 +466,7 @@ export class ModpackManagementService {
           is_coming_soon: modpackData.isComingSoon || false,
           allow_custom_mods: modpackData.allowCustomMods ?? true,
           allow_custom_resourcepacks: modpackData.allowCustomResourcepacks ?? true,
+          custom_protected_paths: modpackData.customProtectedPaths || [],
         } as any)
         .select('id')
         .single();
@@ -635,6 +637,7 @@ export class ModpackManagementService {
       isComingSoon: boolean;
       allowCustomMods: boolean;
       allowCustomResourcepacks: boolean;
+      customProtectedPaths: string[];
       recommendedRam: number;
     }>
   ): Promise<{ success: boolean; error?: string }> {
@@ -656,10 +659,10 @@ export class ModpackManagementService {
       if (updates.modloaderVersion) updateData.modloader_version = updates.modloaderVersion;
       if (updates.gamemode !== undefined) updateData.gamemode = updates.gamemode;
       if (updates.serverIp !== undefined) updateData.server_ip = updates.serverIp;
-      if (updates.primaryColor !== undefined) updateData.primary_color = updates.primaryColor;
       if (updates.isComingSoon !== undefined) updateData.is_coming_soon = updates.isComingSoon;
       if (updates.allowCustomMods !== undefined) updateData.allow_custom_mods = updates.allowCustomMods;
       if (updates.allowCustomResourcepacks !== undefined) updateData.allow_custom_resourcepacks = updates.allowCustomResourcepacks;
+      if (updates.customProtectedPaths !== undefined) updateData.custom_protected_paths = updates.customProtectedPaths;
       if (updates.recommendedRam !== undefined) updateData.recommended_ram = updates.recommendedRam;
       if (updates.isActive !== undefined) {
         updateData.is_active = updates.isActive;

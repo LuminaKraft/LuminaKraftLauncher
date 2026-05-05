@@ -21,6 +21,7 @@ pub async fn process_curseforge_modpack_with_failed_tracking<F>(
     category: Option<&str>,
     allow_custom_mods: bool,
     allow_custom_resourcepacks: bool,
+    custom_protected_paths: Option<Vec<String>>,
     old_installed_files: Option<HashSet<String>>,
     is_legacy_instance: bool,
     max_concurrent_downloads: Option<usize>,
@@ -162,7 +163,7 @@ where
     
     if should_cleanup_mods || should_cleanup_resourcepacks {
         println!("🛡️ Anti-cheat cleanup: mods={}, resourcepacks={}", should_cleanup_mods, should_cleanup_resourcepacks);
-        cleanup_unauthorized_files(instance_dir, &all_new_expected, should_cleanup_mods, should_cleanup_resourcepacks)?;
+        cleanup_unauthorized_files(instance_dir, &all_new_expected, should_cleanup_mods, should_cleanup_resourcepacks, &custom_protected_paths)?;
     }
     
     // Process overrides AFTER cleanup - files from overrides will not be deleted
@@ -203,6 +204,7 @@ fn cleanup_unauthorized_files(
     expected_files: &HashSet<String>,
     cleanup_mods: bool,
     cleanup_resourcepacks: bool,
+    custom_protected_paths: &Option<Vec<String>>,
 ) -> Result<()> {
     let mut total_removed = 0;
     
@@ -212,6 +214,20 @@ fn cleanup_unauthorized_files(
     
     if cleanup_resourcepacks {
         total_removed += cleanup_directory_by_path(instance_dir, "resourcepacks", expected_files, "zip", false);
+    }
+
+    // Clean custom protected paths
+    if let Some(paths) = custom_protected_paths {
+        for custom_path in paths {
+            // Sanitize: reject empty or path-traversal attempts
+            let trimmed = custom_path.trim();
+            if trimmed.is_empty() || trimmed.contains("..") || trimmed.starts_with('/') || trimmed.starts_with('\\') {
+                println!("⚠️ Skipping unsafe custom protected path: {}", trimmed);
+                continue;
+            }
+            println!("🛡️ Cleaning custom protected path: {}", trimmed);
+            total_removed += cleanup_directory_by_path(instance_dir, trimmed, expected_files, "*", true);
+        }
     }
     
     if total_removed > 0 {

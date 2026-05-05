@@ -32,6 +32,7 @@ export interface Modpack {
   partnerName?: string; // Name of the partner if category is 'partner'
   allowCustomMods?: boolean; // Allow users to add custom mods (default true)
   allowCustomResourcepacks?: boolean; // Allow users to add custom resourcepacks (default true)
+  customProtectedPaths?: string[]; // Array of custom paths to protect from modification
   fileSha256?: string; // SHA256 hash of the modpack ZIP file
   authorName?: string; // Display name of the author (for community modpacks)
 }
@@ -95,6 +96,7 @@ export interface InstanceMetadata {
   recommendedRam?: number;
   allowCustomMods?: boolean;
   allowCustomResourcepacks?: boolean;
+  customProtectedPaths?: string[];
 }
 
 export interface MicrosoftAccount {
