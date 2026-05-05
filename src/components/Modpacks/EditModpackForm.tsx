@@ -128,6 +128,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
   const [isDraggingBanner, setIsDraggingBanner] = useState(false);
   const [isDraggingScreenshots, setIsDraggingScreenshots] = useState(false);
   const [showAdvancedProtection, setShowAdvancedProtection] = useState(false);
+  const [topProtectionMode, setTopProtectionMode] = useState<'protected' | 'open'>('protected');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // State to store the full parsed manifest data
@@ -212,6 +213,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
         bannerUrl: modpackData.banner_url,
         category: modpackData.category
       });
+      setTopProtectionMode((modpackData.allow_custom_mods ?? true) && (modpackData.allow_custom_resourcepacks ?? true) ? 'open' : 'protected');
 
       // 2. Fetch Features
       const featuresResult = await service.getModpackFeatures(modpackId);
@@ -245,10 +247,6 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
     }
   };
 
-  // Derived state for Shield UI (Stability & Protection)
-  const isProtected = formData ? !formData.allowCustomMods && !formData.allowCustomResourcepacks : false;
-  const isFullyOpen = formData ? formData.allowCustomMods && formData.allowCustomResourcepacks : false;
-  const isCustomMode = formData ? !isProtected && !isFullyOpen : false;
 
   // --- General Tab Handlers ---
 
@@ -1375,6 +1373,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                         type="button"
                         onClick={async () => {
                           if (!formData) return;
+                          setTopProtectionMode('protected');
                           setFormData(prev => prev ? ({
                             ...prev,
                             allowCustomMods: false,
@@ -1385,15 +1384,15 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                             allowCustomResourcepacks: false,
                           });
                         }}
-                        className={`flex flex-col items-start p-5 rounded-xl border transition-all text-left group ${isProtected
+                        className={`flex flex-col items-start p-5 rounded-xl border transition-all text-left group ${topProtectionMode === 'protected'
                           ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                           : 'border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-800 bg-white dark:bg-gray-800/50'
                           }`}
                         disabled={isUpdating}
                       >
                         <div className="flex items-center gap-3 mb-2">
-                          <Shield className={`w-5 h-5 ${isProtected ? 'text-blue-500' : 'text-gray-400'}`} />
-                          <span className={`font-bold ${isProtected ? 'text-gray-900 dark:text-white' : 'text-gray-500'}`}>
+                          <Shield className={`w-5 h-5 ${topProtectionMode === 'protected' ? 'text-blue-500' : 'text-gray-400'}`} />
+                          <span className={`font-bold ${topProtectionMode === 'protected' ? 'text-gray-900 dark:text-white' : 'text-gray-500'}`}>
                             {t('profileOptions.stability.protected')}
                           </span>
                         </div>
@@ -1407,6 +1406,8 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                         type="button"
                         onClick={async () => {
                           if (!formData) return;
+                          setTopProtectionMode('open');
+                          setShowAdvancedProtection(false);
                           setFormData(prev => prev ? ({
                             ...prev,
                             allowCustomMods: true,
@@ -1417,15 +1418,15 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                             allowCustomResourcepacks: true,
                           });
                         }}
-                        className={`flex flex-col items-start p-5 rounded-xl border transition-all text-left group ${isFullyOpen
+                        className={`flex flex-col items-start p-5 rounded-xl border transition-all text-left group ${topProtectionMode === 'open'
                           ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
                           : 'border-gray-200 dark:border-gray-700 hover:border-emerald-400 dark:hover:border-emerald-800 bg-white dark:bg-gray-800/50'
                           }`}
                         disabled={isUpdating}
                       >
                         <div className="flex items-center gap-3 mb-2">
-                          <ShieldOff className={`w-5 h-5 ${isFullyOpen ? 'text-emerald-500' : 'text-gray-400'}`} />
-                          <span className={`font-bold ${isFullyOpen ? 'text-gray-900 dark:text-white' : 'text-gray-500'}`}>
+                          <ShieldOff className={`w-5 h-5 ${topProtectionMode === 'open' ? 'text-emerald-500' : 'text-gray-400'}`} />
+                          <span className={`font-bold ${topProtectionMode === 'open' ? 'text-gray-900 dark:text-white' : 'text-gray-500'}`}>
                             {t('profileOptions.stability.open')}
                           </span>
                         </div>
@@ -1436,7 +1437,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                     </div>
 
                     {/* Advanced Mode Toggle */}
-                    <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                    {topProtectionMode === 'protected' && <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
                       <button
                         type="button"
                         onClick={() => setShowAdvancedProtection(!showAdvancedProtection)}
@@ -1445,11 +1446,6 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                         <span className="flex items-center gap-2">
                           <Settings className="w-4 h-4" />
                           {t('profileOptions.stability.advancedMode')}
-                          {isCustomMode && (
-                            <span className="text-blue-600 dark:text-blue-400 text-[10px] uppercase font-bold px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 rounded ml-2">
-                              Custom
-                            </span>
-                          )}
                         </span>
                         {showAdvancedProtection ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                       </button>
@@ -1536,7 +1532,7 @@ export function EditModpackForm({ modpackId, onNavigate }: EditModpackFormProps)
                           </table>
                         </div>
                       )}
-                    </div>
+                    </div>}
                   </div>
                 </div>
               )}

@@ -123,6 +123,9 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
   const [nameError, setNameError] = useState<string | null>(null);
   const [isCheckingName, setIsCheckingName] = useState(false);
   const [showAdvancedProtection, setShowAdvancedProtection] = useState(false);
+  const [topProtectionMode, setTopProtectionMode] = useState<'protected' | 'open'>(() =>
+    formData.allowCustomMods && formData.allowCustomResourcepacks ? 'open' : 'protected'
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Save form data to localStorage whenever it changes
@@ -365,10 +368,6 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
     return () => clearTimeout(timeoutId);
   }, [formData.name.en, t]);
 
-  // Derived state for Shield UI (Stability & Protection)
-  const isProtected = !formData.allowCustomMods && !formData.allowCustomResourcepacks;
-  const isFullyOpen = formData.allowCustomMods && formData.allowCustomResourcepacks;
-  const isCustomMode = !isProtected && !isFullyOpen;
 
   const updateFormData = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -1258,20 +1257,21 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                   <button
                     type="button"
                     onClick={() => {
+                      setTopProtectionMode('protected');
                       setFormData(prev => ({
                         ...prev,
                         allowCustomMods: false,
                         allowCustomResourcepacks: false,
                       }));
                     }}
-                    className={`flex flex-col items-start p-5 rounded-xl border transition-all text-left group ${isProtected
+                    className={`flex flex-col items-start p-5 rounded-xl border transition-all text-left group ${topProtectionMode === 'protected'
                       ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                       : 'border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-800 bg-white dark:bg-gray-800/50'
                       }`}
                   >
                     <div className="flex items-center gap-2 mb-2">
-                      <Shield className={`w-5 h-5 ${isProtected ? 'text-blue-500' : 'text-gray-400'}`} />
-                      <span className={`font-bold ${isProtected ? 'text-gray-900 dark:text-white' : 'text-gray-500'}`}>
+                      <Shield className={`w-5 h-5 ${topProtectionMode === 'protected' ? 'text-blue-500' : 'text-gray-400'}`} />
+                      <span className={`font-bold ${topProtectionMode === 'protected' ? 'text-gray-900 dark:text-white' : 'text-gray-500'}`}>
                         {t('profileOptions.stability.protected')}
                       </span>
                     </div>
@@ -1284,20 +1284,22 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                   <button
                     type="button"
                     onClick={() => {
+                      setTopProtectionMode('open');
+                      setShowAdvancedProtection(false);
                       setFormData(prev => ({
                         ...prev,
                         allowCustomMods: true,
                         allowCustomResourcepacks: true,
                       }));
                     }}
-                    className={`flex flex-col items-start p-5 rounded-xl border transition-all text-left group ${isFullyOpen
+                    className={`flex flex-col items-start p-5 rounded-xl border transition-all text-left group ${topProtectionMode === 'open'
                       ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
                       : 'border-gray-200 dark:border-gray-700 hover:border-emerald-400 dark:hover:border-emerald-800 bg-white dark:bg-gray-800/50'
                       }`}
                   >
                     <div className="flex items-center gap-2 mb-2">
-                      <ShieldOff className={`w-5 h-5 ${isFullyOpen ? 'text-emerald-500' : 'text-gray-400'}`} />
-                      <span className={`font-bold ${isFullyOpen ? 'text-gray-900 dark:text-white' : 'text-gray-500'}`}>
+                      <ShieldOff className={`w-5 h-5 ${topProtectionMode === 'open' ? 'text-emerald-500' : 'text-gray-400'}`} />
+                      <span className={`font-bold ${topProtectionMode === 'open' ? 'text-gray-900 dark:text-white' : 'text-gray-500'}`}>
                         {t('profileOptions.stability.open')}
                       </span>
                     </div>
@@ -1308,7 +1310,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                 </div>
 
                 {/* Advanced Mode Toggle */}
-                <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                {topProtectionMode === 'protected' && <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
                   <button
                     type="button"
                     onClick={() => setShowAdvancedProtection(!showAdvancedProtection)}
@@ -1317,11 +1319,6 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                     <span className="flex items-center gap-2">
                       <Settings className="w-4 h-4" />
                       {t('profileOptions.stability.advancedMode')}
-                      {isCustomMode && (
-                        <span className="text-blue-600 dark:text-blue-400 text-[10px] uppercase font-bold px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 rounded ml-2">
-                          Custom
-                        </span>
-                      )}
                     </span>
                     {showAdvancedProtection ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </button>
@@ -1396,7 +1393,7 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                       </table>
                     </div>
                   )}
-                </div>
+                </div>}
               </div>
             </div>
           </div>
