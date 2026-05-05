@@ -10,7 +10,7 @@ import { ModpackManagementService } from '../../services/modpackManagementServic
 interface MinecraftAccountDropdownProps {
   isOpen: boolean;
   onClose: () => void;
-  anchorRef: React.RefObject<HTMLDivElement>;
+  anchorRef: React.RefObject<HTMLDivElement | null>;
   userSettings: UserSettings;
   onUpdateSettings: (_settings: UserSettings) => void;
   onNavigateToAccount?: () => void;
