@@ -58,7 +58,7 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
   const [selectedBannerFile, setSelectedBannerFile] = useState<File | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [bannerPreviewUrl, setBannerPreviewUrl] = useState<string | null>(null);
-  const [systemRamMB, setSystemRamMB] = useState<number>(8192); // Default fallback
+  const [systemRamMB, setSystemRamMB] = useState<number>(0); // Initialize to 0 to wait for real value
   const [maxAllocatableRam, setMaxAllocatableRam] = useState<number>(32768);
 
   // Repair and reinstall confirmation state

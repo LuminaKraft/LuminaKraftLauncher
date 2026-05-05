@@ -953,18 +953,26 @@ async fn open_microsoft_auth_modal(app: tauri::AppHandle) -> Result<String, Stri
             if let Ok(current_url) = window_check.url() {
                 let url_str = current_url.as_str();
                 
-                // Check if URL contains code parameter or is the redirect URL
-                if url_str.contains("code=") || url_str.contains("login.live.com/oauth20_desktop.srf") {
-                    if let Some(code) = url_str.split("code=").nth(1).and_then(|s| s.split('&').next()) {
+                // Check if URL is the redirect URL or contains auth parameters
+                if url_str.contains("code=") || url_str.contains("error=") || url_str.contains("login.live.com/oauth20_desktop.srf") {
+                    let mut found_code = None;
+                    let mut found_error = None;
+                    
+                    for (key, value) in current_url.query_pairs() {
+                        if key == "code" {
+                            found_code = Some(value.into_owned());
+                        } else if key == "error" {
+                            found_error = Some(value.into_owned());
+                        }
+                    }
+
+                    if let Some(code) = found_code {
                         if let Ok(mut result_guard) = result_check.lock() {
-                            *result_guard = Some(Ok(code.to_string()));
+                            *result_guard = Some(Ok(code));
                         }
                         let _ = window_check.close();
                         break;
-                    } else if url_str.contains("error=") {
-                        let error = url_str.split("error=").nth(1)
-                            .and_then(|s| s.split('&').next())
-                            .unwrap_or("Authentication failed");
+                    } else if let Some(error) = found_error {
                         if let Ok(mut result_guard) = result_check.lock() {
                             *result_guard = Some(Err(format!("Microsoft authentication error: {}", error)));
                         }
