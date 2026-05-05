@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n';
 import { Plus, X, Upload, FileArchive, RefreshCw, Check, ChevronRight, ChevronLeft, Info, Image as ImageIcon, FileText, Package, Layers, ChevronDown, ChevronUp, Settings, AlertCircle, Globe, Shield, ShieldOff } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
-import { save } from '@tauri-apps/plugin-dialog';
+import { save, open as openDialog } from '@tauri-apps/plugin-dialog';
 import { listen } from '@tauri-apps/api/event';
 import JSZip from 'jszip';
 import { supabase } from '../../services/supabaseClient';
@@ -1364,38 +1364,38 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                           </tr>
 
                           <tr>
-                            <td className="py-2.5 font-medium text-gray-700 dark:text-gray-300">
-                              <div className="flex flex-col">
-                                <span>Custom Paths</span>
-                                <span className="text-[10px] text-gray-400 font-normal mt-0.5">Comma-separated relative paths (e.g., config, kubejs, scripts)</span>
-                              </div>
-                            </td>
+                            <td className="py-2.5 font-medium text-gray-700 dark:text-gray-300">Custom Paths</td>
                             <td className="py-2.5 text-right">
-                              <input
-                                type="text"
-                                value={formData.customProtectedPaths?.join(', ') || ''}
-                                onChange={(e) => {
-                                  const value = e.target.value;
-                                  const paths = value.split(',').map(p => p.trim()).filter(p => p.length > 0);
-                                  updateFormData('customProtectedPaths', paths);
-                                }}
-                                placeholder="config, kubejs"
-                                className="w-full text-xs px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                              />
-                            </td>
-                          </tr>
-
-                          <tr>
-                            <td className="py-2.5 font-medium">/shaderpacks & others</td>
-                            <td className="py-2.5 text-right text-emerald-600 dark:text-emerald-500/60 italic text-[11px]">
-                              {t('profileOptions.stability.foldersTable.unprotected')}
+                              <div className="flex flex-col items-end gap-1.5">
+                                {(formData.customProtectedPaths?.length ?? 0) > 0 && (
+                                  <div className="flex flex-wrap gap-1 justify-end">
+                                    {formData.customProtectedPaths!.map((p, i) => (
+                                      <span key={i} className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-medium">
+                                        {p}
+                                        <button type="button" onClick={() => updateFormData('customProtectedPaths', formData.customProtectedPaths!.filter((_, j) => j !== i))} className="hover:text-red-500 transition-colors">×</button>
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    const selected = await openDialog({ directory: true, multiple: true, title: 'Select folders to protect' });
+                                    if (!selected) return;
+                                    const dirs = (Array.isArray(selected) ? selected : [selected]).map(p => p.replace(/\\/g, '/').split('/').pop() ?? p);
+                                    const current = formData.customProtectedPaths ?? [];
+                                    const merged = Array.from(new Set([...current, ...dirs]));
+                                    updateFormData('customProtectedPaths', merged);
+                                  }}
+                                  className="text-xs px-2.5 py-1 rounded-lg font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+                                >
+                                  + Add folder
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         </tbody>
                       </table>
-                      <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-2 italic">
-                        * {t('profileOptions.stability.foldersTable.advancedFootnote', 'Shaders, screenshots and aesthetic mods are never restricted.')}
-                      </p>
                     </div>
                   )}
                 </div>

@@ -538,15 +538,14 @@ const ProfileOptionsModal: React.FC<ProfileOptionsModalProps> = ({
                       </tr>
                       {metadata?.custom_protected_paths && metadata.custom_protected_paths.length > 0 && (
                         <tr>
-                          <td className="py-2.5 text-white">
-                            <div className="flex flex-col">
-                              <span>Custom Paths</span>
-                              <span className="text-[10px] text-dark-400 font-normal mt-0.5">{metadata.custom_protected_paths.join(', ')}</span>
-                            </div>
-                          </td>
+                          <td className="py-2.5 text-white">Custom Paths</td>
                           <td className="py-2.5 text-right">
-                            <div className="text-xs px-2 py-1 rounded transition-colors bg-lumina-500/20 text-lumina-400">
-                              Protected
+                            <div className="flex flex-wrap gap-1 justify-end">
+                              {metadata.custom_protected_paths.map((p, i) => (
+                                <span key={i} className="inline-flex items-center text-[11px] px-2 py-0.5 rounded-md bg-lumina-500/20 text-lumina-400 font-medium">
+                                  {p}
+                                </span>
+                              ))}
                             </div>
                           </td>
                         </tr>
