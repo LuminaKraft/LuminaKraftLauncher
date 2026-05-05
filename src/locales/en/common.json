@@ -826,7 +826,11 @@
         "unprotected": "Not Protected",
         "advancedFootnote": "Shaders, screenshots and aesthetic mods are never restricted."
       },
-      "managedByCreator": "These settings are managed by the modpack creator to ensure stability."
+      "managedByCreator": "These settings are managed by the modpack creator to ensure stability.",
+      "customPaths": {
+        "hint": "Only protect paths that won't change during normal gameplay.",
+        "volatileWarn": "This path tends to change just by playing or adjusting in-game settings — it will be flagged as user-modified. Prefer protecting specific subpaths that you know stay unchanged."
+      }
     }
   },
   "publishModpack": {

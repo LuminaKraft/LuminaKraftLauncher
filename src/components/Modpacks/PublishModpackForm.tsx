@@ -1370,12 +1370,15 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                               <div className="flex flex-col items-end gap-1.5">
                                 {(formData.customProtectedPaths?.length ?? 0) > 0 && (
                                   <div className="flex flex-wrap gap-1 justify-end">
-                                    {formData.customProtectedPaths!.map((p, i) => (
-                                      <span key={i} className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-medium">
-                                        {p}
-                                        <button type="button" onClick={() => updateFormData('customProtectedPaths', formData.customProtectedPaths!.filter((_, j) => j !== i))} className="hover:text-red-500 transition-colors">×</button>
-                                      </span>
-                                    ))}
+                                    {formData.customProtectedPaths!.map((p, i) => {
+                                      const isVolatile = ['config', 'options.txt', 'saves', 'servers.dat'].includes(p);
+                                      return (
+                                        <span key={i} title={isVolatile ? t('profileOptions.stability.customPaths.volatileWarn') : undefined} className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md font-medium ${isVolatile ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 cursor-help' : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'}`}>
+                                          {p}
+                                          <button type="button" onClick={() => updateFormData('customProtectedPaths', formData.customProtectedPaths!.filter((_, j) => j !== i))} className="hover:text-red-500 transition-colors">×</button>
+                                        </span>
+                                      );
+                                    })}
                                   </div>
                                 )}
                                 <PathAutocompleteInput
@@ -1383,9 +1386,18 @@ export function PublishModpackForm({ onNavigate }: PublishModpackFormProps) {
                                   onAdd={(p) => {
                                     const merged = Array.from(new Set([...(formData.customProtectedPaths ?? []), p]));
                                     updateFormData('customProtectedPaths', merged);
+                                    if (['config', 'options.txt', 'saves', 'servers.dat'].includes(p)) {
+                                      toast(t('profileOptions.stability.customPaths.volatileWarn'), {
+                                        style: { background: '#fffbeb', color: '#92400e', border: '1px solid #fde68a', fontSize: '13px' },
+                                        duration: 6000,
+                                      });
+                                    }
                                   }}
-                                  placeholder="e.g. config, options.txt"
+                                  placeholder="e.g. mods, config/mymod.json"
                                 />
+                                <p className="text-[11px] text-gray-400 dark:text-gray-500 text-right">
+                                  {t('profileOptions.stability.customPaths.hint')}
+                                </p>
                               </div>
                             </td>
                           </tr>
