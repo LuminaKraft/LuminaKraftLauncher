@@ -5,6 +5,36 @@ All notable changes to the LuminaKraft Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.9] - 2026-05-06
+
+### ✨ **New Features**
+- **Custom protected paths for modpack publishing**
+  - Modpack creators can now define additional relative paths to protect from user modification beyond the default `mods/` and `resourcepacks/` folders.
+  - Paths are specified as relative to the instance directory (e.g. `config/mymod.json`).
+- **Autocomplete input for custom protected paths**
+  - Replaced the file/folder system picker with a text input that suggests paths extracted directly from the uploaded modpack ZIP (`overrides/` and `client-overrides/` entries).
+  - `EditModpackForm` also fetches paths from the locally installed instance via a new `get_instance_file_paths` Tauri command, so suggestions are available even without re-uploading.
+  - Common instance paths (`mods`, `resourcepacks`, `saves`, etc.) are always included as fallback suggestions.
+  - Supports keyboard navigation (↑↓ / Enter / Escape) and click-outside to close the dropdown.
+- **Volatile path warnings**
+  - Tags for paths that tend to change during normal gameplay (`config`, `options.txt`, `saves`, `servers.dat`) are displayed in amber instead of blue.
+  - Hovering over an amber tag shows a tooltip explaining why that path is risky to protect.
+  - Adding a volatile path triggers a non-intrusive toast warning.
+  - A persistent gray hint below the input reminds creators to only protect paths that stay unchanged during gameplay.
+
+### 🐛 **Bug Fixes**
+- **Fixed Microsoft auth decoding error and premature RAM safety check**
+- **Fixed phantom sessions after auth state changes**
+  - Global cache is now invalidated on auth state changes to prevent stale session data from persisting.
+- **Fixed Windows absolute path bypass in custom protected paths validation**
+  - Paths like `C:\Windows` are now correctly rejected in both Modrinth and CurseForge processors.
+
+### 🔧 **UX Improvements**
+- **Protection mode selector decoupled from Advanced Mode toggles**
+  - The Protected/Open top-level selection no longer changes when individual folder toggles are adjusted inside Advanced Mode.
+  - The Advanced Mode section is hidden when Open mode is selected.
+  - Removed the "Custom" badge from the Advanced Mode toggle to reduce visual noise.
+
 ## [0.1.8] - 2026-04-27
 
 ### 🚀 **Infrastructure & Assets**
