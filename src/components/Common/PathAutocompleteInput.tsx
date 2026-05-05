@@ -3,7 +3,7 @@ import { Plus } from 'lucide-react';
 
 interface PathAutocompleteInputProps {
   suggestions: string[];
-  onAdd: (path: string) => void;
+  onAdd: (_path: string) => void;
   placeholder?: string;
 }
 
