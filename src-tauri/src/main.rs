@@ -17,6 +17,21 @@ mod parallel_download;
 
 use crate::launcher::launch_modpack_action;
 
+/// Validate modpack_id is safe to use in filesystem paths
+/// Rejects path traversal attempts and separators
+fn validate_modpack_id(modpack_id: &str) -> Result<(), String> {
+    if modpack_id.is_empty()
+        || modpack_id.contains("..")
+        || modpack_id.contains('/')
+        || modpack_id.contains('\\')
+        || modpack_id.contains('\0')
+        || modpack_id.starts_with('.')
+    {
+        return Err(format!("Invalid modpack_id: {}", modpack_id));
+    }
+    Ok(())
+}
+
 /// Helper function for serde default values
 
 
@@ -185,6 +200,7 @@ async fn get_instance_metadata(modpack_id: String) -> Result<Option<String>, Str
 
 #[tauri::command]
 async fn get_cached_modpack_data(modpack_id: String) -> Result<Option<String>, String> {
+    validate_modpack_id(&modpack_id)?;
     let launcher_dir = match dirs::data_dir() {
         Some(dir) => dir.join("LKLauncher"),
         None => return Err("Failed to get app data directory".to_string()),
@@ -210,6 +226,7 @@ async fn update_modpack_cache_json(
     modpack_id: String,
     updates: serde_json::Value,
 ) -> Result<(), String> {
+    validate_modpack_id(&modpack_id)?;
     let launcher_dir = match dirs::data_dir() {
         Some(dir) => dir.join("LKLauncher"),
         None => return Err("Failed to get app data directory".to_string()),
@@ -259,6 +276,7 @@ async fn save_modpack_metadata_json(
     modpack_id: String,
     modpack_json: String
 ) -> Result<(), String> {
+    validate_modpack_id(&modpack_id)?;
     let launcher_dir = match dirs::data_dir() {
         Some(dir) => dir.join("LKLauncher"),
         None => return Err("Failed to get app data directory".to_string()),
@@ -1066,6 +1084,7 @@ async fn remove_modpack(modpack_id: String) -> Result<(), String> {
 
 #[tauri::command]
 async fn open_instance_folder(modpack_id: String) -> Result<(), String> {
+    validate_modpack_id(&modpack_id)?;
     let app_data_dir = dirs::data_dir()
         .ok_or_else(|| "Failed to get app data directory".to_string())?;
     

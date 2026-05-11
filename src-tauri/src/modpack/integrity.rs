@@ -14,8 +14,17 @@ use serde::{Deserialize, Serialize};
 
 type HmacSha256 = Hmac<Sha256>;
 
-/// Secret key for HMAC signing (embedded in binary, obfuscated)
-/// In production, this should be more complex and possibly derived
+/// Secret key for HMAC signing (embedded in binary).
+///
+/// SECURITY NOTE: This is NOT adversarial-grade anti-cheat. The secret can be extracted
+/// from the binary via `strings`/disassembly, so a determined user can re-sign tampered
+/// integrity data. The purpose here is to:
+///   1. Signal "honest mistake" tampering (accidental file edits get caught)
+///   2. Force a minimum effort threshold for cheaters
+///   3. Combined with server-side ZIP SHA256 check at install time, catch most casual abuse
+///
+/// For real anti-cheat, integrity must be verified server-side (e.g., kicking on join
+/// based on a server-trusted manifest), not client-side.
 const HMAC_SECRET: &[u8] = b"LK_INTEGRITY_v1_8f3k2m9x4p7q1w6e";
 
 /// Integrity data stored in instance metadata

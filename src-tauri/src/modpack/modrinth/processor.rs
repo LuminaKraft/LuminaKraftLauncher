@@ -61,8 +61,14 @@ where
         "extracting_modpack".to_string()
     );
     
-    // Extract ZIP to temp directory
-    extract_zip(modpack_zip_path, &temp_dir)?;
+    // Extract ZIP to temp directory in a blocking task to avoid starving tokio runtime
+    {
+        let zip_path = modpack_zip_path.clone();
+        let dest = temp_dir.clone();
+        tokio::task::spawn_blocking(move || extract_zip(&zip_path, &dest))
+            .await
+            .map_err(|e| anyhow!("Extract task panicked: {}", e))??;
+    }
     
     emit_progress(
         "Leyendo información del modpack Modrinth".to_string(),

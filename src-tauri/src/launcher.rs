@@ -176,7 +176,10 @@ where
     if !meta_dirs.is_version_installed(&modpack.minecraft_version).await {
         emit_progress("progress.downloadingMinecraft".to_string(), 20.0, "downloading_minecraft".to_string());
         
-        // Infinite retry loop for Minecraft installation (libraries/assets)
+        // Bounded retry loop for Minecraft installation (libraries/assets).
+        // Max 20 attempts (~100s with 5s sleep) prevents indefinite hang on degraded networks.
+        const MAX_NETWORK_RETRIES: u32 = 20;
+        let mut attempt: u32 = 0;
         loop {
             match minecraft::install_minecraft_with_lyceris_progress(&modpack, &settings, meta_dirs.meta_dir.clone(), {
                 let emit_progress = emit_progress.clone();
@@ -189,17 +192,26 @@ where
                 Err(e) => {
                     let error_msg = e.to_string();
                     println!("DEBUG: Minecraft Install error: {:?}", e); // Debug log
-                    
-                    // Check for network error - Infinite Retry
-                    if error_msg.contains("Error de red") || error_msg.contains("TIMEDOUT") || error_msg.contains("unreachable") || error_msg.to_lowercase().contains("offline") 
+
+                    // Check for network error - Bounded retry
+                    if error_msg.contains("Error de red") || error_msg.contains("TIMEDOUT") || error_msg.contains("unreachable") || error_msg.to_lowercase().contains("offline")
                         || error_msg.contains("dns") || error_msg.contains("connection closed") || error_msg.contains("hyper::Error") {
-                         
-                         emit_progress("progress.waitingForNetwork".to_string(), 20.0, "waiting_for_network".to_string());
-                         println!("⚠️ Network error installing Minecraft, waiting for connection...");
-                         tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-                         continue;
+
+                        attempt += 1;
+                        if attempt >= MAX_NETWORK_RETRIES {
+                            println!("❌ Max network retries ({}) exceeded installing Minecraft", MAX_NETWORK_RETRIES);
+                            return Err(anyhow::anyhow!(
+                                "Network error installing Minecraft after {} attempts: {}",
+                                MAX_NETWORK_RETRIES, error_msg
+                            ));
+                        }
+
+                        emit_progress("progress.waitingForNetwork".to_string(), 20.0, "waiting_for_network".to_string());
+                        println!("⚠️ Network error installing Minecraft (attempt {}/{}), waiting...", attempt, MAX_NETWORK_RETRIES);
+                        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+                        continue;
                     }
-                    
+
                     return Err(e); // Fatal error
                 }
             }

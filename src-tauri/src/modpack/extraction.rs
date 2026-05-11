@@ -58,7 +58,14 @@ pub fn extract_zip(zip_path: &PathBuf, extract_to: &PathBuf) -> Result<()> {
                 match archive.by_index(index) {
                     Ok(mut file) => {
                         let output_path = extract_to.join(&name);
-                        
+
+                        // Defense-in-depth: ensure extracted path stays within target dir
+                        // enclosed_name() already strips `..`, but verify anyway
+                        if !output_path.starts_with(extract_to) {
+                            eprintln!("⚠️ Zip-slip blocked: {} escapes {}", output_path.display(), extract_to.display());
+                            return;
+                        }
+
                         if file.is_dir() {
                             let _ = std::fs::create_dir_all(&output_path);
                         } else {
