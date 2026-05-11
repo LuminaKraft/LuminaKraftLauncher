@@ -465,7 +465,8 @@ where
         .map(|c| c == "official" || c == "partner")
         .unwrap_or(false);
     let has_protection = modpack.allow_custom_mods == Some(false)
-        || modpack.allow_custom_resourcepacks == Some(false);
+        || modpack.allow_custom_resourcepacks == Some(false)
+        || modpack.custom_protected_paths.as_ref().map(|v| !v.is_empty()).unwrap_or(false);
     
     let integrity_data = if is_managed_category || has_protection {
         emit_progress("progress.calculatingIntegrity".to_string(), 97.0, "calculating_integrity".to_string());

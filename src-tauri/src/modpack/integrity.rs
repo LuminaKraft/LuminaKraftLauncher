@@ -85,7 +85,7 @@ pub fn hash_file(path: &PathBuf) -> Result<String> {
 }
 
 /// Calculate hashes for all managed directories in an instance (Parallelized)
-pub fn calculate_instance_hashes(instance_dir: &PathBuf) -> Result<HashMap<String, String>> {
+pub fn calculate_instance_hashes(instance_dir: &PathBuf, custom_protected_paths: &Option<Vec<String>>) -> Result<HashMap<String, String>> {
     use rayon::prelude::*;
 
     let mut dir_list = Vec::new();
@@ -128,6 +128,16 @@ pub fn calculate_instance_hashes(instance_dir: &PathBuf) -> Result<HashMap<Strin
 
     collect_dir("mods", false, Some("jar"))?;
     collect_dir("resourcepacks", false, Some("zip"))?;
+
+    if let Some(paths) = custom_protected_paths {
+        for p in paths {
+            let trimmed = p.trim();
+            if trimmed.is_empty() || trimmed.contains("..") || trimmed.starts_with('/') || trimmed.starts_with('\\') {
+                continue;
+            }
+            collect_dir(trimmed, true, None)?;
+        }
+    }
 
     // Hash in parallel
     let results: Result<Vec<(String, String)>> = dir_list.into_par_iter()
@@ -214,7 +224,7 @@ pub fn create_integrity_data(
     instance_dir: &PathBuf,
     zip_sha256: Option<String>,
 ) -> Result<IntegrityData> {
-    let file_hashes = calculate_instance_hashes(instance_dir)?;
+    let file_hashes = calculate_instance_hashes(instance_dir, &None)?;
     let signature = sign_hashes(&file_hashes)?;
     
     Ok(IntegrityData {
@@ -232,6 +242,7 @@ pub fn verify_integrity(
     integrity_data: &IntegrityData,
     allow_custom_mods: bool,
     allow_custom_resourcepacks: bool,
+    custom_protected_paths: &Option<Vec<String>>,
 ) -> IntegrityResult {
     let mut issues = Vec::new();
     
@@ -241,7 +252,7 @@ pub fn verify_integrity(
     }
     
     // Calculate current hashes
-    let current_hashes = match calculate_instance_hashes(instance_dir) {
+    let current_hashes = match calculate_instance_hashes(instance_dir, custom_protected_paths) {
         Ok(h) => h,
         Err(e) => {
             eprintln!("Failed to calculate current hashes: {}", e);
@@ -270,17 +281,24 @@ pub fn verify_integrity(
     // Check for unauthorized files (only if custom files are not allowed)
     for path in current_hashes.keys() {
         if !integrity_data.file_hashes.contains_key(path) {
-            // Determine if this is a mod or resourcepack
+            // Determine if this is a mod, resourcepack, or custom protected path
             let is_mod = path.starts_with("mods/");
             let is_resourcepack = path.starts_with("resourcepacks/");
-            
-            // Only report as unauthorized if custom files are NOT allowed for this type
+            let is_custom_protected = custom_protected_paths.as_ref()
+                .map(|paths| paths.iter().any(|p| {
+                    let trimmed = p.trim();
+                    !trimmed.is_empty() && path.starts_with(&format!("{}/", trimmed))
+                }))
+                .unwrap_or(false);
+
             let should_report = if is_mod {
                 !allow_custom_mods
             } else if is_resourcepack {
                 !allow_custom_resourcepacks
+            } else if is_custom_protected {
+                true // custom protected paths always enforced
             } else {
-                false // Don't report other file types (configs change naturally)
+                false // configs and other dirs change naturally
             };
             
             if should_report {

@@ -195,6 +195,27 @@ where
         "curseforge_completed".to_string()
     );
 
+    // Add files on disk in custom protected paths so they're tracked in integrity data
+    if let Some(ref paths) = custom_protected_paths {
+        for custom_path in paths {
+            let trimmed = custom_path.trim();
+            if trimmed.is_empty() || trimmed.contains("..") || trimmed.starts_with('/') || trimmed.starts_with('\\') {
+                continue;
+            }
+            let dir = instance_dir.join(trimmed);
+            if dir.exists() {
+                for entry in walkdir::WalkDir::new(&dir).into_iter().flatten() {
+                    let path = entry.path();
+                    if path.is_file() {
+                        if let Ok(rel) = path.strip_prefix(instance_dir) {
+                            all_new_expected.insert(rel.to_string_lossy().replace('\\', "/"));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     Ok((modloader, modloader_version, recommended_ram, failed_mods, all_new_expected))
 }
 

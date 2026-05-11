@@ -580,10 +580,11 @@ async fn verify_instance_integrity(
         
     // Determine if protection is enabled by checking override flags first, then metadata
     // If any protection flag is explicitly set to false, we should verify integrity
-    let has_protection = override_allow_custom_mods == Some(false) 
+    let has_protection = override_allow_custom_mods == Some(false)
         || override_allow_custom_resourcepacks == Some(false)
         || metadata.allow_custom_mods == Some(false)
-        || metadata.allow_custom_resourcepacks == Some(false);
+        || metadata.allow_custom_resourcepacks == Some(false)
+        || metadata.custom_protected_paths.as_ref().map(|v| !v.is_empty()).unwrap_or(false);
     
     // If it's a community/imported modpack AND has no protection enabled, skip verification
     // But if protection is enabled, verify regardless of category
@@ -672,6 +673,7 @@ async fn verify_instance_integrity(
                 integrity_data,
                 effective_allow_mods,
                 effective_allow_resourcepacks,
+                &metadata.custom_protected_paths,
             );
             
             if !result.is_valid {
