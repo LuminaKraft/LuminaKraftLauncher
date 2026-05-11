@@ -323,6 +323,73 @@ pub fn verify_integrity(
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    #[test]
+    fn sign_hashes_is_deterministic_regardless_of_insertion_order() {
+        let mut a: HashMap<String, String> = HashMap::new();
+        a.insert("mods/a.jar".into(), "hash_a".into());
+        a.insert("mods/b.jar".into(), "hash_b".into());
+        a.insert("resourcepacks/c.zip".into(), "hash_c".into());
+
+        let mut b: HashMap<String, String> = HashMap::new();
+        b.insert("resourcepacks/c.zip".into(), "hash_c".into());
+        b.insert("mods/b.jar".into(), "hash_b".into());
+        b.insert("mods/a.jar".into(), "hash_a".into());
+
+        let sig_a = sign_hashes(&a).unwrap();
+        let sig_b = sign_hashes(&b).unwrap();
+        assert_eq!(sig_a, sig_b, "HMAC must be deterministic given the same content");
+    }
+
+    #[test]
+    fn verify_signature_accepts_correct_signature() {
+        let mut h: HashMap<String, String> = HashMap::new();
+        h.insert("mods/x.jar".into(), "deadbeef".into());
+        let sig = sign_hashes(&h).unwrap();
+        assert!(verify_signature(&h, &sig));
+    }
+
+    #[test]
+    fn verify_signature_rejects_tampered_data() {
+        let mut h: HashMap<String, String> = HashMap::new();
+        h.insert("mods/x.jar".into(), "deadbeef".into());
+        let sig = sign_hashes(&h).unwrap();
+        // Tamper: modify a hash after signing
+        h.insert("mods/x.jar".into(), "cafebabe".into());
+        assert!(!verify_signature(&h, &sig));
+    }
+
+    #[test]
+    fn verify_signature_rejects_invalid_signature_string() {
+        let h: HashMap<String, String> = HashMap::new();
+        assert!(!verify_signature(&h, "not-a-real-hmac"));
+    }
+
+    #[test]
+    fn format_issues_produces_human_strings() {
+        let issues = vec![
+            IntegrityIssue::ModifiedFile {
+                path: "mods/foo.jar".into(),
+                expected: "abc123".into(),
+                actual: "xyz789".into(),
+            },
+            IntegrityIssue::UnauthorizedFile { path: "mods/bar.jar".into() },
+            IntegrityIssue::MissingFile { path: "mods/baz.jar".into() },
+            IntegrityIssue::InvalidSignature,
+        ];
+        let formatted = format_issues(&issues);
+        assert_eq!(formatted.len(), 4);
+        assert!(formatted[0].contains("mods/foo.jar"));
+        assert!(formatted[1].contains("mods/bar.jar"));
+        assert!(formatted[2].contains("mods/baz.jar"));
+        assert!(formatted[3].to_lowercase().contains("integridad") || formatted[3].to_lowercase().contains("integrity"));
+    }
+}
+
 /// Format integrity issues for display
 pub fn format_issues(issues: &[IntegrityIssue]) -> Vec<String> {
     issues.iter().map(|issue| {

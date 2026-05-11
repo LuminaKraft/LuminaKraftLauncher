@@ -382,6 +382,21 @@ async fn get_local_modpacks() -> Result<String, String> {
     }
 }
 
+/// Returns all instance metadata keyed by modpack id, as a JSON object.
+/// Use this instead of N x get_instance_metadata when loading lists of modpacks
+/// to avoid IPC round-trip storms.
+#[tauri::command]
+async fn get_all_instance_metadata() -> Result<String, String> {
+    match filesystem::list_instances().await {
+        Ok(instances) => {
+            let map: std::collections::HashMap<String, &InstanceMetadata> =
+                instances.iter().map(|m| (m.id.clone(), m)).collect();
+            serde_json::to_string(&map).map_err(|e| format!("Failed to serialize metadata map: {}", e))
+        }
+        Err(e) => Err(format!("Failed to list instances: {}", e)),
+    }
+}
+
 #[tauri::command]
 async fn install_modpack(modpack: Modpack) -> Result<(), String> {
     // Validate modpack before installation
@@ -1546,6 +1561,7 @@ fn main() {
             get_file_as_data_url,
             update_instance_ram_settings,
             get_local_modpacks,
+            get_all_instance_metadata,
             install_modpack,
             install_modpack_with_minecraft,
             install_modpack_with_failed_tracking,
@@ -1604,4 +1620,36 @@ fn main() {
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::validate_modpack_id;
+
+    #[test]
+    fn accepts_safe_ids() {
+        assert!(validate_modpack_id("luminapack").is_ok());
+        assert!(validate_modpack_id("crucismc-2024-spring").is_ok());
+        assert!(validate_modpack_id("550e8400-e29b-41d4-a716-446655440000").is_ok());
+    }
+
+    #[test]
+    fn rejects_path_traversal() {
+        assert!(validate_modpack_id("..").is_err());
+        assert!(validate_modpack_id("../etc").is_err());
+        assert!(validate_modpack_id("foo/../bar").is_err());
+    }
+
+    #[test]
+    fn rejects_separators() {
+        assert!(validate_modpack_id("foo/bar").is_err());
+        assert!(validate_modpack_id("foo\\bar").is_err());
+    }
+
+    #[test]
+    fn rejects_dangerous_prefixes_and_empty() {
+        assert!(validate_modpack_id("").is_err());
+        assert!(validate_modpack_id(".hidden").is_err());
+        assert!(validate_modpack_id("foo\0bar").is_err());
+    }
 }

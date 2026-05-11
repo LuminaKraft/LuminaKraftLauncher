@@ -108,4 +108,24 @@ src-tauri/src/
 
 Client configured via `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` env vars. Auth uses Supabase sessions stored under key `'luminakraft-auth'` in localStorage.
 
-Tables: `users`, `modpacks`, `modpack_versions`, `modpack_images`, `partners`.
+Tables: `users`, `modpacks`, `modpack_versions`, `modpack_images`, `partners`, `modpack_features`, `modpack_collaborators`, `modpack_stats`, `modpack_reviews`, `download_logs`.
+
+## Pre-commit checklist
+
+**Always run BEFORE committing** (CI runs same on push, but local saves time):
+
+1. `npm run lint` — must pass with 0 warnings
+2. `npm run test` — all vitest tests pass
+3. `cd src-tauri && cargo check && cargo clippy -- -D warnings && cargo test` — all Rust checks + tests pass
+4. If touching launch/install flow: smoke test manually (`npm run tauri:dev-stable`)
+5. If touching DB schema or RLS: apply migration to a Supabase branch first, smoke test, then merge to main
+
+If any of these fail, fix the root cause — do not skip hooks or use `--no-verify`.
+
+## Commit conventions
+
+- Conventional Commits format: `fix:`, `perf:`, `feat:`, `chore:`, `refactor:`, `docs:`
+- Subject ≤ 72 chars
+- Body explains WHY (not WHAT — diff already shows what)
+- **Never** add `Co-Authored-By` or AI/assistant attribution
+- One logical change per commit when possible

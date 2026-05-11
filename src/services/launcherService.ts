@@ -622,6 +622,21 @@ class LauncherService {
     }
   }
 
+  /**
+   * Batch fetch of ALL instance metadata in a single IPC call.
+   * Returns a map keyed by modpack id. Avoids N round-trips when loading lists.
+   */
+  async getAllInstanceMetadata(): Promise<Record<string, InstanceMetadata>> {
+    if (!isTauriContext()) return {};
+    try {
+      const json = await safeInvoke<string>('get_all_instance_metadata');
+      return json ? JSON.parse(json) : {};
+    } catch (error) {
+      console.error('Error getting all instance metadata:', error);
+      return {};
+    }
+  }
+
   // Helper function to ensure modpack has required fields, refreshing data if needed
   private async ensureModpackHasRequiredFields(modpackId: string): Promise<any> {
     let modpack = this.modpacksData?.modpacks.find((m: any) => m.id === modpackId);
