@@ -733,6 +733,11 @@ class AuthService {
           avatarHash = avatarMatch ? avatarMatch[1] : null;
         }
 
+        // Build full CDN URL from hash (a_ prefix = animated GIF)
+        const discordAvatarUrl = avatarHash
+          ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${avatarHash}.${avatarHash.startsWith('a_') ? 'gif' : 'png'}`
+          : null;
+
         // Clean username - remove discriminator if present (legacy format username#0000)
         let cleanUsername = discordUser.username || '';
         if (cleanUsername.includes('#')) {
@@ -769,6 +774,7 @@ class AuthService {
           discord_username: cleanUsername,
           discord_global_name: discordUser.global_name,
           discord_avatar: avatarHash,
+          avatar_url: discordAvatarUrl,
           discord_linked_at: new Date().toISOString(), // Track when Discord was linked
           email: discordUser.email || currentUser?.email, // Use Discord email if available
           display_name: calculated_display_name
