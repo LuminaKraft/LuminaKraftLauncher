@@ -15,28 +15,20 @@ export default defineConfig(async () => ({
     chunkSizeWarningLimit: 2000,
     rollupOptions: {
       output: {
-        // Split heavy deps into separate chunks for better caching + smaller initial JS
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'supabase': ['@supabase/supabase-js'],
-          'tauri': [
-            '@tauri-apps/api',
-            '@tauri-apps/plugin-fs',
-            '@tauri-apps/plugin-dialog',
-            '@tauri-apps/plugin-http',
-            '@tauri-apps/plugin-shell',
-            '@tauri-apps/plugin-process',
-            '@tauri-apps/plugin-opener',
-            '@tauri-apps/plugin-updater',
-          ],
-          'i18n': [
-            'i18next',
-            'react-i18next',
-            'i18next-browser-languagedetector',
-            'i18next-http-backend',
-          ],
-          'jszip': ['jszip'],
-          'icons': ['lucide-react', 'react-icons'],
+        // Split heavy deps into separate chunks for better caching + smaller initial JS.
+        // Vite 8 uses Rolldown, which only supports the FUNCTION form of manualChunks
+        // (the object form throws "manualChunks is not a function").
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return undefined;
+          if (/[\\/]node_modules[\\/](react|react-dom|react-router|react-router-dom)[\\/]/.test(id)) {
+            return "react-vendor";
+          }
+          if (id.includes("@supabase")) return "supabase";
+          if (id.includes("@tauri-apps")) return "tauri";
+          if (/i18next|react-i18next/.test(id)) return "i18n";
+          if (id.includes("jszip")) return "jszip";
+          if (/lucide-react|react-icons/.test(id)) return "icons";
+          return undefined;
         },
       },
     },
