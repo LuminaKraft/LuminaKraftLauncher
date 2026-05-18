@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { relaunch, exit } from '@tauri-apps/plugin-process';
 import { LauncherProvider, useLauncher } from './contexts/LauncherContext';
@@ -6,13 +6,14 @@ import { AnimationProvider, useAnimation } from './contexts/AnimationContext';
 import Sidebar from './components/Layout/Sidebar';
 import HomePage from './components/Home/HomePage';
 import ModpacksPage from './components/Modpacks/ModpacksPage';
-import MyModpacksPage from './components/Modpacks/MyModpacksPage';
-import PublishModpackForm from './components/Modpacks/PublishModpackForm';
-import EditModpackForm from './components/Modpacks/EditModpackForm';
-import PublishedModpacksPage from './components/Modpacks/PublishedModpacksPage';
-import SettingsPage from './components/Settings/SettingsPage';
-import AboutPage from './components/About/AboutPage';
-import AccountPage from './components/Account/AccountPage';
+// Lazy-loaded routes (non-home, less frequently visited)
+const MyModpacksPage = lazy(() => import('./components/Modpacks/MyModpacksPage'));
+const PublishModpackForm = lazy(() => import('./components/Modpacks/PublishModpackForm'));
+const EditModpackForm = lazy(() => import('./components/Modpacks/EditModpackForm'));
+const PublishedModpacksPage = lazy(() => import('./components/Modpacks/PublishedModpacksPage'));
+const SettingsPage = lazy(() => import('./components/Settings/SettingsPage'));
+const AboutPage = lazy(() => import('./components/About/AboutPage'));
+const AccountPage = lazy(() => import('./components/Account/AccountPage'));
 import UpdateDialog from './components/UpdateDialog';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import LauncherService from './services/launcherService';
@@ -354,7 +355,13 @@ function AppContent() {
             }`}
           style={{ transitionTimingFunction: 'cubic-bezier(0.2, 0, 0, 1)' }}
         >
-          {renderContent()}
+          <Suspense fallback={
+            <div className="flex h-full items-center justify-center">
+              <RefreshCw className="w-8 h-8 animate-spin text-gray-400" />
+            </div>
+          }>
+            {renderContent()}
+          </Suspense>
         </div>
       </main>
 

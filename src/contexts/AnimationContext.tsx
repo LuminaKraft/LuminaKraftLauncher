@@ -1,4 +1,4 @@
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, useCallback, useMemo, ReactNode } from 'react';
 import { useLauncher } from './LauncherContext';
 
 interface AnimationContextType {
@@ -15,12 +15,12 @@ export function AnimationProvider({ children }: { children: ReactNode }) {
   const { userSettings } = useLauncher();
   const animationsEnabled = userSettings.enableAnimations !== false; // default to true
 
-  const getAnimationClass = (baseClass: string, animatedClass: string = '') => {
+  const getAnimationClass = useCallback((baseClass: string, animatedClass: string = '') => {
     if (!animationsEnabled) return baseClass;
     return `${baseClass} ${animatedClass}`.trim();
-  };
+  }, [animationsEnabled]);
 
-  const getAnimationStyle = (style: React.CSSProperties): React.CSSProperties => {
+  const getAnimationStyle = useCallback((style: React.CSSProperties): React.CSSProperties => {
     if (!animationsEnabled) {
       // Completely disable all animations, transitions, and transforms
       const disabledStyle: React.CSSProperties = {
@@ -32,7 +32,7 @@ export function AnimationProvider({ children }: { children: ReactNode }) {
         transitionDuration: '0s !important' as any,
         transitionDelay: '0s !important' as any,
       };
-      
+
       // Remove scale transforms but keep other transforms like translate
       if (style.transform) {
         disabledStyle.transform = style.transform
@@ -40,22 +40,22 @@ export function AnimationProvider({ children }: { children: ReactNode }) {
           .replace(/rotate\([^)]+\)/g, '')
           .trim();
       }
-      
+
       return disabledStyle;
     }
     return style;
-  };
+  }, [animationsEnabled]);
 
   // Get appropriate delay - returns 0 if animations are disabled, original delay if enabled
-  const getDelay = (delay: number): number => {
+  const getDelay = useCallback((delay: number): number => {
     return animationsEnabled ? delay : 0;
-  };
+  }, [animationsEnabled]);
 
   // Execute callback with appropriate delay
-  const withDelay = (callback: () => void, delay: number): void => {
+  const withDelay = useCallback((callback: () => void, delay: number): void => {
     const actualDelay = animationsEnabled ? delay : 0;
     setTimeout(callback, actualDelay);
-  };
+  }, [animationsEnabled]);
 
   // Add global CSS to disable animations when setting is off
   React.useEffect(() => {
@@ -81,14 +81,16 @@ export function AnimationProvider({ children }: { children: ReactNode }) {
     }
   }, [animationsEnabled]);
 
+  const contextValue = useMemo(() => ({
+    animationsEnabled,
+    getAnimationClass,
+    getAnimationStyle,
+    getDelay,
+    withDelay,
+  }), [animationsEnabled, getAnimationClass, getAnimationStyle, getDelay, withDelay]);
+
   return (
-    <AnimationContext.Provider value={{
-      animationsEnabled,
-      getAnimationClass,
-      getAnimationStyle,
-      getDelay,
-      withDelay,
-    }}>
+    <AnimationContext.Provider value={contextValue}>
       {children}
     </AnimationContext.Provider>
   );

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Home, Settings, Info, AlertCircle, Pin, PinOff, FolderOpen, UploadCloud, User, Compass } from 'lucide-react';
 import { useLauncher } from '../../contexts/LauncherContext';
@@ -21,6 +21,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
   });
   const [hasUpdate, setHasUpdate] = useState(false);
   const [latestVersion, setLatestVersion] = useState<string>('');
+  const hasCheckedUpdates = useRef(false);
 
   // Minecraft Account Dropdown State
   const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
@@ -33,20 +34,18 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
     }
   }, [isPinned]);
 
-  // Check for updates (respecting experimental updates setting)
+  // Check for updates ONCE on mount. Re-checking on every userSettings change spammed the updater endpoint.
   useEffect(() => {
+    if (hasCheckedUpdates.current) return;
+    hasCheckedUpdates.current = true;
     const checkUpdates = async () => {
       try {
-        // Check if prereleases are enabled
         const enablePrereleases = userSettings?.enablePrereleases ?? false;
 
         const update = await check();
         if (update?.available) {
           const isPrerelease = update.version.includes('alpha') || update.version.includes('beta') || update.version.includes('rc');
 
-          // Only show update notification if:
-          // - It's a stable release, OR
-          // - It's a prerelease AND experimental updates are enabled
           if (!isPrerelease || enablePrereleases) {
             setHasUpdate(true);
             setLatestVersion(update.version);
@@ -57,55 +56,21 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
       }
     };
     checkUpdates();
-  }, [userSettings?.enablePrereleases]);
+    // Intentionally empty deps — runs once. enablePrereleases read fresh inside the async fn.
+  }, []);
 
   // Version is automatically updated by release.js
   const currentVersion = "0.1.9";
 
-  const menuItems = [
-    {
-      id: 'home',
-      label: t('navigation.home'),
-      icon: Home,
-      description: t('navigation.homeDesc')
-    },
-    {
-      id: 'explore',
-      label: t('navigation.explore'),
-      icon: Compass,
-      description: t('navigation.exploreDesc')
-    },
-    {
-      id: 'my-modpacks',
-      label: t('navigation.myModpacks'),
-      icon: FolderOpen,
-      description: t('navigation.myModpacksDesc')
-    },
-    {
-      id: 'published-modpacks',
-      label: t('navigation.publishedModpacks'),
-      icon: UploadCloud,
-      description: t('navigation.publishedModpacksDesc')
-    },
-    {
-      id: 'account',
-      label: t('navigation.account'),
-      icon: User,
-      description: t('navigation.accountDesc')
-    },
-    {
-      id: 'settings',
-      label: t('navigation.settings'),
-      icon: Settings,
-      description: 'Ajustes del launcher'
-    },
-    {
-      id: 'about',
-      label: t('navigation.about'),
-      icon: Info,
-      description: 'Información del launcher'
-    }
-  ];
+  const menuItems = useMemo(() => [
+    { id: 'home', label: t('navigation.home'), icon: Home, description: t('navigation.homeDesc') },
+    { id: 'explore', label: t('navigation.explore'), icon: Compass, description: t('navigation.exploreDesc') },
+    { id: 'my-modpacks', label: t('navigation.myModpacks'), icon: FolderOpen, description: t('navigation.myModpacksDesc') },
+    { id: 'published-modpacks', label: t('navigation.publishedModpacks'), icon: UploadCloud, description: t('navigation.publishedModpacksDesc') },
+    { id: 'account', label: t('navigation.account'), icon: User, description: t('navigation.accountDesc') },
+    { id: 'settings', label: t('navigation.settings'), icon: Settings, description: 'Ajustes del launcher' },
+    { id: 'about', label: t('navigation.about'), icon: Info, description: 'Información del launcher' }
+  ], [t]);
 
   const handleAvatarClick = () => {
     setIsAccountDropdownOpen(!isAccountDropdownOpen);

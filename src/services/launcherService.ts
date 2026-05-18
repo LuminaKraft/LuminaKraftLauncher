@@ -300,8 +300,9 @@ class LauncherService {
 
       if (uniqueAuthorIds.length > 0) {
         try {
+          // Use users_public view — public.users no longer permits anon/cross-user reads (RLS).
           const { data: authors } = await supabase
-            .from('users')
+            .from('users_public' as any)
             .select('id, display_name, discord_global_name, discord_username')
             .in('id', uniqueAuthorIds);
 
@@ -619,6 +620,21 @@ class LauncherService {
       }
       console.error('Error getting instance metadata:', error);
       return null;
+    }
+  }
+
+  /**
+   * Batch fetch of ALL instance metadata in a single IPC call.
+   * Returns a map keyed by modpack id. Avoids N round-trips when loading lists.
+   */
+  async getAllInstanceMetadata(): Promise<Record<string, InstanceMetadata>> {
+    if (!isTauriContext()) return {};
+    try {
+      const json = await safeInvoke<string>('get_all_instance_metadata');
+      return json ? JSON.parse(json) : {};
+    } catch (error) {
+      console.error('Error getting all instance metadata:', error);
+      return {};
     }
   }
 

@@ -17,6 +17,21 @@ mod parallel_download;
 
 use crate::launcher::launch_modpack_action;
 
+/// Validate modpack_id is safe to use in filesystem paths
+/// Rejects path traversal attempts and separators
+fn validate_modpack_id(modpack_id: &str) -> Result<(), String> {
+    if modpack_id.is_empty()
+        || modpack_id.contains("..")
+        || modpack_id.contains('/')
+        || modpack_id.contains('\\')
+        || modpack_id.contains('\0')
+        || modpack_id.starts_with('.')
+    {
+        return Err(format!("Invalid modpack_id: {}", modpack_id));
+    }
+    Ok(())
+}
+
 /// Helper function for serde default values
 
 
@@ -185,6 +200,7 @@ async fn get_instance_metadata(modpack_id: String) -> Result<Option<String>, Str
 
 #[tauri::command]
 async fn get_cached_modpack_data(modpack_id: String) -> Result<Option<String>, String> {
+    validate_modpack_id(&modpack_id)?;
     let launcher_dir = match dirs::data_dir() {
         Some(dir) => dir.join("LKLauncher"),
         None => return Err("Failed to get app data directory".to_string()),
@@ -210,6 +226,7 @@ async fn update_modpack_cache_json(
     modpack_id: String,
     updates: serde_json::Value,
 ) -> Result<(), String> {
+    validate_modpack_id(&modpack_id)?;
     let launcher_dir = match dirs::data_dir() {
         Some(dir) => dir.join("LKLauncher"),
         None => return Err("Failed to get app data directory".to_string()),
@@ -259,6 +276,7 @@ async fn save_modpack_metadata_json(
     modpack_id: String,
     modpack_json: String
 ) -> Result<(), String> {
+    validate_modpack_id(&modpack_id)?;
     let launcher_dir = match dirs::data_dir() {
         Some(dir) => dir.join("LKLauncher"),
         None => return Err("Failed to get app data directory".to_string()),
@@ -359,6 +377,21 @@ async fn get_local_modpacks() -> Result<String, String> {
                 Ok(json) => Ok(json),
                 Err(e) => Err(format!("Failed to serialize instances: {}", e)),
             }
+        }
+        Err(e) => Err(format!("Failed to list instances: {}", e)),
+    }
+}
+
+/// Returns all instance metadata keyed by modpack id, as a JSON object.
+/// Use this instead of N x get_instance_metadata when loading lists of modpacks
+/// to avoid IPC round-trip storms.
+#[tauri::command]
+async fn get_all_instance_metadata() -> Result<String, String> {
+    match filesystem::list_instances().await {
+        Ok(instances) => {
+            let map: std::collections::HashMap<String, &InstanceMetadata> =
+                instances.iter().map(|m| (m.id.clone(), m)).collect();
+            serde_json::to_string(&map).map_err(|e| format!("Failed to serialize metadata map: {}", e))
         }
         Err(e) => Err(format!("Failed to list instances: {}", e)),
     }
@@ -1066,6 +1099,7 @@ async fn remove_modpack(modpack_id: String) -> Result<(), String> {
 
 #[tauri::command]
 async fn open_instance_folder(modpack_id: String) -> Result<(), String> {
+    validate_modpack_id(&modpack_id)?;
     let app_data_dir = dirs::data_dir()
         .ok_or_else(|| "Failed to get app data directory".to_string())?;
     
@@ -1527,6 +1561,7 @@ fn main() {
             get_file_as_data_url,
             update_instance_ram_settings,
             get_local_modpacks,
+            get_all_instance_metadata,
             install_modpack,
             install_modpack_with_minecraft,
             install_modpack_with_failed_tracking,
@@ -1585,4 +1620,36 @@ fn main() {
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::validate_modpack_id;
+
+    #[test]
+    fn accepts_safe_ids() {
+        assert!(validate_modpack_id("luminapack").is_ok());
+        assert!(validate_modpack_id("crucismc-2024-spring").is_ok());
+        assert!(validate_modpack_id("550e8400-e29b-41d4-a716-446655440000").is_ok());
+    }
+
+    #[test]
+    fn rejects_path_traversal() {
+        assert!(validate_modpack_id("..").is_err());
+        assert!(validate_modpack_id("../etc").is_err());
+        assert!(validate_modpack_id("foo/../bar").is_err());
+    }
+
+    #[test]
+    fn rejects_separators() {
+        assert!(validate_modpack_id("foo/bar").is_err());
+        assert!(validate_modpack_id("foo\\bar").is_err());
+    }
+
+    #[test]
+    fn rejects_dangerous_prefixes_and_empty() {
+        assert!(validate_modpack_id("").is_err());
+        assert!(validate_modpack_id(".hidden").is_err());
+        assert!(validate_modpack_id("foo\0bar").is_err());
+    }
 }

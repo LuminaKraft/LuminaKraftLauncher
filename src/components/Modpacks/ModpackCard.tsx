@@ -1,4 +1,4 @@
-import React, { useState, useEffect, memo } from 'react';
+import React, { useState, useEffect, useMemo, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Download, Play, RefreshCw, Wrench, AlertTriangle, Loader2, Globe, Trash2, FolderOpen, StopCircle, Clock, Settings, Info } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
@@ -440,13 +440,15 @@ const ModpackCard: React.FC<ModpackCardProps> = memo(({ modpack, state, onSelect
       : ''
     }`;
 
+  const cardStyle = useMemo(() => ({
+    animation: `fadeInUp 0.15s ease-out ${index * 0.02 + 0.1}s backwards`,
+    ...getAnimationStyle({})
+  }), [index, getAnimationStyle]);
+
   return (
     <div
       className={cardClasses}
-      style={{
-        animation: `fadeInUp 0.15s ease-out ${index * 0.02 + 0.1}s backwards`,
-        ...getAnimationStyle({})
-      }}
+      style={cardStyle}
     >
       {/* Status Badge - Top right corner of entire card */}
       {!hideServerBadges && (

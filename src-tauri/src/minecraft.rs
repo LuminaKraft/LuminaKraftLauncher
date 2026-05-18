@@ -118,7 +118,10 @@ pub async fn stop_instance_process(instance_id: &str) -> crate::Result<()> {
     
     // Also try to kill via the tracked process (if any)
     let maybe_child_arc = {
-        let map_guard = RUNNING_PROCS.lock().unwrap();
+        let map_guard = RUNNING_PROCS.lock().unwrap_or_else(|e| {
+            eprintln!("⚠️ RUNNING_PROCS mutex poisoned (stop_instance_process), recovering: {}", e);
+            e.into_inner()
+        });
         map_guard.get(instance_id).cloned()
     };
 
@@ -579,11 +582,25 @@ pub async fn launch_minecraft_with_token_refresh(modpack: Modpack, settings: Use
             Err(e) => eprintln!("⚠️ Warning: Minecraft verification failed: {}. Assuming offline and attempting to launch...", e),
         }
     
+        // Guard against double-launch
+        {
+            let guard = RUNNING_PROCS.lock().unwrap_or_else(|e| {
+                eprintln!("⚠️ RUNNING_PROCS mutex poisoned (double-launch check), recovering: {}", e);
+                e.into_inner()
+            });
+            if guard.contains_key(&modpack.id) {
+                return Err(anyhow!("Modpack {} is already running", modpack.id));
+            }
+        }
+
         // Launch Minecraft
         let child = launch(&config, Some(&emitter)).await?;
-        
+
         let child_arc = std::sync::Arc::new(AsyncMutex::new(child));
-        RUNNING_PROCS.lock().unwrap().insert(modpack.id.clone(), child_arc.clone());
+        RUNNING_PROCS.lock().unwrap_or_else(|e| {
+            eprintln!("⚠️ RUNNING_PROCS mutex poisoned (insert), recovering: {}", e);
+            e.into_inner()
+        }).insert(modpack.id.clone(), child_arc.clone());
         let _ = app.emit(&format!("minecraft-started-{}", modpack.id), "started");
 
         // Wait for exit
@@ -595,25 +612,42 @@ pub async fn launch_minecraft_with_token_refresh(modpack: Modpack, settings: Use
                     let mut guard = child_arc.lock().await;
                     let _ = guard.wait().await;
                 }
-                RUNNING_PROCS.lock().unwrap().remove(&id_clone);
+                RUNNING_PROCS.lock().unwrap_or_else(|e| {
+                    eprintln!("⚠️ RUNNING_PROCS mutex poisoned (remove), recovering: {}", e);
+                    e.into_inner()
+                }).remove(&id_clone);
                 let _ = app_clone.emit(&format!("minecraft-exited-{}", id_clone), "exited");
             });
         }
     } else {
         let config = config_builder.build();
-    
+
         // Install/verify Minecraft installation first
         // We wrap this in a customized error handling block to allow offline usage
         match install(&config, Some(&emitter)).await {
             Ok(_) => println!("✅ Minecraft verification passed"),
             Err(e) => eprintln!("⚠️ Warning: Minecraft verification failed: {}. Assuming offline and attempting to launch...", e),
         }
-    
+
+        // Guard against double-launch
+        {
+            let guard = RUNNING_PROCS.lock().unwrap_or_else(|e| {
+                eprintln!("⚠️ RUNNING_PROCS mutex poisoned (double-launch check), recovering: {}", e);
+                e.into_inner()
+            });
+            if guard.contains_key(&modpack.id) {
+                return Err(anyhow!("Modpack {} is already running", modpack.id));
+            }
+        }
+
         // Launch Minecraft
         let child = launch(&config, Some(&emitter)).await?;
-        
+
         let child_arc = std::sync::Arc::new(AsyncMutex::new(child));
-        RUNNING_PROCS.lock().unwrap().insert(modpack.id.clone(), child_arc.clone());
+        RUNNING_PROCS.lock().unwrap_or_else(|e| {
+            eprintln!("⚠️ RUNNING_PROCS mutex poisoned (insert), recovering: {}", e);
+            e.into_inner()
+        }).insert(modpack.id.clone(), child_arc.clone());
         let _ = app.emit(&format!("minecraft-started-{}", modpack.id), "started");
 
         // Wait for exit
@@ -625,7 +659,10 @@ pub async fn launch_minecraft_with_token_refresh(modpack: Modpack, settings: Use
                     let mut guard = child_arc.lock().await;
                     let _ = guard.wait().await;
                 }
-                RUNNING_PROCS.lock().unwrap().remove(&id_clone);
+                RUNNING_PROCS.lock().unwrap_or_else(|e| {
+                    eprintln!("⚠️ RUNNING_PROCS mutex poisoned (remove), recovering: {}", e);
+                    e.into_inner()
+                }).remove(&id_clone);
                 let _ = app_clone.emit(&format!("minecraft-exited-{}", id_clone), "exited");
             });
         }

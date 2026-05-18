@@ -1,0 +1,46 @@
+name: Tests
+
+on:
+  push:
+    branches: [main, "fix/**", "feat/**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-frontend:
+    name: Frontend (lint + vitest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run test
+
+  test-rust:
+    name: Rust (check + clippy + test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "src-tauri"
+      - name: Install Linux build deps for Tauri
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libgtk-3-dev libssl-dev libsoup-3.0-dev
+      - name: cargo check
+        working-directory: src-tauri
+        run: cargo check
+      - name: cargo clippy (warnings only, not failing yet — TODO clean and re-enable -D)
+        working-directory: src-tauri
+        run: cargo clippy
+      - name: cargo test
+        working-directory: src-tauri
+        run: cargo test

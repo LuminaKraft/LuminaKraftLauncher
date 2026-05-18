@@ -660,30 +660,33 @@ export function LauncherProvider({ children }: { children: ReactNode }) {
 
     if (!state.modpacksData) return;
 
-    // 2. Load/Update states for server modpacks
-    for (const modpack of state.modpacksData.modpacks) {
-      try {
-        const status = await launcherService.getModpackStatus(modpack.id);
-        dispatch({
-          type: 'SET_MODPACK_STATE',
-          payload: {
-            id: modpack.id,
-            state: createModpackState(status),
-          },
-        });
-      } catch (error) {
-        console.error(`Error loading state for modpack ${modpack.id}:`, error);
-        dispatch({
-          type: 'SET_MODPACK_STATE',
-          payload: {
-            id: modpack.id,
-            state: createModpackState('error', {
-              error: 'Error loading state'
-            }),
-          },
-        });
-      }
-    }
+    // 2. Load/Update states for server modpacks IN PARALLEL.
+    // Previously sequential awaits caused N IPC round-trips back-to-back.
+    await Promise.all(
+      state.modpacksData.modpacks.map(async (modpack) => {
+        try {
+          const status = await launcherService.getModpackStatus(modpack.id);
+          dispatch({
+            type: 'SET_MODPACK_STATE',
+            payload: {
+              id: modpack.id,
+              state: createModpackState(status),
+            },
+          });
+        } catch (error) {
+          console.error(`Error loading state for modpack ${modpack.id}:`, error);
+          dispatch({
+            type: 'SET_MODPACK_STATE',
+            payload: {
+              id: modpack.id,
+              state: createModpackState('error', {
+                error: 'Error loading state'
+              }),
+            },
+          });
+        }
+      })
+    );
   };
 
   const updateUserSettings = async (settings: Partial<UserSettings>) => {

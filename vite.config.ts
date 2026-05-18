@@ -13,6 +13,33 @@ export default defineConfig(async () => ({
     emptyOutDir: false,
     // Increase chunk size warning limit for desktop app (2MB - acceptable for desktop)
     chunkSizeWarningLimit: 2000,
+    rollupOptions: {
+      output: {
+        // Split heavy deps into separate chunks for better caching + smaller initial JS
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'supabase': ['@supabase/supabase-js'],
+          'tauri': [
+            '@tauri-apps/api',
+            '@tauri-apps/plugin-fs',
+            '@tauri-apps/plugin-dialog',
+            '@tauri-apps/plugin-http',
+            '@tauri-apps/plugin-shell',
+            '@tauri-apps/plugin-process',
+            '@tauri-apps/plugin-opener',
+            '@tauri-apps/plugin-updater',
+          ],
+          'i18n': [
+            'i18next',
+            'react-i18next',
+            'i18next-browser-languagedetector',
+            'i18next-http-backend',
+          ],
+          'jszip': ['jszip'],
+          'icons': ['lucide-react', 'react-icons'],
+        },
+      },
+    },
   },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`

@@ -141,8 +141,16 @@ pub async fn save_instance_metadata(metadata: &InstanceMetadata) -> Result<()> {
     let metadata_path = instance_dir.join("instance.json");
     let metadata_json = serde_json::to_string_pretty(metadata)?;
 
-    let mut file = fs::File::create(metadata_path)?;
-    file.write_all(metadata_json.as_bytes())?;
+    // Atomic write: write to .tmp then rename. Prevents corrupt JSON if process crashes mid-write.
+    // fs::rename is atomic on POSIX and near-atomic on Windows (NTFS).
+    let tmp_path = metadata_path.with_extension("json.tmp");
+    {
+        let mut file = fs::File::create(&tmp_path)?;
+        file.write_all(metadata_json.as_bytes())?;
+        // Best-effort fsync; ignore error on filesystems that don't support it
+        let _ = file.sync_all();
+    }
+    fs::rename(&tmp_path, &metadata_path)?;
 
     Ok(())
 }

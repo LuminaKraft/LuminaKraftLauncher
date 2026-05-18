@@ -129,7 +129,9 @@ where
                 }
             };
             
-            // Download with retry loop
+            // Download with bounded retry loop (max 5 hash mismatch retries to avoid infinite spin)
+            const MAX_HASH_RETRIES: u32 = 5;
+            let mut hash_retries: u32 = 0;
             loop {
                 match download_file(&download_url, &dest_path).await {
                     Ok(()) => {
@@ -143,7 +145,19 @@ where
                             );
                             break;
                         } else {
-                            println!("⚠️ [Modrinth] Hash mismatch for {}, retrying...", filename);
+                            hash_retries += 1;
+                            if hash_retries >= MAX_HASH_RETRIES {
+                                println!("❌ [Modrinth] Hash mismatch for {} after {} retries, marking as failed", filename, MAX_HASH_RETRIES);
+                                let _ = fs::remove_file(&dest_path);
+                                let failed_info = create_failed_file_info(&file, &filename, Some("SHA1 hash mismatch after retries")).await;
+                                let mut failed = failed_files.lock().await;
+                                failed.push(failed_info);
+                                let completed = completed_count.fetch_add(1, Ordering::Relaxed) + 1;
+                                let mod_progress = start_percentage + (completed as f32 / total_files as f32) * progress_range;
+                                emit(format!("progress.downloadingModsProgress|{}|{}", completed, total_files), mod_progress, "file_download_error".to_string());
+                                break;
+                            }
+                            println!("⚠️ [Modrinth] Hash mismatch for {} (attempt {}/{}), retrying...", filename, hash_retries, MAX_HASH_RETRIES);
                             let _ = fs::remove_file(&dest_path);
                             tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
                             continue;
@@ -151,21 +165,21 @@ where
                     },
                     Err(e) => {
                         let error_msg = e.to_string();
-                        
-                        if error_msg.contains("Error de red") || error_msg.contains("TIMEDOUT") || 
+
+                        if error_msg.contains("Error de red") || error_msg.contains("TIMEDOUT") ||
                            error_msg.contains("unreachable") || error_msg.to_lowercase().contains("offline") ||
                            error_msg.contains("dns") || error_msg.contains("connection closed") {
                             println!("⚠️ [Modrinth] Network error for {}, retrying...", filename);
                             tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
                             continue;
                         }
-                        
+
                         // Fatal error
                         println!("❌ [Modrinth] Failed to download {}: {}", filename, e);
                         let failed_info = create_failed_file_info(&file, &filename, Some(&error_msg)).await;
                         let mut failed = failed_files.lock().await;
                         failed.push(failed_info);
-                        
+
                         let completed = completed_count.fetch_add(1, Ordering::Relaxed) + 1;
                         let mod_progress = start_percentage + (completed as f32 / total_files as f32) * progress_range;
                         emit(format!("progress.downloadingModsProgress|{}|{}", completed, total_files), mod_progress, "file_download_error".to_string());
