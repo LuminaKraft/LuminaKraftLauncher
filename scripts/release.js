@@ -139,27 +139,31 @@ async function commitAndTag(version, isPrerelease = false) {
       return;
     }
 
-    // Check for unstaged changes beyond version files
+    // Files that belong in the release commit: the 4 version files (bumped above)
+    // plus CHANGELOG.md (edited manually before running this script).
     const versionFiles = [
-      'package.json', 
-      'src-tauri/tauri.conf.json', 
+      'package.json',
+      'src-tauri/tauri.conf.json',
       'src-tauri/Cargo.toml',
       'src/components/Layout/Sidebar.tsx'
     ];
+    const releaseFiles = [...versionFiles, 'CHANGELOG.md'];
+
+    // Warn about unstaged changes in files that are NOT part of the release commit
     const statusLines = status.trim().split('\n');
     const unstagedChanges = statusLines.filter(line => {
       const file = line.slice(3).trim();
-      return line.startsWith(' M') && !versionFiles.includes(file);
+      return line.startsWith(' M') && !releaseFiles.includes(file);
     });
 
     if (unstagedChanges.length > 0) {
       log('  ⚠️ Warning: There are unstaged changes in other files:', 'yellow');
       unstagedChanges.forEach(line => log(`    ${line}`, 'yellow'));
-      log('  ℹ️ Only committing version files. Please commit other changes separately.', 'cyan');
+      log('  ℹ️ Only committing version files + CHANGELOG.md. Please commit other changes separately.', 'cyan');
     }
 
-    // Add only version files
-    versionFiles.forEach(file => {
+    // Stage version files + CHANGELOG.md
+    releaseFiles.forEach(file => {
       try {
         execSync(`git add ${file}`, { stdio: 'pipe' });
       } catch (error) {
@@ -167,7 +171,7 @@ async function commitAndTag(version, isPrerelease = false) {
       }
     });
     
-    // Check if any version files were actually staged
+    // Check if any release files were actually staged
     const stagedStatus = execSync('git status --porcelain', { encoding: 'utf8' })
       .split('\n')
       .filter(line => line.startsWith('A ') || line.startsWith('M ')); // Only look for added or modified files
@@ -175,7 +179,13 @@ async function commitAndTag(version, isPrerelease = false) {
       log('  ℹ️ No version files to commit', 'yellow');
       return;
     }
-    
+
+    // Remind the maintainer if CHANGELOG.md was NOT updated for this release
+    const changelogStaged = stagedStatus.some(line => line.slice(3).trim() === 'CHANGELOG.md');
+    if (!changelogStaged) {
+      log('  ⚠️ CHANGELOG.md has no changes — did you forget to add an entry for this version?', 'yellow');
+    }
+
     // Create commit
     const commitMessage = `Release v${version}${isPrerelease ? ' (pre-release)' : ''}`;
     // Commit signed (-S) so GitHub marks it as Verified (requires local GPG key configured)

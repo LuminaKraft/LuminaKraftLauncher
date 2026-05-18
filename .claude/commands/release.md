@@ -39,7 +39,7 @@ If any check fails, abort with a clear summary of what to fix.
 
 ## Step 2 — Update CHANGELOG.md
 
-The release script does NOT touch CHANGELOG.md. You must add the entry manually before running the script.
+The release script does NOT generate CHANGELOG content — you must write the entry. But it DOES stage `CHANGELOG.md` into the release commit automatically (alongside the 4 version files). So: edit CHANGELOG.md here, then run the script — no manual staging needed.
 
 1. Read recent git log since the last release tag:
    ```
@@ -71,7 +71,7 @@ The release script does NOT touch CHANGELOG.md. You must add the entry manually 
 
 ## Step 3 — Run the release script
 
-The script bumps the version in **all 4 files** (package.json, src-tauri/Cargo.toml, src-tauri/tauri.conf.json, src/components/Layout/Sidebar.tsx), commits everything, and tags. **Never edit those 4 files by hand.**
+The script bumps the version in **all 4 files** (package.json, src-tauri/Cargo.toml, src-tauri/tauri.conf.json, src/components/Layout/Sidebar.tsx), stages those + your CHANGELOG.md edit, creates the `Release v<version>` commit, and tags it. **Never edit the 4 version files by hand** — only the script touches them. (The script also prints a warning if CHANGELOG.md has no changes, in case you forgot Step 2.)
 
 Choose the right invocation based on user input:
 - `patch` / `minor` / `major` → `npm run release:<type>` (no push) or `npm run release:<type>-push`
@@ -79,24 +79,12 @@ Choose the right invocation based on user input:
 
 If the version contains a `-suffix` (prerelease), the script will set `isPrerelease: true` automatically.
 
-## Step 3.5 — Fold CHANGELOG into the release commit
-
-`release.js` only stages the 4 version files — it does NOT pick up your CHANGELOG.md edit. After the script finishes, `CHANGELOG.md` will be left uncommitted. Fold it into the release commit:
-
-```
-git add CHANGELOG.md
-git commit --amend --no-edit
-git tag -f v<new-version>
-```
-
-This is safe: the release commit has not been pushed yet, so amending it and re-pointing the tag rewrites only local history. (Amending is normally discouraged — it's correct here only because the commit is unpushed and the CHANGELOG logically belongs in it.)
-
 ## Step 4 — Verify post-release state
 
 After the script returns:
-1. `git log -1 --format="%H %s"` — confirm the bump commit landed.
-2. `git show --stat HEAD` — confirm it includes CHANGELOG.md + the 4 version files.
-3. `git tag --points-at HEAD` — confirm tag `v<new-version>` exists and points at the amended commit.
+1. `git log -1 --format="%H %s"` — confirm the `Release v<new-version>` commit landed.
+2. `git show --stat HEAD` — confirm it includes CHANGELOG.md + the 4 version files (5 files total). If CHANGELOG.md is missing, you forgot to edit it in Step 2 — fix and re-run.
+3. `git tag --points-at HEAD` — confirm tag `v<new-version>` exists and points at the release commit.
 3. Verify all 4 version files are in sync:
    ```
    grep -h '"version"' package.json src-tauri/tauri.conf.json
