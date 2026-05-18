@@ -186,12 +186,12 @@ export class ModpackManagementService {
         return { hasPermission: false, error: 'User not authenticated' };
       }
 
-      // Get modpack details
+      // Get modpack details (read modpack.partner_id directly — avoid looking up another user's partner_id)
       const { data: modpack, error: modpackError } = await supabase
         .from('modpacks')
-        .select('author_id, category')
+        .select('author_id, category, partner_id')
         .eq('id', modpackId)
-        .single() as { data: { author_id: string; category: string } | null; error: any };
+        .single() as { data: { author_id: string; category: string; partner_id: string | null } | null; error: any };
 
       if (modpackError || !modpack) {
         return { hasPermission: false, error: 'Modpack not found' };
@@ -218,17 +218,11 @@ export class ModpackManagementService {
         return { hasPermission: true };
       }
 
-      // Check if same partner (for partner category modpacks)
-      if (modpack.category === 'partner' && userData.partner_id) {
-        const { data: authorData } = await supabase
-          .from('users')
-          .select('partner_id')
-          .eq('id', modpack.author_id)
-          .single() as { data: { partner_id: string | null } | null };
-
-        if (authorData?.partner_id && authorData.partner_id === userData.partner_id) {
-          return { hasPermission: true };
-        }
+      // Check if same partner (for partner category modpacks).
+      // Compare modpacks.partner_id (already loaded) instead of looking up author's user row,
+      // which is no longer readable by anon/cross-user under tightened RLS.
+      if (modpack.category === 'partner' && userData.partner_id && modpack.partner_id === userData.partner_id) {
+        return { hasPermission: true };
       }
 
       return { hasPermission: false, error: 'Insufficient permissions' };
@@ -1149,12 +1143,14 @@ export class ModpackManagementService {
 
       // Get modpack details to verify ownership and get file paths
       // Note: file_url is in modpack_versions, not modpacks table
+      // partner_id read directly to avoid looking up another user's profile (RLS-restricted)
       const { data: modpack, error: modpackError } = await supabase
         .from('modpacks')
         .select(`
           id,
           author_id,
           category,
+          partner_id,
           logo_url,
           banner_url,
           modpack_versions (
@@ -1196,19 +1192,9 @@ export class ModpackManagementService {
 
       console.log('✅ User data found:', userData.id, 'Role:', userData.role, 'Partner:', userData.partner_id);
 
-      // Get author's partner_id if they're a partner (to check if same partner)
-      let authorPartnerId: string | null = null;
-      if (modpack.category === 'partner') {
-        const { data: authorData, error: authorError } = await supabase
-          .from('users')
-          .select('partner_id')
-          .eq('id', modpack.author_id)
-          .single() as { data: any; error: any };
-
-        if (!authorError && authorData) {
-          authorPartnerId = authorData.partner_id;
-        }
-      }
+      // partner_id is now sourced from modpacks.partner_id directly (set when modpack was created).
+      // Avoids cross-user read of users.partner_id which RLS no longer permits.
+      const authorPartnerId: string | null = modpack.category === 'partner' ? (modpack.partner_id ?? null) : null;
 
       // Check permissions:
       // - Owner can always delete their modpack

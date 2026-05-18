@@ -300,8 +300,9 @@ class LauncherService {
 
       if (uniqueAuthorIds.length > 0) {
         try {
+          // Use users_public view — public.users no longer permits anon/cross-user reads (RLS).
           const { data: authors } = await supabase
-            .from('users')
+            .from('users_public' as any)
             .select('id, display_name, discord_global_name, discord_username')
             .in('id', uniqueAuthorIds);
 
