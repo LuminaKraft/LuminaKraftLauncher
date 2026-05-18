@@ -5,6 +5,35 @@ All notable changes to the LuminaKraft Launcher will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.10] - 2026-05-18
+
+### ⚡ **Performance**
+- **Faster startup and navigation**
+  - Non-home pages (Settings, About, Account, Publish/Edit/Published modpacks, My Modpacks) are now lazy-loaded, shrinking the initial bundle.
+  - Build output is split into cacheable vendor chunks (React, Supabase, Tauri, i18n, etc.).
+- **Smoother UI**
+  - Memoized global contexts to eliminate unnecessary re-render cascades across the app.
+  - Modpack states now load in parallel instead of one-by-one, so installed-modpack lists populate noticeably faster.
+
+### 🐛 **Bug Fixes**
+- **Custom protected paths are now enforced during integrity verification**
+- **Discord avatar now syncs correctly from the avatar hash on profile update**
+- **Installs no longer hang forever on a flaky connection**
+  - Network retry loops during Minecraft install and mod downloads are now bounded instead of infinite.
+- **Instance metadata is written atomically**
+  - A crash mid-write can no longer corrupt `instance.json`.
+- **Guard against launching the same modpack twice**
+
+### 🔒 **Security & Robustness**
+- Hardened Supabase Edge Functions: authentication is now required, request input is validated, and cross-user access paths were closed.
+- Tightened database access policies so sensitive profile fields are no longer exposed.
+- Added zip-slip and path-traversal protections when extracting and handling modpack files.
+- Recover gracefully from internal lock contention instead of crashing.
+
+### 🔧 **Maintenance**
+- Added an automated test suite (39 frontend + 9 Rust tests) and a CI workflow that runs lint, tests, and Rust checks on every push.
+- Added project documentation (`CLAUDE.md`) and a guided `/release` workflow.
+
 ## [0.1.9] - 2026-05-06
 
 ### ✨ **New Features**

@@ -60,7 +60,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
   }, []);
 
   // Version is automatically updated by release.js
-  const currentVersion = "0.1.9";
+  const currentVersion = "0.1.10";
 
   const menuItems = useMemo(() => [
     { id: 'home', label: t('navigation.home'), icon: Home, description: t('navigation.homeDesc') },
