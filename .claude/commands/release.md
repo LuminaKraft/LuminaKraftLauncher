@@ -79,11 +79,24 @@ Choose the right invocation based on user input:
 
 If the version contains a `-suffix` (prerelease), the script will set `isPrerelease: true` automatically.
 
+## Step 3.5 — Fold CHANGELOG into the release commit
+
+`release.js` only stages the 4 version files — it does NOT pick up your CHANGELOG.md edit. After the script finishes, `CHANGELOG.md` will be left uncommitted. Fold it into the release commit:
+
+```
+git add CHANGELOG.md
+git commit --amend --no-edit
+git tag -f v<new-version>
+```
+
+This is safe: the release commit has not been pushed yet, so amending it and re-pointing the tag rewrites only local history. (Amending is normally discouraged — it's correct here only because the commit is unpushed and the CHANGELOG logically belongs in it.)
+
 ## Step 4 — Verify post-release state
 
 After the script returns:
 1. `git log -1 --format="%H %s"` — confirm the bump commit landed.
-2. `git tag --points-at HEAD` — confirm tag `v<new-version>` exists.
+2. `git show --stat HEAD` — confirm it includes CHANGELOG.md + the 4 version files.
+3. `git tag --points-at HEAD` — confirm tag `v<new-version>` exists and points at the amended commit.
 3. Verify all 4 version files are in sync:
    ```
    grep -h '"version"' package.json src-tauri/tauri.conf.json
